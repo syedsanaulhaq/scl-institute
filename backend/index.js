@@ -19,17 +19,6 @@ const app = express();
 const PORT = process.env.PORT || 4000;
 
 app.use((req, res, next) => {
-    let rawBody = '';
-    req.on('data', chunk => {
-        rawBody += chunk.toString();
-    });
-    req.on('end', () => {
-        req.rawBody = rawBody;
-        next();
-    });
-});
-
-app.use((req, res, next) => {
     const start = Date.now();
     res.on('finish', () => {
         const duration = Date.now() - start;
@@ -42,13 +31,13 @@ app.use(cors());
 app.use(bodyParser.json({ limit: '50mb' }));
 app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
 
-// Error handler for body parser
+// Error handler for body parser errors
 app.use((err, req, res, next) => {
     if (err instanceof SyntaxError && 'body' in err) {
-        console.error('[BODY_PARSE_ERROR]', err.message, 'Body:', req.rawBody || 'no raw body');
+        console.error('[BODY_PARSE_ERROR]', err.message);
         return res.status(400).json({ error: 'Invalid JSON in request body', details: err.message });
     }
-    return next();
+    next(err);
 });
 
 // Database Connection
