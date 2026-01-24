@@ -1,16 +1,45 @@
 # Quick Start Guide - Development vs Production
 
+## 🌿 Git Branches - First Things First!
+
+**Before anything else, make sure you understand our branching strategy:**
+
+- **Working on your laptop (development)**: Always use the **`develop`** branch
+- **Production server code**: The **`main`** branch (don't work on main directly!)
+
+```bash
+# Start your work
+git checkout develop
+git pull origin develop
+
+# Create a feature branch
+git checkout -b feature/your-feature-name
+
+# Work, test, commit
+# When done, create a Pull Request to develop
+```
+
+**📖 Read [GIT_WORKFLOW.md](GIT_WORKFLOW.md) for the complete workflow guide**
+
+---
+
 ## 🚀 Quick Start
 
 ### Development (Local Machine) - 2 Steps
 
-1. **Start development environment**:
+1. **Ensure you're on develop branch**:
+   ```bash
+   git checkout develop
+   git pull origin develop
+   ```
+
+2. **Start development environment**:
    ```bash
    ./scripts/start-dev.bat    # Windows
    ./scripts/start-dev.sh     # Linux/Mac
    ```
 
-2. **Access services**:
+3. **Access services**:
    - Frontend: http://localhost:3000
    - Backend: http://localhost:4000
    - Moodle: http://localhost:8080
@@ -23,6 +52,7 @@
 
 ### Development Environment
 - **Location**: Your local machine
+- **Git Branch**: `develop` (your default working branch)
 - **Config File**: `.env.development`
 - **Docker Compose**: `docker-compose.dev.yml`
 - **Purpose**: Development and testing
@@ -33,6 +63,7 @@
 
 ### Production Environment
 - **Location**: Production server
+- **Git Branch**: `main` (production-only, requires PR review)
 - **Config File**: `.env.production`
 - **Docker Compose**: `docker-compose.prod.yml`
 - **Purpose**: Live deployment
@@ -131,51 +162,196 @@ ENVIRONMENT_SETUP.md          # Detailed environment documentation
 
 ---
 
-## 🔄 Switching Environments
+## 🔄 Git Workflow + Environment Management
 
-**From Dev to Production**:
-1. Stop development: `./scripts/stop-all.bat`
-2. On production server, update `.env.production` with real credentials
-3. Start production: `./scripts/start-prod.bat`
+### Your Daily Workflow (Development)
 
-**From Production back to Dev**:
-1. Stop production (on server): `docker-compose -f docker-compose.prod.yml down`
-2. Start development (local): `./scripts/start-dev.bat`
+```bash
+# 1. Each morning, sync with latest develop
+git checkout develop
+git pull origin develop
+
+# 2. Start your development environment
+./scripts/start-dev.bat    # Windows
+./scripts/start-dev.sh     # Linux/Mac
+
+# 3. Create a feature branch (use meaningful names)
+git checkout -b feature/add-dashboard-cards
+# or for bugfixes:
+git checkout -b bugfix/fix-login-error
+
+# 4. Work, test, commit
+# Edit files, test on http://localhost:3000
+git add .
+git commit -m "feat(dashboard): add professional module cards"
+
+# 5. Push to your feature branch
+git push origin feature/add-dashboard-cards
+
+# 6. When done, create a Pull Request to develop (via GitHub)
+# - Go to https://github.com/syedsanaulhaq/scl-institute
+# - Click "Create Pull Request"
+# - Set: From feature/add-dashboard-cards → To develop
+
+# 7. After approval, merge your PR on GitHub
+
+# 8. Update local develop and cleanup
+git checkout develop
+git pull origin develop
+git branch -d feature/add-dashboard-cards
+git push origin --delete feature/add-dashboard-cards
+```
+
+### Releasing to Production
+
+```bash
+# When develop is stable and ready for production:
+
+# 1. Create a Pull Request on GitHub
+# - From: develop → To: main
+# - Title: "Release v1.0.0" or "Release: Feb 2026 Update"
+# - List all changes
+
+# 2. Get review and approval from team
+
+# 3. Merge to main on GitHub
+
+# 4. On production server:
+git checkout main
+git pull origin main
+docker-compose -f docker-compose.prod.yml --env-file .env.production up -d
+```
+
+### Switching Between Dev and Production Environments
+
+**From Dev to Production** (deploying to server):
+```bash
+# 1. Stop development
+./scripts/stop-all.bat
+
+# 2. On production server, pull latest main
+git checkout main
+git pull origin main
+
+# 3. Update .env.production with real passwords (if not already done)
+
+# 4. Start production
+./scripts/start-prod.bat
+```
+
+**From Production back to Dev** (if needed):
+```bash
+# On production server:
+docker-compose -f docker-compose.prod.yml down
+
+# On your local laptop:
+./scripts/start-dev.bat
+```
 
 ---
 
-## 📊 Environment Variables
+## 📝 Important: Never Commit Sensitive Data!
 
-All variables are configured in `.env.development` and `.env.production`:
+**The .gitignore already protects these files:**
+- `.env` (never commit!)
+- `.env.local`
 
-**Common Variables**:
-- `NODE_ENV`: Environment type
-- `PORT`: Backend port (4000)
-- `VITE_API_URL`: Frontend API endpoint
-- `VITE_ENV`: Frontend environment
-
-**Database Variables**:
-- `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASS`, `DB_NAME`
-
-**Moodle Variables**:
-- `MOODLE_URL`: LMS domain
-- `MOODLE_USERNAME`: Admin username
-- `MOODLE_PASSWORD`: Admin password
-
-**Security Variables**:
-- `SSO_SECRET`: Single Sign-On secret (keep private!)
+**But remember:**
+- `.env.development` is safe to commit (it's example values)
+- `.env.production` is safe to commit (it has placeholder values)
+- **ALWAYS** update actual passwords on the production server before deploying!
 
 ---
 
-## ✅ Deployment Checklist
+## 🔐 Security for Production
 
-- [ ] All `.env.production` passwords updated
-- [ ] SSL certificates configured (if using HTTPS)
-- [ ] Database backups scheduled
-- [ ] Monitoring/alerts configured
-- [ ] Production log rotation enabled
-- [ ] All services responding on production URLs
-- [ ] Database connections verified
+**Before deploying to production, update these in `.env.production`:**
+
+```env
+# Database passwords
+DB_PASS=your_secure_password_here
+MYSQL_PASSWORD=your_secure_password_here
+MYSQL_ROOT_PASSWORD=your_secure_root_password
+
+# Moodle passwords
+MARIADB_PASSWORD=your_secure_password_here
+MARIADB_ROOT_PASSWORD=your_secure_root_password
+MOODLE_PASSWORD=your_production_admin_password
+
+# SSL secret
+SSO_SECRET=your_production_secret_key_here
+```
+
+---
+
+## 📁 File Structure
+
+```
+.env.development              # Development configuration (local)
+.env.production               # Production configuration (server)
+docker-compose.dev.yml        # Development containers setup
+docker-compose.prod.yml       # Production containers setup
+GIT_WORKFLOW.md               # Complete Git workflow guide
+scripts/
+  └─ start-dev.bat            # Quick start development (Windows)
+  └─ start-dev.sh             # Quick start development (Linux/Mac)
+  └─ start-prod.bat           # Quick start production (Windows)
+  └─ stop-all.bat             # Stop all environments (Windows)
+  └─ stop-all.sh              # Stop all environments (Linux/Mac)
+ENVIRONMENT_SETUP.md          # Detailed environment documentation
+```
+
+---
+
+## 🌐 Service URLs
+
+### Development (Your Laptop)
+| Service | URL | Branch |
+|---------|-----|--------|
+| Frontend | http://localhost:3000 | develop |
+| Backend API | http://localhost:4000 | develop |
+| Moodle LMS | http://localhost:8080 | develop |
+| MySQL | localhost:33061 | develop |
+
+### Production (Server)
+| Service | URL | Branch |
+|---------|-----|--------|
+| Frontend | https://sclsandbox.xyz | main |
+| Backend API | https://api.sclsandbox.xyz | main |
+| Moodle LMS | https://lms.sclsandbox.xyz | main |
+
+---
+
+## 📊 Environment + Git Reference
+
+| Aspect | Development | Production |
+|--------|-------------|-----------|
+| **Git Branch** | `develop` | `main` |
+| **Location** | Your laptop | Server |
+| **Configuration** | `.env.development` | `.env.production` |
+| **Docker Compose** | `docker-compose.dev.yml` | `docker-compose.prod.yml` |
+| **Hot Reload** | ✅ Yes | ❌ No |
+| **Auto-restart** | ❌ No | ✅ Yes |
+| **Logging** | Console | JSON file |
+| **Data Persistence** | Local volumes | Production volumes |
+
+---
+
+## ✅ Deployment Checklist for Production
+
+- [ ] All work merged to `develop` branch
+- [ ] All reviews approved
+- [ ] Code tested on localhost
+- [ ] Create PR from develop → main
+- [ ] Get approval for production release
+- [ ] Merge to main on GitHub
+- [ ] Tag version on main (git tag v1.0.0)
+- [ ] Pull main on production server
+- [ ] Update `.env.production` with real passwords
+- [ ] Run `docker-compose -f docker-compose.prod.yml up -d`
+- [ ] Test all services on production URLs
+- [ ] Verify database connections
+- [ ] Monitor logs for errors
 
 ---
 
@@ -196,14 +372,26 @@ docker-compose -f docker-compose.dev.yml ps
 # Change ports in docker-compose.dev.yml or stop other services
 ```
 
+**Need to switch branches?**
+```bash
+# List all branches
+git branch -a
+
+# Switch to a branch
+git checkout develop
+git checkout feature/my-feature
+
+# If you have uncommitted changes, stash them first:
+git stash              # Save changes
+git checkout develop
+git stash pop          # Restore changes later
+```
+
 ---
 
 ## 📖 Full Documentation
 
-See [ENVIRONMENT_SETUP.md](ENVIRONMENT_SETUP.md) for complete details on:
-- Detailed setup instructions
-- Database management
-- Troubleshooting
-- Security best practices
-- Monitoring and logging
+- **[GIT_WORKFLOW.md](GIT_WORKFLOW.md)** - Complete Git workflow guide with examples
+- **[ENVIRONMENT_SETUP.md](ENVIRONMENT_SETUP.md)** - Detailed environment configuration
+- **[README.md](README.md)** - Project overview and architecture
 

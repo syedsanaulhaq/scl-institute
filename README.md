@@ -113,4 +113,33 @@ We are adopting a strict "Clean Slate" approach. We will not link to the old SCL
 
 ---
 
+## 🌿 Git Branching Strategy
+
+This project follows a structured Git workflow:
+
+- **`main` branch**: Production-ready code deployed to your server
+- **`develop` branch**: Your default development branch for local work
+
+For detailed information on how to work with branches, features, and deployments, see [GIT_WORKFLOW.md](GIT_WORKFLOW.md).
+
+---
+
+## 🚀 Quick Setup Commands
+
+### Development (Your Laptop)
+```bash
+./scripts/start-dev.bat    # Windows: Start local development
+./scripts/start-dev.sh     # Linux/Mac: Start local development
+```
+
+### Stop All Services
+```bash
+./scripts/stop-all.bat     # Windows
+./scripts/stop-all.sh      # Linux/Mac
+```
+
+For complete setup guide, see [QUICK_START.md](QUICK_START.md) and [ENVIRONMENT_SETUP.md](ENVIRONMENT_SETUP.md).
+
+---
+
 *This document serves as the Request for Comments (RFC) and Implementation Guide for the SCL-Institute Rebuild.*
