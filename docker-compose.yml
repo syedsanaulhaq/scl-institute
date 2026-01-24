@@ -32,10 +32,8 @@ services:
       - scl-network
 
   scli-moodle:
-    image: bitnami/moodle:latest
+    image: bitnamilegacy/moodle:latest
     container_name: scli-moodle
-    ports:
-      - "8080:8080"
     environment:
       - MOODLE_DATABASE_HOST=scli-moodle-db
       - MOODLE_DATABASE_PORT_NUMBER=3306
@@ -45,6 +43,7 @@ services:
       - MOODLE_USERNAME=admin
       - MOODLE_PASSWORD=SCLInst!2026
       - MOODLE_SITE_NAME=SCL Institute LMS
+      - MOODLE_REVERSEPROXY=yes
       - BITNAMI_DEBUG=true
     restart: on-failure
     volumes:
@@ -67,7 +66,7 @@ services:
       - DB_USER=scl_user
       - DB_PASS=scl_password
       - DB_NAME=scl_institute
-      - MOODLE_URL=http://localhost:8080
+      - MOODLE_URL=http://lms.sclsandbox.xyz
       - SSO_SECRET=supersecretkey
     depends_on:
       - scli-mysql
@@ -81,20 +80,30 @@ services:
   scli-frontend:
     build: ./frontend
     container_name: scli-frontend
-    ports:
-      - "3000:3000"
     environment:
-      - VITE_API_URL=http://localhost:4000/api
+      - VITE_API_URL=http://backend.sclsandbox.xyz/api
     depends_on:
       - scli-backend
     networks:
       - scl-network
-    # For dev, we might want to mount volumes or use dev server
-    # But for now, standard build
     command: npm run dev
     volumes:
       - ./frontend:/app
       - /app/node_modules
+
+  scli-nginx:
+    image: nginx:alpine
+    container_name: scli-nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - scli-frontend
+      - scli-backend
+      - scli-moodle
+    networks:
+      - scl-network
 
 networks:
   scl-network:
