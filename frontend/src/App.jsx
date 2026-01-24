@@ -37,6 +37,26 @@ function App() {
         localStorage.removeItem('user');
     };
 
+    const handleAccessLMS = async () => {
+        try {
+            setLoading(true);
+            const response = await axios.post(`${API_URL}/sso/generate`, {
+                email: user.email
+            });
+
+            if (response.data.success) {
+                // Open Moodle in a new tab
+                window.open(response.data.redirectUrl, '_blank');
+            } else {
+                setError('Failed to generate SSO token');
+            }
+        } catch (err) {
+            setError(err.response?.data?.message || 'Failed to access LMS');
+        } finally {
+            setLoading(false);
+        }
+    };
+
     if (user) {
         return (
             <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
@@ -46,12 +66,29 @@ function App() {
                         <p><strong>Email:</strong> {user.email}</p>
                         <p><strong>Role:</strong> {user.role}</p>
                     </div>
-                    <button
-                        onClick={handleLogout}
-                        className="w-full bg-red-500 text-white py-2 px-4 rounded hover:bg-red-600 transition"
-                    >
-                        Logout
-                    </button>
+
+                    {error && (
+                        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
+                            {error}
+                        </div>
+                    )}
+
+                    <div className="space-y-3">
+                        <button
+                            onClick={handleAccessLMS}
+                            disabled={loading}
+                            className="w-full bg-purple-600 text-white py-3 px-4 rounded-lg hover:bg-purple-700 transition disabled:opacity-50 disabled:cursor-not-allowed font-semibold"
+                        >
+                            {loading ? 'Opening LMS...' : '🎓 Access Learning Management System'}
+                        </button>
+
+                        <button
+                            onClick={handleLogout}
+                            className="w-full bg-red-500 text-white py-2 px-4 rounded hover:bg-red-600 transition"
+                        >
+                            Logout
+                        </button>
+                    </div>
                 </div>
             </div>
         );
