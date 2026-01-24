@@ -1,0 +1,121 @@
+version: '3.8'
+
+services:
+  scli-mysql:
+    image: mysql:8.0
+    container_name: scli-mysql-dev
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    ports:
+      - "33061:3306"
+    volumes:
+      - mysql_data_dev:/var/lib/mysql
+    networks:
+      - scl-network-dev
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 10s
+      retries: 5
+
+  scli-moodle-db:
+    image: bitnami/mariadb:latest
+    container_name: scli-moodle-db-dev
+    environment:
+      - MARIADB_ROOT_PASSWORD=${MARIADB_ROOT_PASSWORD}
+      - MARIADB_DATABASE=${MARIADB_DATABASE}
+      - MARIADB_USER=${MARIADB_USER}
+      - MARIADB_PASSWORD=${MARIADB_PASSWORD}
+      - MARIADB_CHARACTER_SET=${MARIADB_CHARACTER_SET}
+      - MARIADB_COLLATE=${MARIADB_COLLATE}
+    volumes:
+      - moodle_db_data_dev:/var/lib/mysql
+    networks:
+      - scl-network-dev
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MARIADB_ROOT_PASSWORD}"]
+      timeout: 10s
+      retries: 5
+
+  scli-moodle:
+    image: bitnamilegacy/moodle:latest
+    container_name: scli-moodle-dev
+    environment:
+      - MOODLE_DATABASE_HOST=scli-moodle-db-dev
+      - MOODLE_DATABASE_PORT_NUMBER=3306
+      - MOODLE_DATABASE_USER=${MARIADB_USER}
+      - MOODLE_DATABASE_PASSWORD=${MARIADB_PASSWORD}
+      - MOODLE_DATABASE_NAME=${MARIADB_DATABASE}
+      - MOODLE_USERNAME=${MOODLE_USERNAME}
+      - MOODLE_PASSWORD=${MOODLE_PASSWORD}
+      - MOODLE_SITE_NAME=${MOODLE_SITE_NAME}
+      - MOODLE_REVERSEPROXY=yes
+      - BITNAMI_DEBUG=true
+    restart: on-failure
+    ports:
+      - "8080:8080"
+    volumes:
+      - moodle_data_dev:/bitnami/moodle
+    depends_on:
+      scli-moodle-db:
+        condition: service_healthy
+    networks:
+      - scl-network-dev
+
+  scli-backend:
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: scli-backend-dev
+    ports:
+      - "4000:4000"
+    environment:
+      - NODE_ENV=${NODE_ENV}
+      - PORT=${PORT}
+      - DB_HOST=scli-mysql-dev
+      - DB_PORT=${DB_PORT}
+      - DB_USER=${DB_USER}
+      - DB_PASS=${DB_PASS}
+      - DB_NAME=${DB_NAME}
+      - MOODLE_URL=${MOODLE_URL}
+      - SSO_SECRET=${SSO_SECRET}
+      - VITE_API_URL=${VITE_API_URL}
+    depends_on:
+      scli-mysql:
+        condition: service_healthy
+    networks:
+      - scl-network-dev
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    command: npm start
+
+  scli-frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: scli-frontend-dev
+    ports:
+      - "3000:3000"
+    environment:
+      - VITE_API_URL=${VITE_API_URL}
+      - VITE_ENV=${VITE_ENV}
+    depends_on:
+      - scli-backend
+    networks:
+      - scl-network-dev
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    command: npm run dev
+
+networks:
+  scl-network-dev:
+    driver: bridge
+
+volumes:
+  mysql_data_dev:
+  moodle_db_data_dev:
+  moodle_data_dev:

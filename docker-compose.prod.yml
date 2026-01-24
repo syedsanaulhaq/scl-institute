@@ -1,0 +1,154 @@
+version: '3.8'
+
+services:
+  scli-mysql:
+    image: mysql:8.0
+    container_name: scli-mysql-prod
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    volumes:
+      - mysql_data_prod:/var/lib/mysql
+    networks:
+      - scl-network-prod
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 10s
+      retries: 5
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  scli-moodle-db:
+    image: bitnami/mariadb:latest
+    container_name: scli-moodle-db-prod
+    restart: always
+    environment:
+      - MARIADB_ROOT_PASSWORD=${MARIADB_ROOT_PASSWORD}
+      - MARIADB_DATABASE=${MARIADB_DATABASE}
+      - MARIADB_USER=${MARIADB_USER}
+      - MARIADB_PASSWORD=${MARIADB_PASSWORD}
+      - MARIADB_CHARACTER_SET=${MARIADB_CHARACTER_SET}
+      - MARIADB_COLLATE=${MARIADB_COLLATE}
+    volumes:
+      - moodle_db_data_prod:/var/lib/mysql
+    networks:
+      - scl-network-prod
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MARIADB_ROOT_PASSWORD}"]
+      timeout: 10s
+      retries: 5
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  scli-moodle:
+    image: bitnamilegacy/moodle:latest
+    container_name: scli-moodle-prod
+    restart: always
+    environment:
+      - MOODLE_DATABASE_HOST=scli-moodle-db-prod
+      - MOODLE_DATABASE_PORT_NUMBER=3306
+      - MOODLE_DATABASE_USER=${MARIADB_USER}
+      - MOODLE_DATABASE_PASSWORD=${MARIADB_PASSWORD}
+      - MOODLE_DATABASE_NAME=${MARIADB_DATABASE}
+      - MOODLE_USERNAME=${MOODLE_USERNAME}
+      - MOODLE_PASSWORD=${MOODLE_PASSWORD}
+      - MOODLE_SITE_NAME=${MOODLE_SITE_NAME}
+      - MOODLE_REVERSEPROXY=yes
+      - BITNAMI_DEBUG=false
+    volumes:
+      - moodle_data_prod:/bitnami/moodle
+    depends_on:
+      scli-moodle-db:
+        condition: service_healthy
+    networks:
+      - scl-network-prod
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  scli-backend:
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: scli-backend-prod
+    restart: always
+    environment:
+      - NODE_ENV=${NODE_ENV}
+      - PORT=${PORT}
+      - DB_HOST=scli-mysql-prod
+      - DB_PORT=${DB_PORT}
+      - DB_USER=${DB_USER}
+      - DB_PASS=${DB_PASS}
+      - DB_NAME=${DB_NAME}
+      - MOODLE_URL=${MOODLE_URL}
+      - SSO_SECRET=${SSO_SECRET}
+      - VITE_API_URL=${VITE_API_URL}
+    depends_on:
+      scli-mysql:
+        condition: service_healthy
+    networks:
+      - scl-network-prod
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  scli-frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: scli-frontend-prod
+    restart: always
+    environment:
+      - VITE_API_URL=${VITE_API_URL}
+      - VITE_ENV=${VITE_ENV}
+    networks:
+      - scl-network-prod
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  scli-nginx:
+    image: nginx:alpine
+    container_name: scli-nginx-prod
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - scli-frontend
+      - scli-backend
+      - scli-moodle
+    networks:
+      - scl-network-prod
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  scl-network-prod:
+    driver: bridge
+
+volumes:
+  mysql_data_prod:
+  moodle_db_data_prod:
+  moodle_data_prod:
