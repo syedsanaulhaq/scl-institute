@@ -24,14 +24,12 @@ app.use((req, res, next) => {
         const duration = Date.now() - start;
         console.log(`${req.method} ${req.url} ${res.statusCode} ${duration}ms`);
     });
-    if (req.body && Object.keys(req.body).length > 0) {
-        console.log('Body:', JSON.stringify(req.body));
-    }
     next();
 });
 
 app.use(cors());
-app.use(bodyParser.json());
+app.use(bodyParser.json({ limit: '50mb' }));
+app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
 
 // Database Connection
 const pool = mysql.createPool({
@@ -76,6 +74,8 @@ const users = [
 
 // Login Endpoint
 app.post('/api/login', (req, res) => {
+    console.log('Login endpoint hit:', req.url);
+    console.log('Body received:', req.body);
     const { email, password } = req.body;
     const user = users.find(u => u.email === email && u.password === password);
 
@@ -91,6 +91,8 @@ app.post('/api/login', (req, res) => {
 
 // V1 Auth Login Endpoint (for frontend compatibility)
 app.post('/api/v1/auth/login', (req, res) => {
+    console.log('V1 Auth login endpoint hit:', req.url);
+    console.log('Body data:', JSON.stringify(req.body));
     const { email, password } = req.body;
     const user = users.find(u => u.email === email && u.password === password);
 
@@ -105,7 +107,7 @@ app.post('/api/v1/auth/login', (req, res) => {
             tokens: { accessToken, refreshToken }
         });
     } else {
-        console.log(`[AUTH] Login failed for: ${email}`);
+        console.log(`[AUTH] Login failed for: ${email} - User not found or password mismatch`);
         res.status(401).json({ message: 'Invalid credentials' });
     }
 });
