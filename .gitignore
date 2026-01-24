@@ -1,0 +1,6 @@
+node_modules/
+dist/
+.env
+moodle_data/
+mysql_data/
+.DS_Store

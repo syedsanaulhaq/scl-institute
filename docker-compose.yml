@@ -1,0 +1,102 @@
+version: '3.8'
+
+services:
+  scli-mysql:
+    image: mysql:8.0
+    container_name: scli-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: scl_institute
+      MYSQL_USER: scl_user
+      MYSQL_PASSWORD: scl_password
+    ports:
+      - "33061:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - scl-network
+
+  scli-moodle-db:
+    image: bitnami/mariadb:latest
+    container_name: scli-moodle-db
+    environment:
+      - MARIADB_ROOT_PASSWORD=moodleroot
+      - MARIADB_DATABASE=bitnami_moodle
+      - MARIADB_USER=bn_moodle
+      - MARIADB_PASSWORD=bitnami_moodle_password
+      - MARIADB_CHARACTER_SET=utf8mb4
+      - MARIADB_COLLATE=utf8mb4_unicode_ci
+    volumes:
+      - moodle_db_data:/var/lib/mysql
+    networks:
+      - scl-network
+
+  scli-moodle:
+    image: bitnami/moodle:latest
+    container_name: scli-moodle
+    ports:
+      - "8080:8080"
+    environment:
+      - MOODLE_DATABASE_HOST=scli-moodle-db
+      - MOODLE_DATABASE_PORT_NUMBER=3306
+      - MOODLE_DATABASE_USER=bn_moodle
+      - MOODLE_DATABASE_PASSWORD=bitnami_moodle_password
+      - MOODLE_DATABASE_NAME=bitnami_moodle
+      - MOODLE_USERNAME=admin
+      - MOODLE_PASSWORD=SCLInst!2026
+      - MOODLE_SITE_NAME=SCL Institute LMS
+      - BITNAMI_DEBUG=true
+    restart: on-failure
+    volumes:
+      - moodle_data:/bitnami/moodle
+      - ./moodle-scripts:/bitnami/moodle/local/sclsso
+    depends_on:
+      - scli-moodle-db
+    networks:
+      - scl-network
+
+  scli-backend:
+    build: ./backend
+    container_name: scli-backend
+    ports:
+      - "4000:4000"
+    environment:
+      - PORT=4000
+      - DB_HOST=scli-mysql
+      - DB_USER=scl_user
+      - DB_PASS=scl_password
+      - DB_NAME=scl_institute
+      - MOODLE_URL=http://localhost:8080
+      - SSO_SECRET=supersecretkey
+    depends_on:
+      - scli-mysql
+    networks:
+      - scl-network
+    command: npm start
+
+  scli-frontend:
+    build: ./frontend
+    container_name: scli-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - REACT_APP_API_URL=http://localhost:4000/api
+    depends_on:
+      - scli-backend
+    networks:
+      - scl-network
+    # For dev, we might want to mount volumes or use dev server
+    # But for now, standard build
+    command: npm run dev
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+
+networks:
+  scl-network:
+    driver: bridge
+
+volumes:
+  mysql_data:
+  moodle_db_data:
+  moodle_data:

@@ -1,0 +1,19 @@
+{
+    "name": "scl-institute",
+    "version": "1.0.0",
+    "description": "SCL Institute - Education Management System",
+    "private": true,
+    "scripts": {
+        "devel:start": "concurrently \"npm run backend:dev\" \"npm run frontend:dev\" --names \"BACKEND,FRONTEND\" --prefix-colors \"bgBlue.bold,bgMagenta.bold\" --kill-others-on-fail",
+        "devel:stop": "node -e \"process.exit(0)\" & taskkill /F /IM node.exe /T 2>nul & echo Development servers stopped",
+        "backend:dev": "cd backend && npm run start",
+        "frontend:dev": "cd frontend && npm run dev",
+        "docker:up": "docker-compose up -d",
+        "docker:down": "docker-compose down",
+        "docker:logs": "docker-compose logs -f",
+        "docker:start-db": "docker-compose up -d scli-mysql"
+    },
+    "devDependencies": {
+        "concurrently": "^8.2.2"
+    }
+}
