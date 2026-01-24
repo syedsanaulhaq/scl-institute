@@ -28,28 +28,7 @@ app.use((req, res, next) => {
 });
 
 app.use(cors());
-
-// Capture raw body for debugging
-app.use(express.raw({ type: 'application/json', limit: '50mb' }));
-
-// Log raw body before parsing
-app.use((req, res, next) => {
-    if (req.body && Buffer.isBuffer(req.body)) {
-        const rawStr = req.body.toString('utf8');
-        console.log(`[RAW_BODY] ${req.method} ${req.url}: ${JSON.stringify(rawStr)}`);
-        // Now parse it manually
-        try {
-            req.body = JSON.parse(rawStr);
-        } catch (e) {
-            console.error(`[JSON_PARSE_ERROR] Failed to parse: ${e.message}`);
-            console.error(`[JSON_PARSE_ERROR] Raw bytes: ${req.body.toString('hex')}`);
-            return res.status(400).json({ error: 'Invalid JSON', details: e.message });
-        }
-    }
-    next();
-});
-
-// Standard body parser for other content types
+app.use(bodyParser.json({ limit: '50mb' }));
 app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
 
 // Database Connection
@@ -113,9 +92,14 @@ app.post('/api/login', (req, res) => {
 // V1 Auth Login Endpoint (for frontend compatibility)
 app.post('/api/v1/auth/login', (req, res) => {
     console.log('V1 Auth login endpoint hit:', req.url);
-    console.log('Body data:', JSON.stringify(req.body));
-    const { email, password } = req.body;
+    console.log('Full body:', JSON.stringify(req.body));
+    console.log('Body type:', typeof req.body);
+    console.log('Body is Buffer:', Buffer.isBuffer(req.body));
+    const { email, password } = req.body || {};
+    console.log(`Email: "${email}", Password: "${password}"`);
+    console.log('Expected email: "admin@scl.com", Expected password: "password"');
     const user = users.find(u => u.email === email && u.password === password);
+    console.log('User found:', !!user, 'Users array length:', users.length);
 
     if (user) {
         console.log(`[AUTH] Login successful for: ${email}`);
