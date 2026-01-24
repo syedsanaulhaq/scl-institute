@@ -1,12 +1,11 @@
 version: '3.8'
 
-env_file: .env.production
-
 services:
   scli-mysql:
     image: mysql:8.0
     container_name: scli-mysql-prod
     restart: always
+    env_file: .env.production
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: ${MYSQL_DATABASE}
@@ -31,6 +30,7 @@ services:
     image: bitnami/mariadb:latest
     container_name: scli-moodle-db-prod
     restart: always
+    env_file: .env.production
     environment:
       - MARIADB_ROOT_PASSWORD=${MARIADB_ROOT_PASSWORD}
       - MARIADB_DATABASE=${MARIADB_DATABASE}
@@ -57,6 +57,7 @@ services:
     image: bitnamilegacy/moodle:latest
     container_name: scli-moodle-prod
     restart: always
+    env_file: .env.production
     environment:
       - MOODLE_DATABASE_HOST=scli-moodle-db-prod
       - MOODLE_DATABASE_PORT_NUMBER=3306
@@ -87,6 +88,7 @@ services:
       dockerfile: Dockerfile
     container_name: scli-backend-prod
     restart: always
+    env_file: .env.production
     environment:
       - NODE_ENV=${NODE_ENV}
       - PORT=${PORT}
@@ -120,6 +122,7 @@ services:
       dockerfile: Dockerfile
     container_name: scli-frontend-prod
     restart: always
+    env_file: .env.production
     environment:
       - VITE_API_URL=${VITE_API_URL}
       - VITE_ENV=${VITE_ENV}
