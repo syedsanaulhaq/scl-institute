@@ -48,7 +48,7 @@ services:
     restart: on-failure
     volumes:
       - moodle_data:/bitnami/moodle
-      - ./moodle-scripts:/bitnami/moodle/local/sclsso
+      # - ./moodle-scripts:/bitnami/moodle/local/sclsso
     depends_on:
       - scli-moodle-db
     networks:
