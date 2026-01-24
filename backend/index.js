@@ -28,17 +28,29 @@ app.use((req, res, next) => {
 });
 
 app.use(cors());
-app.use(bodyParser.json({ limit: '50mb' }));
-app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
 
-// Error handler for body parser errors
-app.use((err, req, res, next) => {
-    if (err instanceof SyntaxError && 'body' in err) {
-        console.error('[BODY_PARSE_ERROR]', err.message);
-        return res.status(400).json({ error: 'Invalid JSON in request body', details: err.message });
+// Capture raw body for debugging
+app.use(express.raw({ type: 'application/json', limit: '50mb' }));
+
+// Log raw body before parsing
+app.use((req, res, next) => {
+    if (req.body && Buffer.isBuffer(req.body)) {
+        const rawStr = req.body.toString('utf8');
+        console.log(`[RAW_BODY] ${req.method} ${req.url}: ${JSON.stringify(rawStr)}`);
+        // Now parse it manually
+        try {
+            req.body = JSON.parse(rawStr);
+        } catch (e) {
+            console.error(`[JSON_PARSE_ERROR] Failed to parse: ${e.message}`);
+            console.error(`[JSON_PARSE_ERROR] Raw bytes: ${req.body.toString('hex')}`);
+            return res.status(400).json({ error: 'Invalid JSON', details: e.message });
+        }
     }
-    next(err);
+    next();
 });
+
+// Standard body parser for other content types
+app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
 
 // Database Connection
 const pool = mysql.createPool({
