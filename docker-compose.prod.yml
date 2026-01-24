@@ -18,6 +18,7 @@ services:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
       timeout: 10s
       retries: 5
+      start_period: 30s
     logging:
       driver: "json-file"
       options:
@@ -43,6 +44,7 @@ services:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MARIADB_ROOT_PASSWORD}"]
       timeout: 10s
       retries: 5
+      start_period: 30s
     logging:
       driver: "json-file"
       options:
@@ -99,6 +101,11 @@ services:
         condition: service_healthy
     networks:
       - scl-network-prod
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4000/api"]
+      timeout: 10s
+      retries: 5
+      start_period: 20s
     logging:
       driver: "json-file"
       options:
@@ -116,6 +123,11 @@ services:
       - VITE_ENV=${VITE_ENV}
     networks:
       - scl-network-prod
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000"]
+      timeout: 10s
+      retries: 5
+      start_period: 20s
     logging:
       driver: "json-file"
       options:
@@ -138,6 +150,11 @@ services:
       - scli-moodle
     networks:
       - scl-network-prod
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:80/health"]
+      timeout: 10s
+      retries: 5
+      start_period: 10s
     logging:
       driver: "json-file"
       options:
@@ -150,5 +167,8 @@ networks:
 
 volumes:
   mysql_data_prod:
+    driver: local
   moodle_db_data_prod:
+    driver: local
   moodle_data_prod:
+    driver: local
