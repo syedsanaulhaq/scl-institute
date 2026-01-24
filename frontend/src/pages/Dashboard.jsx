@@ -183,7 +183,9 @@ const Dashboard = ({ user, onLogout }) => {
                                 </p>
 
                                 <div className="mt-6 pt-5 border-t border-gray-50 flex items-center justify-between">
-                                    <span className="text-[10px] uppercase font-black tracking-widest text-gray-400">Authority: Full</span>
+                                    <span className="text-[10px] uppercase font-black tracking-widest text-gray-400">
+                                        Authority: {user.role === 'admin' ? 'Full' : 'Standard'}
+                                    </span>
                                     {module.isSSO ? (
                                         <button
                                             onClick={(e) => { e.stopPropagation(); handleAccessLMS(); }}
