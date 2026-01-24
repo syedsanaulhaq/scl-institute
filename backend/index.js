@@ -19,7 +19,14 @@ const app = express();
 const PORT = process.env.PORT || 4000;
 
 app.use((req, res, next) => {
-    console.log(`${req.method} ${req.url}`);
+    const start = Date.now();
+    res.on('finish', () => {
+        const duration = Date.now() - start;
+        console.log(`${req.method} ${req.url} ${res.statusCode} ${duration}ms`);
+    });
+    if (req.body && Object.keys(req.body).length > 0) {
+        console.log('Body:', JSON.stringify(req.body));
+    }
     next();
 });
 
@@ -88,6 +95,7 @@ app.post('/api/v1/auth/login', (req, res) => {
     const user = users.find(u => u.email === email && u.password === password);
 
     if (user) {
+        console.log(`[AUTH] Login successful for: ${email}`);
         // Generate mock tokens
         const accessToken = `mock_access_token_${Date.now()}`;
         const refreshToken = `mock_refresh_token_${Date.now()}`;
@@ -97,6 +105,7 @@ app.post('/api/v1/auth/login', (req, res) => {
             tokens: { accessToken, refreshToken }
         });
     } else {
+        console.log(`[AUTH] Login failed for: ${email}`);
         res.status(401).json({ message: 'Invalid credentials' });
     }
 });
@@ -139,18 +148,22 @@ app.post('/api/sso/verify', async (req, res) => {
         return res.status(403).json({ success: false, message: 'Invalid secret' });
     }
 
+    const normalizedToken = token.replace(/-/g, '');
+    console.log(`[SSO] Verifying token: ${token} (normalized: ${normalizedToken})`);
+
     try {
-        const [rows] = await pool.query('SELECT * FROM sso_tokens WHERE token = ?', [token]);
+        // Find token by exact match or normalized match
+        const [rows] = await pool.query('SELECT * FROM sso_tokens');
+        const tokenData = rows.find(r => r.token === token || r.token.replace(/-/g, '') === normalizedToken);
 
-        if (rows.length > 0) {
-            const tokenData = rows[0];
-            await pool.query('DELETE FROM sso_tokens WHERE token = ?', [token]); // One-time use via DB
+        if (tokenData) {
+            await pool.query('DELETE FROM sso_tokens WHERE token = ?', [tokenData.token]); // One-time use via DB
 
-            console.log(`[SSO] Verified token from DB: ${token}`);
+            console.log(`[SSO] Verified token successfully: ${tokenData.token}`);
             res.json({ success: true, user: tokenData });
         } else {
-            console.log(`[SSO] Token not found in DB: ${token}`);
-            res.status(400).json({ success: false, message: 'Invalid or expired token (DB)' });
+            console.log(`[SSO] Token not found: ${token}`);
+            res.status(400).json({ success: false, message: 'Invalid or expired token' });
         }
     } catch (err) {
         console.error("Token Verify Error:", err);
