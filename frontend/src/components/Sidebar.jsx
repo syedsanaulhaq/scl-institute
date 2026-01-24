@@ -5,10 +5,11 @@ import {
     Settings,
     ChevronLeft,
     Menu,
-    ShieldCheck
+    ShieldCheck,
+    LogOut
 } from 'lucide-react';
 
-const Sidebar = ({ isOpen, toggle, activePath = '/' }) => {
+const Sidebar = ({ isOpen, toggle, onLogout, activePath = '/' }) => {
     const menuItems = [
         { name: 'Dashboard', icon: LayoutDashboard, path: '/' },
         { name: 'Access LMS', icon: GraduationCap, path: '/lms' },
@@ -46,8 +47,8 @@ const Sidebar = ({ isOpen, toggle, activePath = '/' }) => {
                             <button
                                 key={item.name}
                                 className={`w-full flex items-center h-12 rounded-xl transition-all duration-200 group relative ${isActive
-                                        ? 'bg-scl-purple text-white shadow-lg shadow-scl-purple/20'
-                                        : 'text-purple-100/70 hover:bg-white/5 hover:text-white'
+                                    ? 'bg-scl-purple text-white shadow-lg shadow-scl-purple/20'
+                                    : 'text-purple-100/70 hover:bg-white/5 hover:text-white'
                                     }`}
                             >
                                 <div className={`flex items-center justify-center transition-all duration-300 ${isOpen ? 'pl-4 w-12' : 'w-full'}`}>
@@ -68,9 +69,32 @@ const Sidebar = ({ isOpen, toggle, activePath = '/' }) => {
                     })}
                 </nav>
 
-                {/* Footer Info */}
-                <div className={`p-6 border-t border-white/10 transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0 h-0 overflow-hidden'}`}>
-                    <p className="text-[10px] text-purple-300 uppercase tracking-widest font-bold">Admin Portal v1.0</p>
+                {/* Footer / Logout Area */}
+                <div className="p-3 border-t border-white/10">
+                    <button
+                        onClick={onLogout}
+                        className="w-full flex items-center h-12 rounded-xl text-red-300 hover:bg-red-500/10 hover:text-red-200 transition-all duration-200 group relative"
+                    >
+                        <div className={`flex items-center justify-center transition-all duration-300 ${isOpen ? 'pl-4 w-12' : 'w-full'}`}>
+                            <LogOut className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                        </div>
+                        <span className={`font-bold whitespace-nowrap transition-all duration-300 text-sm overflow-hidden ${isOpen ? 'opacity-100 ml-3' : 'opacity-0 w-0'
+                            }`}>
+                            Logout
+                        </span>
+
+                        {!isOpen && (
+                            <div className="absolute left-full ml-4 px-2 py-1 bg-red-600 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50 shadow-xl">
+                                Logout
+                            </div>
+                        )}
+                    </button>
+
+                    {isOpen && (
+                        <div className="mt-4 px-4 pb-2">
+                            <p className="text-[10px] text-purple-300/50 uppercase tracking-widest font-bold">Admin Portal v1.0</p>
+                        </div>
+                    )}
                 </div>
             </div>
         </aside>
