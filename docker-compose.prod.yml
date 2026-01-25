@@ -172,5 +172,3 @@ volumes:
     driver: local
   moodle_db_data_prod:
     driver: local
-  moodle_data_prod:
-    driver: local

@@ -55,8 +55,6 @@ services:
     restart: always
     ports:
       - "9090:8080"
-    volumes:
-      - moodle_data_dev:/opt/bitnami/moodle
     depends_on:
       scli-moodle-db:
         condition: service_healthy
@@ -117,4 +115,3 @@ networks:
 volumes:
   mysql_data_dev:
   moodle_db_data_dev:
-  moodle_data_dev:
