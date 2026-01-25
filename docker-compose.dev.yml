@@ -1,5 +1,7 @@
 version: '3.8'
 
+env_file: .env.development
+
 services:
   scli-mysql:
     image: mysql:8.0
