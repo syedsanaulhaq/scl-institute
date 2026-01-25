@@ -51,35 +51,6 @@ services:
         max-size: "10m"
         max-file: "3"
 
-  scli-moodle:
-    image: bitnamilegacy/moodle:4.3
-    container_name: scli-moodle-prod
-    restart: no
-    env_file: .env
-    environment:
-      - MOODLE_DATABASE_HOST=scli-moodle-db-prod
-      - MOODLE_DATABASE_PORT_NUMBER=3306
-      - MOODLE_DATABASE_USER=${MARIADB_USER}
-      - MOODLE_DATABASE_PASSWORD=${MARIADB_PASSWORD}
-      - MOODLE_DATABASE_NAME=${MARIADB_DATABASE}
-      - MOODLE_USERNAME=${MOODLE_USERNAME}
-      - MOODLE_PASSWORD=${MOODLE_PASSWORD}
-      - MOODLE_SITE_NAME=${MOODLE_SITE_NAME}
-      - MOODLE_REVERSEPROXY=yes
-      - BITNAMI_DEBUG=false
-    volumes:
-      - moodle_data_prod:/opt/bitnami/moodle
-    depends_on:
-      scli-moodle-db:
-        condition: service_healthy
-    networks:
-      - scl-network-prod
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-
   scli-backend:
     build: 
       context: ./backend
@@ -150,7 +121,6 @@ services:
     depends_on:
       - scli-frontend
       - scli-backend
-      - scli-moodle
     networks:
       - scl-network-prod
     healthcheck:
@@ -172,6 +142,4 @@ volumes:
   mysql_data_prod:
     driver: local
   moodle_db_data_prod:
-    driver: local
-  moodle_data_prod:
     driver: local
