@@ -27,8 +27,25 @@ apt-get install -y php8.2-curl php8.2-zip php8.2-xml php8.2-intl
 apt-get install -y php8.2-fileinfo php8.2-mbstring php8.2-soap
 apt-get install -y php8.2-xmlrpc php8.2-cgi php8.2-redis
 
-# Step 3: Configure PHP settings for Moodle
-echo "[3/8] Configuring PHP for Moodle..."
+# Step 3: Install MariaDB (Moodle Database)
+echo "[3/8] Installing MariaDB Database Server..."
+apt-get install -y mariadb-server mariadb-client php8.2-mysql
+
+# Step 3.5: Configure MariaDB
+echo "[3.5/8] Configuring MariaDB for Moodle..."
+systemctl start mariadb
+systemctl enable mariadb
+
+# Create Moodle database and user
+mysql -u root << EOF
+CREATE DATABASE IF NOT EXISTS bitnami_moodle_prod CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER IF NOT EXISTS 'bn_moodle'@'localhost' IDENTIFIED BY 'MoodleDBPass2026!';
+GRANT ALL PRIVILEGES ON bitnami_moodle_prod.* TO 'bn_moodle'@'localhost';
+FLUSH PRIVILEGES;
+EOF
+
+# Step 4: Configure PHP settings for Moodle
+echo "[4/8] Configuring PHP for Moodle..."
 php_ini="/etc/php/8.2/apache2/php.ini"
 sed -i "s/upload_max_filesize = 2M/upload_max_filesize = 100M/" $php_ini
 sed -i "s/post_max_size = 8M/post_max_size = 100M/" $php_ini
@@ -37,7 +54,7 @@ sed -i "s/default_socket_timeout = 60/default_socket_timeout = 300/" $php_ini
 sed -i "s/;date.timezone =/date.timezone = UTC/" $php_ini
 
 # Enable mod_rewrite for Moodle
-echo "[4/8] Enabling Apache modules..."
+echo "[5/8] Enabling Apache modules..."
 a2enmod rewrite
 a2enmod php8.2
 a2enmod ssl
@@ -108,14 +125,21 @@ echo "====================================="
 echo "✅ LAMP Stack with Moodle 4.3 Installed"
 echo "====================================="
 echo ""
-echo "Next Steps:"
-echo "1. Visit: http://185.211.6.60:8080/moodle"
-echo "2. Complete Moodle setup wizard"
-echo "3. Database Host: scli-moodle-db-prod"
-echo "4. Database Name: bitnami_moodle_prod"
-echo "5. Database User: bn_moodle"
-echo "6. Database Password: MoodleDBPass2026!"
+echo "Moodle 4.3 is now running on LAMP stack:"
+echo "- Apache: Port 8080"
+echo "- PHP 8.2: Configured with all required modules"
+echo "- MariaDB: Running locally (bitnami_moodle_prod database)"
 echo ""
-echo "Apache is listening on port 8080"
-echo "NGINX will proxy from lms.sclsandbox.xyz:443 -> localhost:8080"
+echo "Database Details:"
+echo "- Host: localhost"
+echo "- Database: bitnami_moodle_prod"
+echo "- User: bn_moodle"
+echo "- Password: MoodleDBPass2026!"
+echo ""
+echo "Access Methods:"
+echo "1. Direct: http://185.211.6.60:8080/moodle"
+echo "2. Via NGINX: https://lms.sclsandbox.xyz (proxied from Apache)"
+echo ""
+echo "If you need to restore from database backup:"
+echo "  mysql -u bn_moodle -p bitnami_moodle_prod < backup.sql"
 echo ""

@@ -1,5 +1,6 @@
 <?php
-// Moodle Configuration File - Production
+// Moodle Configuration File - Production LAMP Stack
+// All services (Moodle, Apache, MariaDB, PHP) running on native Linux
 // 185.211.6.60
 
 unset($CFG);
@@ -8,8 +9,7 @@ global $DOCUMENT_ROOT;
 
 $CFG = new stdClass();
 
-// Database configuration
-// MariaDB container port is exposed to host at localhost:3306
+// Database configuration - MariaDB on localhost (LAMP stack)
 $CFG->dbtype    = 'mariadb';
 $CFG->dblibrary = 'native';
 $CFG->dbhost    = 'localhost';

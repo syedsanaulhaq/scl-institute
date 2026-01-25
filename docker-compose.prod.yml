@@ -24,35 +24,6 @@ services:
         max-size: "10m"
         max-file: "3"
 
-  scli-moodle-db:
-    image: bitnami/mariadb:latest
-    container_name: scli-moodle-db-prod
-    restart: always
-    env_file: .env
-    ports:
-      - "3306:3306"
-    environment:
-      - MARIADB_ROOT_PASSWORD=${MARIADB_ROOT_PASSWORD}
-      - MARIADB_DATABASE=${MARIADB_DATABASE}
-      - MARIADB_USER=${MARIADB_USER}
-      - MARIADB_PASSWORD=${MARIADB_PASSWORD}
-      - MARIADB_CHARACTER_SET=${MARIADB_CHARACTER_SET}
-      - MARIADB_COLLATE=${MARIADB_COLLATE}
-    volumes:
-      - moodle_db_data_prod:/var/lib/mysql
-    networks:
-      - scl-network-prod
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MARIADB_ROOT_PASSWORD}"]
-      timeout: 10s
-      retries: 5
-      start_period: 30s
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-
   scli-backend:
     build: 
       context: ./backend
@@ -142,6 +113,4 @@ networks:
 
 volumes:
   mysql_data_prod:
-    driver: local
-  moodle_db_data_prod:
     driver: local
