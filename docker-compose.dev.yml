@@ -51,13 +51,12 @@ services:
       - MOODLE_USERNAME=${MOODLE_USERNAME}
       - MOODLE_PASSWORD=${MOODLE_PASSWORD}
       - MOODLE_SITE_NAME=${MOODLE_SITE_NAME}
-      - MOODLE_REVERSEPROXY=yes
       - BITNAMI_DEBUG=true
-    restart: on-failure
+    restart: always
     ports:
-      - "8080:8080"
+      - "9090:8080"
     volumes:
-      - moodle_data_dev:/bitnami/moodle
+      - moodle_data_dev:/opt/bitnami/moodle
     depends_on:
       scli-moodle-db:
         condition: service_healthy

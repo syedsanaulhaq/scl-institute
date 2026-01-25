@@ -69,7 +69,7 @@ services:
       - MOODLE_REVERSEPROXY=yes
       - BITNAMI_DEBUG=false
     volumes:
-      - moodle_data_prod:/bitnami/moodle
+      - moodle_data_prod:/opt/bitnami/moodle
     depends_on:
       scli-moodle-db:
         condition: service_healthy
