@@ -68,7 +68,7 @@ services:
       - MOODLE_REVERSEPROXY=yes
       - BITNAMI_DEBUG=false
     volumes:
-      - moodle_data_prod:/bitnami/moodle
+      - moodle_data_prod:/opt/bitnami/moodle
     depends_on:
       scli-moodle-db:
         condition: service_healthy
@@ -172,6 +172,4 @@ volumes:
   mysql_data_prod:
     driver: local
   moodle_db_data_prod:
-    driver: local
-  moodle_data_prod:
     driver: local

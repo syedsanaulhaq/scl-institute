@@ -1,7 +1,10 @@
 <?php
 // /local/sclsso/login.php
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
 
-require_once('../../config.php');
+require_once(__DIR__ . '/../../config.php');
 require_once($CFG->libdir . '/authlib.php');
 
 $token = optional_param('token', '', PARAM_RAW); // PARAM_RAW to allow dashes in UUID // PARAM_RAW to allow dashes in UUID
@@ -12,7 +15,7 @@ if (empty($token)) {
 
 // 1. Verify Token with SCL Backend
 $verifier_url = 'http://scli-backend:4000/api/sso/verify';
-$secret = 'supersecretkey'; // Must match backend
+$secret = getenv('SSO_SECRET') ?: 'dev-supersecretkey-changeinproduction';
 
 $data = json_encode(array('token' => $token, 'secret' => $secret));
 
@@ -27,9 +30,9 @@ curl_close($ch);
 
 $response = json_decode($result);
 
-if ($http_code !== 200 || !$response || !$response->success) {
-    $msg = 'SSO Verification Failed. HTTP: ' . $http_code . '. Error: ' . ($response->message ?? 'Unknown' . ' Curl: ' . $curl_error);
-    throw new moodle_exception('generalexceptionmessage', 'error', '', $msg);
+if ($http_code !== 200 || !$response || !isset($response->success) || !$response->success) {
+    $msg = 'SSO Verification Failed. HTTP: ' . $http_code . '. Error: ' . ($response->message ?? 'Unknown') . '. Curl: ' . $curl_error;
+    throw new moodle_exception('generalexceptionmessage', 'local_sclsso', '', $msg);
 }
 
 $sso_user = $response->user;
