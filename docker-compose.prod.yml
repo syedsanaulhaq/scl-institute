@@ -52,7 +52,7 @@ services:
         max-file: "3"
 
   scli-moodle:
-    image: bitnamilegacy/moodle:latest
+    image: bitnamilegacy/moodle:4.3
     container_name: scli-moodle-prod
     restart: always
     env_file: .env.production
