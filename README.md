@@ -140,6 +140,17 @@ For detailed information on how to work with branches, features, and deployments
 
 For complete setup guide, see [QUICK_START.md](QUICK_START.md) and [ENVIRONMENT_SETUP.md](ENVIRONMENT_SETUP.md).
 
+## 🌐 Production Deployment
+
+For deploying to a production server, see [PRODUCTION_SETUP.md](PRODUCTION_SETUP.md).
+
+**Quick Summary:**
+1. Fresh Ubuntu 22.04 LTS server
+2. Run `setup-production-server.sh` as root
+3. All 6 Docker containers deployed automatically
+4. Fully configured HTTPS and SSL
+5. Ready for use
+
 ---
 
 *This document serves as the Request for Comments (RFC) and Implementation Guide for the SCL-Institute Rebuild.*
