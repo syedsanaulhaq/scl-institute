@@ -21,7 +21,7 @@ services:
       # MOODLE_SITE_NAME: My Moodle Site
       # MOODLE_HOST: localhost
       # MOODLE_PROTOCOL: http
-    volumes:
+      # volumes:
       # Moodle typically needs its own data volume
       # - moodle_data_prod:/bitnami/moodle
     networks:

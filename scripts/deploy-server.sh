@@ -102,7 +102,9 @@ if [ ! -f "$PROJECT_DIR/.env.production" ]; then
     print_error "ERROR: .env.production template not found!"
     exit 1
 fi
-print_status ".env.production file ready (review contents before proceeding)"
+print_status ".env.production file ready"
+cp .env.production .env
+print_status "Copied .env.production to .env for Docker Compose"
 
 # Step 8: Create necessary directories
 print_status "Creating data directories..."
