@@ -1,0 +1,8 @@
+# Don't commit large backup files to git
+# They'll be uploaded separately via SCP
+*.sql
+*.tar.gz
+*.dump
+
+# But keep the directory structure
+!.gitkeep

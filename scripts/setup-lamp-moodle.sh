@@ -13,6 +13,12 @@ echo "[1/8] Installing Apache Web Server..."
 apt-get update
 apt-get install -y apache2 apache2-utils
 
+# Add Ondrej PHP PPA (required for PHP 8.2)
+echo "[1.5/8] Adding PHP PPA..."
+apt-get install -y software-properties-common
+add-apt-repository -y ppa:ondrej/php
+apt-get update
+
 # Step 2: Install PHP 8.2 (required for Moodle 4.3)
 echo "[2/8] Installing PHP 8.2..."
 apt-get install -y php8.2 php8.2-fpm php8.2-cli php8.2-common

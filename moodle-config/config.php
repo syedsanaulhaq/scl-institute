@@ -9,9 +9,10 @@ global $DOCUMENT_ROOT;
 $CFG = new stdClass();
 
 // Database configuration
+// MariaDB container port is exposed to host at localhost:3306
 $CFG->dbtype    = 'mariadb';
 $CFG->dblibrary = 'native';
-$CFG->dbhost    = 'localhost';  // Using Docker network bridge
+$CFG->dbhost    = 'localhost';
 $CFG->dbname    = 'bitnami_moodle_prod';
 $CFG->dbuser    = 'bn_moodle';
 $CFG->dbpass    = 'MoodleDBPass2026!';
