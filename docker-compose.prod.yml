@@ -54,7 +54,7 @@ services:
   scli-moodle:
     image: bitnamilegacy/moodle:4.3
     container_name: scli-moodle-prod
-    restart: always
+    restart: no
     env_file: .env
     environment:
       - MOODLE_DATABASE_HOST=scli-moodle-db-prod
