@@ -1,0 +1,105 @@
+# Moodle 4.4 Dockerfile with multiple download fallbacks
+FROM php:8.1-apache
+
+# Install required PHP extensions
+RUN apt-get update && apt-get install -y \
+    libmysqlclient-dev \
+    libpng-dev \
+    libjpeg-dev \
+    libfreetype6-dev \
+    libzip-dev \
+    libxml2-dev \
+    libldap2-dev \
+    libc-client-dev \
+    libkrb5-dev \
+    libcurl4-openssl-dev \
+    libmcrypt-dev \
+    wget \
+    curl \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Configure and install PHP extensions
+RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-configure imap --with-kerberos --with-imap-ssl \
+    && docker-php-ext-install -j$(nproc) \
+    mysqli \
+    pdo_mysql \
+    gd \
+    zip \
+    xml \
+    curl \
+    intl \
+    mbstring \
+    imap \
+    ldap
+
+# Configure PHP for Moodle
+RUN echo "upload_max_filesize = 100M" >> /usr/local/etc/php/conf.d/moodle.ini \
+    && echo "post_max_size = 100M" >> /usr/local/etc/php/conf.d/moodle.ini \
+    && echo "max_execution_time = 300" >> /usr/local/etc/php/conf.d/moodle.ini \
+    && echo "default_socket_timeout = 300" >> /usr/local/etc/php/conf.d/moodle.ini
+
+# Enable Apache modules
+RUN a2enmod rewrite && a2enmod ssl
+
+# Set Apache ServerName
+RUN echo "ServerName localhost" >> /etc/apache2/apache2.conf
+
+# Create Moodle directories
+RUN mkdir -p /var/www/moodle /var/moodledata \
+    && chown -R www-data:www-data /var/www/moodle /var/moodledata \
+    && chmod 0750 /var/www/moodle /var/moodledata
+
+WORKDIR /var/www/moodle
+
+# Download Moodle with fallback methods
+RUN echo "Attempting to download Moodle 4.4..." \
+    && cd /var/www \
+    && (wget -q https://download.moodle.org/download.php/direct/stable44/moodle-4.4.tar.gz 2>/dev/null && echo "Downloaded from official source") \
+    || (wget -q https://github.com/moodle/moodle/archive/refs/heads/master.zip -O moodle-master.zip 2>/dev/null && echo "Downloaded from GitHub") \
+    || (curl -L -o moodle-4.4.tar.gz https://moodle.org/downloads/moodle-4.4.tar.gz 2>/dev/null && echo "Downloaded from moodle.org") \
+    || echo "Warning: All download methods failed, will use git clone as fallback"
+
+# Extract Moodle
+RUN cd /var/www && \
+    if [ -f moodle-4.4.tar.gz ]; then \
+        tar -xzf moodle-4.4.tar.gz && \
+        rm moodle-4.4.tar.gz; \
+    elif [ -f moodle-master.zip ]; then \
+        unzip -q moodle-master.zip && \
+        mv moodle-master moodle && \
+        rm moodle-master.zip; \
+    else \
+        echo "Falling back to git clone..." && \
+        git clone https://github.com/moodle/moodle.git moodle && \
+        cd moodle && \
+        git checkout master; \
+    fi
+
+# Set proper permissions
+RUN chown -R www-data:www-data /var/www/moodle /var/moodledata \
+    && chmod 0750 /var/www/moodle /var/moodledata
+
+# Create Apache VirtualHost for Moodle
+RUN echo '<VirtualHost *:80>' > /etc/apache2/sites-available/moodle.conf \
+    && echo '    ServerName lms.sclsandbox.xyz' >> /etc/apache2/sites-available/moodle.conf \
+    && echo '    DocumentRoot /var/www/moodle' >> /etc/apache2/sites-available/moodle.conf \
+    && echo '    <Directory /var/www/moodle>' >> /etc/apache2/sites-available/moodle.conf \
+    && echo '        Options -Indexes +FollowSymLinks' >> /etc/apache2/sites-available/moodle.conf \
+    && echo '        AllowOverride All' >> /etc/apache2/sites-available/moodle.conf \
+    && echo '        Require all granted' >> /etc/apache2/sites-available/moodle.conf \
+    && echo '    </Directory>' >> /etc/apache2/sites-available/moodle.conf \
+    && echo '    ErrorLog ${APACHE_LOG_DIR}/moodle_error.log' >> /etc/apache2/sites-available/moodle.conf \
+    && echo '    CustomLog ${APACHE_LOG_DIR}/moodle_access.log combined' >> /etc/apache2/sites-available/moodle.conf \
+    && echo '</VirtualHost>' >> /etc/apache2/sites-available/moodle.conf
+
+# Enable the site
+RUN a2dissite 000-default.conf 2>/dev/null || true \
+    && a2ensite moodle.conf
+
+# Expose port
+EXPOSE 80
+
+# Start Apache
+CMD ["apache2-foreground"]

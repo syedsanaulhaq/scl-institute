@@ -144,7 +144,30 @@ for service in "${SERVICES[@]}"; do
     fi
 done
 
-echo ""
+# Step 13: Apply Moodle Reverse Proxy Fix (Auto-HTTPS)
+print_status "Applying Moodle SSL Proxy settings..."
+MAX_RETRIES=30
+COUNT=0
+MOODLE_CONTAINER="scli-moodle-prod"
+
+while [ $COUNT -lt $MAX_RETRIES ]; do
+    if docker exec $MOODLE_CONTAINER ls /opt/bitnami/moodle/config.php >/dev/null 2>&1; then
+        print_status "Found Moodle config.php! Applying SSL fix..."
+        # Append reverse proxy settings ensuring no duplication
+        docker exec $MOODLE_CONTAINER bash -c "grep -q 'reverseproxy' /opt/bitnami/moodle/config.php || echo \"\\\$CFG->sslproxy = true; \\\$CFG->reverseproxy = true;\" >> /opt/bitnami/moodle/config.php"
+        print_status "SSL Fix applied. Restarting Moodle..."
+        docker restart $MOODLE_CONTAINER
+        break
+    else
+        echo "Waiting for Moodle to initialize... ($COUNT/$MAX_RETRIES)"
+        sleep 5
+        COUNT=$((COUNT+1))
+    fi
+done
+
+if [ $COUNT -eq $MAX_RETRIES ]; then
+    print_warning "Timed out waiting for Moodle config. You may need to run the fix manually."
+fi
 echo "======================================================================"
 echo "Setup Complete!"
 echo "======================================================================"
