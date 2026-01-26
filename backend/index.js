@@ -132,7 +132,8 @@ app.post('/api/sso/generate', async (req, res) => {
             'INSERT INTO sso_tokens (token, email, firstname, lastname, role) VALUES (?, ?, ?, ?, ?)',
             [token, user.email, firstname, lastname, user.role]
         );
-        const redirectUrl = `http://localhost:9000?token=${token}`;
+        const moodleUrl = process.env.MOODLE_URL || 'http://localhost:8080';
+        const redirectUrl = `${moodleUrl}/local/sclsso/login.php?token=${token}`;
         console.log(`[SSO] Token created. Redirect: ${redirectUrl}`);
         res.json({ success: true, redirectUrl });
     } catch (err) {
