@@ -5,7 +5,7 @@
 **What**: Unified institutional management system (SCL Main + Moodle LMS)
 **Who**: 5 distinct user roles (Super Admin, LMS Manager, Partners Manager, Admissions Officer, Faculty & HR Manager)
 **Where**: Cloud-hosted production server (185.211.6.60)
-**When**: ~1 week to full deployment
+**When**: 12 weeks to full production deployment
 **Why**: Streamline institutional operations, reduce manual work, ensure compliance
 
 ---
@@ -51,10 +51,10 @@
 ### **For Technical Team (20 min)**
 1. Start: IMPLEMENTATION_ROADMAP.md - "Complete Implementation Plan"
 2. Show: "System Architecture Overview" diagram
-3. Explain: "Step-by-Step Implementation" (Task 1-7)
+3. Explain: "Step-by-Step Implementation" (12-week timeline)
 4. Show: Database structure from TEAM_PRESENTATION.md
 5. Discuss: API endpoints & integration points
-6. Close: "Timeline Summary" (1 week deployment)
+6. Close: "12-Week Timeline Summary"
 
 ### **For Database Team (15 min)**
 1. Start: DATABASE_ARCHITECTURE.md - "Database Schema Overview"
@@ -80,15 +80,14 @@
 **Partner Workflow:**
 7 stages: Registration → Visit Planning → Preparation → Execution → Actions → Risk Mgmt → Renewal
 
-**Implementation:**
-- Task 1: Infrastructure (✅ Done - 4 hrs)
-- Task 2: Moodle SSO (✅ Done - 6 hrs)
-- Task 3: Database (→ Next - 2-3 hrs)
-- Task 4: API (1-2 days)
-- Task 5: Forms (2-3 days)
-- Task 6: Dashboard (1 day)
-- Task 7: Testing (1 day)
-- **Total: ~1 week**
+**Implementation Timeline (12 Weeks):**
+- Week 1: Infrastructure + Moodle SSO (✅ Done - 10 hrs)
+- Weeks 2-3: Database Schema Design & Implementation (Task 3)
+- Weeks 4-6: Backend API Development (Task 4)
+- Weeks 7-9: Frontend Forms & Components (Task 5)
+- Week 10: Dashboard & Navigation (Task 6)
+- Weeks 11-12: Testing, UAT & Production Deployment (Task 7)
+- **Total: 12 weeks to go-live**
 
 ---
 
@@ -200,24 +199,42 @@
 
 ## 🚀 NEXT STEPS
 
-**Immediate (This Week):**
-1. Present documents to team (30 mins)
-2. Answer questions & get approval
-3. Start Task 3: Database schema creation
+**Week 1 (Complete):**
+- ✅ Infrastructure setup (Task 1)
+- ✅ Moodle + SSO integration (Task 2)
 
-**Week 1:**
-- ✅ Database deployed to production
-- ✅ Backend API endpoints created
-- ✅ Frontend forms operational
-- ✅ Dashboard navigation setup
+**Weeks 2-3 (Database Implementation):**
+- Design detailed schema with all 40+ tables
+- Create migration scripts
+- Deploy to production database
+- Verify relationships & indexes
 
-**Week 2-3:**
-- ✅ Integration testing complete
-- ✅ User training delivered
-- ✅ Go-live preparation
-- ✅ Production deployment
+**Weeks 4-6 (Backend API Development):**
+- Develop 60+ API endpoints
+- Implement database models
+- Add role-based access control
+- Create comprehensive documentation
 
-**Post-Launch:**
+**Weeks 7-9 (Frontend Development):**
+- Build 40+ form components
+- Integrate with API endpoints
+- Implement file upload handling
+- Add real-time validation
+
+**Week 10 (Dashboard & Navigation):**
+- Update dashboard with all modules
+- Implement role-based filtering
+- Optimize user interface
+- Add analytics & KPIs
+
+**Weeks 11-12 (Testing & Deployment):**
+- Unit & integration testing
+- User acceptance testing (UAT)
+- Performance optimization
+- Production deployment
+- Go-live & monitoring
+
+**Post-Launch (Weeks 13+):**
 - Monitor system performance
 - Collect user feedback
 - Iterate & improve
@@ -241,7 +258,7 @@ Before you present:
 ## ❓ COMMON QUESTIONS & ANSWERS
 
 **Q: How long until the system is ready?**
-A: ~1 week from database deployment (Tasks 3-7). Tasks 1 & 2 are already complete.
+A: 12 weeks total. Tasks 1 & 2 (infrastructure & Moodle) are complete. Tasks 3-7 span weeks 2-12 with proper testing and deployment.
 
 **Q: Will students need to log in multiple times?**
 A: No - SSO means one login works everywhere. They auto-login to Moodle too.

@@ -1,0 +1,1103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SCL-Institute System Architecture & Workflow - Team Presentation</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --scl-purple: #7c3aed;
+            --scl-dark: #1e1b4b;
+            --scl-light: #f3e8ff;
+            --scl-accent: #a78bfa;
+            --text-dark: #1f2937;
+            --text-light: #6b7280;
+            --border-color: #e5e7eb;
+            --success: #10b981;
+            --warning: #f59e0b;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: var(--text-dark);
+            background: linear-gradient(135deg, #f5f3ff 0%, #faf5ff 100%);
+            overflow-x: hidden;
+        }
+
+        /* Navigation */
+        nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            border-bottom: 2px solid var(--scl-purple);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 1000;
+            box-shadow: 0 2px 10px rgba(124, 58, 237, 0.1);
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--scl-purple);
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+            list-style: none;
+        }
+
+        .nav-links a {
+            text-decoration: none;
+            color: var(--text-dark);
+            font-weight: 500;
+            transition: color 0.3s;
+            cursor: pointer;
+        }
+
+        .nav-links a:hover {
+            color: var(--scl-purple);
+        }
+
+        /* Main Container */
+        main {
+            margin-top: 80px;
+            max-width: 1200px;
+            margin-left: auto;
+            margin-right: auto;
+            padding: 2rem;
+        }
+
+        /* Slide Sections */
+        .slide {
+            background: white;
+            border-radius: 12px;
+            padding: 3rem;
+            margin-bottom: 3rem;
+            box-shadow: 0 4px 20px rgba(124, 58, 237, 0.1);
+            page-break-inside: avoid;
+            scroll-margin-top: 100px;
+        }
+
+        .slide h1 {
+            color: var(--scl-purple);
+            font-size: 2.5rem;
+            margin-bottom: 1.5rem;
+            border-bottom: 3px solid var(--scl-purple);
+            padding-bottom: 1rem;
+        }
+
+        .slide h2 {
+            color: var(--scl-dark);
+            font-size: 2rem;
+            margin-top: 2rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .slide h3 {
+            color: var(--scl-purple);
+            font-size: 1.5rem;
+            margin-top: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .slide p {
+            color: var(--text-light);
+            margin-bottom: 1rem;
+            line-height: 1.8;
+        }
+
+        /* Hero Slide */
+        .hero {
+            background: linear-gradient(135deg, var(--scl-purple) 0%, var(--scl-dark) 100%);
+            color: white;
+            text-align: center;
+            padding: 6rem 3rem;
+        }
+
+        .hero h1 {
+            font-size: 3rem;
+            color: white;
+            border: none;
+            padding: 0;
+            margin-bottom: 1rem;
+        }
+
+        .hero p {
+            font-size: 1.3rem;
+            color: var(--scl-light);
+            margin-bottom: 2rem;
+        }
+
+        .hero-meta {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 2rem;
+            margin-top: 3rem;
+        }
+
+        .meta-item {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 1.5rem;
+            border-radius: 8px;
+            backdrop-filter: blur(10px);
+        }
+
+        .meta-label {
+            font-size: 0.9rem;
+            opacity: 0.8;
+            margin-bottom: 0.5rem;
+        }
+
+        .meta-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+
+        /* Cards Grid */
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2rem;
+            margin: 2rem 0;
+        }
+
+        .card {
+            background: linear-gradient(135deg, var(--scl-light) 0%, white 100%);
+            border-left: 4px solid var(--scl-purple);
+            padding: 1.5rem;
+            border-radius: 8px;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(124, 58, 237, 0.15);
+        }
+
+        .card h4 {
+            color: var(--scl-purple);
+            margin-bottom: 0.5rem;
+        }
+
+        .card p {
+            color: var(--text-light);
+            font-size: 0.95rem;
+        }
+
+        /* Workflow Diagram */
+        .workflow {
+            background: var(--scl-light);
+            border: 2px solid var(--scl-purple);
+            border-radius: 8px;
+            padding: 2rem;
+            margin: 2rem 0;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        /* Table Styles */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 2rem 0;
+            font-size: 0.95rem;
+        }
+
+        th {
+            background: var(--scl-purple);
+            color: white;
+            padding: 1rem;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        td {
+            padding: 1rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        tr:hover {
+            background: var(--scl-light);
+        }
+
+        /* Matrix/Role Table */
+        .role-matrix {
+            width: 100%;
+            margin: 2rem 0;
+        }
+
+        .role-matrix td {
+            border: 1px solid var(--border-color);
+        }
+
+        .role-name {
+            background: var(--scl-purple);
+            color: white;
+            font-weight: 600;
+            padding: 1rem;
+            position: sticky;
+            left: 0;
+            min-width: 200px;
+        }
+
+        .role-desc {
+            background: var(--scl-light);
+            padding: 1rem;
+        }
+
+        /* Timeline */
+        .timeline {
+            position: relative;
+            padding: 2rem 0;
+        }
+
+        .timeline-item {
+            display: flex;
+            margin-bottom: 2rem;
+            position: relative;
+        }
+
+        .timeline-marker {
+            width: 40px;
+            height: 40px;
+            background: var(--scl-purple);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            flex-shrink: 0;
+            margin-right: 2rem;
+        }
+
+        .timeline-marker.done {
+            background: var(--success);
+        }
+
+        .timeline-content h4 {
+            color: var(--scl-purple);
+            margin-bottom: 0.5rem;
+        }
+
+        .timeline-content p {
+            color: var(--text-light);
+        }
+
+        /* Checklist */
+        .checklist {
+            list-style: none;
+            margin: 1.5rem 0;
+        }
+
+        .checklist li {
+            padding: 0.8rem 0;
+            padding-left: 2rem;
+            position: relative;
+        }
+
+        .checklist li:before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: var(--success);
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+
+        /* Code Block */
+        code {
+            background: var(--scl-light);
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            color: var(--scl-dark);
+        }
+
+        pre {
+            background: var(--scl-dark);
+            color: var(--scl-light);
+            padding: 1.5rem;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 1rem 0;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            line-height: 1.4;
+        }
+
+        .architecture-diagram {
+            background: var(--scl-light);
+            border: 2px solid var(--scl-purple);
+            padding: 2rem;
+            border-radius: 8px;
+            margin: 2rem 0;
+            font-family: monospace;
+            overflow-x: auto;
+            white-space: pre;
+        }
+
+        /* Stat Boxes */
+        .stat-box {
+            background: linear-gradient(135deg, var(--scl-purple), var(--scl-dark));
+            color: white;
+            padding: 2rem;
+            border-radius: 8px;
+            text-align: center;
+            margin: 1rem 0;
+            min-height: 150px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .stat-number {
+            font-size: 3rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .stat-boxes {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        /* Button */
+        .btn {
+            display: inline-block;
+            background: var(--scl-purple);
+            color: white;
+            padding: 0.75rem 2rem;
+            border-radius: 6px;
+            text-decoration: none;
+            transition: background 0.3s;
+            border: none;
+            cursor: pointer;
+            font-size: 1rem;
+            margin: 0.5rem;
+        }
+
+        .btn:hover {
+            background: var(--scl-dark);
+        }
+
+        .btn-secondary {
+            background: var(--scl-accent);
+        }
+
+        .btn-secondary:hover {
+            background: var(--scl-purple);
+        }
+
+        /* Print Styles */
+        @media print {
+            nav {
+                display: none;
+            }
+
+            main {
+                margin-top: 0;
+            }
+
+            .slide {
+                page-break-after: always;
+                box-shadow: none;
+                border: 1px solid var(--border-color);
+            }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .nav-links {
+                gap: 1rem;
+                font-size: 0.9rem;
+            }
+
+            .slide {
+                padding: 1.5rem;
+            }
+
+            .slide h1 {
+                font-size: 2rem;
+            }
+
+            .slide h2 {
+                font-size: 1.5rem;
+            }
+
+            main {
+                padding: 1rem;
+            }
+
+            .hero {
+                padding: 3rem 1.5rem;
+            }
+
+            .hero h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav>
+        <div class="logo">🏛️ SCL-Institute</div>
+        <ul class="nav-links">
+            <li><a href="#overview">Overview</a></li>
+            <li><a href="#workflows">Workflows</a></li>
+            <li><a href="#database">Database</a></li>
+            <li><a href="#roles">Roles</a></li>
+            <li><a href="#timeline">Timeline</a></li>
+        </ul>
+    </nav>
+
+    <main>
+        <!-- SLIDE 1: Hero -->
+        <section class="slide hero">
+            <h1>SCL-Institute</h1>
+            <h2 style="font-size: 1.8rem; color: var(--scl-light); border: none;">System Architecture & Workflow</h2>
+            <p>Unified Institutional Management System with Moodle LMS Integration</p>
+            
+            <div class="hero-meta">
+                <div class="meta-item">
+                    <div class="meta-label">📊 Database</div>
+                    <div class="meta-value">40+ Tables</div>
+                </div>
+                <div class="meta-item">
+                    <div class="meta-label">👥 Roles</div>
+                    <div class="meta-value">5 Defined</div>
+                </div>
+                <div class="meta-item">
+                    <div class="meta-label">⚙️ APIs</div>
+                    <div class="meta-value">60+ Endpoints</div>
+                </div>
+                <div class="meta-item">
+                    <div class="meta-label">📈 Timeline</div>
+                    <div class="meta-value">1 Week</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SLIDE 2: System Overview -->
+        <section class="slide" id="overview">
+            <h1>🎯 System Overview & Vision</h1>
+            
+            <h2>What We're Building</h2>
+            <p>A <strong>unified institutional management system</strong> that integrates:</p>
+            <ul class="checklist">
+                <li><strong>SCL Main System</strong> - Forms, Admin, Governance</li>
+                <li><strong>Moodle LMS</strong> - Learning delivery, assessments</li>
+                <li><strong>ERP Capabilities</strong> - Finance, HR, Compliance</li>
+            </ul>
+
+            <h2>3-Tier Architecture</h2>
+            <div class="architecture-diagram">
+┌─────────────────────────────────────────────────────────────────┐
+│                      PRESENTATION LAYER                         │
+│        (React Frontend @ sclsandbox.xyz)                        │
+│  Dashboard | Forms | Reports | User Management                 │
+└────────────────────────────┬────────────────────────────────────┘
+                             │
+┌────────────────────────────┴────────────────────────────────────┐
+│                      BUSINESS LOGIC LAYER                       │
+│        (Node.js API @ backend, port 4000)                       │
+│  API Routes | Validation | Middleware | Auth | SSO Bridge      │
+└────────────────────────────┬────────────────────────────────────┘
+                             │
+┌────────────────────────────┴────────────────────────────────────┐
+│                      DATA LAYER                                 │
+│        (MySQL @ port 3306)                                      │
+│  40+ Tables | Relationships | Audit Trail | Reports             │
+└─────────────────────────────────────────────────────────────────┘
+                             ↓
+                  (SSO Integration)
+                             ↓
+                      ┌──────────────────┐
+                      │  MOODLE LMS      │
+                      │ (lms.sclsandbox) │
+                      └──────────────────┘</div>
+        </section>
+
+        <!-- SLIDE 3: Student Workflow -->
+        <section class="slide" id="workflows">
+            <h1>🎓 Student Lifecycle Workflow</h1>
+
+            <div class="timeline">
+                <div class="timeline-item">
+                    <div class="timeline-marker done">1</div>
+                    <div class="timeline-content">
+                        <h4>Application Phase</h4>
+                        <p>Student completes application form with personal info, academic background, course selection, and document uploads</p>
+                    </div>
+                </div>
+
+                <div class="timeline-item">
+                    <div class="timeline-marker done">2</div>
+                    <div class="timeline-content">
+                        <h4>Application Review</h4>
+                        <p>Admissions officer reviews documents, verifies qualifications, and makes academic suitability assessment</p>
+                    </div>
+                </div>
+
+                <div class="timeline-item">
+                    <div class="timeline-marker done">3</div>
+                    <div class="timeline-content">
+                        <h4>Admission Decision</h4>
+                        <p>Offer letter generated and sent to student with acceptance deadline</p>
+                    </div>
+                </div>
+
+                <div class="timeline-item">
+                    <div class="timeline-marker done">4</div>
+                    <div class="timeline-content">
+                        <h4>Student Onboarding</h4>
+                        <p>Student completes orientation: handbook, policies, IT setup, consent forms, declarations</p>
+                    </div>
+                </div>
+
+                <div class="timeline-item">
+                    <div class="timeline-marker done">5</div>
+                    <div class="timeline-content">
+                        <h4>Moodle Enrollment</h4>
+                        <p><strong>AUTOMATIC</strong> - SSO token generated, student auto-enrolled in course</p>
+                    </div>
+                </div>
+
+                <div class="timeline-item">
+                    <div class="timeline-marker">6</div>
+                    <div class="timeline-content">
+                        <h4>Active Learning</h4>
+                        <p>Course delivery, schedules, assignments, exams, grading all in Moodle</p>
+                    </div>
+                </div>
+
+                <div class="timeline-item">
+                    <div class="timeline-marker">7</div>
+                    <div class="timeline-content">
+                        <h4>Support & Services</h4>
+                        <p>Student can submit support requests, complaints, appeals through SCL system</p>
+                    </div>
+                </div>
+
+                <div class="timeline-item">
+                    <div class="timeline-marker">8</div>
+                    <div class="timeline-content">
+                        <h4>Completion</h4>
+                        <p>Final grades recorded, certificate issued, record archived</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SLIDE 4: Awarding Body Workflow -->
+        <section class="slide">
+            <h1>🔍 Awarding Body & Partner Workflow</h1>
+
+            <div class="timeline">
+                <div class="timeline-item">
+                    <div class="timeline-marker">1</div>
+                    <div class="timeline-content">
+                        <h4>Partner Registration</h4>
+                        <p>Super Admin registers awarding body with organization details</p>
+                    </div>
+                </div>
+
+                <div class="timeline-item">
+                    <div class="timeline-marker">2</div>
+                    <div class="timeline-content">
+                        <h4>Visit Planning</h4>
+                        <p>Inspection visit scheduled - type, date, lead contact, coordinator assigned</p>
+                    </div>
+                </div>
+
+                <div class="timeline-item">
+                    <div class="timeline-marker">3</div>
+                    <div class="timeline-content">
+                        <h4>Pre-Visit Preparation</h4>
+                        <p>Checklist of tasks: profiles, specs, records, CVs, policies, facilities prepared</p>
+                    </div>
+                </div>
+
+                <div class="timeline-item">
+                    <div class="timeline-marker">4</div>
+                    <div class="timeline-content">
+                        <h4>Visit Execution</h4>
+                        <p>Scheduled activities: welcome, meetings, reviews, feedback, closing</p>
+                    </div>
+                </div>
+
+                <div class="timeline-item">
+                    <div class="timeline-marker">5</div>
+                    <div class="timeline-content">
+                        <h4>Post-Visit Actions</h4>
+                        <p>Action items recorded with priority, owner, and deadline tracking</p>
+                    </div>
+                </div>
+
+                <div class="timeline-item">
+                    <div class="timeline-marker">6</div>
+                    <div class="timeline-content">
+                        <h4>Risk Management</h4>
+                        <p>Risks identified during visit logged and tracked for mitigation</p>
+                    </div>
+                </div>
+
+                <div class="timeline-item">
+                    <div class="timeline-marker">7</div>
+                    <div class="timeline-content">
+                        <h4>Subscriptions & Renewals</h4>
+                        <p>Partnership costs tracked with renewal reminders</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SLIDE 5: Database Overview -->
+        <section class="slide" id="database">
+            <h1>🗄️ Database Structure Overview</h1>
+
+            <h2>9 Core Layers</h2>
+            <div class="cards-grid">
+                <div class="card">
+                    <h4>1. Authentication & Authorization</h4>
+                    <p>Users, roles, permissions, SSO tokens</p>
+                </div>
+                <div class="card">
+                    <h4>2. Student Management</h4>
+                    <p>Profiles, applications, admissions, onboarding</p>
+                </div>
+                <div class="card">
+                    <h4>3. Course Management</h4>
+                    <p>Courses, approvals, compliance, inductions</p>
+                </div>
+                <div class="card">
+                    <h4>4. Partner & Compliance</h4>
+                    <p>Partners, visits, subscriptions, governance</p>
+                </div>
+                <div class="card">
+                    <h4>5. Faculty & HR</h4>
+                    <p>Faculty profiles, applications, onboarding, HR records</p>
+                </div>
+                <div class="card">
+                    <h4>6. Learning Management</h4>
+                    <p>Course delivery, timetables, assessments, grades</p>
+                </div>
+                <div class="card">
+                    <h4>7. Support & Compliance</h4>
+                    <p>Support requests, complaints, appeals, misconduct</p>
+                </div>
+                <div class="card">
+                    <h4>8. ERP</h4>
+                    <p>Finance, HR records, suppliers</p>
+                </div>
+                <div class="card">
+                    <h4>9. Support Systems</h4>
+                    <p>Documents, audit logs, compliance tracking</p>
+                </div>
+            </div>
+
+            <h2>Key Statistics</h2>
+            <div class="stat-boxes">
+                <div class="stat-box">
+                    <div class="stat-number">40+</div>
+                    <div class="stat-label">Database Tables</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-number">5</div>
+                    <div class="stat-label">Core Roles Defined</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-number">60+</div>
+                    <div class="stat-label">API Endpoints</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-number">∞</div>
+                    <div class="stat-label">Scalability</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SLIDE 6: Role-Based Access -->
+        <section class="slide" id="roles">
+            <h1>🔐 Role-Based Access Matrix</h1>
+
+            <h2>5 Core User Roles</h2>
+
+            <h3>🛡️ Super Admin</h3>
+            <ul class="checklist">
+                <li>Full system access (ALL modules)</li>
+                <li>User management & role assignment</li>
+                <li>System configuration & settings</li>
+                <li>Reports & analytics access</li>
+                <li>Audit logs & compliance oversight</li>
+            </ul>
+
+            <h3>📚 LMS Manager</h3>
+            <ul class="checklist">
+                <li>Course delivery & management</li>
+                <li>Schedules & timetable creation</li>
+                <li>Assessments & assignments setup</li>
+                <li>Student progress tracking</li>
+                <li>Grade management & reporting</li>
+            </ul>
+
+            <h3>🤝 Partners & Associates Manager</h3>
+            <ul class="checklist">
+                <li>Partner registration & management</li>
+                <li>Awarding body visit scheduling</li>
+                <li>Inspection preparation & tracking</li>
+                <li>Post-visit action management</li>
+                <li>Subscription & membership management</li>
+            </ul>
+
+            <h3>📋 Admissions Officer</h3>
+            <ul class="checklist">
+                <li>Student application management</li>
+                <li>Application review & assessment</li>
+                <li>Admission decision & offer letters</li>
+                <li>Student onboarding coordination</li>
+                <li>Deferral request processing</li>
+            </ul>
+
+            <h3>👨‍💼 Faculty & HR Manager</h3>
+            <ul class="checklist">
+                <li>Faculty recruitment & applications</li>
+                <li>Selection process management</li>
+                <li>Faculty onboarding</li>
+                <li>HR records & operations</li>
+                <li>Supplier & vendor management</li>
+            </ul>
+        </section>
+
+        <!-- SLIDE 7: Integration -->
+        <section class="slide">
+            <h1>🔗 System Integration Architecture</h1>
+
+            <h2>How Systems Connect</h2>
+            <div class="architecture-diagram">
+                    SCL FRONTEND (React)
+                           ↓
+                   NGINX Router
+        (sclsandbox.xyz, lms.sclsandbox.xyz)
+                    ↙         ↓         ↘
+            Frontend API  Backend API   Moodle LMS
+            (port 3000)   (port 4000)  (port 8080)
+                    ↓         ↓         ↓
+           ┌─────────────────────────┬──────────────────┐
+           │  SCL SYSTEM             │  MOODLE          │
+           │  (MySQL DB)             │  (MariaDB)       │
+           │                         │                  │
+           │ • users                 │ • mdl_user       │
+           │ • roles                 │ • mdl_course     │
+           │ • students              │ • mdl_enrol      │
+           │ • courses               │ • mdl_grades     │
+           │ • applications          │ • mdl_assign     │
+           │ • admissions            │ • mdl_quiz       │
+           │ • faculty               │ • mdl_modules    │
+           │ • governance            │                  │
+           │ • finance               │  [Moodle data]   │
+           │ • sso_tokens ◄─────────────────┐         │
+           │   (SSO Bridge)                  │         │
+           └─────────────────────────────────┼──────────┘
+                                             │
+                        SSO Token Exchange
+                        (token verification)
+            </div>
+
+            <h2>Single Sign-On Flow</h2>
+            <ol class="checklist">
+                <li>User logs in to SCL Frontend</li>
+                <li>User clicks "Access LMS" card</li>
+                <li>Frontend calls /api/sso/generate</li>
+                <li>Backend creates SSO token & stores in database</li>
+                <li>Backend redirects to Moodle with token</li>
+                <li>Moodle verifies token with backend</li>
+                <li>Moodle auto-creates/updates user</li>
+                <li>User auto-logged into Moodle dashboard</li>
+            </ol>
+        </section>
+
+        <!-- SLIDE 8: Implementation Timeline -->
+        <section class="slide" id="timeline">
+            <h1>📅 12-Week Implementation Timeline</h1>
+
+            <h2>Phased Project Schedule</h2>
+
+            <div class="timeline">
+                <div class="timeline-item">
+                    <div class="timeline-marker done">✓</div>
+                    <div class="timeline-content">
+                        <h4>WEEK 1: Infrastructure Setup (✅ Complete)</h4>
+                        <p>Ubuntu server, Docker, GitHub, SSH keys configured. Infrastructure ready for development.</p>
+                    </div>
+                </div>
+
+                <div class="timeline-item">
+                    <div class="timeline-marker done">✓</div>
+                    <div class="timeline-content">
+                        <h4>WEEK 1: Moodle & SSO Integration (✅ Complete)</h4>
+                        <p>Moodle installed, SSO plugin created, NGINX configured. Seamless LMS enrollment ready.</p>
+                    </div>
+                </div>
+
+                <div class="timeline-item">
+                    <div class="timeline-marker">3</div>
+                    <div class="timeline-content">
+                        <h4>WEEKS 2-3: Database Schema Implementation</h4>
+                        <p>Design & deploy 40+ tables, relationships, indexes. Production migration & verification.</p>
+                    </div>
+                </div>
+
+                <div class="timeline-item">
+                    <div class="timeline-marker">4</div>
+                    <div class="timeline-content">
+                        <h4>WEEKS 4-6: Backend API Development</h4>
+                        <p>Create 60+ endpoints. Partner, student, course, faculty APIs. Full testing & documentation.</p>
+                    </div>
+                </div>
+
+                <div class="timeline-item">
+                    <div class="timeline-marker">5</div>
+                    <div class="timeline-content">
+                        <h4>WEEKS 7-9: Frontend Forms & Components</h4>
+                        <p>Build 40+ form components. Student, faculty, partner forms. File upload, validation, API integration.</p>
+                    </div>
+                </div>
+
+                <div class="timeline-item">
+                    <div class="timeline-marker">6</div>
+                    <div class="timeline-content">
+                        <h4>WEEK 10: Dashboard & Navigation</h4>
+                        <p>Integrate all modules. Role-based filtering, KPIs, navigation polish, final UX improvements.</p>
+                    </div>
+                </div>
+
+                <div class="timeline-item">
+                    <div class="timeline-marker">7</div>
+                    <div class="timeline-content">
+                        <h4>WEEKS 11-12: Testing, UAT & Deployment</h4>
+                        <p>Comprehensive testing, user acceptance testing, performance optimization, production deployment & go-live.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="stat-boxes">
+                <div class="stat-box">
+                    <div class="stat-number">✅ 10 hrs</div>
+                    <div class="stat-label">Completed (Week 1)</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-number">11 wks</div>
+                    <div class="stat-label">Development Remaining</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-number">12 wks</div>
+                    <div class="stat-label">Total to Production</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SLIDE 9: Success Criteria -->
+        <section class="slide">
+            <h1>✅ Success Criteria</h1>
+
+            <h2>After Complete Implementation</h2>
+
+            <h3>✓ Authentication & Access</h3>
+            <ul class="checklist">
+                <li>Users can login with email/password</li>
+                <li>Passwordless SSO to Moodle works</li>
+                <li>Role-based dashboard displays correct modules</li>
+            </ul>
+
+            <h3>✓ Student Workflow</h3>
+            <ul class="checklist">
+                <li>Application → Review → Admission → Onboarding → Moodle enrollment</li>
+                <li>All data persisted in database</li>
+                <li>No manual steps required</li>
+            </ul>
+
+            <h3>✓ Compliance & Governance</h3>
+            <ul class="checklist">
+                <li>Audit trail tracks all changes</li>
+                <li>Risk register maintained</li>
+                <li>Compliance checklist managed</li>
+            </ul>
+
+            <h3>✓ Multi-User Support</h3>
+            <ul class="checklist">
+                <li>5 different roles with proper access control</li>
+                <li>No unauthorized data access</li>
+                <li>Reports available per role</li>
+            </ul>
+
+            <h3>✓ Data Integrity & Performance</h3>
+            <ul class="checklist">
+                <li>Foreign key constraints enforced</li>
+                <li>No orphaned records</li>
+                <li>API responses < 500ms</li>
+                <li>Form submissions < 1 second</li>
+            </ul>
+        </section>
+
+        <!-- SLIDE 10: Key Features -->
+        <section class="slide">
+            <h1>💎 Key Features to Highlight</h1>
+
+            <div class="cards-grid">
+                <div class="card">
+                    <h4>🔐 Single Sign-On</h4>
+                    <p>One login for all systems. Auto-enrollment to Moodle. No password duplication.</p>
+                </div>
+                <div class="card">
+                    <h4>⚙️ Automated Workflows</h4>
+                    <p>Application → admission → Moodle enrollment automatic. No manual data entry.</p>
+                </div>
+                <div class="card">
+                    <h4>👥 Role-Based Access</h4>
+                    <p>5 distinct roles with granular permissions. No unauthorized access.</p>
+                </div>
+                <div class="card">
+                    <h4>✔️ Compliance Built-In</h4>
+                    <p>Audit trail on all changes. Risk register. Compliance checklist managed.</p>
+                </div>
+                <div class="card">
+                    <h4>🏛️ Institutional Governance</h4>
+                    <p>Policies & procedures documented. Risk tracking. Compliance monitoring.</p>
+                </div>
+                <div class="card">
+                    <h4>📚 Learning Integration</h4>
+                    <p>Seamless Moodle integration. Course delivery. Assessment & grading.</p>
+                </div>
+                <div class="card">
+                    <h4>📈 Scalability</h4>
+                    <p>Architecture supports multiple institutions. Designed for growth.</p>
+                </div>
+                <div class="card">
+                    <h4>📊 Comprehensive Reporting</h4>
+                    <p>Reports for all modules. Analytics & insights. Performance tracking.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- SLIDE 11: Talking Points -->
+        <section class="slide">
+            <h1>💡 Presentation Talking Points</h1>
+
+            <h2>"Why This Architecture?"</h2>
+            <p><strong>Unified:</strong> One system for all institutional needs</p>
+            <p><strong>Scalable:</strong> Supports growth without rewrite</p>
+            <p><strong>Secure:</strong> RBAC, audit trail, compliance built-in</p>
+            <p><strong>Efficient:</strong> Automated workflows reduce manual work</p>
+            <p><strong>Compliant:</strong> Governance & risk management integrated</p>
+
+            <h2>"What's Already Done?"</h2>
+            <ul class="checklist">
+                <li>Production server configured (Ubuntu Linux, Docker)</li>
+                <li>Moodle LMS installed & ready</li>
+                <li>SSO integration tested & working</li>
+                <li>Domain routing configured (sclsandbox.xyz, lms.sclsandbox.xyz)</li>
+                <li>Git workflow established (main + develop branches)</li>
+            </ul>
+
+            <h2>"What's Next?"</h2>
+            <ul class="checklist">
+                <li>Database schema deployment (2-3 hours)</li>
+                <li>Backend API development (1-2 days)</li>
+                <li>Frontend forms & UI (2-3 days)</li>
+                <li>Dashboard & navigation (1 day)</li>
+                <li>Testing & go-live (1 day)</li>
+            </ul>
+        </section>
+
+        <!-- SLIDE 12: Closing -->
+        <section class="slide" style="text-align: center;">
+            <h1>🚀 Ready to Go Live!</h1>
+            
+            <p style="font-size: 1.3rem; color: var(--scl-purple); margin: 2rem 0;">
+                Complete institutional management system,<br>
+                production-ready infrastructure,<br>
+                1 week to full deployment.
+            </p>
+
+            <h2 style="color: var(--scl-dark); margin-top: 3rem;">Questions?</h2>
+            <p style="color: var(--text-light); font-size: 1.1rem;">Check the documentation:</p>
+            <ul style="list-style: none; margin-top: 2rem;">
+                <li>📄 TEAM_PRESENTATION.md - Full details</li>
+                <li>📋 IMPLEMENTATION_ROADMAP.md - Technical specs</li>
+                <li>🗄️ DATABASE_ARCHITECTURE.md - Database design</li>
+            </ul>
+
+            <div style="margin-top: 3rem;">
+                <button class="btn" onclick="window.print()">🖨️ Print Presentation</button>
+                <a href="https://github.com/syedsanaulhaq/scl-institute" class="btn btn-secondary">📦 GitHub Repository</a>
+            </div>
+
+            <p style="margin-top: 3rem; color: var(--text-light); font-size: 0.9rem;">
+                SCL-Institute © 2026 | System Architecture Presentation
+            </p>
+        </section>
+    </main>
+
+    <script>
+        // Smooth scrolling for navigation links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function(e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            });
+        });
+
+        // Highlight nav link on scroll
+        window.addEventListener('scroll', () => {
+            const sections = document.querySelectorAll('.slide[id]');
+            let current = '';
+            
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                if (scrollY >= sectionTop - 100) {
+                    current = section.getAttribute('id');
+                }
+            });
+
+            document.querySelectorAll('.nav-links a').forEach(link => {
+                link.classList.remove('active');
+                if (link.getAttribute('href') === `#${current}`) {
+                    link.style.color = 'var(--scl-purple)';
+                    link.style.fontWeight = '600';
+                } else {
+                    link.style.color = 'var(--text-dark)';
+                    link.style.fontWeight = '500';
+                }
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1142,52 +1142,77 @@ BACKEND API (Node.js @ port 4000)
 ## 📈 IMPLEMENTATION TIMELINE
 
 ```
-TASK 1: Infrastructure (✅ COMPLETE)
-├─ Server setup          │ Ubuntu 20.04 Linux          │ ✅
-├─ Docker/Compose        │ Containerization            │ ✅
-├─ GitHub setup          │ Repository & workflow       │ ✅
-├─ SSH access            │ Passwordless auth           │ ✅
-└─ Time: 4 hours total
+WEEK 1: FOUNDATION (Complete ✅)
+└─ TASK 1: Infrastructure Setup (✅ COMPLETE)
+   ├─ Server setup          │ Ubuntu 20.04 Linux          │ ✅
+   ├─ Docker/Compose        │ Containerization            │ ✅
+   ├─ GitHub setup          │ Repository & workflow       │ ✅
+   ├─ SSH access            │ Passwordless auth           │ ✅
+   └─ Time: 4 hours
 
-TASK 2: Moodle & SSO (✅ COMPLETE)
-├─ Moodle container      │ Bitnami Moodle 4.3         │ ✅
-├─ Database setup        │ MariaDB + MySQL            │ ✅
-├─ SSO plugin            │ Custom plugin created      │ ✅
-├─ NGINX config          │ Domain routing             │ ✅
-└─ Time: 6 hours total
+└─ TASK 2: Moodle & SSO (✅ COMPLETE)
+   ├─ Moodle container      │ Bitnami Moodle 4.3         │ ✅
+   ├─ Database setup        │ MariaDB + MySQL            │ ✅
+   ├─ SSO plugin            │ Custom plugin created      │ ✅
+   ├─ NGINX config          │ Domain routing             │ ✅
+   └─ Time: 6 hours
+   └─ STATUS: Infrastructure ready for development
 
-TASK 3: Database Schema (→ NEXT - 2-3 hours)
-├─ Create all 40+ tables
-├─ Set up relationships
-├─ Create indexes
-├─ Run migrations
-└─ Deploy to production
+WEEKS 2-3: DATABASE SCHEMA (→ NEXT)
+└─ TASK 3: Database Schema Design & Implementation (2-3 weeks)
+   ├─ Create all 40+ tables
+   ├─ Foreign key relationships
+   ├─ Performance indexes
+   ├─ Security constraints
+   ├─ Migration test runs
+   ├─ Run migrations on production
+   └─ Verify integrity & backup
 
-TASK 4: Backend API (1-2 days)
-├─ Create 50+ API endpoints
-├─ Database models
-├─ Validation & middleware
-└─ Testing
+WEEKS 4-6: BACKEND API (3 weeks)
+└─ TASK 4: Backend API Development (1-2 weeks per task estimate)
+   ├─ Create 60+ API endpoints
+   ├─ Database models & queries
+   ├─ Validation & middleware
+   ├─ Role-based access control
+   ├─ Audit logging
+   ├─ Error handling
+   ├─ API documentation
+   └─ Unit testing for all endpoints
 
-TASK 5: Frontend Forms (2-3 days)
-├─ Build 40+ form components
-├─ File upload handling
-├─ Form validation
-└─ Integration with API
+WEEKS 7-9: FRONTEND FORMS (3 weeks)
+└─ TASK 5: Frontend Forms & Components (2-3 weeks task estimate)
+   ├─ Build 40+ form components
+   ├─ Form validation logic
+   ├─ File upload handling
+   ├─ Real-time field validation
+   ├─ Integration with API
+   ├─ Status workflow buttons
+   ├─ Search & filter features
+   └─ Form testing
 
-TASK 6: Dashboard & Navigation (1 day)
-├─ Update dashboard
-├─ Module navigation
-├─ Role-based filtering
-└─ User experience improvements
+WEEK 10: DASHBOARD & NAVIGATION (1 week)
+└─ TASK 6: Dashboard & Navigation (1 week)
+   ├─ Update dashboard with all modules
+   ├─ Role-based module filtering
+   ├─ Module card components
+   ├─ Module listing pages
+   ├─ Navigation optimization
+   ├─ Add KPIs & quick stats
+   └─ User experience polish
 
-TASK 7: Testing & Deployment (1 day)
-├─ Unit tests
-├─ Integration tests
-├─ Production deployment
-└─ Smoke tests
+WEEKS 11-12: TESTING & DEPLOYMENT (2 weeks)
+└─ TASK 7: Testing, UAT & Production Deployment (2 weeks)
+   ├─ Unit tests (all modules)
+   ├─ Integration tests (all workflows)
+   ├─ User acceptance testing (UAT)
+   ├─ Performance optimization
+   ├─ Security audit
+   ├─ Data migration & backup
+   ├─ Production deployment
+   ├─ Go-live checklist
+   └─ Smoke tests & monitoring
 
-TOTAL: ~1 week to production
+STATUS: 12 WEEKS TO PRODUCTION
 ```
 
 ---
