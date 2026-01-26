@@ -41,7 +41,7 @@ services:
       - MOODLE_USERNAME=admin
       - MOODLE_PASSWORD=SCLInst!2026
       - MOODLE_SITE_NAME=SCL Institute LMS
-      - MOODLE_REVERSEPROXY=yes
+      - MOODLE_REVERSEPROXY=no
       - BITNAMI_DEBUG=true
     volumes:
       - moodle_data_prod:/bitnami/moodle
