@@ -1,4 +1,30 @@
 services:
+  scli-moodle-db:
+    image: bitnami/mariadb:latest
+    container_name: scli-moodle-db-prod
+    restart: always
+    environment:
+      - MARIADB_ROOT_PASSWORD=moodleroot
+      - MARIADB_DATABASE=bitnami_moodle
+      - MARIADB_USER=bn_moodle
+      - MARIADB_PASSWORD=bitnami_moodle_password
+      - MARIADB_CHARACTER_SET=utf8mb4
+      - MARIADB_COLLATE=utf8mb4_unicode_ci
+    volumes:
+      - moodle_db_data_prod:/var/lib/mysql
+    networks:
+      - scl-network-prod
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-pmoodleroot"]
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
   scli-moodle:
     image: bitnamilegacy/moodle:4.3
     container_name: scli-moodle-prod
@@ -7,29 +33,22 @@ services:
       - "8080:80"
     env_file: .env
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-      # The following environment variables are typically for Moodle,
-      # but the instruction only provided MYSQL_ROOT_PASSWORD.
-      # Assuming these are placeholders or need to be filled in by the user.
-      # Moodle specific environment variables would typically include:
-      # MOODLE_DATABASE_HOST: scli-mysql-prod
-      # MOODLE_DATABASE_PORT: ${DB_PORT}
-      # MOODLE_DATABASE_USER: ${DB_USER}
-      # MOODLE_DATABASE_PASSWORD: ${DB_PASS}
-      # MOODLE_DATABASE_NAME: ${DB_NAME}
-      # MOODLE_USERNAME: user
-      # MOODLE_PASSWORD: password
-      # MOODLE_EMAIL: user@example.com
-      # MOODLE_SITE_NAME: My Moodle Site
-      # MOODLE_HOST: localhost
-      # MOODLE_PROTOCOL: http
-      # volumes:
-      # Moodle typically needs its own data volume
-      # - moodle_data_prod:/bitnami/moodle
+      - MOODLE_DATABASE_HOST=scli-moodle-db
+      - MOODLE_DATABASE_PORT_NUMBER=3306
+      - MOODLE_DATABASE_USER=bn_moodle
+      - MOODLE_DATABASE_PASSWORD=bitnami_moodle_password
+      - MOODLE_DATABASE_NAME=bitnami_moodle
+      - MOODLE_USERNAME=admin
+      - MOODLE_PASSWORD=SCLInst!2026
+      - MOODLE_SITE_NAME=SCL Institute LMS
+      - MOODLE_REVERSEPROXY=yes
+      - BITNAMI_DEBUG=true
+    volumes:
+      - moodle_data_prod:/bitnami/moodle
     networks:
       - scl-network-prod
     depends_on:
-      scli-mysql:
+      scli-moodle-db:
         condition: service_healthy
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost/moodle/login/index.php" ]
@@ -137,6 +156,7 @@ services:
     depends_on:
       - scli-frontend
       - scli-backend
+      - scli-moodle
     networks:
       - scl-network-prod
     healthcheck:
@@ -156,4 +176,8 @@ networks:
 
 volumes:
   mysql_data_prod:
+    driver: local
+  moodle_db_data_prod:
+    driver: local
+  moodle_data_prod:
     driver: local
