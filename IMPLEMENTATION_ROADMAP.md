@@ -243,134 +243,145 @@ MySQL (scli-mysql-prod) - Extended
 
 ## 🛠️ STEP-BY-STEP IMPLEMENTATION PLAN
 
-### **TASK 3: Database Schema Creation** (Next)
-**Time: 2-3 hours**
+### **TASK 2: Module 1 - Student Management** (Weeks 2-3)
+**Time: 2 weeks (Feb 2-15)**
 
-1. Create SQL migration file with all 40+ tables
-2. Set up proper foreign key relationships
-3. Create indexes for performance
-4. Run migrations on production database
-5. Verify schema integrity
+**What we're building:**
+- Student profiles, applications, admissions, onboarding
+- Database: 8 tables
+- API: 20+ endpoints for student workflows
+- Frontend: 11 form components
 
 **Deliverables:**
-- ✅ `database_migration.sql` (all CREATE TABLE statements)
-- ✅ Updated database with proper structure
+- ✅ Database tables created (student_profiles, student_applications, admissions, etc.)
+- ✅ API endpoints for student management
+- ✅ Form components (ApplicationForm, AdmissionForm, OnboardingForm, etc.)
+- ✅ Integration tests passing
 
 ---
 
-### **TASK 4: Backend API Development**
-**Time: 1-2 days**
+### **TASK 3: Module 2 - Course Management** (Weeks 4-5)
+**Time: 2 weeks (Feb 16-Mar 1)**
 
-1. Create Express routes for each module:
-   ```
-   /api/partners/*              (Partner management)
-   /api/courses/*               (Course management)
-   /api/students/*              (Student management)
-   /api/faculty/*               (Faculty management)
-   /api/admissions/*            (Admissions workflow)
-   /api/support/*               (Support requests)
-   /api/finance/*               (Finance records)
-   /api/governance/*            (Governance)
-   /api/reports/*               (Analytics & reports)
-   ```
-
-2. Create database models (using MySQL connector)
-3. Implement CRUD operations for each form
-4. Add role-based middleware (check user permissions)
-5. Add validation & error handling
-6. Create audit logging
+**What we're building:**
+- Course creation, approval, compliance, delivery
+- Database: 6 tables
+- API: 18+ endpoints for course workflows
+- Frontend: 9 form components
 
 **Deliverables:**
-- ✅ 50+ API endpoints
-- ✅ Database models
-- ✅ Middleware for auth & permissions
-- ✅ Test endpoints
+- ✅ Database tables (courses, course_approvals, course_compliance, etc.)
+- ✅ API endpoints for course workflows
+- ✅ Form components (CourseForm, ApprovalForm, ComplianceForm, etc.)
+- ✅ Integration tests passing
 
 ---
 
-### **TASK 5: Frontend Form Components**
-**Time: 2-3 days**
+### **TASK 4: Module 3 - Faculty & HR Management** (Weeks 6-7)
+**Time: 2 weeks (Mar 2-15)**
 
-1. Create reusable form components:
-   ```
-   components/
-   ├─ forms/
-   │  ├─ PartnerForm.jsx
-   │  ├─ AWBVisitForm.jsx
-   │  ├─ CourseApprovalForm.jsx
+**What we're building:**
+- Faculty recruitment, hiring, onboarding, HR records
+- Database: 6 tables
+- API: 18+ endpoints for faculty & HR
+- Frontend: 8 form components
+
+**Deliverables:**
+- ✅ Database tables (faculty_profiles, faculty_applications, faculty_selections, etc.)
+- ✅ API endpoints for faculty & HR workflows
+- ✅ Form components (ApplicationForm, SelectionForm, OnboardingForm, etc.)
+- ✅ Integration tests passing
+
+---
+
+### **TASK 5: Module 4 - Partner & Awarding Body Management** (Weeks 8-9)
+**Time: 2 weeks (Mar 16-29)**
+
+**What we're building:**
+- Partner registration, inspection visits, compliance, risk management
+- Database: 6 tables
+- API: 18+ endpoints for partner workflows
+- Frontend: 9 form components
+
+**Deliverables:**
+- ✅ Database tables (partners, awarding_body_visits, subscriptions, etc.)
+- ✅ API endpoints for partner workflows
+- ✅ Form components (RegistrationForm, VisitForm, ChecklistForm, etc.)
+- ✅ Integration tests passing
    │  ├─ StudentApplicationForm.jsx
    │  ├─ AdmissionForm.jsx
    │  ├─ FacultyApplicationForm.jsx
    │  ├─ StudentOnboardingForm.jsx
    │  ├─ SupportRequestForm.jsx
    │  ├─ ComplaintForm.jsx
-   │  └─ [10+ more forms]
+   │  └─ [Various form components for each module]
    │
    └─ modules/
-      ├─ PartnersModule.jsx
-      ├─ CoursesModule.jsx
       ├─ StudentsModule.jsx
+      ├─ CoursesModule.jsx
       ├─ FacultyModule.jsx
-      ├─ SupportModule.jsx
-      └─ GovernanceModule.jsx
+      ├─ PartnersModule.jsx
+      └─ SupportModule.jsx
    ```
 
-2. Implement form validation
-3. Add file upload for documents
-4. Create list/view components for each form type
-5. Add status workflows (buttons for transitions)
-6. Add search & filter capabilities
-
 **Deliverables:**
-- ✅ 40+ form components
-- ✅ Validation logic
-- ✅ File handling
+- ✅ All database & API endpoints for Module 4
+- ✅ Form components working
+- ✅ File handling configured
 
 ---
 
-### **TASK 6: Dashboard & Navigation**
-**Time: 1 day**
+### **TASK 6: Module 5 - Support, Finance & Governance** (Week 10)
+**Time: 1 week (Mar 30-Apr 4)**
 
-1. Update Dashboard.jsx with role-based modules
-2. Create module card components
-3. Update Sidebar with all module links
-4. Add breadcrumb navigation
-5. Create module listing pages
-6. Add quick stats/KPIs
-
-**Current Dashboard (Hardcoded):**
-```jsx
-const modules = [
-    { id: 'partners', title: 'Partner Management', roles: ['admin', 'partners_manager'] },
-    { id: 'courses', title: 'Course Offerings', roles: ['admin', 'faculty'] },
-    // ... etc
-];
-```
-
-**Updated Dashboard (Dynamic + Database):**
-```jsx
-// Fetch user's role from database
-// Filter modules based on role → role_permissions table
-// Show only authorized modules
-```
+**What we're building:**
+- Support requests, complaints, appeals, finance, governance
+- Database: 6 tables
+- API: 20+ endpoints
+- Frontend: 9 form components
 
 **Deliverables:**
-- ✅ Updated Dashboard component
-- ✅ Module navigation
-- ✅ Role filtering
+- ✅ Database tables (support_requests, complaints, appeals, finance_transactions, etc.)
+- ✅ API endpoints for support & finance workflows
+- ✅ Form components (SupportForm, ComplaintForm, AppealForm, FinanceForm, etc.)
+- ✅ Integration tests passing
 
 ---
 
-### **TASK 7: Testing & Deployment**
-**Time: 1 day**
+### **TASK 7: Dashboard Integration, Testing & Deployment** (Weeks 11-12)
+**Time: 2 weeks (Apr 5-18)**
 
-1. Unit tests for API endpoints
-2. Form validation tests
-3. Role-based access tests
-4. End-to-end workflow tests
-5. Database migration on production
-6. Deploy to production server
-7. Smoke tests
+**What we're doing:**
+- Integrate all 5 modules into master dashboard
+- Comprehensive testing & UAT
+- Production deployment & go-live
+
+**Week 11: Integration & Testing**
+1. Build master Dashboard.jsx
+2. Integrate all 5 modules
+3. Create role-based module display
+4. Run comprehensive test suite (80%+ coverage)
+5. Execute UAT with stakeholders
+6. Fix critical bugs
+
+**Week 12: Production & Go-Live**
+1. Final data backup
+2. Deploy to production
+3. Run smoke tests
+4. Conduct user training
+5. Launch system
+6. Monitor performance
+
+**Deliverables:**
+- ✅ Master dashboard integrated
+- ✅ 80%+ test coverage
+- ✅ UAT sign-off
+- ✅ Production deployment
+- ✅ Go-live successful
+
+---
+
+## 🗓️ TIMELINE UPDATE: MODULE-BASED DEVELOPMENT
 
 ---
 
@@ -507,11 +518,12 @@ Will contain:
 |-------|------|----------|----------|--------|
 | **Week 1** | Task 1: Infrastructure | 4 hours | Week 1 (Jan 26-Feb 1) | ✅ Done |
 | **Week 1** | Task 2: Moodle + SSO | 6 hours | Week 1 (Jan 26-Feb 1) | ✅ Done |
-| **Weeks 2-3** | Task 3: Database Schema | 2 weeks | Feb 2-15 | → Next |
-| **Weeks 4-6** | Task 4: Backend API | 3 weeks | Feb 16-Mar 7 | Pending |
-| **Weeks 7-9** | Task 5: Frontend Forms | 3 weeks | Mar 8-28 | Pending |
-| **Week 10** | Task 6: Dashboard & Nav | 1 week | Mar 29-Apr 4 | Pending |
-| **Weeks 11-12** | Task 7: Testing & Deploy | 2 weeks | Apr 5-18 | Pending |
+| **Weeks 2-3** | Task 2: Module 1 - Students | 2 weeks | Feb 2-15 | → Next |
+| **Weeks 4-5** | Task 3: Module 2 - Courses | 2 weeks | Feb 16-Mar 1 | Pending |
+| **Weeks 6-7** | Task 4: Module 3 - Faculty & HR | 2 weeks | Mar 2-15 | Pending |
+| **Weeks 8-9** | Task 5: Module 4 - Partners | 2 weeks | Mar 16-29 | Pending |
+| **Week 10** | Task 6: Module 5 - Support/Finance | 1 week | Mar 30-Apr 4 | Pending |
+| **Weeks 11-12** | Task 7: Integration & Go-Live | 2 weeks | Apr 5-18 | Pending |
 | | | | **🚀 Go-Live** | **12 weeks** |
 
 ### **WEEKLY DELIVERABLES**
@@ -521,12 +533,50 @@ Will contain:
   - Ubuntu server, Docker, GitHub, SSH
 - Task 2: Moodle + SSO (6 hrs)
   - Moodle installed, SSO plugin working, domains configured
-- **Milestone**: Ready for development
+- **Milestone**: Ready for module-based development
 
-**WEEKS 2-3: DATABASE FOUNDATION**
-- Task 3: Database Schema (2 weeks)
-  - Design 40+ tables with relationships
-  - Create migration scripts
+**WEEKS 2-3: MODULE 1 - STUDENT MANAGEMENT**
+- Task 2: Complete end-to-end student module
+  - Database: 8 tables for student lifecycle
+  - API: 20+ endpoints for students, applications, admissions, support
+  - Frontend: 11 form components for student workflows
+  - Integration tests passing
+
+**WEEKS 4-5: MODULE 2 - COURSE MANAGEMENT**
+- Task 3: Complete end-to-end course module
+  - Database: 6 tables for courses and approvals
+  - API: 18+ endpoints for course workflows
+  - Frontend: 9 form components for course management
+  - Integration tests passing
+
+**WEEKS 6-7: MODULE 3 - FACULTY & HR MANAGEMENT**
+- Task 4: Complete end-to-end faculty module
+  - Database: 6 tables for faculty and HR
+  - API: 18+ endpoints for faculty & HR workflows
+  - Frontend: 8 form components for faculty management
+  - Integration tests passing
+
+**WEEKS 8-9: MODULE 4 - PARTNER & AWARDING BODY MANAGEMENT**
+- Task 5: Complete end-to-end partner module
+  - Database: 6 tables for partners and visits
+  - API: 18+ endpoints for partner workflows
+  - Frontend: 9 form components for partner management
+  - Integration tests passing
+
+**WEEK 10: MODULE 5 - SUPPORT, FINANCE & GOVERNANCE**
+- Task 6: Complete end-to-end support/finance module
+  - Database: 6 tables for support, finance, governance
+  - API: 20+ endpoints for support & finance workflows
+  - Frontend: 9 form components
+  - Integration tests passing
+
+**WEEKS 11-12: DASHBOARD INTEGRATION, TESTING & GO-LIVE**
+- Task 7: Master integration and production
+  - Integrate all 5 modules into dashboard
+  - Comprehensive testing (80%+ coverage)
+  - UAT with stakeholders
+  - Production deployment
+  - Go-live & monitoring
   - Deploy to production
   - Verify integrity & performance
   - Create backups & restore procedures

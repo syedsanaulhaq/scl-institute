@@ -10,15 +10,16 @@
 
 ## 🎯 EXECUTIVE SUMMARY
 
-This is a **12-week phased implementation** of the complete SCL-Institute system with integrated Moodle LMS. The project is organized into 7 tasks spanning foundation work, database design, API development, frontend development, and comprehensive testing.
+This is a **12-week phased implementation** of the complete SCL-Institute system with integrated Moodle LMS. The project is organized into 7 tasks using a **module-based development approach** where each module is built end-to-end (Database + API + Frontend) before moving to the next module.
 
 **Key Dates:**
 - **Week 1** (Jan 26-Feb 1): Foundation complete ✅
-- **Weeks 2-3** (Feb 2-15): Database deployment
-- **Weeks 4-6** (Feb 16-Mar 7): Backend API development
-- **Weeks 7-9** (Mar 8-28): Frontend development
-- **Week 10** (Mar 29-Apr 4): Dashboard integration
-- **Weeks 11-12** (Apr 5-18): Testing & Go-live
+- **Weeks 2-3** (Feb 2-15): Module 1 - Student Management (DB + API + Forms)
+- **Weeks 4-5** (Feb 16-Mar 1): Module 2 - Course Management (DB + API + Forms)
+- **Weeks 6-7** (Mar 2-15): Module 3 - Faculty & HR Management (DB + API + Forms)
+- **Weeks 8-9** (Mar 16-29): Module 4 - Partner & Awarding Body Management (DB + API + Forms)
+- **Week 10** (Mar 30-Apr 4): Module 5 - Support, Finance & Governance (DB + API + Forms)
+- **Weeks 11-12** (Apr 5-18): Dashboard Integration, Testing & Go-live
 - **🚀 Go-Live**: Mid-April 2026
 
 ---
@@ -27,15 +28,18 @@ This is a **12-week phased implementation** of the complete SCL-Institute system
 
 ### Task Distribution
 ```
-Week 1        ████████████████ (10 hours) - COMPLETE ✅
-Weeks 2-3     ████████████████████████████ (2 weeks)
-Weeks 4-6     ████████████████████████████████████ (3 weeks)
-Weeks 7-9     ████████████████████████████████████ (3 weeks)
-Week 10       ██████████████████ (1 week)
-Weeks 11-12   ████████████████████████ (2 weeks)
-              |----|----|----|----|----|----|----|----|
-              W1   W2   W4   W6   W8   W10  W12
+Week 1           ████████████████ (10 hours) - COMPLETE ✅
+Weeks 2-3        ██████████████████████ (Module 1 - Students)
+Weeks 4-5        ██████████████████████ (Module 2 - Courses)
+Weeks 6-7        ██████████████████████ (Module 3 - Faculty & HR)
+Weeks 8-9        ██████████████████████ (Module 4 - Partners)
+Week 10          ███████████████████ (Module 5 - Support/Finance/Governance)
+Weeks 11-12      ████████████████████████ (Integration & Go-Live)
+                 |----|----|----|----|----|----|----|----|
+                 W1   W2   W4   W6   W8   W10  W12
 ```
+
+**Development Approach**: Module-based (each module is developed end-to-end with database, API, and frontend together)
 
 ### Team Capacity
 - **Development Team**: 2-3 backend developers (DB + API)
@@ -127,262 +131,58 @@ moodle-scripts/local/sclsso/
 
 ---
 
-## WEEKS 2-3: DATABASE FOUNDATION
+## WEEKS 2-3: MODULE 1 - STUDENT MANAGEMENT
 
-### Task 3: Database Schema Design & Implementation
+### Task 2: Student Management Module (Database + API + Forms)
 
 **Duration**: 2 weeks  
 **Timeline**: Feb 2-15  
-**Team**: 1 Backend Developer + 1 DBA (if available)  
+**Team**: 2 Backend Developers + 1 Frontend Developer  
 **Dependency**: Week 1 complete
 
-#### Week 2 Deliverables:
-- Database design document (ER diagram)
-- 40+ table definitions
-- Foreign key relationships mapped
-- Performance indexes identified
-- Migration script created
-- Test data prepared
+**Module Overview**: Student applications, admissions, onboarding, deferrals, profile management
 
-#### Week 3 Deliverables:
-- Migration script deployed to production
-- All tables verified in MySQL
-- Backup procedures established
-- Database connection tested from backend
-- Audit logging tables configured
+#### Week 2: Database & API
 
-#### Tables to Create (40+):
-
-**Authentication Layer**:
-- `users` - User accounts
-- `roles` - 5 core roles
-- `user_roles` - User to Role mapping
-- `role_permissions` - Role to Permission mapping
-- `sso_tokens` - Moodle SSO bridge
-
-**Partner Management**:
-- `partners` - Awarding bodies registry
-- `awarding_body_visits` - Inspection visits
-- `pre_visit_checklist` - Pre-visit tasks
-- `post_visit_actions` - Post-visit follow-ups
-- `subscriptions` - Partnership subscriptions
-
-**Course Management**:
-- `courses` - Course catalog
-- `course_approvals` - Approval workflows
-- `course_compliance` - Compliance tracking
-- `course_inductions` - Cohort inductions
-- `course_deliveries` - Active course runs
-
-**Student Management**:
-- `student_profiles` - Student personal info
-- `student_applications` - Application forms
-- `application_reviews` - Review workflow
-- `admissions` - Admission decisions
-- `student_onboarding` - Orientation checklist
-- `deferral_requests` - Deferral management
+**Database Tables**:
+- `student_profiles` - Student personal information
+- `student_applications` - Course applications
+- `application_reviews` - Review workflow & comments
+- `admissions` - Admission decisions & offers
+- `student_onboarding` - Onboarding checklist
+- `deferral_requests` - Deferral applications
 - `course_registrations` - Moodle enrollment
+- `students_audit_log` - Change tracking
 
-**Support & Compliance**:
-- `support_requests` - Student support
-- `complaints` - Complaints registry
-- `appeals` - Appeals management
-- `academic_misconduct` - Misconduct tracking
-
-**Faculty & HR**:
-- `faculty_profiles` - Faculty personal info
-- `faculty_applications` - Job applications
-- `faculty_selections` - Selection process
-- `faculty_onboarding` - Onboarding checklist
-- `hr_records` - HR operations
-
-**Learning & Governance**:
-- `timetables` - Schedule reference
-- `assessments` - Assessment reference
-- `exam_records` - Grades reference
-- `governance_records` - Policies & procedures
-- `risk_register` - Risk tracking
-- `compliances` - Compliance checklist
-
-**Support Systems**:
-- `documents` - Document storage reference
-- `audit_log` - Change tracking
-- `finance_transactions` - Financial records
-- `suppliers` - Vendor management
-
-#### Milestones:
-- ✅ Database schema approved by team
-- ✅ SQL migration script created
-- ✅ Test data loaded successfully
-- ✅ Backup procedures tested
-- ✅ Ready for API development
-
----
-
-## WEEKS 4-6: BACKEND API DEVELOPMENT
-
-### Task 4: Backend API Implementation
-
-**Duration**: 3 weeks  
-**Timeline**: Feb 16 - Mar 7  
-**Team**: 2 Backend Developers + 1 QA Engineer  
-**Dependency**: Task 3 complete
-
-#### Week 4: Partners & Governance APIs
-
-**Focus**: Partnership management and governance workflows
-
-**Endpoints to Create**:
-- `GET /api/partners` - List all partners
-- `POST /api/partners` - Create new partner
-- `GET /api/partners/:id` - Get partner details
-- `PATCH /api/partners/:id` - Update partner
-- `GET /api/partners/:id/visits` - List visits
-- `POST /api/partners/:id/visits` - Schedule visit
-- `GET /api/partners/:id/subscriptions` - List subscriptions
-- `POST /api/partners/:id/subscriptions` - Create subscription
-- `GET /api/governance/policies` - List policies
-- `GET /api/governance/risks` - List risks
-- `POST /api/governance/risks` - Create risk
-- `GET /api/reports/partners` - Partner analytics
-- + 10+ more endpoints
-
-**Deliverables**:
-- ✅ Partner CRUD endpoints
-- ✅ Visit management endpoints
-- ✅ Subscription management
-- ✅ Risk register endpoints
-- ✅ Role-based middleware
-- ✅ Unit tests (80%+ coverage)
-- ✅ API documentation
-
-#### Week 5: Student Management APIs
-
-**Focus**: Student applications, admissions, onboarding
-
-**Endpoints to Create**:
+**API Endpoints**:
 - `GET /api/students` - List all students
 - `POST /api/students` - Create student profile
 - `GET /api/students/:id` - Get student details
+- `PATCH /api/students/:id` - Update student
 - `GET /api/students/:id/applications` - Student applications
 - `POST /api/students/:id/applications` - Submit application
-- `GET /api/admissions/applications` - List applications (Admin view)
+- `GET /api/admissions/applications` - List applications (Admin)
 - `POST /api/admissions/:appid/review` - Application review
 - `POST /api/admissions/:appid/decision` - Admission decision
 - `GET /api/students/:id/onboarding` - Onboarding status
-- `POST /api/students/:id/onboarding` - Complete onboarding
+- `POST /api/students/:id/onboarding` - Complete onboarding task
 - `POST /api/students/:id/deferral` - Request deferral
-- `GET /api/support/requests` - Support requests
+- `GET /api/students/:id/deferral` - Deferral status
 - `POST /api/support/requests` - Submit support request
+- `GET /api/support/requests` - List support requests
 - `POST /api/complaints` - Submit complaint
-- + 15+ more endpoints
+- `GET /api/complaints` - List complaints
+- + 5 more endpoints for filtering, search, bulk actions
 
 **Deliverables**:
-- ✅ Student management endpoints
-- ✅ Application workflow endpoints
-- ✅ Admissions decision endpoints
-- ✅ Support & complaint endpoints
+- ✅ 8 database tables with relationships
+- ✅ 20+ API endpoints
+- ✅ Role-based access control
 - ✅ Form data validation
-- ✅ Audit logging
 - ✅ Unit tests (80%+ coverage)
+- ✅ API documentation
 
-#### Week 6: Course & Faculty APIs
-
-**Focus**: Course management, faculty management, learning delivery
-
-**Endpoints to Create**:
-- `GET /api/courses` - List courses
-- `POST /api/courses` - Create course
-- `PATCH /api/courses/:id` - Update course
-- `POST /api/courses/:id/approvals` - Submit for approval
-- `GET /api/courses/:id/approvals` - Approval status
-- `POST /api/courses/:id/compliance` - Compliance check
-- `GET /api/faculty` - List faculty
-- `POST /api/faculty/applications` - Faculty application
-- `GET /api/faculty/:id/applications` - Application status
-- `POST /api/faculty/:id/onboarding` - Faculty onboarding
-- `GET /api/timetables/:courseid` - Get schedule
-- `POST /api/timetables` - Create schedule
-- `GET /api/assessments/:courseid` - Get assessments
-- `POST /api/assessments` - Create assessment
-- `GET /api/grades/:studentid` - Get student grades
-- `POST /api/reports/*` - Various reports
-- + 10+ more endpoints
-
-**Deliverables**:
-- ✅ Course management endpoints
-- ✅ Faculty management endpoints
-- ✅ Schedule & timetable endpoints
-- ✅ Assessment endpoints
-- ✅ Report generation endpoints
-- ✅ Integration with Moodle
-- ✅ Full API documentation
-
-#### API Totals (Week 4-6):
-- **60+ API endpoints** created
-- **Complete CRUD** operations for all major entities
-- **Role-based access** control implemented
-- **Pagination, sorting, filtering** on all list endpoints
-- **Audit logging** on all write operations
-- **Error handling** with proper HTTP status codes
-- **Request validation** on all endpoints
-- **Database optimization** with indexes
-
-#### Testing During Week 4-6:
-- Unit tests for each endpoint
-- Integration tests for workflows
-- Role-based access tests
-- Error handling tests
-- Performance tests
-
----
-
-## WEEKS 7-9: FRONTEND DEVELOPMENT
-
-### Task 5: Frontend Forms & Components
-
-**Duration**: 3 weeks  
-**Timeline**: Mar 8 - Mar 28  
-**Team**: 2 Frontend Developers + 1 Backend (API support)  
-**Dependency**: Task 4 mostly complete
-
-#### Week 7: Partnership & Course Forms
-
-**Focus**: Forms for partner management, course approval, compliance
-
-**Components to Build**:
-- `PartnerRegistrationForm` - Register new partner
-- `AWBVisitForm` - Schedule inspection visit
-- `PreVisitChecklistForm` - Pre-visit task tracker
-- `PostVisitActionsForm` - Action items tracker
-- `SubscriptionForm` - Subscription management
-- `CourseApprovalForm` - Course submission for approval
-- `CourseComplianceForm` - Compliance checklist
-- `CourseInductionForm` - Induction scheduling
-- `GovernancePoliciesForm` - Policy documentation
-- `RiskRegisterForm` - Risk tracking
-- + 10+ more components
-
-**Form Features**:
-- Real-time validation
-- File upload (documents, evidence)
-- Status workflow buttons
-- Comments/notes sections
-- Signature capture fields
-- Required field highlighting
-- Error messages & tooltips
-
-**Week 7 Deliverables**:
-- ✅ 10+ form components
-- ✅ File upload handlers
-- ✅ Validation logic
-- ✅ API integration
-- ✅ Form state management
-- ✅ Responsive design
-
-#### Week 8: Student & Admissions Forms
-
-**Focus**: Student applications, admissions, onboarding
+#### Week 3: Frontend Forms
 
 **Components to Build**:
 - `StudentApplicationForm` - Course application
@@ -394,259 +194,532 @@ moodle-scripts/local/sclsso/
 - `ComplaintForm` - Complaints submission
 - `AppealForm` - Appeals process
 - `StudentProfileForm` - Student personal info
-- + 5+ more components
+- `StudentListComponent` - Student directory
+- `ApplicationTrackerComponent` - Application status tracking
 
 **Form Features**:
 - Multi-step forms (application wizard)
 - Document upload
-- Validation against requirements
-- Conditional fields based on entry route
-- Status tracking (Draft → Submitted → Under Review → Decided)
-- Notification triggers
+- Real-time validation
+- Status workflow buttons
+- Comments/notes sections
+- Conditional fields
+- Email notifications
 
-**Week 8 Deliverables**:
-- ✅ 10+ student forms
-- ✅ Multi-step form logic
-- ✅ Document management
-- ✅ Status workflow
-- ✅ Real-time validation
-- ✅ Integration with API
+**Deliverables**:
+- ✅ 11 form components
+- ✅ API integration tested
+- ✅ Responsive design
+- ✅ Accessibility compliance
+- ✅ Form unit tests
 
-#### Week 9: Faculty, Finance & Governance Forms
+#### Task 2 Completion Criteria:
+- [x] Database schema designed & approved
+- [x] 8 tables created in MySQL
+- [x] 20+ API endpoints functional
+- [x] Student workflows tested
+- [x] 11 form components working
+- [x] Integration between API & forms verified
+- [x] Ready for Module 2
 
-**Focus**: Faculty recruitment, HR records, financial tracking
+---
+
+## WEEKS 4-5: MODULE 2 - COURSE MANAGEMENT
+
+### Task 3: Course Management Module (Database + API + Forms)
+
+**Duration**: 2 weeks  
+**Timeline**: Feb 16 - Mar 1  
+**Team**: 2 Backend Developers + 1 Frontend Developer
+**Dependency**: Task 2 complete
+
+**Module Overview**: Course creation, approval workflows, compliance tracking, course delivery
+
+#### Week 4: Database & API
+
+**Database Tables**:
+- `courses` - Course catalog
+- `course_approvals` - Approval workflows
+- `course_compliance` - Compliance tracking
+- `course_inductions` - Cohort inductions
+- `course_deliveries` - Active course runs
+- `course_audit_log` - Change tracking
+
+**API Endpoints**:
+- `GET /api/courses` - List courses
+- `POST /api/courses` - Create course
+- `GET /api/courses/:id` - Get course details
+- `PATCH /api/courses/:id` - Update course
+- `DELETE /api/courses/:id` - Archive course
+- `POST /api/courses/:id/approvals` - Submit for approval
+- `GET /api/courses/:id/approvals` - Approval status
+- `POST /api/courses/:id/approvals/:appid/review` - Review approval
+- `POST /api/courses/:id/compliance` - Compliance check
+- `GET /api/courses/:id/compliance` - Compliance status
+- `POST /api/courses/:id/induction` - Schedule induction
+- `GET /api/courses/:id/inductions` - List inductions
+- `POST /api/courses/:id/deliveries` - Create course run
+- `GET /api/courses/:id/deliveries` - List course runs
+- `GET /api/courses/list` - List with filters & search
+- + 5 more endpoints for analytics, bulk actions
+
+**Deliverables**:
+- ✅ 6 database tables with relationships
+- ✅ 18+ API endpoints
+- ✅ Approval workflow logic
+- ✅ Compliance tracking
+- ✅ Unit tests (80%+ coverage)
+- ✅ API documentation
+
+#### Week 5: Frontend Forms
+
+**Components to Build**:
+- `CourseCreationForm` - New course form
+- `CourseApprovalForm` - Submission for approval
+- `CourseApprovalReviewForm` - Reviewer form
+- `CourseComplianceForm` - Compliance checklist
+- `CourseInductionForm` - Induction scheduling
+- `CourseDeliveryForm` - Create course run
+- `CourseListComponent` - Course directory
+- `CourseDetailsComponent` - Course overview
+- `CourseApprovalWorkflowComponent` - Approval status tracker
+
+**Form Features**:
+- Multi-step form for course creation
+- Document upload (syllabus, materials)
+- Approval workflow visualization
+- Compliance requirement checklist
+- Comments & approval notes
+- Email notifications to stakeholders
+
+**Deliverables**:
+- ✅ 9 form components
+- ✅ API integration tested
+- ✅ Responsive design
+- ✅ Accessibility compliance
+- ✅ Form unit tests
+
+#### Task 3 Completion Criteria:
+- [x] Database schema for courses designed
+- [x] 6 tables created in MySQL
+- [x] 18+ API endpoints functional
+- [x] Course approval workflow tested
+- [x] 9 form components working
+- [x] Integration between API & forms verified
+- [x] Ready for Module 3
+
+---
+
+## WEEKS 6-7: MODULE 3 - FACULTY & HR MANAGEMENT
+
+### Task 4: Faculty & HR Management Module (Database + API + Forms)
+
+**Duration**: 2 weeks  
+**Timeline**: Mar 2-15  
+**Team**: 2 Backend Developers + 1 Frontend Developer
+**Dependency**: Task 3 complete
+
+**Module Overview**: Faculty recruitment, hiring, onboarding, HR operations, payroll
+
+#### Week 6: Database & API
+
+**Database Tables**:
+- `faculty_profiles` - Faculty personal information
+- `faculty_applications` - Job applications
+- `faculty_selections` - Selection & interview process
+- `faculty_onboarding` - Onboarding checklist
+- `hr_records` - HR operations, leave, transfers
+- `faculty_audit_log` - Change tracking
+
+**API Endpoints**:
+- `GET /api/faculty` - List faculty
+- `POST /api/faculty` - Create faculty profile
+- `GET /api/faculty/:id` - Get faculty details
+- `PATCH /api/faculty/:id` - Update faculty
+- `GET /api/faculty/applications` - List job applications
+- `POST /api/faculty/applications` - Submit job application
+- `GET /api/faculty/applications/:appid` - Get application details
+- `POST /api/faculty/applications/:appid/review` - Review application
+- `POST /api/faculty/applications/:appid/selection` - Selection process
+- `POST /api/faculty/:id/onboarding` - Complete onboarding task
+- `GET /api/faculty/:id/onboarding` - Onboarding status
+- `GET /api/hr/records/:facultyid` - Get HR records
+- `POST /api/hr/records/:facultyid/leave` - Submit leave request
+- `POST /api/hr/records/:facultyid/transfer` - Transfer request
+- `GET /api/faculty/list` - List with filters & search
+- + 3 more endpoints for analytics, bulk actions
+
+**Deliverables**:
+- ✅ 6 database tables with relationships
+- ✅ 18+ API endpoints
+- ✅ Recruitment workflow logic
+- ✅ HR operations tracking
+- ✅ Unit tests (80%+ coverage)
+- ✅ API documentation
+
+#### Week 7: Frontend Forms
 
 **Components to Build**:
 - `FacultyApplicationForm` - Job application
 - `FacultySelectionForm` - Selection & interview
 - `FacultyOnboardingForm` - Onboarding checklist
 - `HRRecordsForm` - Leave, payroll, transfers
-- `FinanceTransactionForm` - Payment tracking
-- `SupplierManagementForm` - Vendor registration
-- `ComplianceChecklistForm` - Compliance tracking
-- `AuditLogViewerComponent` - Audit trail viewer
-- `ReportGeneratorComponent` - Report building
-- + 5+ more components
+- `FacultyProfileForm` - Faculty personal info
+- `FacultyListComponent` - Faculty directory
+- `ApplicationTrackerComponent` - Application status
+- `HRDashboardComponent` - HR overview
 
 **Form Features**:
-- Dynamic field creation
-- Complex workflows
-- Approvals & sign-offs
-- Report generation
-- Data export (PDF, Excel)
+- Multi-step application form
+- Interview scheduling
+- Document upload (credentials, certificates)
+- Approval workflow visualization
+- HR operations tracking
+- Email notifications
 
-**Week 9 Deliverables**:
-- ✅ 10+ faculty/finance forms
-- ✅ Report generation
-- ✅ Data export functionality
-- ✅ Advanced filtering & search
-- ✅ Full API integration
+**Deliverables**:
+- ✅ 8 form components
+- ✅ API integration tested
+- ✅ Responsive design
+- ✅ Accessibility compliance
+- ✅ Form unit tests
 
-#### Forms Summary (Week 7-9):
-- **40+ form components** created
-- **Multi-page/wizard** forms for complex workflows
-- **File upload** with validation
-- **Real-time validation** with error messages
-- **Status tracking** with workflow buttons
-- **Search & filter** on all list views
-- **Data persistence** with API
-- **Responsive design** (mobile-friendly)
-- **Accessibility** (WCAG 2.1)
-
-#### Testing During Week 7-9:
-- Form validation tests
-- API integration tests
-- File upload tests
-- Cross-browser testing
-- Mobile responsiveness testing
-- Accessibility testing
+#### Task 4 Completion Criteria:
+- [x] Database schema for faculty & HR designed
+- [x] 6 tables created in MySQL
+- [x] 18+ API endpoints functional
+- [x] Faculty recruitment workflow tested
+- [x] 8 form components working
+- [x] Integration between API & forms verified
+- [x] Ready for Module 4
 
 ---
 
-## WEEK 10: DASHBOARD & NAVIGATION
+## WEEKS 8-9: MODULE 4 - PARTNER & AWARDING BODY MANAGEMENT
 
-### Task 6: Dashboard Integration & UI Polish
+### Task 5: Partner & Awarding Body Management Module (Database + API + Forms)
+
+**Duration**: 2 weeks  
+**Timeline**: Mar 16-29  
+**Team**: 2 Backend Developers + 1 Frontend Developer
+**Dependency**: Task 4 complete
+
+**Module Overview**: Partner registration, inspection visits, compliance tracking, risk management
+
+#### Week 8: Database & API
+
+**Database Tables**:
+- `partners` - Awarding bodies registry
+- `awarding_body_visits` - Inspection visits
+- `pre_visit_checklist` - Pre-visit tasks
+- `post_visit_actions` - Post-visit follow-ups
+- `subscriptions` - Partnership subscriptions
+- `partner_audit_log` - Change tracking
+
+**API Endpoints**:
+- `GET /api/partners` - List all partners
+- `POST /api/partners` - Create new partner
+- `GET /api/partners/:id` - Get partner details
+- `PATCH /api/partners/:id` - Update partner
+- `GET /api/partners/:id/visits` - List visits
+- `POST /api/partners/:id/visits` - Schedule visit
+- `GET /api/partners/:id/visits/:vid` - Get visit details
+- `POST /api/partners/:id/visits/:vid/checklist` - Pre-visit checklist
+- `POST /api/partners/:id/visits/:vid/complete` - Complete visit
+- `POST /api/partners/:id/visits/:vid/actions` - Post-visit actions
+- `GET /api/partners/:id/subscriptions` - List subscriptions
+- `POST /api/partners/:id/subscriptions` - Create subscription
+- `GET /api/partners/list` - List with filters & search
+- `GET /api/governance/risks` - List risks
+- `POST /api/governance/risks` - Create risk entry
+- + 3 more endpoints for analytics, bulk actions
+
+**Deliverables**:
+- ✅ 6 database tables with relationships
+- ✅ 18+ API endpoints
+- ✅ Visit management workflow
+- ✅ Risk tracking system
+- ✅ Unit tests (80%+ coverage)
+- ✅ API documentation
+
+#### Week 9: Frontend Forms
+
+**Components to Build**:
+- `PartnerRegistrationForm` - Register new partner
+- `AWBVisitForm` - Schedule inspection visit
+- `PreVisitChecklistForm` - Pre-visit task tracker
+- `PostVisitActionsForm` - Action items tracker
+- `SubscriptionForm` - Subscription management
+- `PartnerListComponent` - Partner directory
+- `VisitScheduleComponent` - Visit calendar
+- `RiskRegisterForm` - Risk tracking
+- `RiskDashboardComponent` - Risk overview
+
+**Form Features**:
+- Visit scheduling with calendar
+- Pre/post-visit checklists
+- Document upload (evidence, reports)
+- Action tracking with deadlines
+- Risk scoring & assessment
+- Compliance monitoring
+- Email notifications
+
+**Deliverables**:
+- ✅ 9 form components
+- ✅ API integration tested
+- ✅ Responsive design
+- ✅ Accessibility compliance
+- ✅ Form unit tests
+
+#### Task 5 Completion Criteria:
+- [x] Database schema for partners designed
+- [x] 6 tables created in MySQL
+- [x] 18+ API endpoints functional
+- [x] Visit management workflow tested
+- [x] 9 form components working
+- [x] Integration between API & forms verified
+- [x] Ready for Module 5
+
+---
+
+## WEEK 10: MODULE 5 - SUPPORT, FINANCE & GOVERNANCE
+
+### Task 6: Support, Finance & Governance Module (Database + API + Forms)
 
 **Duration**: 1 week  
-**Timeline**: Mar 29 - Apr 4  
-**Team**: 1 Frontend Developer + Backend support  
-**Dependency**: Task 5 mostly complete
+**Timeline**: Mar 30 - Apr 4  
+**Team**: 2 Backend Developers + 1 Frontend Developer
+**Dependency**: Task 5 complete
 
-#### Dashboard Components:
-- **Role-based Module Display** - Show only modules user has access to
-- **Quick Stats** - KPIs relevant to user role
-- **Recent Activities** - Last 10 actions
-- **Pending Items** - Items awaiting user action
-- **Quick Links** - Most-used modules
-- **Notifications** - System notifications
+**Module Overview**: Student support requests, complaints, appeals, finance transactions, governance tracking
 
-#### Module Cards:
-- Partner Management
-- Course Management
-- Student Management
-- Faculty Management
-- Support & Complaints
-- Finance Management
-- Governance & Compliance
-- Reports & Analytics
+#### Database & API
 
-#### Navigation Updates:
-- Sidebar with all modules
-- Breadcrumb navigation
-- Search across all modules
-- Help documentation links
-- User profile menu
-- Logout functionality
+**Database Tables**:
+- `support_requests` - Student support tickets
+- `complaints` - Complaints registry
+- `appeals` - Appeals management
+- `academic_misconduct` - Misconduct tracking
+- `finance_transactions` - Financial records
+- `governance_records` - Policies & procedures
 
-#### Dashboard Features by Role:
+**API Endpoints**:
+- `GET /api/support/requests` - List support requests
+- `POST /api/support/requests` - Submit support request
+- `GET /api/support/requests/:id` - Get request details
+- `PATCH /api/support/requests/:id` - Update request
+- `POST /api/support/requests/:id/resolve` - Resolve request
+- `GET /api/complaints` - List complaints
+- `POST /api/complaints` - Submit complaint
+- `GET /api/complaints/:id` - Get complaint details
+- `POST /api/complaints/:id/review` - Review complaint
+- `GET /api/appeals` - List appeals
+- `POST /api/appeals` - Submit appeal
+- `POST /api/appeals/:id/decision` - Appeal decision
+- `GET /api/finance/transactions` - List transactions
+- `POST /api/finance/transactions` - Record transaction
+- `GET /api/governance/policies` - List policies
+- `POST /api/governance/policies` - Create policy
+- + 3 more endpoints for filtering, analytics
 
-**Super Admin Dashboard**:
-- Access to ALL modules
-- System settings
-- User management
-- Audit logs
-- Analytics
+**Deliverables**:
+- ✅ 6 database tables
+- ✅ 20+ API endpoints
+- ✅ Support ticket workflow
+- ✅ Complaints & appeals workflow
+- ✅ Unit tests (80%+ coverage)
+- ✅ API documentation
 
-**LMS Manager Dashboard**:
-- Course management
-- Schedules & timetables
-- Assessments & grades
-- Student progress
-- Course reports
+#### Frontend Forms
 
-**Partners Manager Dashboard**:
-- Partner registry
-- Inspection visits
-- Pre/post-visit tasks
-- Subscriptions
-- Risk management
+**Components to Build**:
+- `SupportRequestForm` - Submit support request
+- `ComplaintForm` - Submit complaint
+- `AppealForm` - Submit appeal
+- `MisconductForm` - Report misconduct
+- `FinanceTransactionForm` - Record payment
+- `GovernancePolicyForm` - Create/update policy
+- `SupportListComponent` - Support ticket dashboard
+- `ComplaintTrackerComponent` - Complaint status
+- `FinanceDashboardComponent` - Financial overview
 
-**Admissions Officer Dashboard**:
-- Pending applications
-- Application reviews
-- Admission decisions
-- Student onboarding
-- Deferral requests
+**Form Features**:
+- Support ticket categorization
+- Priority levels & SLA tracking
+- Document attachments
+- Comments & updates
+- Status workflow
+- Finance reporting
+- Policy documentation
+- Email notifications
 
-**Faculty & HR Manager Dashboard**:
-- Faculty applications
-- Recruitment tracking
-- Employee records
-- HR operations
-- Supplier management
+**Deliverables**:
+- ✅ 9 form components
+- ✅ API integration tested
+- ✅ Responsive design
+- ✅ Accessibility compliance
+- ✅ Form unit tests
 
-#### Week 10 Deliverables:
-- ✅ Updated Dashboard component
-- ✅ Module navigation system
-- ✅ Role-based filtering
-- ✅ KPI calculations
-- ✅ Quick stats display
-- ✅ Responsive sidebar
-- ✅ Breadcrumb navigation
-- ✅ Search functionality
+#### Task 6 Completion Criteria:
+- [x] Database schema for support/finance/governance designed
+- [x] 6 tables created in MySQL
+- [x] 20+ API endpoints functional
+- [x] Support & complaint workflows tested
+- [x] 9 form components working
+- [x] Integration between API & forms verified
+- [x] All modules ready for integration & testing
 
 ---
 
-## WEEKS 11-12: TESTING, UAT & DEPLOYMENT
+## WEEKS 11-12: DASHBOARD INTEGRATION, TESTING & GO-LIVE
 
-### Task 7: Quality Assurance & Production Deployment
+### Task 7: Master Integration, Quality Assurance & Production Deployment
 
 **Duration**: 2 weeks  
 **Timeline**: Apr 5 - Apr 18  
-**Team**: 1 QA Engineer + Developers + DevOps  
-**Dependency**: All previous tasks complete
+**Team**: 2 Frontend Developers + 2 Backend Developers + 1 QA Engineer + DevOps  
+**Dependency**: All Modules 1-5 complete
 
-#### Week 11: Complete Testing & UAT
+#### Week 11: Dashboard Integration & Comprehensive Testing
 
-**Testing Activities**:
+**Dashboard Integration**:
+- Integrate all 5 modules into master dashboard
+- Role-based module display (students, admissions, faculty, LMS manager, admin)
+- Quick stats & KPIs for each role
+- Recent activities feed
+- Pending items by role
+- Search across all modules
+- Module navigation sidebar
 
-**Unit Testing**:
-- Test each API endpoint
-- Test each form component
+**Dashboard Components**:
+- Master Dashboard component
+- Role-based filtering
+- Sidebar navigation
+- Quick links
+- Notifications system
+- User profile menu
+- Help documentation
+
+**Comprehensive Testing**:
+
+**Unit Testing** (Continue from modules):
+- Verify all 80+ API endpoints
+- Test all form components
 - Test validation logic
-- Test authentication & authorization
-- **Target**: 80%+ code coverage
+- Target: 80%+ code coverage
 
 **Integration Testing**:
-- Complete student workflow (application → enrollment)
-- Complete partner workflow (registration → visit → actions)
-- Complete faculty workflow (application → onboarding)
+- Complete student workflow (application → enrollment → Moodle)
 - Complete course workflow (creation → approval → delivery)
-- SSO integration with Moodle
+- Complete partner workflow (registration → visit → actions)
+- Complete faculty workflow (application → hiring → onboarding)
+- Complete support workflow (request → resolution)
+- SSO integration with Moodle verified
+- Dashboard role-based filtering
 
 **User Acceptance Testing (UAT)**:
-- Involve stakeholders from each role
-- Test real-world scenarios
-- Collect feedback on UX
-- Make quick fixes & adjustments
-- Sign-off from stakeholders
+- Stakeholders from each role test real workflows
+- Feedback collection on UX & functionality
+- Quick bug fixes & adjustments
+- Formal sign-off from stakeholders
 
 **Performance Testing**:
-- Load testing (100+ concurrent users)
-- Response time benchmarks (< 500ms)
+- Load test with 100+ concurrent users
+- API response time benchmarking (target: < 500ms)
 - Database query optimization
-- File upload performance
 - Report generation performance
+- File upload/download performance
 
 **Security Testing**:
 - SQL injection prevention
-- Cross-site scripting (XSS) prevention
-- Cross-site request forgery (CSRF) protection
-- Authentication bypasses
-- Authorization bypasses
-- Data encryption validation
+- XSS prevention
+- CSRF protection
+- Authentication bypass attempts
+- Authorization bypass attempts
+- Data encryption verification
+- Audit logging verification
 
-**Regression Testing**:
-- Retest all critical paths
-- Verify bug fixes
-- Check for new issues
+**Week 11 Deliverables**:
+- ✅ Master dashboard integrated
+- ✅ All modules accessible via dashboard
+- ✅ 80+ API endpoints tested
+- ✅ 50+ form components tested
+- ✅ UAT sign-off from stakeholders
+- ✅ Performance benchmarks met
+- ✅ Security audit completed
+- ✅ All critical bugs fixed
 
-#### Week 12: Deployment & Go-Live
+#### Week 12: Production Deployment & Go-Live
 
-**Deployment Activities**:
-
-**Pre-Deployment**:
-- Final backup of all data
+**Pre-Deployment Activities**:
+- Final data backup
 - Deployment checklist review
 - Rollback procedures prepared
 - Monitoring alerts configured
 - User documentation finalized
-- Training materials prepared
+- Training materials finalized
+- Support team training completed
 
 **Production Deployment**:
-- Deploy database migrations
-- Deploy backend API
-- Deploy frontend
-- Configure NGINX
+- Deploy all database migrations
+- Deploy backend API (Node.js)
+- Deploy frontend (React)
+- Configure NGINX reverse proxy
 - Update DNS records
+- Configure SSL certificates
 - Verify all services running
+- Run smoke tests
 
-**Post-Deployment**:
-- Smoke tests (verify critical functionality)
+**Post-Deployment Verification**:
+- Verify critical functionality working
 - Monitor system performance
-- Monitor error logs
-- Check database integrity
-- Verify backups working
-- Support availability
+- Check error logs
+- Verify database integrity
+- Test backup procedures
+- Verify email notifications
+- Verify Moodle SSO integration
 
 **Go-Live Activities**:
-- User announcement
-- System access instructions sent
-- Support team on standby
-- Initial user training sessions
-- Performance monitoring
+- Send system access instructions to users
+- Conduct initial user training sessions
+- Make support team available
+- Monitor system performance & errors
 - Collect user feedback
+- Publish go-live announcement
 
-#### Week 11-12 Deliverables:
-- ✅ All unit tests passing (80%+ coverage)
-- ✅ All integration tests passing
-- ✅ UAT sign-off from stakeholders
-- ✅ Performance benchmarks met
-- ✅ Security audit completed
-- ✅ Documentation complete
-- ✅ Training materials prepared
+**Week 12 Deliverables**:
 - ✅ System deployed to production
+- ✅ All services running & monitored
+- ✅ User documentation complete
+- ✅ Training delivered to user groups
+- ✅ Support procedures established
 - ✅ Go-live successful
+- ✅ Post-go-live monitoring active
+
+#### Task 7 Completion Criteria:
+- [x] Master dashboard integrated & tested
+- [x] All 5 modules functioning together
+- [x] 80+ API endpoints working (100% pass rate)
+- [x] 50+ form components functional
+- [x] UAT completed with stakeholder sign-off
+- [x] Security audit passed
+- [x] Performance benchmarks met
+- [x] System deployed to production
+- [x] Go-live completed successfully
+- [x] Post-go-live monitoring active
+
+---
+
+## 📊 INTEGRATED MODULE SUMMARY
+
+| Module | Weeks | DB Tables | API Endpoints | Form Components | Status |
+|--------|-------|-----------|----------------|---|--------|
+| 1. Student Management | 2-3 | 8 | 20+ | 11 | Design |
+| 2. Course Management | 4-5 | 6 | 18+ | 9 | Design |
+| 3. Faculty & HR | 6-7 | 6 | 18+ | 8 | Design |
+| 4. Partner & AWB | 8-9 | 6 | 18+ | 9 | Design |
+| 5. Support, Finance, Governance | 10 | 6 | 20+ | 9 | Design |
+| **TOTALS** | **12 weeks** | **32 tables** | **94+ endpoints** | **46+ components** | **Ready** |
 
 ---
 
