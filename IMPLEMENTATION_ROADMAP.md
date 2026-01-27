@@ -514,45 +514,69 @@ Will contain:
 
 ### **PROJECT SCHEDULE AT A GLANCE**
 
-| Phase | Task | Duration | Timeline | Status | 
-|-------|------|----------|----------|--------|
-| **Week 1** | Task 1: Infrastructure | 4 hours | Week 1 (Jan 26-Feb 1) | ✅ Done |
-| **Week 1** | Task 2: Moodle + SSO | 6 hours | Week 1 (Jan 26-Feb 1) | ✅ Done |
-| **Weeks 2-3** | Task 2: Module 1 - Students | 2 weeks | Feb 2-15 | → Next |
-| **Weeks 4-5** | Task 3: Module 2 - Courses | 2 weeks | Feb 16-Mar 1 | Pending |
-| **Weeks 6-7** | Task 4: Module 3 - Faculty & HR | 2 weeks | Mar 2-15 | Pending |
-| **Weeks 8-9** | Task 5: Module 4 - Partners | 2 weeks | Mar 16-29 | Pending |
-| **Week 10** | Task 6: Module 5 - Support/Finance | 1 week | Mar 30-Apr 4 | Pending |
-| **Weeks 11-12** | Task 7: Integration & Go-Live | 2 weeks | Apr 5-18 | Pending |
-| | | | **🚀 Go-Live** | **12 weeks** |
+| Phase | Timeline | All 5 Modules | Status | 
+|-------|----------|---------------|--------|
+| **Week 1** | Jan 26-Feb 1 | Infrastructure + Moodle | ✅ Done |
+| **Week 2** | Feb 2-8 | Phase 1: Mockup & Design | → Next |
+| **Week 3** | Feb 9-15 | Phase 2: Database Development | Pending |
+| **Week 4** | Feb 16-22 | Phase 3: Backend API | Pending |
+| **Week 5** | Feb 23-Mar 1 | Phase 4: Frontend Forms | Pending |
+| **Weeks 6-11** | Mar 2-Apr 11 | Testing, Integration, UAT | Pending |
+| **Week 12** | Apr 12-18 | Production & Go-Live | Pending |
+| | | **🚀 Go-Live** | **12 weeks** |
 
 ### **WEEKLY DELIVERABLES**
 
 **WEEK 1: FOUNDATION** ✅
-- Task 1: Infrastructure setup (4 hrs) 
+- Task 1: Infrastructure setup (4 hrs)
   - Ubuntu server, Docker, GitHub, SSH
 - Task 2: Moodle + SSO (6 hrs)
   - Moodle installed, SSO plugin working, domains configured
-- **Milestone**: Ready for module-based development
+- **Milestone**: Ready for parallel module development
 
-**WEEKS 2-3: MODULE 1 - STUDENT MANAGEMENT**
-- Task 2: Complete end-to-end student module
-  - Database: 8 tables for student lifecycle
-  - API: 20+ endpoints for students, applications, admissions, support
-  - Frontend: 11 form components for student workflows
-  - Integration tests passing
+**WEEK 2: PHASE 1 - MOCKUP & DESIGN (ALL 5 MODULES)**
+- Module 1 - Students: Mockups & UI designs complete
+- Module 2 - Courses: Mockups & UI designs complete
+- Module 3 - Faculty & HR: Mockups & UI designs complete
+- Module 4 - Partners: Mockups & UI designs complete
+- Module 5 - Support/Finance: Mockups & UI designs complete
 
-**WEEKS 4-5: MODULE 2 - COURSE MANAGEMENT**
-- Task 3: Complete end-to-end course module
-  - Database: 6 tables for courses and approvals
-  - API: 18+ endpoints for course workflows
-  - Frontend: 9 form components for course management
-  - Integration tests passing
+**WEEK 3: PHASE 2 - DATABASE DEVELOPMENT (ALL 5 MODULES)**
+- Module 1 - Students: 8 database tables + relationships
+- Module 2 - Courses: 6 database tables + relationships
+- Module 3 - Faculty & HR: 6 database tables + relationships
+- Module 4 - Partners: 6 database tables + relationships
+- Module 5 - Support/Finance: 6 database tables + relationships
+- **Total**: 32 tables, all indexes optimized
 
-**WEEKS 6-7: MODULE 3 - FACULTY & HR MANAGEMENT**
-- Task 4: Complete end-to-end faculty module
-  - Database: 6 tables for faculty and HR
-  - API: 18+ endpoints for faculty & HR workflows
+**WEEK 4: PHASE 3 - BACKEND API (ALL 5 MODULES)**
+- Module 1 - Students: 20+ API endpoints complete
+- Module 2 - Courses: 18+ API endpoints complete
+- Module 3 - Faculty & HR: 18+ API endpoints complete
+- Module 4 - Partners: 18+ API endpoints complete
+- Module 5 - Support/Finance: 20+ API endpoints complete
+- **Total**: 94+ endpoints, all tested, documentation complete
+
+**WEEK 5: PHASE 4 - FRONTEND FORMS (ALL 5 MODULES)**
+- Module 1 - Students: 11 form components complete
+- Module 2 - Courses: 9 form components complete
+- Module 3 - Faculty & HR: 8 form components complete
+- Module 4 - Partners: 9 form components complete
+- Module 5 - Support/Finance: 9 form components complete
+- **Total**: 46+ components, all integrated & tested
+
+**WEEKS 6-11: INTEGRATION, TESTING, UAT**
+- All 5 modules integrated into master dashboard
+- Comprehensive testing (80%+ coverage)
+- User Acceptance Testing with stakeholders
+- Performance & security testing
+- Final fixes & refinements
+
+**WEEK 12: PRODUCTION & GO-LIVE**
+- Production deployment
+- User training
+- System launch
+- Post-go-live monitoring
   - Frontend: 8 form components for faculty management
   - Integration tests passing
 
