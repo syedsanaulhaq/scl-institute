@@ -28,7 +28,7 @@ This is a **12-week phased implementation** of the complete SCL-Institute system
 
 ### Task Distribution
 ```
-Week 1           ████████████████ (10 hours) - COMPLETE ✅
+Week 1           ████████████████ COMPLETE ✅
 Week 2 (Ph 1)    ████████████████ (Mockup & Design for all 5 modules)
 Week 3 (Ph 2)    ████████████████ (Database for all 5 modules)
 Week 4 (Ph 3)    ████████████████ (Backend API for all 5 modules)
@@ -58,7 +58,7 @@ Week 12          ████████████████ (Go-Live & Mon
 
 ### Task 1: Server & Infrastructure Setup ✅
 
-**Duration**: 4 hours  
+**Duration**: Week 1  
 **Status**: COMPLETE  
 **Team**: DevOps + 1 Backend Developer
 
@@ -93,7 +93,7 @@ NGINX (reverse proxy)
 
 ### Task 2: Moodle Installation & SSO Integration ✅
 
-**Duration**: 6 hours  
+**Duration**: Week 1  
 **Status**: COMPLETE  
 **Team**: 1 Backend Developer + DevOps
 
