@@ -148,9 +148,9 @@ moodle-scripts/local/sclsso/
 - Mockup: Student application forms → Admissions review → Onboarding
 - Design: Dashboard, form layouts, workflow visualizations
 
-#### Module 2: Course Management
-- Mockup: Course creation → Approval workflow → Delivery management
-- Design: Course catalog view, approval forms, compliance checklist
+#### Module 2: Course Management + Moodle Course Sync
+- Mockup: Course creation → Approval workflow → Moodle sync → Delivery management
+- Design: Course catalog view, approval forms, Moodle course sync dashboard, course mapping interface
 
 #### Module 3: Faculty & HR Management
 - Mockup: Faculty application → Selection → Onboarding → HR records
@@ -192,9 +192,9 @@ moodle-scripts/local/sclsso/
 - Tables: student_profiles, student_applications, admissions, onboarding, support_requests
 - Total: 8 tables
 
-#### Module 2: Course Management
-- Tables: courses, course_approvals, course_compliance, course_inductions, course_deliveries
-- Total: 6 tables
+#### Module 2: Course Management + Moodle Course Sync
+- Tables: courses, course_approvals, course_compliance, course_inductions, course_deliveries, moodle_course_mapping
+- Total: 7 tables
 
 #### Module 3: Faculty & HR Management
 - Tables: faculty_profiles, faculty_applications, faculty_selections, faculty_onboarding, hr_records
@@ -213,7 +213,7 @@ moodle-scripts/local/sclsso/
 - Total: 4 tables
 
 **Phase 2 Deliverables**:
-- ✅ 36 database tables created & migrated (5 modules + Moodle)
+- ✅ 37 database tables created & migrated (5 modules + Moodle course sync)
 - ✅ All relationships configured
 - ✅ Indexes optimized
 - ✅ Backup procedures tested
@@ -237,9 +237,9 @@ moodle-scripts/local/sclsso/
 - Endpoints: Student CRUD, Applications, Admissions, Onboarding, Support
 - Total: 20+ endpoints
 
-#### Module 2: Course Management
-- Endpoints: Course CRUD, Approvals, Compliance, Inductions, Deliveries
-- Total: 18+ endpoints
+#### Module 2: Course Management + Moodle Course Sync
+- Endpoints: Course CRUD, Approvals, Compliance, Inductions, Deliveries, Moodle course sync/mapping
+- Total: 24+ endpoints
 
 #### Module 3: Faculty & HR Management
 - Endpoints: Faculty CRUD, Applications, Selections, Onboarding, HR Operations
@@ -258,7 +258,7 @@ moodle-scripts/local/sclsso/
 - Total: 12+ endpoints
 
 **Phase 3 Deliverables**:
-- ✅ 106+ API endpoints fully functional (5 modules + Moodle)
+- ✅ 112+ API endpoints fully functional (5 modules + Moodle course sync)
 - ✅ All endpoints tested (unit tests)
 - ✅ Complete API documentation
 - ✅ Role-based access verified
@@ -283,9 +283,9 @@ moodle-scripts/local/sclsso/
 - Components: ApplicationForm, AdmissionForm, OnboardingForm, SupportForm, etc.
 - Total: 11 components
 
-#### Module 2: Course Management
-- Components: CourseForm, ApprovalForm, ComplianceForm, InductionForm, etc.
-- Total: 9 components
+#### Module 2: Course Management + Moodle Course Sync
+- Components: CourseForm, ApprovalForm, ComplianceForm, InductionForm, MoodleCourseSyncForm, CourseMapForm, etc.
+- Total: 12 components
 
 #### Module 3: Faculty & HR Management
 - Components: ApplicationForm, SelectionForm, OnboardingForm, HRRecordsForm, etc.
@@ -304,7 +304,7 @@ moodle-scripts/local/sclsso/
 - Total: 6 components
 
 **Phase 4 Deliverables**:
-- ✅ 52+ form components created (5 modules + Moodle)
+- ✅ 55+ form components created (5 modules + Moodle course sync)
 - ✅ All forms validated & tested
 - ✅ All API integrations working
 - ✅ Responsive design implemented

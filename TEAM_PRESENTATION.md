@@ -1164,11 +1164,11 @@ WEEKS 2-3: MODULE 1 - STUDENT MANAGEMENT (→ NEXT)
    ├─ FORMS (11 components)
    └─ TESTING: Integration tests passing
 
-WEEKS 4-5: MODULE 2 - COURSE MANAGEMENT
-└─ Complete course module (database + API + forms)
-   ├─ DATABASE (6 tables)
-   ├─ API (18+ endpoints)
-   ├─ FORMS (9 components)
+WEEKS 4-5: MODULE 2 - COURSE MANAGEMENT + MOODLE COURSE SYNC
+└─ Complete course module with Moodle integration (database + API + forms)
+   ├─ DATABASE (7 tables: courses, approvals, compliance, inductions, deliveries, moodle_course_mapping)
+   ├─ API (24+ endpoints: CRUD, Approvals, Compliance, Moodle sync, Course mapping)
+   ├─ FORMS (12 components: CourseForm, ApprovalForm, MoodleCourseSyncForm, CourseMapForm, etc.)
    └─ TESTING: Integration tests passing
 
 WEEKS 6-7: MODULE 3 - FACULTY & HR MANAGEMENT
