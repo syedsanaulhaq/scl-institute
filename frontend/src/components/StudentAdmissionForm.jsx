@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
-import { Upload, Calendar, User, GraduationCap, FileText, Shield, CheckCircle, AlertCircle } from 'lucide-react';
+import { Upload, Calendar, User, GraduationCap, FileText, Shield, CheckCircle, AlertCircle, Download, X, FileUp } from 'lucide-react';
 
 const StudentAdmissionForm = () => {
   const [currentSection, setCurrentSection] = useState(1);
+  const [csvModalOpen, setCsvModalOpen] = useState(false);
+  const [csvFile, setCsvFile] = useState(null);
+  const [csvPreviewData, setCsvPreviewData] = useState([]);
+  const [importStatus, setImportStatus] = useState({ type: '', message: '' });
   const [formData, setFormData] = useState({
-    // Personal Information
     firstName: '',
     middleNames: '',
     lastName: '',
@@ -621,6 +624,98 @@ const StudentAdmissionForm = () => {
     }
   };
 
+  // CSV Template and Import Functions
+  const generateCSVTemplate = () => {
+    const csvHeaders = [
+      'Full Name',
+      'Email',
+      'Phone Number', 
+      'Date of Birth',
+      'Nationality',
+      'Gender',
+      'Marital Status',
+      'Current Address',
+      'City',
+      'Country',
+      'Emergency Contact Name',
+      'Emergency Contact Relation',
+      'Emergency Contact Phone',
+      'Course Applied',
+      'Study Mode',
+      'Previous Education',
+      'Previous Institution',
+      'Previous GPA',
+      'English Proficiency',
+      'Work Experience'
+    ];
+    
+    const csvContent = csvHeaders.join(',') + '\n' +
+      'John Doe,john.doe@email.com,+971-50-123-4567,1995-05-15,UAE,Male,Single,"123 Sheikh Zayed Road Dubai",Dubai,UAE,Jane Doe,Mother,+971-50-987-6543,Computer Science,Full-time,High School Diploma,Dubai International School,3.8,IELTS 7.0,"Internship at Tech Company (6 months)"';
+    
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'student_admission_template.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+  };
+
+  const handleCSVUpload = (event) => {
+    const file = event.target.files[0];
+    if (file && file.type === 'text/csv') {
+      setCsvFile(file);
+      
+      // Parse CSV for preview
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const text = e.target.result;
+        const lines = text.split('\n');
+        const headers = lines[0].split(',');
+        const previewLines = lines.slice(1, 6); // Show first 5 rows
+        
+        const preview = previewLines.map(line => {
+          const values = line.split(',');
+          const row = {};
+          headers.forEach((header, index) => {
+            row[header.trim()] = values[index]?.trim() || '';
+          });
+          return row;
+        }).filter(row => row['Full Name']); // Filter out empty rows
+        
+        setCsvPreviewData(preview);
+        setImportStatus({ type: 'success', message: `File loaded successfully. Found ${preview.length} student records.` });
+      };
+      reader.readAsText(file);
+    } else {
+      setImportStatus({ type: 'error', message: 'Please upload a valid CSV file.' });
+    }
+  };
+
+  const processBulkImport = () => {
+    if (!csvFile) {
+      setImportStatus({ type: 'error', message: 'Please select a CSV file first.' });
+      return;
+    }
+    
+    // Simulate processing
+    setImportStatus({ type: 'loading', message: 'Processing bulk import...' });
+    
+    setTimeout(() => {
+      setImportStatus({ type: 'success', message: `Successfully imported ${csvPreviewData.length} student applications!` });
+      
+      // Reset states after 3 seconds
+      setTimeout(() => {
+        setCsvModalOpen(false);
+        setCsvFile(null);
+        setCsvPreviewData([]);
+        setImportStatus({ type: '', message: '' });
+      }, 3000);
+    }, 2000);
+  };
+
   return (
     <div className="space-y-4">
       {/* Page Header */}
@@ -630,14 +725,24 @@ const StudentAdmissionForm = () => {
           <p className="text-gray-600 mt-1 text-sm">Complete all sections to submit your application</p>
         </div>
         <div className="flex items-center space-x-3">
-          <span className="text-sm text-gray-600">Progress:</span>
-          <div className="w-32 bg-gray-200 rounded-full h-2">
-            <div 
-              className="bg-scl-purple h-2 rounded-full transition-all duration-300"
-              style={{ width: `${(currentSection / 5) * 100}%` }}
-            />
+          <button
+            type="button"
+            onClick={() => setCsvModalOpen(true)}
+            className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition-colors text-sm"
+          >
+            <FileUp className="w-4 h-4 mr-2" />
+            Bulk Import CSV
+          </button>
+          <div className="flex items-center space-x-3">
+            <span className="text-sm text-gray-600">Progress:</span>
+            <div className="w-32 bg-gray-200 rounded-full h-2">
+              <div 
+                className="bg-scl-purple h-2 rounded-full transition-all duration-300"
+                style={{ width: `${(currentSection / 5) * 100}%` }}
+              />
+            </div>
+            <span className="text-sm font-semibold text-gray-900">{currentSection}/5</span>
           </div>
-          <span className="text-sm font-semibold text-gray-900">{currentSection}/5</span>
         </div>
       </div>
 
@@ -739,6 +844,143 @@ const StudentAdmissionForm = () => {
           </div>
         </div>
       </div>
+      
+      {/* CSV Import Modal */}
+      {csvModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <h2 className="text-xl font-bold text-gray-900">Bulk Import Student Applications</h2>
+              <button
+                onClick={() => setCsvModalOpen(false)}
+                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            {/* Modal Content */}
+            <div className="p-6 overflow-y-auto max-h-[70vh]">
+              {/* Instructions */}
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-3">Import Instructions</h3>
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div className="flex items-start">
+                    <AlertCircle className="w-5 h-5 text-blue-600 mt-0.5 mr-3 flex-shrink-0" />
+                    <div className="text-sm text-blue-800">
+                      <p className="mb-2"><strong>Step 1:</strong> Download the CSV template below with the correct format</p>
+                      <p className="mb-2"><strong>Step 2:</strong> Fill in your student data following the template structure</p>
+                      <p><strong>Step 3:</strong> Upload your completed CSV file for bulk import</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Template Download */}
+              <div className="mb-6">
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="text-base font-semibold text-gray-900">CSV Template</h4>
+                  <button
+                    onClick={generateCSVTemplate}
+                    className="flex items-center px-4 py-2 bg-scl-purple text-white rounded-lg hover:bg-purple-700 text-sm font-medium transition-colors"
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    Download Template
+                  </button>
+                </div>
+                <p className="text-sm text-gray-600">Download the template CSV file with sample data and correct column headers.</p>
+              </div>
+              
+              {/* File Upload */}
+              <div className="mb-6">
+                <h4 className="text-base font-semibold text-gray-900 mb-3">Upload CSV File</h4>
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors">
+                  <input
+                    type="file"
+                    accept=".csv"
+                    onChange={handleCSVUpload}
+                    className="hidden"
+                    id="csvUpload"
+                  />
+                  <label
+                    htmlFor="csvUpload"
+                    className="cursor-pointer flex flex-col items-center"
+                  >
+                    <FileUp className="w-12 h-12 text-gray-400 mb-3" />
+                    <p className="text-lg font-medium text-gray-900 mb-1">Upload CSV File</p>
+                    <p className="text-sm text-gray-600">Click to browse or drag and drop your CSV file here</p>
+                  </label>
+                </div>
+                
+                {csvFile && (
+                  <div className="mt-4 flex items-center p-3 bg-green-50 border border-green-200 rounded-lg">
+                    <CheckCircle className="w-5 h-5 text-green-600 mr-3" />
+                    <span className="text-sm font-medium text-green-800">{csvFile.name}</span>
+                  </div>
+                )}
+              </div>
+              
+              {/* Status Messages */}
+              {importStatus.message && (
+                <div className={`mb-6 p-4 rounded-lg ${
+                  importStatus.type === 'success' ? 'bg-green-50 border border-green-200 text-green-800' :
+                  importStatus.type === 'error' ? 'bg-red-50 border border-red-200 text-red-800' :
+                  'bg-yellow-50 border border-yellow-200 text-yellow-800'
+                }`}>
+                  <p className="text-sm font-medium">{importStatus.message}</p>
+                </div>
+              )}
+              
+              {/* Preview Data */}
+              {csvPreviewData.length > 0 && (
+                <div className="mb-6">
+                  <h4 className="text-base font-semibold text-gray-900 mb-3">Preview ({csvPreviewData.length} records)</h4>
+                  <div className="overflow-x-auto border border-gray-200 rounded-lg">
+                    <table className="w-full text-sm">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-3 py-2 text-left font-medium text-gray-900">Name</th>
+                          <th className="px-3 py-2 text-left font-medium text-gray-900">Email</th>
+                          <th className="px-3 py-2 text-left font-medium text-gray-900">Course</th>
+                          <th className="px-3 py-2 text-left font-medium text-gray-900">Nationality</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-200">
+                        {csvPreviewData.map((row, index) => (
+                          <tr key={index}>
+                            <td className="px-3 py-2 text-gray-900">{row['Full Name']}</td>
+                            <td className="px-3 py-2 text-gray-600">{row['Email']}</td>
+                            <td className="px-3 py-2 text-gray-900">{row['Course Applied']}</td>
+                            <td className="px-3 py-2 text-gray-600">{row['Nationality']}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            {/* Modal Footer */}
+            <div className="flex items-center justify-end p-6 border-t border-gray-200 space-x-3">
+              <button
+                onClick={() => setCsvModalOpen(false)}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={processBulkImport}
+                disabled={!csvFile || importStatus.type === 'loading'}
+                className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-colors"
+              >
+                {importStatus.type === 'loading' ? 'Processing...' : 'Import Students'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
