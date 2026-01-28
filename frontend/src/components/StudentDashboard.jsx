@@ -192,20 +192,22 @@ const StudentDashboard = () => {
 
   const StatCard = ({ title, value, change, icon: Icon, color, trend, onClick }) => (
     <div 
-      className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl shadow-sm border border-gray-200 p-4 hover:shadow-md transition-shadow relative cursor-pointer hover:scale-105 transform transition-transform"
+      className="bg-gradient-to-br from-gray-50 to-slate-50 rounded-lg shadow-sm border border-gray-100 p-3 hover:shadow-md transition-shadow relative cursor-pointer hover:scale-105 transform transition-transform"
       onClick={onClick}
     >
-      <div className="absolute top-3 right-3">
-        <div className="p-1.5 rounded-lg bg-white/50 border border-gray-200/50">
-          <Icon className="h-3 w-3 text-gray-400" />
+      <div className="absolute top-2 right-2">
+        <div className="p-1 rounded-md bg-white/60 border border-gray-100">
+          <Icon className="h-3 w-3 text-gray-500" />
         </div>
       </div>
-      <div className="pr-10">
+      <div className="pr-8">
         <p className="text-xs font-medium text-gray-500 mb-1 uppercase tracking-wide">{title}</p>
-        <p className="text-xl font-bold text-gray-900">{value.toLocaleString()}</p>
+        <p className="text-lg font-bold text-gray-800">{value.toLocaleString()}</p>
         {change && (
-          <div className={`flex items-center mt-1 text-xs ${trend >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-            <TrendingUp className={`h-3 w-3 mr-1 ${trend < 0 ? 'rotate-180' : ''}`} />
+          <div className={`flex items-center mt-1 text-xs ${
+            trend >= 0 ? 'text-green-600' : 'text-red-600'
+          }`}>
+            <TrendingUp className={`h-2 w-2 mr-1 ${trend < 0 ? 'rotate-180' : ''}`} />
             <span>{Math.abs(change)}% from last month</span>
           </div>
         )}

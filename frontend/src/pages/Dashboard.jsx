@@ -159,17 +159,17 @@ const Dashboard = ({ user, onLogout }) => {
                     <span className="bg-gray-100 text-gray-500 px-2 py-0.5 rounded-lg text-xs font-bold">{visibleModules.length}</span>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
                     {visibleModules.map((module, index) => {
-                        // Vibrant gradients inspired by legacy SCL project
+                        // Muted gradients for less brightness
                         const gradients = [
-                            'from-blue-600 to-blue-700',
-                            'from-indigo-600 to-indigo-700',
-                            'from-purple-600 to-purple-700',
-                            'from-emerald-600 to-emerald-700',
-                            'from-orange-600 to-orange-700',
-                            'from-scl-purple to-scl-dark',
-                            'from-slate-700 to-slate-800'
+                            'from-blue-400 to-blue-500',
+                            'from-indigo-400 to-indigo-500',
+                            'from-purple-400 to-purple-500',
+                            'from-emerald-400 to-emerald-500',
+                            'from-orange-400 to-orange-500',
+                            'from-scl-purple/80 to-scl-dark/90',
+                            'from-slate-500 to-slate-600'
                         ];
                         const bgGradient = gradients[index % gradients.length];
 
@@ -177,27 +177,27 @@ const Dashboard = ({ user, onLogout }) => {
                             <div
                                 key={module.id}
                                 onClick={() => handleModuleClick(module)}
-                                className={`relative overflow-hidden rounded-2xl p-4 border border-white/10 shadow-lg hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 group cursor-pointer bg-gradient-to-br ${bgGradient} text-white`}
+                                className={`relative overflow-hidden rounded-xl p-3 border border-white/10 shadow-md hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 group cursor-pointer bg-gradient-to-br ${bgGradient} text-white`}
                             >
-                                <div className="relative z-10 flex flex-col h-full min-h-[110px]">
-                                    <div className="flex items-start justify-between mb-3">
-                                        <div className="p-2 rounded-xl bg-white/15 backdrop-blur-md text-white shadow-lg border border-white/10 group-hover:scale-110 transition-transform duration-300">
-                                            <module.icon className="w-5 h-5" />
+                                <div className="relative z-10 flex flex-col h-full min-h-[85px]">
+                                    <div className="flex items-start justify-between mb-2">
+                                        <div className="p-1.5 rounded-lg bg-white/15 backdrop-blur-md text-white shadow-md border border-white/10 group-hover:scale-105 transition-transform duration-300">
+                                            <module.icon className="w-4 h-4" />
                                         </div>
-                                        <div className="p-1 rounded-full bg-white/10 text-white/50 opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <ArrowUpRight className="w-3 h-3" />
+                                        <div className="p-0.5 rounded-full bg-white/10 text-white/50 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <ArrowUpRight className="w-2.5 h-2.5" />
                                         </div>
                                     </div>
 
-                                    <h3 className="text-lg font-bold mb-0.5 leading-tight tracking-tight">
+                                    <h3 className="text-sm font-semibold mb-0.5 leading-tight tracking-tight">
                                         {module.title}
                                     </h3>
 
-                                    <p className="text-[10px] text-white/80 leading-snug flex-grow font-medium line-clamp-1">
+                                    <p className="text-[9px] text-white/75 leading-snug flex-grow font-medium line-clamp-1">
                                         {module.description}
                                     </p>
 
-                                    <div className="mt-3 pt-3 border-t border-white/10 flex items-center justify-between">
+                                    <div className="mt-2 pt-2 border-t border-white/10 flex items-center justify-between">
                                         <span className="text-[8px] uppercase font-black tracking-widest text-white/60">
                                             {user.role === 'admin' ? 'Full' : 'Std'}
                                         </span>
@@ -216,8 +216,8 @@ const Dashboard = ({ user, onLogout }) => {
                                 </div>
 
                                 {/* Subtle large icon overlay */}
-                                <div className="absolute -top-4 -right-4 opacity-10 group-hover:opacity-20 transition-all duration-500 scale-110">
-                                    <module.icon className="w-32 h-32" />
+                                <div className="absolute -top-2 -right-2 opacity-5 group-hover:opacity-15 transition-all duration-500 scale-90">
+                                    <module.icon className="w-20 h-20" />
                                 </div>
 
                                 {/* Bottom shine effect */}
