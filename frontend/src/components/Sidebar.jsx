@@ -1,3 +1,5 @@
+import { useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
     LayoutDashboard,
     GraduationCap,
@@ -6,30 +8,66 @@ import {
     ChevronLeft,
     Menu,
     ShieldCheck,
-    LogOut
+    LogOut,
+    ChevronDown,
+    ChevronRight,
+    FileText,
+    UserPlus,
+    BarChart3,
+    UserCheck
 } from 'lucide-react';
 
-const Sidebar = ({ isOpen, toggle, onLogout, activePath = '/' }) => {
+const Sidebar = ({ isOpen, toggle, onLogout }) => {
+    const navigate = useNavigate();
+    const location = useLocation();
+    const [expandedMenus, setExpandedMenus] = useState({ 'student-admission': true });
+
     const menuItems = [
         { name: 'Dashboard', icon: LayoutDashboard, path: '/' },
+        {
+            name: 'Student Admission',
+            icon: Users,
+            isParent: true,
+            key: 'student-admission',
+            subItems: [
+                { name: 'Dashboard', icon: BarChart3, path: '/students' },
+                { name: 'New Admission', icon: UserPlus, path: '/student-application' },
+                { name: 'View Students', icon: UserCheck, path: '/student-list' },
+                { name: 'Report', icon: FileText, path: '/students/report' }
+            ]
+        },
         { name: 'Access LMS', icon: GraduationCap, path: '/lms' },
-        { name: 'Users', icon: Users, path: '/users' },
         { name: 'Settings', icon: Settings, path: '/settings' },
     ];
 
+    const toggleSubMenu = (menuKey) => {
+        setExpandedMenus(prev => ({
+            ...prev,
+            [menuKey]: !prev[menuKey]
+        }));
+    };
+
+    const handleMenuClick = (item) => {
+        if (item.isParent) {
+            toggleSubMenu(item.key);
+        } else if (item.path) {
+            navigate(item.path);
+        }
+    };
+
     return (
         <aside
-            className={`fixed inset-y-0 left-0 z-50 bg-scl-dark text-white transition-all duration-300 ease-in-out shadow-2xl ${isOpen ? 'w-64' : 'w-20'
+            className={`fixed inset-y-0 left-0 z-50 bg-scl-dark text-white transition-all duration-300 ease-in-out shadow-2xl ${isOpen ? 'w-56' : 'w-16'
                 }`}
         >
             <div className="flex flex-col h-full">
                 {/* Logo Area */}
-                <div className="h-20 flex items-center justify-between px-6 border-b border-white/10">
-                    <div className={`flex items-center space-x-3 overflow-hidden transition-all duration-300 ${isOpen ? 'opacity-100 w-auto' : 'opacity-0 w-0'}`}>
-                        <div className="bg-white text-scl-purple p-1.5 rounded-lg">
-                            <ShieldCheck className="w-6 h-6" />
+                <div className="h-14 flex items-center justify-between px-3 border-b border-white/10">
+                    <div className={`flex items-center space-x-2 overflow-hidden transition-all duration-300 ${isOpen ? 'opacity-100 w-auto' : 'opacity-0 w-0'}`}>
+                        <div className="bg-white/10 backdrop-blur-md p-1.5 rounded-lg border border-white/20">
+                            <ShieldCheck className="w-5 h-5 text-white" />
                         </div>
-                        <span className="font-extrabold text-xl tracking-tight whitespace-nowrap">SCL INST</span>
+                        <span className="font-bold text-base tracking-tight whitespace-nowrap text-white">SCL Institute</span>
                     </div>
                     <button
                         onClick={toggle}
@@ -40,31 +78,73 @@ const Sidebar = ({ isOpen, toggle, onLogout, activePath = '/' }) => {
                 </div>
 
                 {/* Navigation Items */}
-                <nav className="flex-1 px-3 py-6 space-y-2">
+                <nav className="flex-1 px-2 py-4 space-y-1">
                     {menuItems.map((item) => {
-                        const isActive = activePath === item.path;
+                        const isActive = location.pathname === item.path;
+                        const isExpanded = item.isParent && expandedMenus[item.key];
+                        
                         return (
-                            <button
-                                key={item.name}
-                                className={`w-full flex items-center h-12 rounded-xl transition-all duration-200 group relative ${isActive
-                                    ? 'bg-scl-purple text-white shadow-lg shadow-scl-purple/20'
-                                    : 'text-purple-100/70 hover:bg-white/5 hover:text-white'
+                            <div key={item.name}>
+                                {/* Main Menu Item */}
+                                <button
+                                    onClick={() => handleMenuClick(item)}
+                                    className={`w-full flex items-center h-10 rounded-lg transition-all duration-200 group relative ${
+                                        isActive
+                                            ? 'bg-scl-purple text-white shadow-lg shadow-scl-purple/20'
+                                            : 'text-purple-100/70 hover:bg-white/5 hover:text-white'
                                     }`}
-                            >
-                                <div className={`flex items-center justify-center transition-all duration-300 ${isOpen ? 'pl-4 w-12' : 'w-full'}`}>
-                                    <item.icon className={`w-5 h-5 ${isActive ? 'scale-110' : 'group-hover:scale-110 transition-transform'}`} />
-                                </div>
-                                <span className={`font-medium whitespace-nowrap transition-all duration-300 text-sm overflow-hidden ${isOpen ? 'opacity-100 ml-3' : 'opacity-0 w-0'
+                                >
+                                    <div className={`flex items-center justify-center transition-all duration-300 ${isOpen ? 'pl-3 w-10' : 'w-full'}`}>
+                                        <item.icon className={`w-4 h-4 ${isActive ? 'scale-110' : 'group-hover:scale-110 transition-transform'}`} />
+                                    </div>
+                                    <span className={`font-medium whitespace-nowrap transition-all duration-300 text-xs overflow-hidden ${
+                                        isOpen ? 'opacity-100 ml-3 flex-1 text-left' : 'opacity-0 w-0'
                                     }`}>
-                                    {item.name}
-                                </span>
-
-                                {!isOpen && (
-                                    <div className="absolute left-full ml-4 px-2 py-1 bg-scl-dark text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50 shadow-xl border border-white/10">
                                         {item.name}
+                                    </span>
+                                    
+                                    {/* Chevron for parent items */}
+                                    {item.isParent && isOpen && (
+                                        <div className="pr-4">
+                                            {isExpanded ? 
+                                                <ChevronDown className="w-4 h-4 transition-transform" /> : 
+                                                <ChevronRight className="w-4 h-4 transition-transform" />
+                                            }
+                                        </div>
+                                    )}
+
+                                    {!isOpen && (
+                                        <div className="absolute left-full ml-4 px-2 py-1 bg-scl-dark text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50 shadow-xl border border-white/10">
+                                            {item.name}
+                                        </div>
+                                    )}
+                                </button>
+
+                                {/* Sub Menu Items */}
+                                {item.isParent && isExpanded && isOpen && (
+                                    <div className="ml-4 mt-1 space-y-1">
+                                        {item.subItems.map((subItem) => {
+                                            const isSubActive = location.pathname === subItem.path;
+                                            return (
+                                                <button
+                                                    key={subItem.name}
+                                                    onClick={() => navigate(subItem.path)}
+                                                    className={`w-full flex items-center h-10 rounded-lg transition-all duration-200 group relative pl-4 ${
+                                                        isSubActive
+                                                            ? 'bg-scl-purple/50 text-white shadow-md'
+                                                            : 'text-purple-100/60 hover:bg-white/5 hover:text-white'
+                                                    }`}
+                                                >
+                                                    <subItem.icon className="w-4 h-4 mr-3" />
+                                                    <span className="font-medium text-sm">
+                                                        {subItem.name}
+                                                    </span>
+                                                </button>
+                                            );
+                                        })}
                                     </div>
                                 )}
-                            </button>
+                            </div>
                         );
                     })}
                 </nav>

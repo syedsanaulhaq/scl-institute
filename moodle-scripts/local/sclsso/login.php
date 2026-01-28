@@ -14,7 +14,7 @@ if (empty($token)) {
 }
 
 // 1. Verify Token with SCL Backend
-$verifier_url = 'http://scli-backend-prod:4000/api/sso/verify';
+$verifier_url = 'http://scli-backend-dev:4000/api/sso/verify';
 $secret = getenv('SSO_SECRET') ?: 'dev-supersecretkey-changeinproduction';
 
 $data = json_encode(array('token' => $token, 'secret' => $secret));

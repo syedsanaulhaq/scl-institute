@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import {
     LayoutDashboard,
@@ -22,6 +23,7 @@ import {
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
 
 const Dashboard = ({ user, onLogout }) => {
+    const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 
@@ -45,8 +47,27 @@ const Dashboard = ({ user, onLogout }) => {
         }
     };
 
+    const handleModuleClick = (module) => {
+        if (module.isSSO) {
+            handleAccessLMS();
+        } else if (module.path) {
+            navigate(module.path);
+        } else {
+            console.log(`Navigate to ${module.id} module`);
+        }
+    };
+
     // Module Definitions with Role-Based Visibility
     const modules = [
+        {
+            id: 'students',
+            title: 'Student Management',
+            description: 'Student applications, admissions, enrollment tracking and management dashboard.',
+            icon: Users,
+            roles: ['admin', 'admission_officer', 'student'],
+            color: 'green',
+            path: '/students'
+        },
         {
             id: 'partners',
             title: 'Partner & Associates Management',
@@ -155,6 +176,7 @@ const Dashboard = ({ user, onLogout }) => {
                         return (
                             <div
                                 key={module.id}
+                                onClick={() => handleModuleClick(module)}
                                 className={`relative overflow-hidden rounded-2xl p-4 border border-white/10 shadow-lg hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 group cursor-pointer bg-gradient-to-br ${bgGradient} text-white`}
                             >
                                 <div className="relative z-10 flex flex-col h-full min-h-[110px]">

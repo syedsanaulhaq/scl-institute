@@ -70,6 +70,12 @@ app.use((req, res, next) => {
 app.use(cors());
 app.use(bodyParser.json());
 
+// Import routes
+const studentRoutes = require('./routes/students');
+
+// Use routes
+app.use('/api/students', studentRoutes);
+
 // Routes
 app.get('/api/health', (req, res) => {
     res.json({ status: 'OK', timestamp: new Date() });
