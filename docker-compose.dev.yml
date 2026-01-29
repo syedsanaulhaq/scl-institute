@@ -51,6 +51,7 @@ services:
       - MOODLE_USERNAME=${MOODLE_USERNAME}
       - MOODLE_PASSWORD=${MOODLE_PASSWORD}
       - MOODLE_SITE_NAME=${MOODLE_SITE_NAME}
+      - SSO_SECRET=${SSO_SECRET}
       - BITNAMI_DEBUG=true
     restart: always
     ports:
