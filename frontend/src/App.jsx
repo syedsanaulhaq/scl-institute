@@ -7,6 +7,7 @@ import StudentAdmissionForm from './components/StudentAdmissionForm';
 import StudentDashboard from './components/StudentDashboard';
 import StudentList from './components/StudentList';
 import StudentDetail from './components/StudentDetail';
+import StudentReport from './components/StudentReport';
 
 function App() {
     const [user, setUser] = useState(null);
@@ -83,6 +84,15 @@ function App() {
                     user ? (
                         <Layout user={user} onLogout={handleLogout}>
                             <StudentDetail />
+                        </Layout>
+                    ) : (
+                        <LoginPage onLoginSuccess={handleLoginSuccess} />
+                    )
+                } />
+                <Route path="/students/report" element={
+                    user ? (
+                        <Layout user={user} onLogout={handleLogout}>
+                            <StudentReport />
                         </Layout>
                     ) : (
                         <LoginPage onLoginSuccess={handleLoginSuccess} />

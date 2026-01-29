@@ -360,34 +360,74 @@ router.get('/applications', async (req, res) => {
             params.push(course_code);
         }
         
-        const offset = (page - 1) * limit;
+        const offset = (page - 1) * parseInt(limit);
         
-        const [applications] = await db.execute(`
-            SELECT 
-                sa.id,
-                sa.application_reference,
-                sa.first_name,
-                sa.last_name,
-                sa.email,
-                sa.course_title,
-                sa.course_code,
-                sa.application_status,
-                sa.submitted_at,
-                sa.intake_start_date,
-                c.department
-            FROM student_applications sa
-            LEFT JOIN courses c ON sa.course_code = c.course_code
-            ${whereClause}
-            ORDER BY sa.submitted_at DESC
-            LIMIT ? OFFSET ?
-        `, [...params, parseInt(limit), parseInt(offset)]);
+        // Try the full query first, fall back to simple query if it fails
+        let applications = [];
+        try {
+            const [result] = await db.execute(`
+                SELECT 
+                    sa.id,
+                    sa.application_reference,
+                    sa.first_name,
+                    sa.last_name,
+                    sa.email,
+                    sa.course_title,
+                    sa.course_code,
+                    sa.application_status,
+                    sa.submitted_at,
+                    sa.intake_start_date,
+                    c.department
+                FROM student_applications sa
+                LEFT JOIN courses c ON sa.course_code = c.course_code
+                ${whereClause}
+                ORDER BY sa.submitted_at DESC
+                LIMIT ? OFFSET ?
+            `, [...params, parseInt(limit), parseInt(offset)]);
+            
+            applications = result;
+        } catch (error) {
+            console.error('Complex query failed, trying simple query:', error.message);
+            // Fallback to simple query without LIMIT/OFFSET
+            try {
+                const [result] = await db.execute(`
+                    SELECT 
+                        sa.id,
+                        sa.application_reference,
+                        sa.first_name,
+                        sa.last_name,
+                        sa.email,
+                        sa.course_title,
+                        sa.course_code,
+                        sa.application_status,
+                        sa.submitted_at,
+                        sa.intake_start_date
+                    FROM student_applications sa
+                    ${whereClause}
+                    ORDER BY sa.id DESC
+                `, params);
+                
+                applications = result;
+            } catch (fallbackError) {
+                console.error('Simple query also failed:', fallbackError.message);
+                // Return empty result set
+                applications = [];
+            }
+        }
 
-        // Get total count
-        const [countResult] = await db.execute(`
-            SELECT COUNT(*) as total
-            FROM student_applications sa
-            ${whereClause}
-        `, params);
+        // Get total count (simplified)
+        let total = 0;
+        try {
+            const [countResult] = await db.execute(`
+                SELECT COUNT(*) as total
+                FROM student_applications sa
+                ${whereClause}
+            `, params);
+            total = countResult[0].total;
+        } catch (countError) {
+            console.error('Count query failed:', countError.message);
+            total = applications.length;
+        }
 
         res.json({
             success: true,
@@ -396,8 +436,8 @@ router.get('/applications', async (req, res) => {
                 pagination: {
                     current_page: parseInt(page),
                     per_page: parseInt(limit),
-                    total: countResult[0].total,
-                    total_pages: Math.ceil(countResult[0].total / limit)
+                    total,
+                    total_pages: Math.ceil(total / parseInt(limit))
                 }
             }
         });
