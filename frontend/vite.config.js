@@ -6,7 +6,6 @@ export default defineConfig({
     plugins: [react()],
     server: {
         host: '0.0.0.0',
-        port: 3000,
-        allowedHosts: ['sclsandbox.xyz', 'backend.sclsandbox.xyz', 'lms.sclsandbox.xyz']
+        port: 3000
     }
 })
