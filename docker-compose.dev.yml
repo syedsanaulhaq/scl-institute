@@ -78,6 +78,8 @@ services:
       - DB_PASS=${DB_PASS}
       - DB_NAME=${DB_NAME}
       - MOODLE_URL=http://localhost:9090
+      - MOODLE_INTERNAL_URL=http://scli-moodle-dev:8080
+      - MOODLE_TOKEN=e86dd021aaa42f78114e6c67cc9d8ff1
       - SSO_SECRET=${SSO_SECRET}
       - VITE_API_URL=${VITE_API_URL}
     depends_on:

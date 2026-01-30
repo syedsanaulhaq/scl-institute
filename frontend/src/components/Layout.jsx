@@ -24,6 +24,7 @@ const Layout = ({ user, onLogout, children }) => {
                 isOpen={isSidebarOpen}
                 toggle={toggleSidebar}
                 onLogout={onLogout}
+                user={user}
             />
 
             <div className={`transition-all duration-300 ease-in-out ${isSidebarOpen ? 'pl-56' : 'pl-16'}`}>

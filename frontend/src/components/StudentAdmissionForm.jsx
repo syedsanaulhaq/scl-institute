@@ -1,5 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import { Upload, Calendar, User, GraduationCap, FileText, Shield, CheckCircle, AlertCircle, Download, X, FileUp } from 'lucide-react';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
 
 const StudentAdmissionForm = () => {
   const [currentSection, setCurrentSection] = useState(1);
@@ -7,6 +10,8 @@ const StudentAdmissionForm = () => {
   const [csvFile, setCsvFile] = useState(null);
   const [csvPreviewData, setCsvPreviewData] = useState([]);
   const [importStatus, setImportStatus] = useState({ type: '', message: '' });
+  const [courses, setCourses] = useState([]);
+  const [loadingCourses, setLoadingCourses] = useState(true);
   const [formData, setFormData] = useState({
     firstName: '',
     middleNames: '',
@@ -64,13 +69,33 @@ const StudentAdmissionForm = () => {
 
   const countries = ['United Kingdom', 'United States', 'Canada', 'Australia', 'Germany', 'France', 'Spain', 'Italy', 'Netherlands', 'Nigeria', 'Ghana', 'Kenya', 'South Africa', 'India', 'Pakistan', 'Bangladesh', 'China', 'Japan'];
 
-  const courses = [
-    { code: 'BUS101', title: 'Business Administration HND', type: 'HND' },
-    { code: 'IT201', title: 'Information Technology Degree', type: 'Degree' },
-    { code: 'ACC301', title: 'Accounting and Finance HND', type: 'HND' },
-    { code: 'ENG401', title: 'English Language Course', type: 'Short Course' },
-    { code: 'PROJ501', title: 'Project Management CPD', type: 'CPD' }
-  ];
+  // Fetch courses from API
+  useEffect(() => {
+    const fetchCourses = async () => {
+      try {
+        console.log('🔄 Fetching courses from API:', `${API_URL}/students/courses`);
+        setLoadingCourses(true);
+        const response = await axios.get(`${API_URL}/students/courses`);
+        console.log('✅ API Response:', response.data);
+        if (response.data.success) {
+          setCourses(response.data.data);
+          console.log('✅ Courses loaded:', response.data.data.length, 'courses');
+        } else {
+          console.error('❌ Failed to fetch courses:', response.data.message);
+          // Fallback to empty array
+          setCourses([]);
+        }
+      } catch (error) {
+        console.error('❌ Error fetching courses:', error);
+        // Fallback to empty array
+        setCourses([]);
+      } finally {
+        setLoadingCourses(false);
+      }
+    };
+
+    fetchCourses();
+  }, []);
 
   const documentTypes = [
     'Passport / ID',
@@ -91,12 +116,12 @@ const StudentAdmissionForm = () => {
     
     // Auto-fill course code when course is selected
     if (field === 'courseTitle') {
-      const selectedCourse = courses.find(course => course.title === value);
+      const selectedCourse = courses.find(course => course.course_title === value);
       if (selectedCourse) {
         setFormData(prev => ({
           ...prev,
-          courseCode: selectedCourse.code,
-          courseType: selectedCourse.type
+          courseCode: selectedCourse.course_code,
+          courseType: selectedCourse.course_type
         }));
       }
     }
@@ -271,15 +296,22 @@ const StudentAdmissionForm = () => {
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Course Title *</label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Course Title * {courses.length > 0 && `(${courses.length} available)`}
+          </label>
           <select
             value={formData.courseTitle}
             onChange={(e) => handleInputChange('courseTitle', e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+            disabled={loadingCourses}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
           >
-            <option value="">Select a course</option>
+            <option value="">
+              {loadingCourses ? 'Loading courses...' : `Select a course ${courses.length > 0 ? `(${courses.length} available)` : '(No courses found)'}`}
+            </option>
             {courses.map(course => (
-              <option key={course.code} value={course.title}>{course.title}</option>
+              <option key={course.course_code} value={course.course_title}>
+                {course.course_title}
+              </option>
             ))}
           </select>
         </div>

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import axios from 'axios';
 import {
     LayoutDashboard,
     GraduationCap,
@@ -17,10 +18,32 @@ import {
     UserCheck
 } from 'lucide-react';
 
-const Sidebar = ({ isOpen, toggle, onLogout }) => {
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
+
+const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
     const navigate = useNavigate();
     const location = useLocation();
     const [expandedMenus, setExpandedMenus] = useState({ 'student-admission': true });
+    const [loading, setLoading] = useState(false);
+
+    const handleAccessLMS = async () => {
+        try {
+            setLoading(true);
+            const response = await axios.post(`${API_URL}/sso/generate`, {
+                email: user.email
+            });
+
+            if (response.data.success) {
+                window.open(response.data.redirectUrl, '_blank');
+            } else {
+                console.error('Failed to generate SSO token');
+            }
+        } catch (err) {
+            console.error('Failed to access LMS:', err);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const menuItems = [
         { name: 'Dashboard', icon: LayoutDashboard, path: '/' },
@@ -36,7 +59,7 @@ const Sidebar = ({ isOpen, toggle, onLogout }) => {
                 { name: 'Report', icon: FileText, path: '/students/report' }
             ]
         },
-        { name: 'Access LMS', icon: GraduationCap, path: '/lms' },
+        { name: 'Access LMS', icon: GraduationCap, isSSO: true },
         { name: 'Settings', icon: Settings, path: '/settings' },
     ];
 
@@ -50,6 +73,8 @@ const Sidebar = ({ isOpen, toggle, onLogout }) => {
     const handleMenuClick = (item) => {
         if (item.isParent) {
             toggleSubMenu(item.key);
+        } else if (item.isSSO) {
+            handleAccessLMS();
         } else if (item.path) {
             navigate(item.path);
         }
@@ -88,11 +113,12 @@ const Sidebar = ({ isOpen, toggle, onLogout }) => {
                                 {/* Main Menu Item */}
                                 <button
                                     onClick={() => handleMenuClick(item)}
+                                    disabled={item.isSSO && loading}
                                     className={`w-full flex items-center h-10 rounded-lg transition-all duration-200 group relative ${
                                         isActive
                                             ? 'bg-scl-purple text-white shadow-lg shadow-scl-purple/20'
                                             : 'text-purple-100/70 hover:bg-white/5 hover:text-white'
-                                    }`}
+                                    } ${item.isSSO && loading ? 'opacity-50 cursor-not-allowed' : ''}`}
                                 >
                                     <div className={`flex items-center justify-center transition-all duration-300 ${isOpen ? 'pl-3 w-10' : 'w-full'}`}>
                                         <item.icon className={`w-4 h-4 ${isActive ? 'scale-110' : 'group-hover:scale-110 transition-transform'}`} />

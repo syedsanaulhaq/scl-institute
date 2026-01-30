@@ -72,9 +72,11 @@ app.use(bodyParser.json());
 
 // Import routes
 const studentRoutes = require('./routes/students');
+const moodleRoutes = require('./routes/moodle');
 
 // Use routes
 app.use('/api/students', studentRoutes);
+app.use('/api/moodle', moodleRoutes);
 
 // Routes
 app.get('/api/health', (req, res) => {
