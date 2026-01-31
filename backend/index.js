@@ -99,13 +99,37 @@ const users = [
     { id: 2, email: 'student@scl.com', password: 'password', name: 'John Doe', role: 'student' }
 ];
 
-app.post('/api/login', (req, res) => {
+app.post('/api/login', async (req, res) => {
     const { email, password } = req.body;
-    const user = users.find(u => u.email === email && u.password === password);
-    if (user) {
-        res.json({ success: true, user: { id: user.id, email: user.email, name: user.name, role: user.role } });
-    } else {
-        res.status(401).json({ success: false, message: 'Invalid credentials' });
+    
+    try {
+        // Get user from database instead of hardcoded array
+        const [rows] = await pool.query(
+            'SELECT id, email, first_name, last_name, role FROM users WHERE email = ? AND password = ?', 
+            [email, password]
+        );
+        
+        if (rows.length > 0) {
+            const user = rows[0];
+            console.log(`[LOGIN] User authenticated:`, { email: user.email, role: user.role });
+            res.json({ 
+                success: true, 
+                user: { 
+                    id: user.id, 
+                    email: user.email, 
+                    name: `${user.first_name} ${user.last_name}`.trim(),
+                    firstName: user.first_name,
+                    lastName: user.last_name,
+                    role: user.role 
+                } 
+            });
+        } else {
+            console.log(`[LOGIN] Failed login attempt for: ${email}`);
+            res.status(401).json({ success: false, message: 'Invalid credentials' });
+        }
+    } catch (dbErr) {
+        console.error('[LOGIN] Database error:', dbErr.message);
+        res.status(500).json({ success: false, message: 'Database error during authentication' });
     }
 });
 
@@ -124,15 +148,24 @@ app.post('/api/v1/auth/login', (req, res) => {
 app.post('/api/sso/generate', async (req, res) => {
     const { email } = req.body;
     console.log(`[SSO] Generating token for ${email}...`);
-    const user = users.find(u => u.email === email);
-
-    if (!user) {
-        return res.status(404).json({ success: false, message: 'User not found' });
+    
+    // Get real user data from database instead of hardcoded array
+    let user;
+    try {
+        const [rows] = await pool.query('SELECT id, email, first_name, last_name, role FROM users WHERE email = ?', [email]);
+        if (rows.length === 0) {
+            return res.status(404).json({ success: false, message: 'User not found in database' });
+        }
+        user = rows[0];
+        console.log(`[SSO] Found user in database:`, { email: user.email, name: `${user.first_name} ${user.last_name}`, role: user.role });
+    } catch (dbErr) {
+        console.error('[SSO] Database error while fetching user:', dbErr.message);
+        return res.status(500).json({ success: false, message: 'Database error while fetching user' });
     }
 
     const token = uuidv4();
-    const firstname = user.name.split(' ')[0];
-    const lastname = user.name.split(' ')[1] || '';
+    const firstname = user.first_name || 'SCL';
+    const lastname = user.last_name || 'User';
 
     try {
         console.log(`[SSO] Inserting token into DB...`);

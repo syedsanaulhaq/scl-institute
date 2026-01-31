@@ -1,6 +1,13 @@
 <?php
-// /local/sclsso/lang/en/local_sclsso.php
+// This file is part of Moodle - https://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+
+defined('MOODLE_INTERNAL') || die();
 
 $string['pluginname'] = 'SCL SSO';
-$string['notoken'] = 'Single Sign-on token is missing. Please log in from the main portal.';
-$string['generalexceptionmessage'] = 'An error occurred during SSO: {$a}';
+$string['privacy:metadata'] = 'The SCL SSO plugin does not store any personal data.';
+?>

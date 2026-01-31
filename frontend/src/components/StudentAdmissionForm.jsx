@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Upload, Calendar, User, GraduationCap, FileText, Shield, CheckCircle, AlertCircle, Download, X, FileUp } from 'lucide-react';
+import { Upload, Calendar, User, GraduationCap, FileText, Shield, CheckCircle, AlertCircle, Download, X, FileUp, ChevronDown, ChevronRight } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
 
 const StudentAdmissionForm = () => {
-  const [currentSection, setCurrentSection] = useState(1);
+  const [activeSection, setActiveSection] = useState(1);
   const [csvModalOpen, setCsvModalOpen] = useState(false);
   const [csvFile, setCsvFile] = useState(null);
   const [csvPreviewData, setCsvPreviewData] = useState([]);
@@ -127,12 +127,8 @@ const StudentAdmissionForm = () => {
     }
   };
 
-  const nextSection = () => {
-    if (currentSection < 5) setCurrentSection(currentSection + 1);
-  };
-
-  const prevSection = () => {
-    if (currentSection > 1) setCurrentSection(currentSection - 1);
+  const toggleSection = (sectionId) => {
+    setActiveSection(activeSection === sectionId ? null : sectionId);
   };
 
   const renderPersonalInformation = () => (
@@ -628,19 +624,8 @@ const StudentAdmissionForm = () => {
     </div>
   );
 
-  const renderCurrentSection = () => {
-    switch (currentSection) {
-      case 1: return renderPersonalInformation();
-      case 2: return renderCourseSelection();
-      case 3: return renderAcademicBackground();
-      case 4: return renderDocumentUpload();
-      case 5: return renderConsentsDeclaration();
-      default: return renderPersonalInformation();
-    }
-  };
-
   const canProceed = () => {
-    switch (currentSection) {
+    switch (activeSection) {
       case 1:
         return formData.firstName && formData.lastName && formData.email && formData.contactNumber;
       case 2:
@@ -770,109 +755,89 @@ const StudentAdmissionForm = () => {
             <div className="w-32 bg-gray-200 rounded-full h-2">
               <div 
                 className="bg-scl-purple h-2 rounded-full transition-all duration-300"
-                style={{ width: `${(currentSection / 5) * 100}%` }}
+                style={{ width: `${(activeSection / 5) * 100}%` }}
               />
             </div>
-            <span className="text-sm font-semibold text-gray-900">{currentSection}/5</span>
+            <span className="text-sm font-semibold text-gray-900">{activeSection}/5</span>
           </div>
         </div>
       </div>
 
-      {/* Form Container */}
+      {/* Accordion Form Container */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        {/* Horizontal Tabs */}
-        <div className="border-b border-gray-200">
-          <nav className="flex space-x-0">
-            {sections.map((section) => {
-              const isActive = currentSection === section.id;
-              const isCompleted = currentSection > section.id;
-              const Icon = section.icon;
-              
-              return (
+        <div className="space-y-0">
+          {sections.map((section) => {
+            const isActive = activeSection === section.id;
+            const Icon = section.icon;
+            
+            return (
+              <div key={section.id} className="border-b border-gray-200 last:border-b-0">
+                {/* Section Header */}
                 <button
-                  key={section.id}
-                  onClick={() => setCurrentSection(section.id)}
-                  className={`flex-1 flex items-center justify-center p-4 text-sm font-medium transition-all relative ${
+                  onClick={() => toggleSection(section.id)}
+                  className={`w-full flex items-center justify-between p-4 text-left transition-colors ${
                     isActive 
-                      ? 'text-scl-purple bg-purple-50 border-b-2 border-scl-purple'
-                      : isCompleted
-                      ? 'text-green-600 bg-green-50 hover:bg-green-100'
-                      : 'text-gray-500 bg-gray-50 hover:bg-gray-100'
+                      ? 'bg-white hover:bg-gray-50' 
+                      : 'bg-gray-50 hover:bg-gray-100'
                   }`}
                 >
-                  <div className="flex items-center space-x-2">
-                    <div className={`p-1.5 rounded-lg ${
-                      isActive ? 'bg-scl-purple/10' : isCompleted ? 'bg-green-100' : 'bg-gray-200'
-                    }`}>
-                      {isCompleted ? (
-                        <CheckCircle className="h-4 w-4 text-green-600" />
-                      ) : (
-                        <Icon className={`h-4 w-4 ${
-                          isActive ? 'text-scl-purple' : 'text-gray-400'
-                        }`} />
-                      )}
+                  <div className="flex items-center space-x-3">
+                    <div className={`p-2 rounded-lg ${section.color} bg-opacity-10`}>
+                      <Icon className={`h-5 w-5 ${section.color.replace('bg-', 'text-')}`} />
                     </div>
-                    <span className="hidden lg:block">{section.title}</span>
-                    <span className="lg:hidden">{section.id}</span>
+                    <div>
+                      <h3 className="text-base font-semibold text-gray-900">{section.title}</h3>
+                      <p className="text-sm text-gray-600 mt-0.5">
+                        {section.id === 1 && "Please provide your personal information"}
+                        {section.id === 2 && "Select your course and study preferences"}
+                        {section.id === 3 && "Tell us about your academic background"}
+                        {section.id === 4 && "Upload your supporting documents"}
+                        {section.id === 5 && "Review and confirm your application"}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">
+                      {section.id}/5
+                    </span>
+                    {isActive ? (
+                      <ChevronDown className="h-5 w-5 text-gray-400" />
+                    ) : (
+                      <ChevronRight className="h-5 w-5 text-gray-400" />
+                    )}
                   </div>
                 </button>
-              );
-            })}
-          </nav>
+                
+                {/* Section Content */}
+                {isActive && (
+                  <div className="p-6 pt-0 border-t border-gray-100">
+                    {section.id === 1 && renderPersonalInformation()}
+                    {section.id === 2 && renderCourseSelection()}
+                    {section.id === 3 && renderAcademicBackground()}
+                    {section.id === 4 && renderDocumentUpload()}
+                    {section.id === 5 && renderConsentsDeclaration()}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
 
-        {/* Form Content */}
-        <div className="p-6">
-          <div className="mb-4">
-            <h2 className="text-lg font-semibold text-gray-900 mb-2">
-              {sections[currentSection - 1].title}
-            </h2>
-            <p className="text-gray-600 text-sm">
-              {currentSection === 1 && "Please provide your personal information"}
-              {currentSection === 2 && "Select your course and study preferences"}
-              {currentSection === 3 && "Tell us about your academic background"}
-              {currentSection === 4 && "Upload your supporting documents"}
-              {currentSection === 5 && "Review and confirm your application"}
-            </p>
-          </div>
-
-          {renderCurrentSection()}
-
-          {/* Navigation Buttons */}
-          <div className="flex justify-between items-center mt-6 pt-4 border-t border-gray-200">
+        {/* Submit Button - Always Visible */}
+        <div className="p-6 bg-gray-50 border-t border-gray-200">
+          <div className="flex justify-between items-center">
             <button
-              onClick={prevSection}
-              disabled={currentSection === 1}
-              className="flex items-center px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
+              type="button"
+              className="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
             >
-              Previous
+              Save Draft
             </button>
-            
-            <div className="flex space-x-3">
-              <button
-                type="button"
-                className="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
-              >
-                Save Draft
-              </button>
-              
-              {currentSection < 5 ? (
-                <button
-                  onClick={nextSection}
-                  disabled={!canProceed()}
-                  className="px-6 py-3 bg-scl-purple text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-colors"
-                >
-                  Next Section
-                </button>
-              ) : (
-                <button
-                  disabled={!canProceed()}
-                  className="px-8 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed font-semibold transition-colors"
-                >
-                  Submit Application
-                </button>
-              )}
-            </div>
+            <button
+              disabled={!canProceed()}
+              className="px-8 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed font-semibold transition-colors"
+            >
+              Submit Application
+            </button>
           </div>
         </div>
       </div>

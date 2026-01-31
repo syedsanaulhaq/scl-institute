@@ -1,0 +1,9 @@
+FROM bitnamilegacy/moodle:4.3
+
+# Copy SSO plugin files during image build from correct path
+COPY moodle-scripts/local/sclsso /opt/bitnami/moodle/local/sclsso
+
+# Set proper ownership 
+USER root
+RUN chown -R daemon:daemon /opt/bitnami/moodle/local/sclsso
+USER 1001
