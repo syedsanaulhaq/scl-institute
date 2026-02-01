@@ -4,7 +4,7 @@ import Home from './pages/Home';
 import Design1 from './pages/Design1';
 import Design2 from './pages/Design2';
 import Design3 from './pages/Design3';
-import PublicApplicationForm from './components/PublicApplicationForm';
+import StudentAdmissionForm from './components/StudentAdmissionForm';
 import { Layout } from 'lucide-react';
 import './index.css';
 
@@ -23,10 +23,19 @@ function App() {
 
     if (currentView === 'apply') {
         return (
-            <PublicApplicationForm 
-                selectedTheme={selectedTheme}
-                onBack={() => setCurrentView('home')}
-            />
+            <div className="min-h-screen bg-gray-50">
+                <div className="bg-white shadow-sm py-4 px-6 mb-6">
+                    <button
+                        onClick={() => setCurrentView('home')}
+                        className="text-blue-600 hover:text-blue-800 font-medium flex items-center gap-2"
+                    >
+                        ← Back to Home
+                    </button>
+                </div>
+                <div className="max-w-7xl mx-auto px-4">
+                    <StudentAdmissionForm />
+                </div>
+            </div>
         );
     }
 
