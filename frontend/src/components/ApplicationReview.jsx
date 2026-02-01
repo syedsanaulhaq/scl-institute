@@ -21,6 +21,29 @@ const ApplicationReview = () => {
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
 
+    // Safe date formatter
+    const formatDate = (dateValue) => {
+        if (!dateValue) return '';
+        try {
+            const date = new Date(dateValue);
+            if (isNaN(date.getTime())) return '';
+            return date.toISOString().split('T')[0];
+        } catch (e) {
+            return '';
+        }
+    };
+
+    const formatDisplayDate = (dateValue) => {
+        if (!dateValue) return 'N/A';
+        try {
+            const date = new Date(dateValue);
+            if (isNaN(date.getTime())) return 'N/A';
+            return date.toLocaleDateString();
+        } catch (e) {
+            return 'N/A';
+        }
+    };
+
     // Review form state
     const [review, setReview] = useState({
         reviewer_name: '',
@@ -173,7 +196,7 @@ const ApplicationReview = () => {
                             </div>
                             <div>
                                 <p className="text-sm text-gray-600 font-medium">Submitted Date</p>
-                                <p className="text-lg font-semibold text-gray-900">{new Date(application.submitted_at).toLocaleDateString()}</p>
+                                <p className="text-lg font-semibold text-gray-900">{formatDisplayDate(application.submitted_at)}</p>
                             </div>
                         </div>
 
@@ -337,7 +360,7 @@ const ApplicationReview = () => {
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Date of Application (Auto-filled)</label>
                                 <input
                                     type="date"
-                                    value={new Date(application.submitted_at).toISOString().split('T')[0]}
+                                    value={formatDate(application.submitted_at)}
                                     disabled
                                     className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50"
                                 />
