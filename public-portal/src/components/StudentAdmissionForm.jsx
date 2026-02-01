@@ -733,6 +733,63 @@ const StudentAdmissionForm = () => {
     }, 2000);
   };
 
+  // Fill sample data for testing
+  const fillSampleData = () => {
+    const today = new Date().toISOString().split('T')[0];
+    const firstCourse = courses.length > 0 ? courses[0] : null;
+    
+    setFormData({
+      // Personal Information
+      firstName: 'Mohammed',
+      middleNames: 'Ahmed',
+      lastName: 'Hassan',
+      dateOfBirth: '1998-05-15',
+      gender: 'Male',
+      nationality: 'Nigeria',
+      email: 'mohammed.hassan@example.com',
+      contactNumber: '+234-803-555-0123',
+      addressLine1: '123 Lagos Street',
+      addressLine2: 'Flat 4B',
+      townCity: 'Lagos',
+      postcode: '100001',
+      countryOfResidence: 'Nigeria',
+      
+      // Course Selection
+      courseTitle: firstCourse?.course_title || '',
+      courseCode: firstCourse?.course_code || '',
+      courseType: firstCourse?.course_type || '',
+      modeOfStudy: 'Full-time',
+      intakeStartDate: today,
+      entryRoute: 'Standard',
+      
+      // Academic Background
+      highestQualification: 'A-Level',
+      institutionName: 'Lagos International College',
+      yearCompleted: '2020',
+      workExperience: '2 years in IT support at Tech Solutions Ltd',
+      englishProficiency: 'IELTS',
+      englishScore: '6.5',
+      
+      // Documents
+      uploadedDocuments: {},
+      
+      // Support Needs
+      hasDisabilities: 'No',
+      disabilityDetails: '',
+      
+      // Consents
+      consentGdpr: true,
+      consentDataSharing: true,
+      consentMarketing: false,
+      declarationTruth: true,
+      digitalSignature: 'Mohammed Ahmed Hassan',
+      declarationDate: today
+    });
+    
+    // If we have courses, auto-expand to first section
+    setActiveSection(1);
+  };
+
   return (
     <div className="space-y-4">
       {/* Page Header */}
@@ -742,6 +799,14 @@ const StudentAdmissionForm = () => {
           <p className="text-gray-600 mt-1 text-sm">Complete all sections to submit your application</p>
         </div>
         <div className="flex items-center space-x-3">
+          <button
+            type="button"
+            onClick={fillSampleData}
+            className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors text-sm"
+          >
+            <User className="w-4 h-4 mr-2" />
+            Fill Sample Data
+          </button>
           <button
             type="button"
             onClick={() => setCsvModalOpen(true)}
