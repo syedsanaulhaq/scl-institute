@@ -140,7 +140,7 @@ const Design3 = ({ selectedTheme = 'corporate', onApplyNow, onChangeTheme }) => 
                         <a href="#" className="text-white hover:opacity-80 font-medium">Programs</a>
                         <a href="#" className="text-white hover:opacity-80 font-medium">About</a>
                         <a href="#" className="text-white hover:opacity-80 font-medium">Contact</a>
-                        <a href="http://localhost:3000" className="text-white hover:opacity-80 font-medium">SCL System</a>
+                        <a href="http://localhost:3000" className="text-yellow-300 hover:text-yellow-200 font-semibold underline">SCL System</a>
                         <button onClick={onApplyNow} className={`bg-${theme.accent} text-white px-6 py-2 rounded font-semibold hover:opacity-90`}>
                             Apply Now
                         </button>

@@ -257,7 +257,12 @@ const Design1 = ({ selectedTheme = 'modern', onApplyNow, onChangeTheme }) => {
                             <a href="#home" className={`font-medium ${isScrolled ? 'text-gray-700' : 'text-white'}`}>Home</a>
                             <a href="#programs" className={`font-medium ${isScrolled ? 'text-gray-700' : 'text-white'}`}>Programs</a>
                             <a href="#about" className={`font-medium ${isScrolled ? 'text-gray-700' : 'text-white'}`}>About</a>
-                            <a href="http://localhost:3000" className={`font-medium ${isScrolled ? 'text-gray-700' : 'text-white'}`}>SCL System</a>
+                            <a
+                                href="http://localhost:3000"
+                                className={`font-medium ${isScrolled ? 'text-blue-700' : 'text-yellow-300'} hover:underline`}
+                            >
+                                SCL System
+                            </a>
                             <button onClick={onApplyNow} className={`bg-${theme.accent} text-white px-6 py-2 rounded-full font-semibold`}>
                                 Apply Now
                             </button>
