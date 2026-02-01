@@ -23,17 +23,45 @@ function App() {
 
     if (currentView === 'apply') {
         return (
-            <div className="min-h-screen bg-gray-50">
-                <div className="bg-white shadow-sm py-4 px-6 mb-6">
-                    <button
-                        onClick={() => setCurrentView('home')}
-                        className="text-blue-600 hover:text-blue-800 font-medium flex items-center gap-2"
-                    >
-                        ← Back to Home
-                    </button>
+            <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+                {/* Header Section */}
+                <div className="bg-gradient-to-r from-blue-600 to-blue-700 shadow-lg">
+                    <div className="max-w-7xl mx-auto px-6 py-6">
+                        <button
+                            onClick={() => setCurrentView('home')}
+                            className="text-white hover:text-blue-100 font-medium flex items-center gap-2 mb-4 transition-colors"
+                        >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                            </svg>
+                            Back to Home
+                        </button>
+                        <div className="text-white">
+                            <h1 className="text-3xl font-bold mb-2">Student Application</h1>
+                            <p className="text-blue-100">Complete your application to join SCL Institute</p>
+                        </div>
+                    </div>
                 </div>
-                <div className="max-w-7xl mx-auto px-4">
-                    <StudentAdmissionForm />
+
+                {/* Form Container with Professional Boundaries */}
+                <div className="max-w-6xl mx-auto px-4 py-8">
+                    <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden">
+                        {/* Welcome Banner */}
+                        <div className="bg-gradient-to-r from-blue-50 to-purple-50 border-b border-gray-200 px-8 py-6">
+                            <h2 className="text-2xl font-bold text-gray-800 mb-2">Application Form</h2>
+                            <p className="text-gray-600">Please fill in all required information carefully. Fields marked with * are mandatory.</p>
+                        </div>
+                        
+                        {/* Form Content */}
+                        <div className="p-8">
+                            <StudentAdmissionForm />
+                        </div>
+                    </div>
+
+                    {/* Footer Info */}
+                    <div className="mt-8 text-center text-gray-600 text-sm">
+                        <p>Need help? Contact us at <span className="text-blue-600 font-semibold">admissions@sclinstitute.edu</span> or call <span className="text-blue-600 font-semibold">+44 20 1234 5678</span></p>
+                    </div>
                 </div>
             </div>
         );
