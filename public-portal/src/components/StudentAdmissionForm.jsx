@@ -4,7 +4,7 @@ import { Upload, Calendar, User, GraduationCap, FileText, Shield, CheckCircle, A
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
 
-const StudentAdmissionForm = () => {
+const StudentAdmissionForm = ({ onSubmitSuccess }) => {
   const [activeSection, setActiveSection] = useState(1);
   const [csvModalOpen, setCsvModalOpen] = useState(false);
   const [csvFile, setCsvFile] = useState(null);
@@ -717,6 +717,9 @@ const StudentAdmissionForm = () => {
           type: 'success',
           message: `Application submitted successfully. Reference: ${reference}`
         });
+        if (onSubmitSuccess) {
+          onSubmitSuccess(reference);
+        }
       } else {
         setSubmitStatus({
           type: 'error',

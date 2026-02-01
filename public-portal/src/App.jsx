@@ -13,6 +13,7 @@ function App() {
     const [selectedDesign, setSelectedDesign] = useState('design1');
     const [selectedTheme, setSelectedTheme] = useState('modern');
     const [showDesignPanel, setShowDesignPanel] = useState(false);
+    const [lastReference, setLastReference] = useState('');
 
     const SelectedDesignComponent = {
         design1: Design1,
@@ -20,6 +21,47 @@ function App() {
         design3: Design3,
         home: Home
     }[selectedDesign] || Design1;
+
+    if (currentView === 'thankyou') {
+        return (
+            <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+                <div className="bg-gradient-to-r from-blue-600 to-blue-700 shadow-lg">
+                    <div className="max-w-7xl mx-auto px-6 py-10 text-center text-white">
+                        <h1 className="text-3xl font-bold mb-2">Thank you for your request</h1>
+                        <p className="text-blue-100">We will review your application and inform you accordingly.</p>
+                    </div>
+                </div>
+
+                <div className="max-w-3xl mx-auto px-4 py-10">
+                    <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden">
+                        <div className="p-10 text-center">
+                            <div className="mx-auto mb-4 h-12 w-12 rounded-full bg-green-100 flex items-center justify-center text-green-600 text-2xl">✓</div>
+                            <h2 className="text-2xl font-bold text-gray-900">Application Received</h2>
+                            <p className="text-gray-600 mt-2">Please keep your reference number for future communication.</p>
+                            <div className="mt-6 inline-flex items-center justify-center rounded-lg border border-blue-200 bg-blue-50 px-6 py-4">
+                                <span className="text-sm text-blue-700">Reference Number:</span>
+                                <span className="ml-2 text-lg font-bold text-blue-900">{lastReference || 'N/A'}</span>
+                            </div>
+                            <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
+                                <button
+                                    onClick={() => setCurrentView('home')}
+                                    className="px-6 py-3 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors font-semibold"
+                                >
+                                    Back to Home
+                                </button>
+                                <button
+                                    onClick={() => setCurrentView('apply')}
+                                    className="px-6 py-3 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors font-semibold"
+                                >
+                                    Submit Another Application
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     if (currentView === 'apply') {
         return (
@@ -54,7 +96,12 @@ function App() {
                         
                         {/* Form Content */}
                         <div className="p-8">
-                            <StudentAdmissionForm />
+                            <StudentAdmissionForm
+                                onSubmitSuccess={(reference) => {
+                                    setLastReference(reference);
+                                    setCurrentView('thankyou');
+                                }}
+                            />
                         </div>
                     </div>
 
