@@ -654,8 +654,48 @@ const StudentAdmissionForm = () => {
       setSubmitStatus({ type: 'loading', message: 'Submitting application...' });
 
       const response = await axios.post(`${API_URL}/students/applications`, {
-        ...formData,
-        declarationDate: formData.declarationDate || new Date().toISOString().split('T')[0]
+        // Personal Information
+        first_name: formData.firstName,
+        middle_names: formData.middleNames,
+        last_name: formData.lastName,
+        date_of_birth: formData.dateOfBirth,
+        gender: formData.gender,
+        nationality: formData.nationality,
+        email: formData.email,
+        contact_number: formData.contactNumber,
+        address_line1: formData.addressLine1,
+        address_line2: formData.addressLine2,
+        town_city: formData.townCity,
+        postcode: formData.postcode,
+        country_of_residence: formData.countryOfResidence,
+
+        // Course Selection
+        course_title: formData.courseTitle,
+        course_code: formData.courseCode,
+        course_type: formData.courseType,
+        mode_of_study: formData.modeOfStudy,
+        intake_start_date: formData.intakeStartDate,
+        entry_route: formData.entryRoute,
+
+        // Academic Background
+        highest_qualification: formData.highestQualification,
+        institution_name: formData.institutionName,
+        year_completed: formData.yearCompleted,
+        relevant_work_experience: formData.workExperience,
+        english_proficiency: formData.englishProficiency,
+        english_score: formData.englishScore,
+
+        // Support Requirements
+        has_disabilities_support_needs: formData.hasDisabilities,
+        disability_support_details: formData.disabilityDetails,
+
+        // Consents & Declaration
+        consent_gdpr: formData.consentGdpr,
+        consent_data_sharing: formData.consentDataSharing,
+        consent_marketing: formData.consentMarketing,
+        declaration_truth: formData.declarationTruth,
+        digital_signature: formData.digitalSignature,
+        declaration_date: formData.declarationDate || new Date().toISOString().split('T')[0]
       });
 
       if (response.data?.success) {
