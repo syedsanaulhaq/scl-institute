@@ -54,10 +54,10 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
             isParent: true,
             key: 'student-admission',
             subItems: [
-                { name: 'Dashboard', icon: BarChart3, path: '/students' },
+                { name: 'Applications', icon: BarChart3, path: '/applications' },
                 { name: 'New Admission', icon: UserPlus, path: '/student-application' },
-                { name: 'View Students', icon: UserCheck, path: '/student-list' },
-                { name: 'Report', icon: FileText, path: '/students/report' }
+                { name: 'Applicants List', icon: UserCheck, path: '/applicants' },
+                { name: 'Reports', icon: FileText, path: '/applications-report' }
             ]
         },
         { name: 'Access LMS', icon: GraduationCap, isSSO: true },

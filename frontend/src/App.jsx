@@ -10,6 +10,8 @@ import StudentList from './components/StudentList';
 import StudentDetail from './components/StudentDetail';
 import StudentReport from './components/StudentReport';
 import ApplicationRequests from './components/ApplicationRequests';
+import ApplicantsList from './components/ApplicantsList';
+import ApplicationReport from './components/ApplicationReport';
 
 function App() {
     const [user, setUser] = useState(null);
@@ -95,6 +97,24 @@ function App() {
                     user ? (
                         <Layout user={user} onLogout={handleLogout}>
                             <StudentList />
+                        </Layout>
+                    ) : (
+                        <LoginPage onLoginSuccess={handleLoginSuccess} />
+                    )
+                } />
+                <Route path="/applicants" element={
+                    user ? (
+                        <Layout user={user} onLogout={handleLogout}>
+                            <ApplicantsList />
+                        </Layout>
+                    ) : (
+                        <LoginPage onLoginSuccess={handleLoginSuccess} />
+                    )
+                } />
+                <Route path="/applications-report" element={
+                    user ? (
+                        <Layout user={user} onLogout={handleLogout}>
+                            <ApplicationReport />
                         </Layout>
                     ) : (
                         <LoginPage onLoginSuccess={handleLoginSuccess} />
