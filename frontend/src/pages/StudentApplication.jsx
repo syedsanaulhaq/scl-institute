@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import axios from 'axios';
 import {
     User,
@@ -7,13 +7,11 @@ import {
     Calendar,
     MapPin,
     BookOpen,
-    FileText,
-    Upload,
-    Save,
     CheckCircle,
     AlertCircle,
     ArrowLeft,
-    GraduationCap
+    GraduationCap,
+    Loader
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -24,56 +22,84 @@ const StudentApplication = () => {
     const [loading, setLoading] = useState(false);
     const [success, setSuccess] = useState(false);
     const [error, setError] = useState('');
+    const [courses, setCourses] = useState([]);
+    const [coursesLoading, setCoursesLoading] = useState(true);
     
     const [formData, setFormData] = useState({
         // Personal Information
-        firstName: '',
-        lastName: '',
-        email: '',
-        phone: '',
-        dateOfBirth: '',
+        first_name: '',
+        middle_names: '',
+        last_name: '',
+        date_of_birth: '',
         gender: '',
+        nationality: '',
+        email: '',
+        contact_number: '',
         
         // Address Information
-        address: '',
-        city: '',
-        state: '',
-        zipCode: '',
-        country: 'India',
+        address_line1: '',
+        address_line2: '',
+        town_city: '',
+        postcode: '',
+        country_of_residence: 'India',
+        
+        // Course Information
+        course_code: '',
+        course_title: '',
+        course_type: '',
+        mode_of_study: '',
+        intake_start_date: '',
+        entry_route: 'Standard',
         
         // Academic Information
-        program: '',
-        previousEducation: '',
-        institution: '',
-        graduationYear: '',
-        percentage: '',
+        highest_qualification: '',
+        institution_name: '',
+        year_completed: '',
+        relevant_work_experience: '',
+        english_proficiency: '',
+        english_score: '',
         
-        // Additional Information
-        experience: '',
-        motivation: '',
-        
-        // Emergency Contact
-        emergencyName: '',
-        emergencyPhone: '',
-        emergencyRelation: ''
+        // Support & Consents
+        has_disabilities_support_needs: false,
+        disability_support_details: '',
+        consent_gdpr: false,
+        consent_data_sharing: false,
+        consent_marketing: false,
+        declaration_truth: false,
+        digital_signature: ''
     });
 
-    const programs = [
-        'B.Tech Computer Science Engineering',
-        'B.Tech Mechanical Engineering',
-        'B.Tech Electrical Engineering',
-        'MBA Business Administration',
-        'M.Sc Data Science',
-        'B.Com Commerce',
-        'BCA Computer Applications',
-        'MCA Computer Applications'
-    ];
+    // Fetch courses from Moodle
+    useEffect(() => {
+        const fetchCourses = async () => {
+            try {
+                setCoursesLoading(true);
+                const response = await axios.get(`${API_URL}/students/courses`);
+                setCourses(response.data?.data || []);
+            } catch (err) {
+                console.error('Error fetching courses:', err);
+                setCourses([]);
+            } finally {
+                setCoursesLoading(false);
+            }
+        };
+        fetchCourses();
+    }, []);
 
     const handleInputChange = (e) => {
-        const { name, value } = e.target;
+        const { name, value, type, checked } = e.target;
         setFormData(prev => ({
             ...prev,
-            [name]: value
+            [name]: type === 'checkbox' ? checked : value
+        }));
+    };
+
+    const handleCourseSelect = (course) => {
+        setFormData(prev => ({
+            ...prev,
+            course_code: course.course_code,
+            course_title: course.course_title,
+            course_type: course.course_type
         }));
     };
 
@@ -82,55 +108,56 @@ const StudentApplication = () => {
         setLoading(true);
         setError('');
 
+        // Validate required fields
+        if (!formData.first_name || !formData.last_name || !formData.email || !formData.course_code) {
+            setError('Please fill in all required fields');
+            setLoading(false);
+            return;
+        }
+
+        if (!formData.consent_gdpr || !formData.declaration_truth) {
+            setError('Please accept the required consents and declarations');
+            setLoading(false);
+            return;
+        }
+
         try {
-            const response = await axios.post(`${API_URL}/applications`, {
-                first_name: formData.firstName,
-                last_name: formData.lastName,
+            const response = await axios.post(`${API_URL}/students/applications`, {
+                first_name: formData.first_name,
+                middle_names: formData.middle_names,
+                last_name: formData.last_name,
                 email: formData.email,
-                phone: formData.phone,
-                date_of_birth: formData.dateOfBirth,
+                contact_number: formData.contact_number,
+                date_of_birth: formData.date_of_birth,
                 gender: formData.gender,
-                address: formData.address,
-                city: formData.city,
-                state: formData.state,
-                zip_code: formData.zipCode,
-                country: formData.country,
-                program_name: formData.program,
-                previous_education: formData.previousEducation,
-                institution: formData.institution,
-                graduation_year: formData.graduationYear,
-                percentage: formData.percentage,
-                experience: formData.experience,
-                motivation: formData.motivation,
-                emergency_contact_name: formData.emergencyName,
-                emergency_contact_phone: formData.emergencyPhone,
-                emergency_contact_relation: formData.emergencyRelation
+                nationality: formData.nationality,
+                address_line1: formData.address_line1,
+                address_line2: formData.address_line2,
+                town_city: formData.town_city,
+                postcode: formData.postcode,
+                country_of_residence: formData.country_of_residence,
+                course_code: formData.course_code,
+                course_title: formData.course_title,
+                course_type: formData.course_type,
+                mode_of_study: formData.mode_of_study,
+                intake_start_date: formData.intake_start_date,
+                entry_route: formData.entry_route,
+                highest_qualification: formData.highest_qualification,
+                institution_name: formData.institution_name,
+                year_completed: formData.year_completed,
+                relevant_work_experience: formData.relevant_work_experience,
+                english_proficiency: formData.english_proficiency,
+                english_score: formData.english_score,
+                has_disabilities_support_needs: formData.has_disabilities_support_needs,
+                disability_support_details: formData.disability_support_details,
+                consent_gdpr: formData.consent_gdpr,
+                consent_data_sharing: formData.consent_data_sharing,
+                consent_marketing: formData.consent_marketing,
+                declaration_truth: formData.declaration_truth,
+                digital_signature: formData.digital_signature
             });
 
             setSuccess(true);
-            setFormData({
-                firstName: '',
-                lastName: '',
-                email: '',
-                phone: '',
-                dateOfBirth: '',
-                gender: '',
-                address: '',
-                city: '',
-                state: '',
-                zipCode: '',
-                country: 'India',
-                program: '',
-                previousEducation: '',
-                institution: '',
-                graduationYear: '',
-                percentage: '',
-                experience: '',
-                motivation: '',
-                emergencyName: '',
-                emergencyPhone: '',
-                emergencyRelation: ''
-            });
         } catch (err) {
             setError(err.response?.data?.message || 'Failed to submit application. Please try again.');
         } finally {
@@ -147,20 +174,14 @@ const StudentApplication = () => {
                     </div>
                     <h2 className="text-2xl font-bold text-gray-900 mb-4">Application Submitted!</h2>
                     <p className="text-gray-600 mb-6">
-                        Your application has been successfully submitted. Our admissions team will review your application and contact you soon.
+                        Your application has been successfully submitted and saved to our database. Our admissions team will review your application and contact you soon.
                     </p>
                     <div className="space-y-3">
                         <button
-                            onClick={() => setSuccess(false)}
+                            onClick={() => navigate('/')}
                             className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
                         >
-                            Submit Another Application
-                        </button>
-                        <button
-                            onClick={() => navigate('/')}
-                            className="w-full text-gray-600 py-3 rounded-lg font-semibold hover:text-gray-900 transition-colors"
-                        >
-                            Back to Dashboard
+                            Back to Home
                         </button>
                     </div>
                 </div>
@@ -185,8 +206,8 @@ const StudentApplication = () => {
                                 <GraduationCap className="h-6 w-6 text-white" />
                             </div>
                             <div>
-                                <h1 className="text-xl font-bold text-gray-900">New Student Registration</h1>
-                                <p className="text-sm text-gray-600">SCL Institute - Academic Year 2026-27</p>
+                                <h1 className="text-xl font-bold text-gray-900">Student Application Form</h1>
+                                <p className="text-sm text-gray-600">SCL Institute - Register for courses</p>
                             </div>
                         </div>
                     </div>
@@ -197,14 +218,14 @@ const StudentApplication = () => {
                 <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
                     {/* Form Header */}
                     <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-8 py-6 text-white">
-                        <h2 className="text-2xl font-bold">Student Application Form</h2>
-                        <p className="text-blue-100 mt-2">Please fill out all required information carefully</p>
+                        <h2 className="text-2xl font-bold">New Student Registration</h2>
+                        <p className="text-blue-100 mt-2">Complete all required fields to apply</p>
                     </div>
 
                     {error && (
                         <div className="mx-8 mt-6 bg-red-50 border-l-4 border-red-500 p-4">
                             <div className="flex">
-                                <AlertCircle className="h-5 w-5 text-red-500 mr-2" />
+                                <AlertCircle className="h-5 w-5 text-red-500 mr-2 flex-shrink-0 mt-0.5" />
                                 <p className="text-red-700">{error}</p>
                             </div>
                         </div>
@@ -224,8 +245,8 @@ const StudentApplication = () => {
                                     </label>
                                     <input
                                         type="text"
-                                        name="firstName"
-                                        value={formData.firstName}
+                                        name="first_name"
+                                        value={formData.first_name}
                                         onChange={handleInputChange}
                                         required
                                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
@@ -238,12 +259,25 @@ const StudentApplication = () => {
                                     </label>
                                     <input
                                         type="text"
-                                        name="lastName"
-                                        value={formData.lastName}
+                                        name="last_name"
+                                        value={formData.last_name}
                                         onChange={handleInputChange}
                                         required
                                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
                                         placeholder="Enter your last name"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                        Middle Names
+                                    </label>
+                                    <input
+                                        type="text"
+                                        name="middle_names"
+                                        value={formData.middle_names}
+                                        onChange={handleInputChange}
+                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
+                                        placeholder="Enter your middle names (optional)"
                                     />
                                 </div>
                                 <div>
@@ -262,12 +296,12 @@ const StudentApplication = () => {
                                 </div>
                                 <div>
                                     <label className="block text-sm font-semibold text-gray-700 mb-2">
-                                        Phone Number *
+                                        Contact Number *
                                     </label>
                                     <input
                                         type="tel"
-                                        name="phone"
-                                        value={formData.phone}
+                                        name="contact_number"
+                                        value={formData.contact_number}
                                         onChange={handleInputChange}
                                         required
                                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
@@ -280,8 +314,8 @@ const StudentApplication = () => {
                                     </label>
                                     <input
                                         type="date"
-                                        name="dateOfBirth"
-                                        value={formData.dateOfBirth}
+                                        name="date_of_birth"
+                                        value={formData.date_of_birth}
                                         onChange={handleInputChange}
                                         required
                                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
@@ -299,10 +333,25 @@ const StudentApplication = () => {
                                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
                                     >
                                         <option value="">Select Gender</option>
-                                        <option value="male">Male</option>
-                                        <option value="female">Female</option>
-                                        <option value="other">Other</option>
+                                        <option value="Male">Male</option>
+                                        <option value="Female">Female</option>
+                                        <option value="Other">Other</option>
+                                        <option value="Prefer not to say">Prefer not to say</option>
                                     </select>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                        Nationality *
+                                    </label>
+                                    <input
+                                        type="text"
+                                        name="nationality"
+                                        value={formData.nationality}
+                                        onChange={handleInputChange}
+                                        required
+                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
+                                        placeholder="Enter your nationality"
+                                    />
                                 </div>
                             </div>
                         </div>
@@ -316,27 +365,40 @@ const StudentApplication = () => {
                             <div className="space-y-6">
                                 <div>
                                     <label className="block text-sm font-semibold text-gray-700 mb-2">
-                                        Full Address *
+                                        Address Line 1 *
                                     </label>
-                                    <textarea
-                                        name="address"
-                                        value={formData.address}
+                                    <input
+                                        type="text"
+                                        name="address_line1"
+                                        value={formData.address_line1}
                                         onChange={handleInputChange}
                                         required
-                                        rows="3"
-                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors resize-none"
-                                        placeholder="Enter your complete address"
+                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
+                                        placeholder="Enter street address"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                        Address Line 2
+                                    </label>
+                                    <input
+                                        type="text"
+                                        name="address_line2"
+                                        value={formData.address_line2}
+                                        onChange={handleInputChange}
+                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
+                                        placeholder="Enter additional address (optional)"
                                     />
                                 </div>
                                 <div className="grid md:grid-cols-3 gap-6">
                                     <div>
                                         <label className="block text-sm font-semibold text-gray-700 mb-2">
-                                            City *
+                                            City/Town *
                                         </label>
                                         <input
                                             type="text"
-                                            name="city"
-                                            value={formData.city}
+                                            name="town_city"
+                                            value={formData.town_city}
                                             onChange={handleInputChange}
                                             required
                                             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
@@ -345,32 +407,134 @@ const StudentApplication = () => {
                                     </div>
                                     <div>
                                         <label className="block text-sm font-semibold text-gray-700 mb-2">
-                                            State *
+                                            Postcode *
                                         </label>
                                         <input
                                             type="text"
-                                            name="state"
-                                            value={formData.state}
+                                            name="postcode"
+                                            value={formData.postcode}
                                             onChange={handleInputChange}
                                             required
                                             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
-                                            placeholder="Enter state"
+                                            placeholder="Enter postcode"
                                         />
                                     </div>
                                     <div>
                                         <label className="block text-sm font-semibold text-gray-700 mb-2">
-                                            ZIP Code *
+                                            Country *
                                         </label>
                                         <input
                                             type="text"
-                                            name="zipCode"
-                                            value={formData.zipCode}
+                                            name="country_of_residence"
+                                            value={formData.country_of_residence}
                                             onChange={handleInputChange}
                                             required
                                             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
-                                            placeholder="Enter ZIP code"
+                                            placeholder="Enter country"
                                         />
                                     </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Course Selection */}
+                        <div>
+                            <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center">
+                                <BookOpen className="h-6 w-6 mr-2 text-blue-600" />
+                                Select Your Course
+                            </h3>
+                            
+                            {coursesLoading ? (
+                                <div className="flex items-center justify-center py-8">
+                                    <Loader className="h-6 w-6 animate-spin text-blue-600 mr-2" />
+                                    <span className="text-gray-600">Loading courses from Moodle...</span>
+                                </div>
+                            ) : courses.length === 0 ? (
+                                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+                                    <p className="text-yellow-800">No courses available at the moment. Please try again later.</p>
+                                </div>
+                            ) : (
+                                <>
+                                    <div className="grid gap-4 mb-6">
+                                        {courses.map((course, idx) => (
+                                            <button
+                                                key={idx}
+                                                type="button"
+                                                onClick={() => handleCourseSelect(course)}
+                                                className={`p-4 border-2 rounded-lg text-left transition-all ${
+                                                    formData.course_code === course.course_code
+                                                        ? 'border-blue-600 bg-blue-50'
+                                                        : 'border-gray-200 bg-white hover:border-blue-300'
+                                                }`}
+                                            >
+                                                <div className="flex items-start justify-between">
+                                                    <div>
+                                                        <h4 className="font-semibold text-gray-900">{course.course_title}</h4>
+                                                        <p className="text-sm text-gray-600 mt-1">{course.course_code}</p>
+                                                        <p className="text-xs text-gray-500 mt-2">{course.description}</p>
+                                                    </div>
+                                                    <span className="text-xs bg-blue-100 text-blue-700 px-3 py-1 rounded-full">{course.course_type}</span>
+                                                </div>
+                                            </button>
+                                        ))}
+                                    </div>
+
+                                    {formData.course_code && (
+                                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                                            <p className="text-sm font-semibold text-gray-900">Selected Course:</p>
+                                            <p className="text-gray-700 mt-1">{formData.course_title} ({formData.course_code})</p>
+                                        </div>
+                                    )}
+                                </>
+                            )}
+
+                            <div className="grid md:grid-cols-2 gap-6">
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                        Mode of Study *
+                                    </label>
+                                    <select
+                                        name="mode_of_study"
+                                        value={formData.mode_of_study}
+                                        onChange={handleInputChange}
+                                        required
+                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
+                                    >
+                                        <option value="">Select mode of study</option>
+                                        <option value="Full-time">Full-time</option>
+                                        <option value="Part-time">Part-time</option>
+                                        <option value="Online">Online</option>
+                                        <option value="Blended">Blended</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                        Intake Start Date *
+                                    </label>
+                                    <input
+                                        type="date"
+                                        name="intake_start_date"
+                                        value={formData.intake_start_date}
+                                        onChange={handleInputChange}
+                                        required
+                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                        Entry Route *
+                                    </label>
+                                    <select
+                                        name="entry_route"
+                                        value={formData.entry_route}
+                                        onChange={handleInputChange}
+                                        required
+                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
+                                    >
+                                        <option value="Standard">Standard</option>
+                                        <option value="RPL">Recognition of Prior Learning</option>
+                                        <option value="Mature Student">Mature Student</option>
+                                    </select>
                                 </div>
                             </div>
                         </div>
@@ -378,45 +542,28 @@ const StudentApplication = () => {
                         {/* Academic Information */}
                         <div>
                             <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center">
-                                <BookOpen className="h-6 w-6 mr-2 text-blue-600" />
-                                Academic Information
+                                <Calendar className="h-6 w-6 mr-2 text-blue-600" />
+                                Academic Background
                             </h3>
                             <div className="grid md:grid-cols-2 gap-6">
-                                <div className="md:col-span-2">
-                                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                                        Program of Interest *
-                                    </label>
-                                    <select
-                                        name="program"
-                                        value={formData.program}
-                                        onChange={handleInputChange}
-                                        required
-                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
-                                    >
-                                        <option value="">Select a program</option>
-                                        {programs.map((program) => (
-                                            <option key={program} value={program}>
-                                                {program}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
                                 <div>
                                     <label className="block text-sm font-semibold text-gray-700 mb-2">
-                                        Previous Education Level *
+                                        Highest Qualification *
                                     </label>
                                     <select
-                                        name="previousEducation"
-                                        value={formData.previousEducation}
+                                        name="highest_qualification"
+                                        value={formData.highest_qualification}
                                         onChange={handleInputChange}
                                         required
                                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
                                     >
-                                        <option value="">Select education level</option>
-                                        <option value="high_school">High School (12th)</option>
-                                        <option value="bachelor">Bachelor's Degree</option>
-                                        <option value="master">Master's Degree</option>
-                                        <option value="diploma">Diploma</option>
+                                        <option value="">Select qualification</option>
+                                        <option value="GCSE">GCSE</option>
+                                        <option value="A-Level">A-Level</option>
+                                        <option value="Level 3 Diploma">Level 3 Diploma</option>
+                                        <option value="HND">HND</option>
+                                        <option value="Degree">Degree</option>
+                                        <option value="Other">Other</option>
                                     </select>
                                 </div>
                                 <div>
@@ -425,8 +572,8 @@ const StudentApplication = () => {
                                     </label>
                                     <input
                                         type="text"
-                                        name="institution"
-                                        value={formData.institution}
+                                        name="institution_name"
+                                        value={formData.institution_name}
                                         onChange={handleInputChange}
                                         required
                                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
@@ -435,160 +582,184 @@ const StudentApplication = () => {
                                 </div>
                                 <div>
                                     <label className="block text-sm font-semibold text-gray-700 mb-2">
-                                        Graduation Year *
+                                        Year Completed *
                                     </label>
                                     <input
-                                        type="number"
-                                        name="graduationYear"
-                                        value={formData.graduationYear}
-                                        onChange={handleInputChange}
-                                        required
-                                        min="1990"
-                                        max="2030"
-                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
-                                        placeholder="Enter graduation year"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                                        Percentage/CGPA *
-                                    </label>
-                                    <input
-                                        type="text"
-                                        name="percentage"
-                                        value={formData.percentage}
+                                        type="date"
+                                        name="year_completed"
+                                        value={formData.year_completed}
                                         onChange={handleInputChange}
                                         required
                                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
-                                        placeholder="e.g., 85% or 8.5 CGPA"
-                                    />
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Additional Information */}
-                        <div>
-                            <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center">
-                                <FileText className="h-6 w-6 mr-2 text-blue-600" />
-                                Additional Information
-                            </h3>
-                            <div className="space-y-6">
-                                <div>
-                                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                                        Work Experience (if any)
-                                    </label>
-                                    <textarea
-                                        name="experience"
-                                        value={formData.experience}
-                                        onChange={handleInputChange}
-                                        rows="3"
-                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors resize-none"
-                                        placeholder="Describe your work experience (optional)"
                                     />
                                 </div>
                                 <div>
                                     <label className="block text-sm font-semibold text-gray-700 mb-2">
-                                        Why do you want to join SCL Institute? *
-                                    </label>
-                                    <textarea
-                                        name="motivation"
-                                        value={formData.motivation}
-                                        onChange={handleInputChange}
-                                        required
-                                        rows="4"
-                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors resize-none"
-                                        placeholder="Tell us about your motivation and career goals"
-                                    />
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Emergency Contact */}
-                        <div>
-                            <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center">
-                                <Phone className="h-6 w-6 mr-2 text-blue-600" />
-                                Emergency Contact
-                            </h3>
-                            <div className="grid md:grid-cols-3 gap-6">
-                                <div>
-                                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                                        Contact Name *
-                                    </label>
-                                    <input
-                                        type="text"
-                                        name="emergencyName"
-                                        value={formData.emergencyName}
-                                        onChange={handleInputChange}
-                                        required
-                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
-                                        placeholder="Enter contact name"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                                        Phone Number *
-                                    </label>
-                                    <input
-                                        type="tel"
-                                        name="emergencyPhone"
-                                        value={formData.emergencyPhone}
-                                        onChange={handleInputChange}
-                                        required
-                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
-                                        placeholder="Enter phone number"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                                        Relationship *
+                                        English Proficiency *
                                     </label>
                                     <select
-                                        name="emergencyRelation"
-                                        value={formData.emergencyRelation}
+                                        name="english_proficiency"
+                                        value={formData.english_proficiency}
                                         onChange={handleInputChange}
                                         required
                                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
                                     >
-                                        <option value="">Select relationship</option>
-                                        <option value="parent">Parent</option>
-                                        <option value="sibling">Sibling</option>
-                                        <option value="spouse">Spouse</option>
-                                        <option value="guardian">Guardian</option>
-                                        <option value="friend">Friend</option>
-                                        <option value="other">Other</option>
+                                        <option value="">Select test type</option>
+                                        <option value="IELTS">IELTS</option>
+                                        <option value="TOEFL">TOEFL</option>
+                                        <option value="Other">Other</option>
                                     </select>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                        English Score
+                                    </label>
+                                    <input
+                                        type="text"
+                                        name="english_score"
+                                        value={formData.english_score}
+                                        onChange={handleInputChange}
+                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
+                                        placeholder="e.g., 6.5 IELTS"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                        Relevant Work Experience
+                                    </label>
+                                    <input
+                                        type="text"
+                                        name="relevant_work_experience"
+                                        value={formData.relevant_work_experience}
+                                        onChange={handleInputChange}
+                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
+                                        placeholder="e.g., 3 years in IT"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Support Needs */}
+                        <div>
+                            <h3 className="text-xl font-bold text-gray-900 mb-6">Support Requirements</h3>
+                            <div className="bg-gray-50 p-6 rounded-lg">
+                                <label className="flex items-center mb-4">
+                                    <input
+                                        type="checkbox"
+                                        name="has_disabilities_support_needs"
+                                        checked={formData.has_disabilities_support_needs}
+                                        onChange={handleInputChange}
+                                        className="w-5 h-5 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
+                                    />
+                                    <span className="ml-3 text-gray-700 font-medium">I require disability support or have additional needs</span>
+                                </label>
+                                {formData.has_disabilities_support_needs && (
+                                    <textarea
+                                        name="disability_support_details"
+                                        value={formData.disability_support_details}
+                                        onChange={handleInputChange}
+                                        rows="4"
+                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors resize-none"
+                                        placeholder="Please describe your support requirements"
+                                    />
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Consents & Declaration */}
+                        <div>
+                            <h3 className="text-xl font-bold text-gray-900 mb-6">Consents & Declaration</h3>
+                            <div className="space-y-4 bg-gray-50 p-6 rounded-lg">
+                                <label className="flex items-start">
+                                    <input
+                                        type="checkbox"
+                                        name="consent_gdpr"
+                                        checked={formData.consent_gdpr}
+                                        onChange={handleInputChange}
+                                        required
+                                        className="w-5 h-5 text-blue-600 rounded focus:ring-2 focus:ring-blue-500 mt-1 flex-shrink-0"
+                                    />
+                                    <span className="ml-3 text-gray-700 text-sm">
+                                        I consent to the processing of my personal data in accordance with GDPR regulations. *
+                                    </span>
+                                </label>
+                                <label className="flex items-start">
+                                    <input
+                                        type="checkbox"
+                                        name="consent_data_sharing"
+                                        checked={formData.consent_data_sharing}
+                                        onChange={handleInputChange}
+                                        className="w-5 h-5 text-blue-600 rounded focus:ring-2 focus:ring-blue-500 mt-1 flex-shrink-0"
+                                    />
+                                    <span className="ml-3 text-gray-700 text-sm">
+                                        I consent to my data being shared with relevant educational bodies
+                                    </span>
+                                </label>
+                                <label className="flex items-start">
+                                    <input
+                                        type="checkbox"
+                                        name="consent_marketing"
+                                        checked={formData.consent_marketing}
+                                        onChange={handleInputChange}
+                                        className="w-5 h-5 text-blue-600 rounded focus:ring-2 focus:ring-blue-500 mt-1 flex-shrink-0"
+                                    />
+                                    <span className="ml-3 text-gray-700 text-sm">
+                                        I would like to receive marketing communications from SCL Institute
+                                    </span>
+                                </label>
+                                <label className="flex items-start">
+                                    <input
+                                        type="checkbox"
+                                        name="declaration_truth"
+                                        checked={formData.declaration_truth}
+                                        onChange={handleInputChange}
+                                        required
+                                        className="w-5 h-5 text-blue-600 rounded focus:ring-2 focus:ring-blue-500 mt-1 flex-shrink-0"
+                                    />
+                                    <span className="ml-3 text-gray-700 text-sm">
+                                        I declare that all information provided in this application is true and accurate. *
+                                    </span>
+                                </label>
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-700 mb-2 mt-4">
+                                        Digital Signature (Type your full name) *
+                                    </label>
+                                    <input
+                                        type="text"
+                                        name="digital_signature"
+                                        value={formData.digital_signature}
+                                        onChange={handleInputChange}
+                                        required
+                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
+                                        placeholder="Type your full name as signature"
+                                    />
                                 </div>
                             </div>
                         </div>
 
                         {/* Submit Button */}
-                        <div className="pt-6 border-t border-gray-200">
-                            <div className="flex flex-col sm:flex-row gap-4">
-                                <button
-                                    type="submit"
-                                    disabled={loading}
-                                    className="flex-1 bg-blue-600 text-white py-4 px-8 rounded-lg font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
-                                >
-                                    {loading ? (
-                                        <>
-                                            <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                                            Submitting Application...
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Save className="h-5 w-5 mr-2" />
-                                            Submit Application
-                                        </>
-                                    )}
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => navigate('/')}
-                                    className="flex-1 sm:flex-none bg-gray-600 text-white py-4 px-8 rounded-lg font-semibold hover:bg-gray-700 transition-colors"
-                                >
-                                    Cancel
-                                </button>
-                            </div>
+                        <div className="flex gap-4">
+                            <button
+                                type="submit"
+                                disabled={loading}
+                                className="flex-1 bg-blue-600 text-white py-4 rounded-lg font-semibold hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center"
+                            >
+                                {loading ? (
+                                    <>
+                                        <Loader className="h-5 w-5 animate-spin mr-2" />
+                                        Submitting...
+                                    </>
+                                ) : (
+                                    'Submit Application'
+                                )}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => navigate('/')}
+                                className="flex-1 bg-gray-200 text-gray-800 py-4 rounded-lg font-semibold hover:bg-gray-300 transition-colors"
+                            >
+                                Cancel
+                            </button>
                         </div>
                     </form>
                 </div>
