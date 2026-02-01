@@ -872,8 +872,8 @@ router.post('/applications/:id/review-decision', async (req, res) => {
 
         // Update application status
         await db.execute(
-            'UPDATE student_applications SET application_status = ?, reviewed_at = NOW(), reviewed_by = ? WHERE id = ?',
-            [newStatus, reviewer_name, id]
+            'UPDATE student_applications SET application_status = ? WHERE id = ?',
+            [newStatus, id]
         );
 
         // Store review details (we can create a JSON column or separate table later)
