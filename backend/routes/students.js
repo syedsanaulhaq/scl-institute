@@ -824,4 +824,100 @@ router.get('/dashboard-stats', async (req, res) => {
     }
 });
 
+// ===============================================
+// ROUTE: POST /api/students/applications/:id/review-decision
+// Submit application review decision (CSV format)
+// ===============================================
+router.post('/applications/:id/review-decision', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const {
+            reviewer_name,
+            review_date,
+            documents_verified,
+            eligibility_check,
+            interview_conducted,
+            interview_outcome,
+            english_requirement_met,
+            additional_notes,
+            decision,
+            reason_for_refusal,
+            detailed_comments,
+            committee_chair_name,
+            final_decision_date,
+            final_decision_confirmation
+        } = req.body;
+
+        // Validate required fields
+        if (!reviewer_name || !decision) {
+            return res.status(400).json({
+                success: false,
+                message: 'Reviewer name and decision are required'
+            });
+        }
+
+        if (decision === 'Refusal' && !reason_for_refusal) {
+            return res.status(400).json({
+                success: false,
+                message: 'Reason for refusal is required when rejecting'
+            });
+        }
+
+        // Map decision to application status
+        let newStatus = 'under_review';
+        if (decision === 'Offer') newStatus = 'accepted';
+        else if (decision === 'Conditional Offer') newStatus = 'conditional_accept';
+        else if (decision === 'Refusal') newStatus = 'rejected';
+        else if (decision === 'Waitlist') newStatus = 'deferred';
+
+        // Update application status
+        await db.execute(
+            'UPDATE student_applications SET application_status = ?, reviewed_at = NOW(), reviewed_by = ? WHERE id = ?',
+            [newStatus, reviewer_name, id]
+        );
+
+        // Store review details (we can create a JSON column or separate table later)
+        const reviewData = {
+            reviewer_name,
+            review_date,
+            documents_verified,
+            eligibility_check,
+            interview_conducted,
+            interview_outcome,
+            english_requirement_met,
+            additional_notes,
+            decision,
+            reason_for_refusal,
+            detailed_comments,
+            committee_chair_name,
+            final_decision_date,
+            final_decision_confirmation,
+            reviewed_at: new Date().toISOString()
+        };
+
+        // For now, we'll store it as a JSON in a notes field or log it
+        // You can create a separate application_reviews table later if needed
+        console.log('Application Review Submitted:', reviewData);
+
+        res.json({
+            success: true,
+            message: 'Review submitted successfully',
+            data: {
+                application_id: id,
+                new_status: newStatus,
+                decision,
+                reviewer: reviewer_name
+            }
+        });
+
+    } catch (error) {
+        console.error('Error submitting review:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to submit review',
+            error: error.message
+        });
+    }
+});
+
 module.exports = router;

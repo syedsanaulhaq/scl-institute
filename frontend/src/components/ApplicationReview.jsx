@@ -126,7 +126,7 @@ const ApplicationReview = () => {
 
             // Save review to backend
             const response = await axios.post(
-                `${API_URL}/students/applications/${id}/review`,
+                `${API_URL}/students/applications/${id}/review-decision`,
                 reviewData
             );
 
