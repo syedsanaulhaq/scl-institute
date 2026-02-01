@@ -249,6 +249,12 @@ router.post('/applications', upload.fields([
             });
         }
 
+        // Helper to convert empty strings to null
+        const toNullIfEmpty = (val) => (val === '' || val === undefined) ? null : val;
+        
+        // Helper to convert to boolean
+        const toBool = (val) => val === true || val === 'true';
+
         // Insert main application
         const [result] = await connection.execute(`
             INSERT INTO student_applications (
@@ -264,11 +270,31 @@ router.post('/applications', upload.fields([
                 declaration_date, application_status, submitted_at
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURDATE(), 'submitted', NOW())
         `, [
-            first_name, middle_names, last_name, date_of_birth, gender, nationality,
-            email, contact_number, address_line1, address_line2, town_city, postcode, country_of_residence,
-            course_title, course_code, course_type, mode_of_study, intake_start_date, entry_route,
-            highest_qualification, institution_name, year_completed, relevant_work_experience,
-            english_proficiency, english_score,
+            first_name, 
+            toNullIfEmpty(middle_names), 
+            last_name, 
+            date_of_birth, 
+            gender, 
+            nationality,
+            email, 
+            contact_number, 
+            address_line1, 
+            toNullIfEmpty(address_line2), 
+            town_city, 
+            postcode, 
+            country_of_residence,
+            course_title, 
+            course_code, 
+            course_type, 
+            mode_of_study, 
+            intake_start_date, 
+            entry_route,
+            highest_qualification, 
+            institution_name, 
+            year_completed, 
+            toNullIfEmpty(relevant_work_experience),
+            english_proficiency, 
+            toNullIfEmpty(english_score),
             documentPaths.passport_id || null,
             documentPaths.academic_certificates || null,
             documentPaths.academic_transcripts || null,
@@ -277,12 +303,12 @@ router.post('/applications', upload.fields([
             documentPaths.work_reference || null,
             documentPaths.proof_of_address || null,
             documentPaths.visa_immigration || null,
-            has_disabilities_support_needs === 'true',
-            disability_support_details,
-            consent_gdpr === 'true',
-            consent_data_sharing === 'true',
-            consent_marketing === 'true',
-            declaration_truth === 'true',
+            toBool(has_disabilities_support_needs),
+            toNullIfEmpty(disability_support_details),
+            toBool(consent_gdpr),
+            toBool(consent_data_sharing),
+            toBool(consent_marketing),
+            toBool(declaration_truth),
             digital_signature
         ]);
 
