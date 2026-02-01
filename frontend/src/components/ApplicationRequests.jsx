@@ -236,10 +236,10 @@ const ApplicationRequests = () => {
                                         <td className="px-6 py-4">
                                             <button
                                                 onClick={() => navigate(`/applications/${app.id}/review`)}
-                                                className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg shadow-sm transition-colors"
+                                                className="inline-flex items-center gap-1 px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-xs font-medium rounded shadow-sm transition-colors"
                                             >
-                                                <CheckCircle2 className="w-4 h-4" />
-                                                Review Application
+                                                <CheckCircle2 className="w-3 h-3" />
+                                                Review
                                             </button>
                                         </td>
                                     </tr>
