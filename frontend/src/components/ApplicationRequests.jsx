@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
     Search,
     Filter,
@@ -19,6 +20,7 @@ import axios from 'axios';
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
 
 const ApplicationRequests = () => {
+    const navigate = useNavigate();
     const [applications, setApplications] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
@@ -227,13 +229,21 @@ const ApplicationRequests = () => {
                                             </div>
                                         </td>
                                         <td className="px-6 py-4">
-                                            <button
-                                                onClick={() => setSelectedApp(app)}
-                                                className="inline-flex items-center gap-2 px-3 py-1 rounded text-sm font-medium text-blue-600 hover:bg-blue-50 transition-colors"
-                                            >
-                                                <Eye className="w-4 h-4" />
-                                                View
-                                            </button>
+                                            <div className="flex items-center gap-2">
+                                                <button
+                                                    onClick={() => setSelectedApp(app)}
+                                                    className="inline-flex items-center gap-2 px-3 py-1 rounded text-sm font-medium text-blue-600 hover:bg-blue-50 transition-colors"
+                                                >
+                                                    <Eye className="w-4 h-4" />
+                                                    View
+                                                </button>
+                                                <button
+                                                    onClick={() => navigate(`/applications/${app.id}/review`)}
+                                                    className="inline-flex items-center gap-2 px-3 py-1 rounded text-sm font-medium text-green-600 hover:bg-green-50 transition-colors"
+                                                >
+                                                    ✓ Review
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 ))}

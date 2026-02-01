@@ -12,6 +12,7 @@ import StudentReport from './components/StudentReport';
 import ApplicationRequests from './components/ApplicationRequests';
 import ApplicantsList from './components/ApplicantsList';
 import ApplicationReport from './components/ApplicationReport';
+import ApplicationReview from './components/ApplicationReview';
 
 function App() {
     const [user, setUser] = useState(null);
@@ -122,6 +123,15 @@ function App() {
                     user ? (
                         <Layout user={user} onLogout={handleLogout}>
                             <StudentDetail />
+                        </Layout>
+                    ) : (
+                        <LoginPage onLoginSuccess={handleLoginSuccess} />
+                    )
+                } />
+                <Route path="/applications/:id/review" element={
+                    user ? (
+                        <Layout user={user} onLogout={handleLogout}>
+                            <ApplicationReview />
                         </Layout>
                     ) : (
                         <LoginPage onLoginSuccess={handleLoginSuccess} />
