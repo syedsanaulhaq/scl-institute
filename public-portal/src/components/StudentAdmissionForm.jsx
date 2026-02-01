@@ -10,6 +10,8 @@ const StudentAdmissionForm = () => {
   const [csvFile, setCsvFile] = useState(null);
   const [csvPreviewData, setCsvPreviewData] = useState([]);
   const [importStatus, setImportStatus] = useState({ type: '', message: '' });
+  const [submitStatus, setSubmitStatus] = useState({ type: '', message: '' });
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [courses, setCourses] = useState([]);
   const [loadingCourses, setLoadingCourses] = useState(true);
   const [formData, setFormData] = useState({
@@ -641,6 +643,42 @@ const StudentAdmissionForm = () => {
     }
   };
 
+  const handleSubmitApplication = async () => {
+    if (!canProceed()) {
+      setSubmitStatus({ type: 'error', message: 'Please complete all required fields before submitting.' });
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      setSubmitStatus({ type: 'loading', message: 'Submitting application...' });
+
+      const response = await axios.post(`${API_URL}/students/applications`, {
+        ...formData,
+        declarationDate: formData.declarationDate || new Date().toISOString().split('T')[0]
+      });
+
+      if (response.data?.success) {
+        setSubmitStatus({
+          type: 'success',
+          message: `Application submitted successfully. Reference: ${response.data.reference || 'N/A'}`
+        });
+      } else {
+        setSubmitStatus({
+          type: 'error',
+          message: response.data?.message || 'Submission failed. Please try again.'
+        });
+      }
+    } catch (error) {
+      setSubmitStatus({
+        type: 'error',
+        message: error?.response?.data?.message || 'Submission failed. Please try again.'
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   // CSV Template and Import Functions
   const generateCSVTemplate = () => {
     const csvHeaders = [
@@ -828,6 +866,20 @@ const StudentAdmissionForm = () => {
         </div>
       </div>
 
+      {submitStatus.message && (
+        <div
+          className={`rounded-lg border px-4 py-3 text-sm ${
+            submitStatus.type === 'success'
+              ? 'border-green-200 bg-green-50 text-green-800'
+              : submitStatus.type === 'error'
+                ? 'border-red-200 bg-red-50 text-red-800'
+                : 'border-blue-200 bg-blue-50 text-blue-800'
+          }`}
+        >
+          {submitStatus.message}
+        </div>
+      )}
+
       {/* Accordion Form Container */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         <div className="space-y-0">
@@ -898,10 +950,11 @@ const StudentAdmissionForm = () => {
               Save Draft
             </button>
             <button
-              disabled={!canProceed()}
+              onClick={handleSubmitApplication}
+              disabled={!canProceed() || isSubmitting}
               className="px-8 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed font-semibold transition-colors"
             >
-              Submit Application
+              {isSubmitting ? 'Submitting...' : 'Submit Application'}
             </button>
           </div>
         </div>
