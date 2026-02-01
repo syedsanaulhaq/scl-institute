@@ -214,7 +214,8 @@ router.post('/applications', upload.fields([
             consent_data_sharing,
             consent_marketing,
             declaration_truth,
-            digital_signature
+            digital_signature,
+            declaration_date
         } = req.body;
 
         // Validate required fields
@@ -273,7 +274,7 @@ router.post('/applications', upload.fields([
                 has_disabilities_support_needs, disability_support_details,
                 consent_gdpr, consent_data_sharing, consent_marketing, declaration_truth, digital_signature,
                 declaration_date, application_reference, application_status, submitted_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURDATE(), ?, 'submitted', NOW())
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'submitted', NOW())
         `, [
             first_name, 
             toNullIfEmpty(middle_names), 
@@ -315,6 +316,7 @@ router.post('/applications', upload.fields([
             toBool(consent_marketing),
             toBool(declaration_truth),
             digital_signature,
+            declaration_date || new Date().toISOString().split('T')[0],
             applicationReference
         ]);
 
