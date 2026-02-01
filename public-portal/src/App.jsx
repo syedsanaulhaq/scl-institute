@@ -49,6 +49,12 @@ function App() {
                                 >
                                     Back to Home
                                 </button>
+                                <a
+                                    href="http://localhost:3000"
+                                    className="px-6 py-3 rounded-lg bg-gray-900 text-white hover:bg-black transition-colors font-semibold"
+                                >
+                                    Go to SCL System
+                                </a>
                                 <button
                                     onClick={() => setCurrentView('apply')}
                                     className="px-6 py-3 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors font-semibold"
