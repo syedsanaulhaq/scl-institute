@@ -15,8 +15,8 @@ function App() {
     const [isInitialized, setIsInitialized] = useState(false);
 
     useEffect(() => {
-        const storedUser = localStorage.getItem('user');
-        const accessToken = localStorage.getItem('accessToken');
+        const storedUser = sessionStorage.getItem('user');
+        const accessToken = sessionStorage.getItem('accessToken');
         
         if (storedUser && accessToken) {
             try {
@@ -28,15 +28,15 @@ function App() {
                     setUser(userData);
                 }).catch(() => {
                     // Token invalid, clear storage
-                    localStorage.removeItem('user');
-                    localStorage.removeItem('accessToken');
+                    sessionStorage.removeItem('user');
+                    sessionStorage.removeItem('accessToken');
                     setUser(null);
                 }).finally(() => {
                     setIsInitialized(true);
                 });
             } catch (e) {
-                localStorage.removeItem('user');
-                localStorage.removeItem('accessToken');
+                sessionStorage.removeItem('user');
+                sessionStorage.removeItem('accessToken');
                 setIsInitialized(true);
             }
         } else {
@@ -50,8 +50,8 @@ function App() {
 
     const handleLogout = () => {
         setUser(null);
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('user');
+        sessionStorage.removeItem('accessToken');
+        sessionStorage.removeItem('user');
     };
 
     if (!isInitialized) {

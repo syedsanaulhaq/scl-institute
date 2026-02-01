@@ -23,8 +23,8 @@ const LoginPage = ({ onLoginSuccess }) => {
             });
 
             const userData = response.data.user;
-            localStorage.setItem('accessToken', response.data.tokens.accessToken);
-            localStorage.setItem('user', JSON.stringify(userData));
+            sessionStorage.setItem('accessToken', response.data.tokens.accessToken);
+            sessionStorage.setItem('user', JSON.stringify(userData));
             onLoginSuccess(userData);
         } catch (err) {
             setError(err.response?.data?.message || 'Login failed. Please check your credentials.');
