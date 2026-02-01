@@ -70,8 +70,64 @@ const Home = ({ selectedTheme = 'modern', onApplyNow, onChangeTheme }) => {
     const [currentSlide, setCurrentSlide] = useState(0);
     const [isScrolled, setIsScrolled] = useState(false);
     const [showThemePanel, setShowThemePanel] = useState(false);
+    const [selectedDesignTheme, setSelectedDesignTheme] = useState('light');
 
     const theme = themes[selectedTheme];
+
+    const designThemes = {
+        light: {
+            name: 'Light',
+            bg: 'bg-white',
+            navBg: 'bg-white',
+            textPrimary: 'text-gray-900',
+            textSecondary: 'text-gray-600',
+            cardBg: 'bg-white',
+            cardBorder: 'border-gray-200',
+            shadowClass: 'shadow-lg'
+        },
+        dark: {
+            name: 'Dark',
+            bg: 'bg-gray-900',
+            navBg: 'bg-gray-800',
+            textPrimary: 'text-white',
+            textSecondary: 'text-gray-300',
+            cardBg: 'bg-gray-800',
+            cardBorder: 'border-gray-700',
+            shadowClass: 'shadow-2xl'
+        },
+        minimal: {
+            name: 'Minimal',
+            bg: 'bg-gray-50',
+            navBg: 'bg-white',
+            textPrimary: 'text-gray-900',
+            textSecondary: 'text-gray-500',
+            cardBg: 'bg-white',
+            cardBorder: 'border-gray-100',
+            shadowClass: 'shadow'
+        },
+        modern: {
+            name: 'Modern',
+            bg: 'bg-gradient-to-br from-gray-50 to-blue-50',
+            navBg: 'bg-white/95 backdrop-blur-md',
+            textPrimary: 'text-gray-900',
+            textSecondary: 'text-gray-600',
+            cardBg: 'bg-white/80 backdrop-blur-sm',
+            cardBorder: 'border-gray-200/50',
+            shadowClass: 'shadow-xl'
+        },
+        classic: {
+            name: 'Classic',
+            bg: 'bg-gray-100',
+            navBg: 'bg-gradient-to-r from-gray-800 to-gray-900',
+            textPrimary: 'text-gray-900',
+            textSecondary: 'text-gray-600',
+            cardBg: 'bg-white',
+            cardBorder: 'border-gray-300',
+            shadowClass: 'shadow'
+        }
+    };
+
+    const currentDesignTheme = designThemes[selectedDesignTheme];
 
     const slides = [
         {
@@ -169,8 +225,8 @@ const Home = ({ selectedTheme = 'modern', onApplyNow, onChangeTheme }) => {
             }`}>
                 <button
                     onClick={() => setShowThemePanel(!showThemePanel)}
-                    className={`bg-white rounded-l-lg shadow-xl px-3 py-6 hover:shadow-2xl transition-all duration-300 group border-2 border-r-0 border-gray-100 hover:border-blue-200 hover:px-4 ${
-                        showThemePanel ? 'bg-blue-50 border-blue-300' : ''
+                    className={`bg-white rounded-l-lg shadow-lg px-2 py-4 hover:shadow-xl transition-all duration-300 group border border-r-0 border-gray-200 hover:border-gray-300 ${
+                        showThemePanel ? 'bg-gray-50 border-gray-300' : ''
                     }`}
                     title="Change Theme"
                 >
@@ -184,58 +240,60 @@ const Home = ({ selectedTheme = 'modern', onApplyNow, onChangeTheme }) => {
                 </button>
             </div>
 
-            {/* Theme Selection Slide Panel */}
-            <div className={`fixed top-20 right-0 w-64 bg-white shadow-2xl rounded-l-lg transform transition-transform duration-300 z-50 border-l border-t border-b border-gray-200 ${
+            {/* Theme Panel */}
+            <div className={`fixed top-20 right-0 w-64 bg-white shadow-2xl rounded-l-lg transform transition-transform duration-300 z-50 border-l border-t border-b border-gray-200 overflow-hidden ${
                 showThemePanel ? 'translate-x-0' : 'translate-x-full'
             }`}>
-                <div className="p-4">
+                <div className="h-screen overflow-y-auto flex flex-col">
                     {/* Panel Header */}
-                    <div className="flex items-center justify-between mb-4 pb-2 border-b border-gray-200">
-                        <div className="flex items-center space-x-2">
-                            <Palette className="h-5 w-5 text-blue-600" />
-                            <h3 className="text-lg font-semibold text-gray-900">Themes</h3>
+                    <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4 flex-shrink-0">
+                        <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center space-x-2">
+                                <Palette className="h-5 w-5" />
+                                <h3 className="text-lg font-semibold">Themes</h3>
+                            </div>
+                            <button
+                                onClick={() => setShowThemePanel(false)}
+                                className="p-1 hover:bg-white/20 rounded transition-colors"
+                            >
+                                <ChevronRight className="h-4 w-4" />
+                            </button>
                         </div>
-                        <button
-                            onClick={() => setShowThemePanel(false)}
-                            className="p-1 hover:bg-gray-100 rounded transition-colors"
-                        >
-                            <ChevronRight className="h-4 w-4 text-gray-500" />
-                        </button>
                     </div>
 
-                    {/* Theme Options */}
-                    <div className="space-y-3">
-                        {Object.entries(themes).map(([key, themeData]) => (
-                            <button
-                                key={key}
-                                onClick={() => {
-                                    onChangeTheme(key);
-                                    setShowThemePanel(false);
-                                }}
-                                className={`w-full p-3 rounded-lg border transition-all duration-200 text-left flex items-center space-x-3 ${
-                                    selectedTheme === key
-                                        ? 'border-blue-400 bg-blue-50'
-                                        : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                                }`}
-                            >
-                                {/* Color Preview */}
-                                <div className="flex space-x-1">
-                                    <div className={`w-4 h-4 rounded-full bg-${themeData.primary} border border-white shadow-sm`}></div>
-                                    <div className={`w-4 h-4 rounded-full bg-${themeData.secondary} border border-white shadow-sm`}></div>
-                                    <div className={`w-4 h-4 rounded-full bg-${themeData.accent} border border-white shadow-sm`}></div>
-                                </div>
-                                
-                                {/* Theme Name */}
-                                <div className="flex-1">
-                                    <span className="font-medium text-gray-900 text-sm">{themeData.name}</span>
-                                </div>
-                                
-                                {/* Selected Indicator */}
-                                {selectedTheme === key && (
-                                    <CheckCircle className="h-4 w-4 text-blue-600 flex-shrink-0" />
-                                )}
-                            </button>
-                        ))}
+                    {/* Color Theme Selection */}
+                    <div className="flex-1 p-4 overflow-y-auto">
+                        <p className="text-xs font-semibold text-gray-600 uppercase mb-3">Color Scheme</p>
+                        <div className="space-y-2">
+                            {Object.entries(themes).map(([key, themeData]) => (
+                                <button
+                                    key={key}
+                                    onClick={() => onChangeTheme(key)}
+                                    className={`w-full p-3 rounded-lg border transition-all duration-200 text-left flex items-center space-x-3 ${
+                                        selectedTheme === key
+                                            ? 'border-blue-400 bg-blue-50'
+                                            : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                                    }`}
+                                >
+                                    {/* Color Preview */}
+                                    <div className="flex space-x-1">
+                                        <div className={`w-4 h-4 rounded-full bg-${themeData.primary} border border-white shadow-sm`}></div>
+                                        <div className={`w-4 h-4 rounded-full bg-${themeData.secondary} border border-white shadow-sm`}></div>
+                                        <div className={`w-4 h-4 rounded-full bg-${themeData.accent} border border-white shadow-sm`}></div>
+                                    </div>
+                                    
+                                    {/* Theme Name */}
+                                    <div className="flex-1">
+                                        <span className="font-medium text-gray-900 text-sm">{themeData.name}</span>
+                                    </div>
+                                    
+                                    {/* Selected Indicator */}
+                                    {selectedTheme === key && (
+                                        <CheckCircle className="h-4 w-4 text-blue-600 flex-shrink-0" />
+                                    )}
+                                </button>
+                            ))}
+                        </div>
                     </div>
                 </div>
             </div>
