@@ -74,6 +74,7 @@ router.get('/courses', async (req, res) => {
                 SELECT 
                     c.id,
                     c.idnumber as course_code,
+                    c.shortname as course_shortname,
                     c.fullname as course_title,
                     COALESCE(cc.name, 'General') as course_type,
                     c.summary as description,
@@ -83,15 +84,13 @@ router.get('/courses', async (req, res) => {
                     c.timemodified
                 FROM mdl_course c
                 LEFT JOIN mdl_course_categories cc ON c.category = cc.id
-                WHERE c.id > 1 AND c.visible = 1 
-                    AND c.idnumber IS NOT NULL 
-                    AND c.idnumber != ''
+                WHERE c.id > 1 AND c.visible = 1
                 ORDER BY c.fullname ASC
             `);
 
             moodleCourses = moodleResult.map(course => ({
                 id: course.id,
-                course_code: course.course_code,
+                course_code: course.course_code || course.course_shortname || `COURSE-${course.id}`,
                 course_title: course.course_title,
                 course_type: course.course_type,
                 department: 'General',
