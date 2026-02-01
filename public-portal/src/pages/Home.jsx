@@ -339,7 +339,7 @@ const Home = ({ selectedTheme = 'modern', onApplyNow, onChangeTheme }) => {
                             <a href="#contact" className={`font-medium transition-colors ${
                                 isScrolled ? 'text-gray-700 hover:text-' + theme.primary : 'text-white hover:text-' + theme.accent
                             }`}>Contact</a>
-                            <a href="http://localhost:3000" className={`font-semibold underline transition-colors ${
+                            <a href="http://localhost:3000" target="_blank" rel="noopener noreferrer" className={`font-semibold underline transition-colors ${
                                 isScrolled ? 'text-blue-700 hover:text-blue-900' : 'text-yellow-300 hover:text-yellow-200'
                             }`}>SCL System</a>
                             <button 

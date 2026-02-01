@@ -259,6 +259,8 @@ const Design1 = ({ selectedTheme = 'modern', onApplyNow, onChangeTheme }) => {
                             <a href="#about" className={`font-medium ${isScrolled ? 'text-gray-700' : 'text-white'}`}>About</a>
                             <a
                                 href="http://localhost:3000"
+                                target="_blank"
+                                rel="noopener noreferrer"
                                 className={`font-medium ${isScrolled ? 'text-blue-700' : 'text-yellow-300'} hover:underline`}
                             >
                                 SCL System

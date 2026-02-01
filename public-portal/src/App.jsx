@@ -51,6 +51,8 @@ function App() {
                                 </button>
                                 <a
                                     href="http://localhost:3000"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
                                     className="px-6 py-3 rounded-lg bg-gray-900 text-white hover:bg-black transition-colors font-semibold"
                                 >
                                     Go to SCL System

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import axios from 'axios';
 import LoginPage from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Layout from './components/Layout';
@@ -15,14 +16,32 @@ function App() {
 
     useEffect(() => {
         const storedUser = localStorage.getItem('user');
-        if (storedUser) {
+        const accessToken = localStorage.getItem('accessToken');
+        
+        if (storedUser && accessToken) {
             try {
-                setUser(JSON.parse(storedUser));
+                const userData = JSON.parse(storedUser);
+                // Validate token by making a test request
+                axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:4000/api'}/v1/auth/verify`, {
+                    headers: { Authorization: `Bearer ${accessToken}` }
+                }).then(() => {
+                    setUser(userData);
+                }).catch(() => {
+                    // Token invalid, clear storage
+                    localStorage.removeItem('user');
+                    localStorage.removeItem('accessToken');
+                    setUser(null);
+                }).finally(() => {
+                    setIsInitialized(true);
+                });
             } catch (e) {
                 localStorage.removeItem('user');
+                localStorage.removeItem('accessToken');
+                setIsInitialized(true);
             }
+        } else {
+            setIsInitialized(true);
         }
-        setIsInitialized(true);
     }, []);
 
     const handleLoginSuccess = (userData) => {
