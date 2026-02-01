@@ -24,27 +24,16 @@ function App() {
         if (storedUser && accessToken) {
             try {
                 const userData = JSON.parse(storedUser);
-                // Validate token by making a test request
-                axios.get(`${import.meta.env.VITE_API_URL || 'http://localhost:4000/api'}/v1/auth/verify`, {
-                    headers: { Authorization: `Bearer ${accessToken}` }
-                }).then(() => {
-                    setUser(userData);
-                }).catch(() => {
-                    // Token invalid, clear storage
-                    sessionStorage.removeItem('user');
-                    sessionStorage.removeItem('accessToken');
-                    setUser(null);
-                }).finally(() => {
-                    setIsInitialized(true);
-                });
+                // Restore user from sessionStorage without re-verifying token
+                // SessionStorage persists during the same browser session
+                setUser(userData);
             } catch (e) {
+                // If parse fails, clear storage
                 sessionStorage.removeItem('user');
                 sessionStorage.removeItem('accessToken');
-                setIsInitialized(true);
             }
-        } else {
-            setIsInitialized(true);
         }
+        setIsInitialized(true);
     }, []);
 
     const handleLoginSuccess = (userData) => {
