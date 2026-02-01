@@ -205,7 +205,12 @@ const ApplicationRequests = () => {
                                 {filteredApplications.map((app) => (
                                     <tr key={app.id} className="border-b border-gray-200 hover:bg-gray-50 transition-colors">
                                         <td className="px-6 py-4">
-                                            <span className="text-sm font-mono font-semibold text-blue-600">{app.application_reference}</span>
+                                            <button 
+                                                onClick={() => setSelectedApp(app)}
+                                                className="text-sm font-mono font-semibold text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+                                            >
+                                                {app.application_reference}
+                                            </button>
                                         </td>
                                         <td className="px-6 py-4">
                                             <div>
@@ -229,21 +234,13 @@ const ApplicationRequests = () => {
                                             </div>
                                         </td>
                                         <td className="px-6 py-4">
-                                            <div className="flex items-center gap-2">
-                                                <button
-                                                    onClick={() => setSelectedApp(app)}
-                                                    className="inline-flex items-center gap-2 px-3 py-1 rounded text-sm font-medium text-blue-600 hover:bg-blue-50 transition-colors"
-                                                >
-                                                    <Eye className="w-4 h-4" />
-                                                    View
-                                                </button>
-                                                <button
-                                                    onClick={() => navigate(`/applications/${app.id}/review`)}
-                                                    className="inline-flex items-center gap-2 px-3 py-1 rounded text-sm font-medium text-green-600 hover:bg-green-50 transition-colors"
-                                                >
-                                                    ✓ Review
-                                                </button>
-                                            </div>
+                                            <button
+                                                onClick={() => navigate(`/applications/${app.id}/review`)}
+                                                className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg shadow-sm transition-colors"
+                                            >
+                                                <CheckCircle2 className="w-4 h-4" />
+                                                Review Application
+                                            </button>
                                         </td>
                                     </tr>
                                 ))}
