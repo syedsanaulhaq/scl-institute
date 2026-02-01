@@ -712,9 +712,10 @@ const StudentAdmissionForm = () => {
       });
 
       if (response.data?.success) {
+        const reference = response.data?.data?.application_reference || response.data?.application_reference || 'N/A';
         setSubmitStatus({
           type: 'success',
-          message: `Application submitted successfully. Reference: ${response.data.reference || 'N/A'}`
+          message: `Application submitted successfully. Reference: ${reference}`
         });
       } else {
         setSubmitStatus({
