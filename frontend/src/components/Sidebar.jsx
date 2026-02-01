@@ -47,6 +47,7 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
 
     const menuItems = [
         { name: 'Dashboard', icon: LayoutDashboard, path: '/' },
+           { name: 'Student Applications', icon: UserCheck, path: '/applications' },
         {
             name: 'Student Admission',
             icon: Users,
