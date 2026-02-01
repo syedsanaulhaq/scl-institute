@@ -73,7 +73,8 @@ const ApplicationReview = () => {
             const response = await axios.get(`${API_URL}/students/applications/${id}`);
             
             if (response.data?.success) {
-                setApplication(response.data.data);
+                // Backend returns data.application, not just data
+                setApplication(response.data.data?.application || response.data.data);
             } else {
                 setError('Failed to load application');
             }
