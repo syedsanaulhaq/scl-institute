@@ -902,14 +902,6 @@ const StudentAdmissionForm = ({ onSubmitSuccess }) => {
             <User className="w-4 h-4 mr-2" />
             Fill Sample Data
           </button>
-          <button
-            type="button"
-            onClick={() => setCsvModalOpen(true)}
-            className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition-colors text-sm"
-          >
-            <FileUp className="w-4 h-4 mr-2" />
-            Bulk Import CSV
-          </button>
           <div className="flex items-center space-x-3">
             <span className="text-sm text-gray-600">Progress:</span>
             <div className="w-32 bg-gray-200 rounded-full h-2">
