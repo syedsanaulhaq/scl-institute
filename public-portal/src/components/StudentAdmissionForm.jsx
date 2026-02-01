@@ -643,6 +643,19 @@ const StudentAdmissionForm = () => {
     }
   };
 
+  const normalizeCourseType = (courseType) => {
+    const allowed = ['HND', 'Degree', 'Vocational', 'Short Course', 'CPD'];
+    if (allowed.includes(courseType)) return courseType;
+
+    const value = (courseType || '').toLowerCase();
+    if (value.includes('hnd')) return 'HND';
+    if (value.includes('vocational')) return 'Vocational';
+    if (value.includes('short')) return 'Short Course';
+    if (value.includes('degree') || value.includes('bachelor') || value.includes('master')) return 'Degree';
+    if (value.includes('professional') || value.includes('qualification')) return 'CPD';
+    return 'CPD';
+  };
+
   const handleSubmitApplication = async () => {
     if (!canProceed()) {
       setSubmitStatus({ type: 'error', message: 'Please complete all required fields before submitting.' });
@@ -672,7 +685,7 @@ const StudentAdmissionForm = () => {
         // Course Selection
         course_title: formData.courseTitle,
         course_code: formData.courseCode,
-        course_type: formData.courseType,
+        course_type: normalizeCourseType(formData.courseType),
         mode_of_study: formData.modeOfStudy,
         intake_start_date: formData.intakeStartDate,
         entry_route: formData.entryRoute,
@@ -686,7 +699,7 @@ const StudentAdmissionForm = () => {
         english_score: formData.englishScore,
 
         // Support Requirements
-        has_disabilities_support_needs: formData.hasDisabilities,
+        has_disabilities_support_needs: formData.hasDisabilities === 'yes',
         disability_support_details: formData.disabilityDetails,
 
         // Consents & Declaration
@@ -843,7 +856,7 @@ const StudentAdmissionForm = () => {
       // Academic Background
       highestQualification: 'A-Level',
       institutionName: 'Lagos International College',
-      yearCompleted: '2020',
+      yearCompleted: '2020-06-30',
       workExperience: '2 years in IT support at Tech Solutions Ltd',
       englishProficiency: 'IELTS',
       englishScore: '6.5',
@@ -852,7 +865,7 @@ const StudentAdmissionForm = () => {
       uploadedDocuments: {},
       
       // Support Needs
-      hasDisabilities: 'No',
+      hasDisabilities: 'no',
       disabilityDetails: '',
       
       // Consents
