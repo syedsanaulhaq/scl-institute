@@ -91,6 +91,18 @@ services:
       - ./frontend:/app
       - /app/node_modules
 
+  scli-public-portal:
+    build: ./public-portal
+    container_name: scli-public-portal
+    ports:
+      - "7777:7777"
+    networks:
+      - scl-network
+    command: npm run dev
+    volumes:
+      - ./public-portal:/app
+      - /app/node_modules
+
   scli-nginx:
     image: nginx:alpine
     container_name: scli-nginx
@@ -102,6 +114,7 @@ services:
       - scli-frontend
       - scli-backend
       - scli-moodle
+      - scli-public-portal
     networks:
       - scl-network
 

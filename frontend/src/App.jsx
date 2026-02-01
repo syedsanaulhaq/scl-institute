@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import LoginPage from './pages/Login';
 import Dashboard from './pages/Dashboard';
+import StudentApplication from './pages/StudentApplication';
 import Layout from './components/Layout';
 import StudentAdmissionForm from './components/StudentAdmissionForm';
 import StudentDashboard from './components/StudentDashboard';
@@ -64,9 +65,7 @@ function App() {
                 } />
                 <Route path="/student-application" element={
                     user ? (
-                        <Layout user={user} onLogout={handleLogout}>
-                            <StudentAdmissionForm />
-                        </Layout>
+                        <StudentApplication />
                     ) : (
                         <LoginPage onLoginSuccess={handleLoginSuccess} />
                     )
