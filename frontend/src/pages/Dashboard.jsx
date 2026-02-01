@@ -60,21 +60,30 @@ const Dashboard = ({ user, onLogout }) => {
     // Module Definitions with Role-Based Visibility
     const modules = [
         {
+            id: 'applications',
+            title: 'Student Applications',
+            description: 'Review incoming student admission requests, applications, and manage enrollment decisions.',
+            icon: Users,
+            roles: ['admin', 'admission_officer'],
+            color: 'green',
+            path: '/applications'
+        },
+        {
             id: 'students',
             title: 'Student Management',
-            description: 'Student applications, admissions, enrollment tracking and management dashboard.',
-            icon: Users,
+            description: 'Student records, admissions, enrollment tracking and comprehensive management dashboard.',
+            icon: Users2,
             roles: ['admin', 'admission_officer', 'student'],
-            color: 'green',
+            color: 'blue',
             path: '/students'
         },
         {
             id: 'partners',
             title: 'Partner & Associates Management',
             description: 'Manage institutional partnerships and external associate directories.',
-            icon: Users2,
+            icon: Users,
             roles: ['admin', 'partner_manager'],
-            color: 'blue'
+            color: 'indigo'
         },
         {
             id: 'compliance',
