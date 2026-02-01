@@ -254,6 +254,12 @@ router.post('/applications', upload.fields([
         // Helper to convert to boolean
         const toBool = (val) => val === true || val === 'true';
 
+        // Generate application reference to avoid duplicate trigger values
+        const [refRows] = await connection.execute(
+            'SELECT LPAD(IFNULL(MAX(id), 0) + 1, 6, "0") as nextId FROM student_applications'
+        );
+        const applicationReference = `SCL${new Date().getFullYear()}${refRows[0].nextId}`;
+
         // Insert main application
         const [result] = await connection.execute(`
             INSERT INTO student_applications (
@@ -266,8 +272,8 @@ router.post('/applications', upload.fields([
                 cv_resume, work_reference, proof_of_address, visa_immigration_document,
                 has_disabilities_support_needs, disability_support_details,
                 consent_gdpr, consent_data_sharing, consent_marketing, declaration_truth, digital_signature,
-                declaration_date, application_status, submitted_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURDATE(), 'submitted', NOW())
+                declaration_date, application_reference, application_status, submitted_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURDATE(), ?, 'submitted', NOW())
         `, [
             first_name, 
             toNullIfEmpty(middle_names), 
@@ -308,7 +314,8 @@ router.post('/applications', upload.fields([
             toBool(consent_data_sharing),
             toBool(consent_marketing),
             toBool(declaration_truth),
-            digital_signature
+            digital_signature,
+            applicationReference
         ]);
 
         const applicationId = result.insertId;
