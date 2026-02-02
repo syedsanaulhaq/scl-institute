@@ -825,6 +825,39 @@ router.get('/dashboard-stats', async (req, res) => {
 });
 
 // ===============================================
+// ROUTE: GET /api/students/applications/:id/review
+// Get existing review for an application
+// ===============================================
+router.get('/applications/:id/review', async (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        const [reviews] = await db.execute(
+            'SELECT * FROM application_reviews WHERE application_id = ? ORDER BY reviewed_at DESC LIMIT 1',
+            [id]
+        );
+
+        if (reviews.length > 0) {
+            res.json({
+                success: true,
+                data: reviews[0]
+            });
+        } else {
+            res.json({
+                success: true,
+                data: null
+            });
+        }
+    } catch (error) {
+        console.error('Error fetching review:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch review',
+            error: error.message
+        });
+    }
+});
+
 // ROUTE: POST /api/students/applications/:id/review-decision
 // Submit application review decision (CSV format)
 // ===============================================
@@ -876,28 +909,84 @@ router.post('/applications/:id/review-decision', async (req, res) => {
             [newStatus, id]
         );
 
-        // Store review details (we can create a JSON column or separate table later)
-        const reviewData = {
-            reviewer_name,
-            review_date,
-            documents_verified,
-            eligibility_check,
-            interview_conducted,
-            interview_outcome,
-            english_requirement_met,
-            additional_notes,
-            decision,
-            reason_for_refusal,
-            detailed_comments,
-            committee_chair_name,
-            final_decision_date,
-            final_decision_confirmation,
-            reviewed_at: new Date().toISOString()
-        };
+        // Check if review already exists
+        const [existingReviews] = await db.execute(
+            'SELECT id FROM application_reviews WHERE application_id = ?',
+            [id]
+        );
 
-        // For now, we'll store it as a JSON in a notes field or log it
-        // You can create a separate application_reviews table later if needed
-        console.log('Application Review Submitted:', reviewData);
+        if (existingReviews.length > 0) {
+            // Update existing review
+            await db.execute(
+                `UPDATE application_reviews SET 
+                    reviewer_id = 1,
+                    academic_suitability = ?,
+                    english_proficiency_adequate = ?,
+                    documentation_complete = ?,
+                    recommendation = ?,
+                    review_notes = ?
+                WHERE application_id = ?`,
+                [
+                    documents_verified === 'Yes' ? 'suitable' : 'needs_assessment',
+                    english_requirement_met === 'Yes' ? 1 : 0,
+                    documents_verified === 'Yes' ? 1 : 0,
+                    decision === 'Offer' ? 'accept' : 
+                    decision === 'Conditional Offer' ? 'conditional_accept' :
+                    decision === 'Refusal' ? 'reject' : 'defer',
+                    JSON.stringify({
+                        reviewer_name,
+                        review_date,
+                        documents_verified,
+                        eligibility_check,
+                        interview_conducted,
+                        interview_outcome,
+                        english_requirement_met,
+                        additional_notes,
+                        decision,
+                        reason_for_refusal,
+                        detailed_comments,
+                        committee_chair_name,
+                        final_decision_date,
+                        final_decision_confirmation
+                    }),
+                    id
+                ]
+            );
+        } else {
+            // Create new review
+            await db.execute(
+                `INSERT INTO application_reviews 
+                (application_id, reviewer_id, review_stage, academic_suitability, english_proficiency_adequate, documentation_complete, recommendation, review_notes)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+                [
+                    id,
+                    1,
+                    'final_decision',
+                    documents_verified === 'Yes' ? 'suitable' : 'needs_assessment',
+                    english_requirement_met === 'Yes' ? 1 : 0,
+                    documents_verified === 'Yes' ? 1 : 0,
+                    decision === 'Offer' ? 'accept' : 
+                    decision === 'Conditional Offer' ? 'conditional_accept' :
+                    decision === 'Refusal' ? 'reject' : 'defer',
+                    JSON.stringify({
+                        reviewer_name,
+                        review_date,
+                        documents_verified,
+                        eligibility_check,
+                        interview_conducted,
+                        interview_outcome,
+                        english_requirement_met,
+                        additional_notes,
+                        decision,
+                        reason_for_refusal,
+                        detailed_comments,
+                        committee_chair_name,
+                        final_decision_date,
+                        final_decision_confirmation
+                    })
+                ]
+            );
+        }
 
         res.json({
             success: true,
@@ -906,7 +995,8 @@ router.post('/applications/:id/review-decision', async (req, res) => {
                 application_id: id,
                 new_status: newStatus,
                 decision,
-                reviewer: reviewer_name
+                reviewer: reviewer_name,
+                is_update: existingReviews.length > 0
             }
         });
 

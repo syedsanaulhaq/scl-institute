@@ -20,6 +20,8 @@ const ApplicationReview = () => {
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
+    const [existingReview, setExistingReview] = useState(null);
+    const [isEditMode, setIsEditMode] = useState(false);
 
     // Safe date formatter
     const formatDate = (dateValue) => {
@@ -64,7 +66,50 @@ const ApplicationReview = () => {
 
     useEffect(() => {
         fetchApplication();
+        fetchExistingReview();
     }, [id]);
+
+    const fetchExistingReview = async () => {
+        try {
+            const response = await axios.get(`${API_URL}/students/applications/${id}/review`);
+            if (response.data?.success && response.data?.data) {
+                const existingData = response.data.data;
+                setExistingReview(existingData);
+                setIsEditMode(true);
+                
+                // Parse review_notes if it's JSON (stored review data)
+                if (existingData.review_notes) {
+                    try {
+                        const parsedNotes = typeof existingData.review_notes === 'string' 
+                            ? JSON.parse(existingData.review_notes) 
+                            : existingData.review_notes;
+                        
+                        setReview(prev => ({
+                            ...prev,
+                            reviewer_name: parsedNotes.reviewer_name || '',
+                            review_date: formatDate(parsedNotes.review_date) || new Date().toISOString().split('T')[0],
+                            documents_verified: parsedNotes.documents_verified || '',
+                            eligibility_check: parsedNotes.eligibility_check || '',
+                            interview_conducted: parsedNotes.interview_conducted || '',
+                            interview_outcome: parsedNotes.interview_outcome || '',
+                            english_requirement_met: parsedNotes.english_requirement_met || '',
+                            additional_notes: parsedNotes.additional_notes || '',
+                            decision: parsedNotes.decision || '',
+                            reason_for_refusal: parsedNotes.reason_for_refusal || '',
+                            detailed_comments: parsedNotes.detailed_comments || '',
+                            committee_chair_name: parsedNotes.committee_chair_name || '',
+                            final_decision_date: formatDate(parsedNotes.final_decision_date) || '',
+                            final_decision_confirmation: parsedNotes.final_decision_confirmation || false
+                        }));
+                    } catch (e) {
+                        console.log('Could not parse review notes');
+                    }
+                }
+            }
+        } catch (err) {
+            console.log('No existing review found or error fetching');
+        }
+    };
 
     const fetchApplication = async () => {
         try {
@@ -188,7 +233,19 @@ const ApplicationReview = () => {
                 <div className="lg:col-span-2 space-y-6">
                     {/* Application Overview */}
                     <div className="bg-white rounded-lg shadow p-6">
-                        <h2 className="text-2xl font-bold text-gray-900 mb-4">Application Details</h2>
+                        <div className="flex items-center justify-between mb-4">
+                            <h2 className="text-2xl font-bold text-gray-900">Application Details</h2>
+                            {isEditMode && (
+                                <div className="bg-blue-50 border border-blue-200 rounded px-3 py-1 text-sm font-medium text-blue-800">
+                                    Edit Review
+                                </div>
+                            )}
+                            {!isEditMode && (
+                                <div className="bg-green-50 border border-green-200 rounded px-3 py-1 text-sm font-medium text-green-800">
+                                    Add Review
+                                </div>
+                            )}
+                        </div>
                         
                         <div className="grid grid-cols-2 gap-6 mb-6">
                             <div>
@@ -560,12 +617,12 @@ const ApplicationReview = () => {
                                 {submitting ? (
                                     <>
                                         <Loader2 className="w-4 h-4 animate-spin" />
-                                        Submitting...
+                                        {isEditMode ? 'Updating...' : 'Submitting...'}
                                     </>
                                 ) : (
                                     <>
                                         <Save className="w-4 h-4" />
-                                        Submit Review
+                                        {isEditMode ? 'Update Review' : 'Submit Review'}
                                     </>
                                 )}
                             </button>

@@ -27,10 +27,20 @@ const ApplicationRequests = () => {
     const [statusFilter, setStatusFilter] = useState('submitted');
     const [selectedApp, setSelectedApp] = useState(null);
     const [error, setError] = useState('');
+    const [reviewStatus, setReviewStatus] = useState({});
 
     useEffect(() => {
         fetchApplications();
     }, [statusFilter]);
+
+    const checkReviewStatus = async (appId) => {
+        try {
+            const response = await axios.get(`${API_URL}/students/applications/${appId}/review`);
+            return response.data?.data !== null;
+        } catch (err) {
+            return false;
+        }
+    };
 
     const fetchApplications = async () => {
         try {
@@ -44,6 +54,13 @@ const ApplicationRequests = () => {
                 // The API returns applications nested under data.applications
                 const apps = response.data.data?.applications || [];
                 setApplications(apps);
+                
+                // Check review status for each application
+                const reviewStatuses = {};
+                for (const app of apps) {
+                    reviewStatuses[app.id] = await checkReviewStatus(app.id);
+                }
+                setReviewStatus(reviewStatuses);
             } else {
                 setError('Failed to load applications');
             }
@@ -236,10 +253,14 @@ const ApplicationRequests = () => {
                                         <td className="px-6 py-4">
                                             <button
                                                 onClick={() => navigate(`/applications/${app.id}/review`)}
-                                                className="inline-flex items-center gap-1 px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-xs font-medium rounded shadow-sm transition-colors"
+                                                className={`inline-flex items-center gap-1 px-3 py-1 text-white text-xs font-medium rounded shadow-sm transition-colors ${
+                                                    reviewStatus[app.id] 
+                                                        ? 'bg-blue-600 hover:bg-blue-700' 
+                                                        : 'bg-green-600 hover:bg-green-700'
+                                                }`}
                                             >
                                                 <CheckCircle2 className="w-3 h-3" />
-                                                Review
+                                                {reviewStatus[app.id] ? 'Edit Review' : 'Add Review'}
                                             </button>
                                         </td>
                                     </tr>
