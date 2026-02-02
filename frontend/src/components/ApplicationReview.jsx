@@ -71,9 +71,13 @@ const ApplicationReview = () => {
 
     const fetchExistingReview = async () => {
         try {
+            console.log(`[FETCH REVIEW] Loading review for app ID ${id}`);
             const response = await axios.get(`${API_URL}/students/applications/${id}/review`);
+            console.log('[FETCH REVIEW] Response:', response.data);
+            
             if (response.data?.success && response.data?.data) {
                 const existingData = response.data.data;
+                console.log('[FETCH REVIEW] Found existing review:', existingData);
                 setExistingReview(existingData);
                 setIsEditMode(true);
                 
@@ -83,6 +87,8 @@ const ApplicationReview = () => {
                         const parsedNotes = typeof existingData.review_notes === 'string' 
                             ? JSON.parse(existingData.review_notes) 
                             : existingData.review_notes;
+                        
+                        console.log('[FETCH REVIEW] Parsed notes:', parsedNotes);
                         
                         setReview(prev => ({
                             ...prev,
@@ -102,12 +108,16 @@ const ApplicationReview = () => {
                             final_decision_confirmation: parsedNotes.final_decision_confirmation || false
                         }));
                     } catch (e) {
-                        console.log('Could not parse review notes');
+                        console.error('[FETCH REVIEW] Error parsing notes:', e);
                     }
+                } else {
+                    console.log('[FETCH REVIEW] No review_notes found in data');
                 }
+            } else {
+                console.log('[FETCH REVIEW] No existing review data found (data is null)');
             }
         } catch (err) {
-            console.log('No existing review found or error fetching');
+            console.error('[FETCH REVIEW] Error fetching review:', err);
         }
     };
 
