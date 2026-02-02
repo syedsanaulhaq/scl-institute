@@ -84,9 +84,20 @@ const ApplicationReview = () => {
                 // Parse review_notes if it's JSON (stored review data)
                 if (existingData.review_notes) {
                     try {
-                        const parsedNotes = typeof existingData.review_notes === 'string' 
-                            ? JSON.parse(existingData.review_notes) 
-                            : existingData.review_notes;
+                        let parsedNotes;
+                        
+                        // Try to parse as JSON
+                        if (typeof existingData.review_notes === 'string') {
+                            try {
+                                parsedNotes = JSON.parse(existingData.review_notes);
+                            } catch (parseErr) {
+                                // If not valid JSON, treat as empty object
+                                console.log('[FETCH REVIEW] review_notes is not JSON, skipping parse');
+                                parsedNotes = {};
+                            }
+                        } else {
+                            parsedNotes = existingData.review_notes;
+                        }
                         
                         console.log('[FETCH REVIEW] Parsed notes:', parsedNotes);
                         
@@ -108,16 +119,18 @@ const ApplicationReview = () => {
                             final_decision_confirmation: parsedNotes.final_decision_confirmation || false
                         }));
                     } catch (e) {
-                        console.error('[FETCH REVIEW] Error parsing notes:', e);
+                        console.error('[FETCH REVIEW] Unexpected error:', e);
                     }
                 } else {
                     console.log('[FETCH REVIEW] No review_notes found in data');
                 }
             } else {
                 console.log('[FETCH REVIEW] No existing review data found (data is null)');
+                setIsEditMode(false);
             }
         } catch (err) {
             console.error('[FETCH REVIEW] Error fetching review:', err);
+            setIsEditMode(false);
         }
     };
 
