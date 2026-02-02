@@ -36,8 +36,11 @@ const ApplicationRequests = () => {
     const checkReviewStatus = async (appId) => {
         try {
             const response = await axios.get(`${API_URL}/students/applications/${appId}/review`);
-            return response.data?.data !== null;
+            const hasReview = response.data?.data !== null;
+            console.log(`[REVIEW STATUS] App ID ${appId}: hasReview = ${hasReview}, data =`, response.data?.data);
+            return hasReview;
         } catch (err) {
+            console.error(`[REVIEW STATUS ERROR] App ID ${appId}:`, err.message);
             return false;
         }
     };
@@ -53,13 +56,16 @@ const ApplicationRequests = () => {
             if (response.data?.success) {
                 // The API returns applications nested under data.applications
                 const apps = response.data.data?.applications || [];
+                console.log('[FETCH APPS] Got', apps.length, 'applications');
                 setApplications(apps);
                 
                 // Check review status for each application
                 const reviewStatuses = {};
                 for (const app of apps) {
+                    console.log(`[CHECKING REVIEW] App ID ${app.id}`);
                     reviewStatuses[app.id] = await checkReviewStatus(app.id);
                 }
+                console.log('[FINAL REVIEW STATUS]', reviewStatuses);
                 setReviewStatus(reviewStatuses);
             } else {
                 setError('Failed to load applications');

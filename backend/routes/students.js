@@ -837,12 +837,16 @@ router.get('/applications/:id/review', async (req, res) => {
             [id]
         );
 
+        console.log(`[REVIEW CHECK] App ID ${id}: Found ${reviews.length} reviews`);
+
         if (reviews.length > 0) {
+            console.log(`[REVIEW CHECK] App ID ${id}: Returning review data`);
             res.json({
                 success: true,
                 data: reviews[0]
             });
         } else {
+            console.log(`[REVIEW CHECK] App ID ${id}: No review found`);
             res.json({
                 success: true,
                 data: null
@@ -915,8 +919,11 @@ router.post('/applications/:id/review-decision', async (req, res) => {
             [id]
         );
 
+        console.log(`[REVIEW SAVE] App ID ${id}: Existing reviews = ${existingReviews.length}`);
+
         if (existingReviews.length > 0) {
             // Update existing review
+            console.log(`[REVIEW SAVE] App ID ${id}: Updating existing review`);
             await db.execute(
                 `UPDATE application_reviews SET 
                     reviewer_id = 1,
@@ -954,6 +961,7 @@ router.post('/applications/:id/review-decision', async (req, res) => {
             );
         } else {
             // Create new review
+            console.log(`[REVIEW SAVE] App ID ${id}: Creating new review`);
             await db.execute(
                 `INSERT INTO application_reviews 
                 (application_id, reviewer_id, review_stage, academic_suitability, english_proficiency_adequate, documentation_complete, recommendation, review_notes)
@@ -986,6 +994,7 @@ router.post('/applications/:id/review-decision', async (req, res) => {
                     })
                 ]
             );
+            console.log(`[REVIEW SAVE] App ID ${id}: New review created successfully`);
         }
 
         res.json({
