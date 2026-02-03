@@ -9,7 +9,11 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs').promises;
 const mysql = require('mysql2/promise');
+const crypto = require('crypto');
 const router = express.Router();
+const { sendStudentWelcomeEmail, sendConditionalApprovalEmail } = require('../utils/emailService');
+
+const generateTempPassword = () => crypto.randomBytes(6).toString('hex');
 
 // Database connection
 const db = mysql.createPool({
@@ -913,6 +917,72 @@ router.post('/applications/:id/review-decision', async (req, res) => {
             [newStatus, id]
         );
 
+        // Auto-create student user account for accepted/conditional offers
+        let createdUser = null;
+        if (newStatus === 'accepted' || newStatus === 'conditional_accept') {
+            const [appRows] = await db.execute(
+                'SELECT email, first_name, last_name, course_title FROM student_applications WHERE id = ?',
+                [id]
+            );
+
+            if (appRows.length > 0) {
+                const { email, first_name, last_name, course_title } = appRows[0];
+                const [userRows] = await db.execute(
+                    'SELECT id, role FROM users WHERE email = ?',
+                    [email]
+                );
+
+                if (userRows.length === 0) {
+                    const tempPassword = generateTempPassword();
+                    await db.execute(
+                        'INSERT INTO users (email, password, first_name, last_name, role) VALUES (?, ?, ?, ?, ?)',
+                        [email, tempPassword, first_name, last_name, 'student']
+                    );
+                    createdUser = {
+                        username: email,
+                        password: tempPassword,
+                        role: 'student',
+                        status: 'created'
+                    };
+                    console.log(`[STUDENT USER] Created account for ${email} (Application ${id})`);
+
+                    // Send welcome email for accepted students
+                    if (newStatus === 'accepted') {
+                        const emailResult = await sendStudentWelcomeEmail(
+                            email,
+                            first_name,
+                            last_name,
+                            tempPassword,
+                            course_title
+                        );
+                        console.log(`[EMAIL SENT] Welcome email to ${email}:`, emailResult.success ? 'Success' : 'Failed');
+                    }
+                    // Send conditional approval email
+                    else if (newStatus === 'conditional_accept') {
+                        const emailResult = await sendConditionalApprovalEmail(
+                            email,
+                            first_name,
+                            last_name,
+                            course_title,
+                            detailed_comments || 'Please refer to your admissions portal for conditions.'
+                        );
+                        console.log(`[EMAIL SENT] Conditional approval email to ${email}:`, emailResult.success ? 'Success' : 'Failed');
+                    }
+                } else {
+                    const existingUser = userRows[0];
+                    if (existingUser.role !== 'student') {
+                        await db.execute('UPDATE users SET role = ? WHERE id = ?', ['student', existingUser.id]);
+                    }
+                    createdUser = {
+                        username: email,
+                        password: null,
+                        role: 'student',
+                        status: 'exists'
+                    };
+                }
+            }
+        }
+
         // Check if review already exists
         const [existingReviews] = await db.execute(
             'SELECT id FROM application_reviews WHERE application_id = ?',
@@ -1005,7 +1075,8 @@ router.post('/applications/:id/review-decision', async (req, res) => {
                 new_status: newStatus,
                 decision,
                 reviewer: reviewer_name,
-                is_update: existingReviews.length > 0
+                is_update: existingReviews.length > 0,
+                created_user: createdUser
             }
         });
 

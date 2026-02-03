@@ -94,11 +94,6 @@ app.get('/api/health/db', async (req, res) => {
     }
 });
 
-const users = [
-    { id: 1, email: 'admin@scl.com', password: 'password', name: 'SCL Admin', role: 'admin' },
-    { id: 2, email: 'student@scl.com', password: 'password', name: 'John Doe', role: 'student' }
-];
-
 app.post('/api/login', async (req, res) => {
     const { email, password } = req.body;
     
@@ -133,15 +128,35 @@ app.post('/api/login', async (req, res) => {
     }
 });
 
-app.post('/api/v1/auth/login', (req, res) => {
+app.post('/api/v1/auth/login', async (req, res) => {
     const { email, password } = req.body;
-    const user = users.find(u => u.email === email && u.password === password);
-    if (user) {
-        const accessToken = `mock_access_token_${Date.now()}`;
-        const refreshToken = `mock_refresh_token_${Date.now()}`;
-        res.json({ user: { id: user.id, email: user.email, name: user.name, role: user.role }, tokens: { accessToken, refreshToken } });
-    } else {
-        res.status(401).json({ message: 'Invalid credentials' });
+
+    try {
+        const [rows] = await pool.query(
+            'SELECT id, email, first_name, last_name, role FROM users WHERE email = ? AND password = ?',
+            [email, password]
+        );
+
+        if (rows.length > 0) {
+            const user = rows[0];
+            const accessToken = `mock_access_token_${Date.now()}`;
+            const refreshToken = `mock_refresh_token_${Date.now()}`;
+
+            res.json({
+                user: {
+                    id: user.id,
+                    email: user.email,
+                    name: `${user.first_name} ${user.last_name}`.trim(),
+                    role: user.role
+                },
+                tokens: { accessToken, refreshToken }
+            });
+        } else {
+            res.status(401).json({ message: 'Invalid credentials' });
+        }
+    } catch (dbErr) {
+        console.error('[LOGIN V1] Database error:', dbErr.message);
+        res.status(500).json({ message: 'Database error during authentication' });
     }
 });
 
