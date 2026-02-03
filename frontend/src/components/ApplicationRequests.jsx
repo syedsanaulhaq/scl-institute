@@ -89,6 +89,7 @@ const ApplicationRequests = () => {
             'submitted': 'bg-blue-100 text-blue-800',
             'under_review': 'bg-yellow-100 text-yellow-800',
             'approved': 'bg-green-100 text-green-800',
+            'accepted': 'bg-green-100 text-green-800',
             'rejected': 'bg-red-100 text-red-800',
             'conditional_accept': 'bg-purple-100 text-purple-800'
         };
@@ -232,7 +233,11 @@ const ApplicationRequests = () => {
                             </thead>
                             <tbody>
                                 {filteredApplications.map((app) => (
-                                    <tr key={app.id} className="border-b border-gray-200 hover:bg-gray-50 transition-colors">
+                                    <tr key={app.id} className={`border-b border-gray-200 transition-colors ${
+                                        app.application_status === 'accepted' 
+                                            ? 'bg-green-50 hover:bg-green-100' 
+                                            : 'hover:bg-gray-50'
+                                    }`}>
                                         <td className="px-6 py-4">
                                             <button 
                                                 onClick={() => setSelectedApp(app)}
