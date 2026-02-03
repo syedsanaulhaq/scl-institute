@@ -270,14 +270,14 @@ const ApplicationRequests = () => {
                                         <td className="px-6 py-4">
                                             <button
                                                 onClick={() => navigate(`/applications/${app.id}/review`)}
-                                                className={`inline-flex items-center gap-1 px-3 py-1 text-white text-xs font-medium rounded shadow-sm transition-colors ${
+                                                className={`p-2 rounded-full transition-colors ${
                                                     reviewStatus[app.id] 
-                                                        ? 'bg-blue-600 hover:bg-blue-700' 
-                                                        : 'bg-green-600 hover:bg-green-700'
+                                                        ? 'text-blue-600 hover:bg-blue-100' 
+                                                        : 'text-green-600 hover:bg-green-100'
                                                 }`}
+                                                title={reviewStatus[app.id] ? 'Edit Review' : 'Add Review'}
                                             >
-                                                <CheckCircle2 className="w-3 h-3" />
-                                                {reviewStatus[app.id] ? 'Edit Review' : 'Add Review'}
+                                                <CheckCircle2 className="w-5 h-5" />
                                             </button>
                                         </td>
                                     </tr>
