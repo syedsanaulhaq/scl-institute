@@ -15,6 +15,13 @@ import ApplicationReport from './components/ApplicationReport';
 import ApplicationReview from './components/ApplicationReview';
 import StudentPortalDashboard from './components/student/StudentPortalDashboard';
 import StudentProfile from './components/student/StudentProfile';
+import StudentAdmissions from './components/student/StudentAdmissions';
+import StudentProgramme from './components/student/StudentProgramme';
+import StudentTimetable from './components/student/StudentTimetable';
+import StudentAssessments from './components/student/StudentAssessments';
+import StudentMessages from './components/student/StudentMessages';
+import StudentFees from './components/student/StudentFees';
+import StudentSupport from './components/student/StudentSupport';
 
 function App() {
     const [user, setUser] = useState(null);
@@ -86,6 +93,69 @@ function App() {
                     user && user.role === 'student' ? (
                         <Layout user={user} onLogout={handleLogout}>
                             <StudentProfile user={user} />
+                                        <Route path="/student/admissions" element={
+                                            user && user.role === 'student' ? (
+                                                <Layout user={user} onLogout={handleLogout}>
+                                                    <StudentAdmissions user={user} />
+                                                </Layout>
+                                            ) : (
+                                                <LoginPage onLoginSuccess={handleLoginSuccess} />
+                                            )
+                                        } />
+                                        <Route path="/student/programme" element={
+                                            user && user.role === 'student' ? (
+                                                <Layout user={user} onLogout={handleLogout}>
+                                                    <StudentProgramme user={user} />
+                                                </Layout>
+                                            ) : (
+                                                <LoginPage onLoginSuccess={handleLoginSuccess} />
+                                            )
+                                        } />
+                                        <Route path="/student/timetable" element={
+                                            user && user.role === 'student' ? (
+                                                <Layout user={user} onLogout={handleLogout}>
+                                                    <StudentTimetable user={user} />
+                                                </Layout>
+                                            ) : (
+                                                <LoginPage onLoginSuccess={handleLoginSuccess} />
+                                            )
+                                        } />
+                                        <Route path="/student/assessments" element={
+                                            user && user.role === 'student' ? (
+                                                <Layout user={user} onLogout={handleLogout}>
+                                                    <StudentAssessments user={user} />
+                                                </Layout>
+                                            ) : (
+                                                <LoginPage onLoginSuccess={handleLoginSuccess} />
+                                            )
+                                        } />
+                                        <Route path="/student/messages" element={
+                                            user && user.role === 'student' ? (
+                                                <Layout user={user} onLogout={handleLogout}>
+                                                    <StudentMessages user={user} />
+                                                </Layout>
+                                            ) : (
+                                                <LoginPage onLoginSuccess={handleLoginSuccess} />
+                                            )
+                                        } />
+                                        <Route path="/student/fees" element={
+                                            user && user.role === 'student' ? (
+                                                <Layout user={user} onLogout={handleLogout}>
+                                                    <StudentFees user={user} />
+                                                </Layout>
+                                            ) : (
+                                                <LoginPage onLoginSuccess={handleLoginSuccess} />
+                                            )
+                                        } />
+                                        <Route path="/student/support" element={
+                                            user && user.role === 'student' ? (
+                                                <Layout user={user} onLogout={handleLogout}>
+                                                    <StudentSupport user={user} />
+                                                </Layout>
+                                            ) : (
+                                                <LoginPage onLoginSuccess={handleLoginSuccess} />
+                                            )
+                                        } />
                         </Layout>
                     ) : (
                         <LoginPage onLoginSuccess={handleLoginSuccess} />
