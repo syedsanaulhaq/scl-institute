@@ -272,8 +272,8 @@ const ApplicationRequests = () => {
                                                 onClick={() => navigate(`/applications/${app.id}/review`)}
                                                 className={`p-2 rounded-full transition-colors ${
                                                     reviewStatus[app.id] 
-                                                        ? 'text-blue-600 hover:bg-blue-100' 
-                                                        : 'text-green-600 hover:bg-green-100'
+                                                        ? 'bg-blue-600 hover:bg-blue-700 text-white' 
+                                                        : 'bg-green-600 hover:bg-green-700 text-white'
                                                 }`}
                                                 title={reviewStatus[app.id] ? 'Edit Review' : 'Add Review'}
                                             >
