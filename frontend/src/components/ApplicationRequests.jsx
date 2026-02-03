@@ -24,7 +24,7 @@ const ApplicationRequests = () => {
     const [applications, setApplications] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
-    const [statusFilter, setStatusFilter] = useState('submitted');
+    const [statusFilter, setStatusFilter] = useState('all');
     const [selectedApp, setSelectedApp] = useState(null);
     const [error, setError] = useState('');
     const [reviewStatus, setReviewStatus] = useState({});
@@ -56,12 +56,18 @@ const ApplicationRequests = () => {
             if (response.data?.success) {
                 // The API returns applications nested under data.applications
                 const apps = response.data.data?.applications || [];
-                console.log('[FETCH APPS] Got', apps.length, 'applications');
-                setApplications(apps);
+                // Sort by submitted_at descending (latest first)
+                const sortedApps = apps.sort((a, b) => {
+                    const dateA = new Date(a.submitted_at);
+                    const dateB = new Date(b.submitted_at);
+                    return dateB - dateA;
+                });
+                console.log('[FETCH APPS] Got', sortedApps.length, 'applications');
+                setApplications(sortedApps);
                 
                 // Check review status for each application
                 const reviewStatuses = {};
-                for (const app of apps) {
+                for (const app of sortedApps) {
                     console.log(`[CHECKING REVIEW] App ID ${app.id}`);
                     reviewStatuses[app.id] = await checkReviewStatus(app.id);
                 }
