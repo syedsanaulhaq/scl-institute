@@ -6,7 +6,10 @@ import {
     XCircle, 
     AlertCircle,
     Save,
-    Loader2
+    Loader2,
+    Copy,
+    Check,
+    X
 } from 'lucide-react';
 import axios from 'axios';
 
@@ -20,6 +23,9 @@ const ApplicationReview = () => {
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
+    const [successData, setSuccessData] = useState(null);
+    const [copiedField, setCopiedField] = useState(null);
+    const [showCredentialsModal, setShowCredentialsModal] = useState(false);
     const [existingReview, setExistingReview] = useState(null);
     const [isEditMode, setIsEditMode] = useState(false);
 
@@ -169,6 +175,19 @@ const ApplicationReview = () => {
         }
     };
 
+    const copyToClipboard = (text, field) => {
+        navigator.clipboard.writeText(text);
+        setCopiedField(field);
+        setTimeout(() => setCopiedField(null), 2000);
+    };
+
+    const handleCloseCredentialsModal = () => {
+        setShowCredentialsModal(false);
+        setTimeout(() => {
+            navigate('/applications');
+        }, 500);
+    };
+
     const handleSubmitReview = async (e) => {
         e.preventDefault();
         
@@ -200,9 +219,14 @@ const ApplicationReview = () => {
 
             if (response.data?.success) {
                 setSuccess('Application review submitted successfully!');
-                setTimeout(() => {
-                    navigate('/applications');
-                }, 2000);
+                if (response.data?.data?.student_credentials) {
+                    setSuccessData(response.data.data.student_credentials);
+                    setShowCredentialsModal(true);
+                } else {
+                    setTimeout(() => {
+                        navigate('/applications');
+                    }, 2000);
+                }
             } else {
                 setError(response.data?.message || 'Failed to submit review');
             }
@@ -398,10 +422,58 @@ const ApplicationReview = () => {
 
                         {success && (
                             <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
-                                <p className="text-green-800 text-sm flex items-center gap-2">
+                                <p className="text-green-800 text-sm flex items-center gap-2 mb-3">
                                     <CheckCircle2 className="w-4 h-4" />
                                     {success}
                                 </p>
+                                
+                                {successData && (
+                                    <div className="mt-4 p-4 bg-white rounded border border-green-200 space-y-3">
+                                        <p className="text-sm font-semibold text-gray-900 mb-3">📋 Student Credentials</p>
+                                        
+                                        <div className="flex items-center justify-between p-3 bg-gray-50 rounded">
+                                            <div>
+                                                <p className="text-xs text-gray-600">Email/Username</p>
+                                                <p className="font-mono text-sm text-gray-900">{successData.email}</p>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={() => copyToClipboard(successData.email, 'email')}
+                                                className="p-2 hover:bg-gray-200 rounded transition-colors"
+                                                title="Copy email"
+                                            >
+                                                {copiedField === 'email' ? (
+                                                    <Check className="w-4 h-4 text-green-600" />
+                                                ) : (
+                                                    <Copy className="w-4 h-4 text-gray-600" />
+                                                )}
+                                            </button>
+                                        </div>
+
+                                        <div className="flex items-center justify-between p-3 bg-gray-50 rounded">
+                                            <div>
+                                                <p className="text-xs text-gray-600">Temporary Password</p>
+                                                <p className="font-mono text-sm font-bold text-gray-900">{successData.temporary_password}</p>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={() => copyToClipboard(successData.temporary_password, 'password')}
+                                                className="p-2 hover:bg-gray-200 rounded transition-colors"
+                                                title="Copy password"
+                                            >
+                                                {copiedField === 'password' ? (
+                                                    <Check className="w-4 h-4 text-green-600" />
+                                                ) : (
+                                                    <Copy className="w-4 h-4 text-gray-600" />
+                                                )}
+                                            </button>
+                                        </div>
+
+                                        <p className="text-xs text-gray-600 italic mt-2">
+                                            ⓘ {successData.note}
+                                        </p>
+                                    </div>
+                                )}
                             </div>
                         )}
 
@@ -653,6 +725,102 @@ const ApplicationReview = () => {
                     </div>
                 </div>
             </div>
+
+            {/* Credentials Modal Popup */}
+            {showCredentialsModal && successData && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-lg shadow-2xl max-w-md w-full p-0 overflow-hidden">
+                        {/* Modal Header */}
+                        <div className="bg-gradient-to-r from-green-600 to-green-700 p-6 flex items-center justify-between">
+                            <div>
+                                <h3 className="text-2xl font-bold text-white flex items-center gap-2">
+                                    <CheckCircle2 className="w-6 h-6" />
+                                    Approval Successful!
+                                </h3>
+                                <p className="text-green-100 text-sm mt-1">Student account created and ready to use</p>
+                            </div>
+                            <button
+                                onClick={handleCloseCredentialsModal}
+                                className="text-white hover:bg-green-600 p-2 rounded-lg transition-colors"
+                                title="Close"
+                            >
+                                <X className="w-6 h-6" />
+                            </button>
+                        </div>
+
+                        {/* Modal Body */}
+                        <div className="p-6 space-y-4">
+                            <p className="text-gray-700 font-medium">📋 Share These Credentials with the Student:</p>
+
+                            {/* Email Box */}
+                            <div className="bg-gray-50 rounded-lg border-2 border-gray-200 p-4">
+                                <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2">Email / Username</p>
+                                <div className="flex items-center justify-between gap-3">
+                                    <p className="font-mono text-lg font-bold text-gray-900 break-all">{successData.email}</p>
+                                    <button
+                                        type="button"
+                                        onClick={() => copyToClipboard(successData.email, 'email')}
+                                        className="flex-shrink-0 p-2 bg-white hover:bg-blue-100 border border-gray-300 rounded-lg transition-colors"
+                                        title="Copy email"
+                                    >
+                                        {copiedField === 'email' ? (
+                                            <Check className="w-5 h-5 text-green-600" />
+                                        ) : (
+                                            <Copy className="w-5 h-5 text-blue-600" />
+                                        )}
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Password Box */}
+                            <div className="bg-gray-50 rounded-lg border-2 border-gray-200 p-4">
+                                <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2">Temporary Password</p>
+                                <div className="flex items-center justify-between gap-3">
+                                    <p className="font-mono text-lg font-bold text-gray-900 break-all">{successData.temporary_password}</p>
+                                    <button
+                                        type="button"
+                                        onClick={() => copyToClipboard(successData.temporary_password, 'password')}
+                                        className="flex-shrink-0 p-2 bg-white hover:bg-blue-100 border border-gray-300 rounded-lg transition-colors"
+                                        title="Copy password"
+                                    >
+                                        {copiedField === 'password' ? (
+                                            <Check className="w-5 h-5 text-green-600" />
+                                        ) : (
+                                            <Copy className="w-5 h-5 text-blue-600" />
+                                        )}
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Note */}
+                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
+                                <p className="font-medium mb-1">ℹ️ Important Notes:</p>
+                                <ul className="list-disc list-inside space-y-1 text-xs">
+                                    <li>{successData.note}</li>
+                                    <li>Student will receive a notification in their portal</li>
+                                    <li>Login portal: http://localhost:3000/student/login</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        {/* Modal Footer */}
+                        <div className="bg-gray-50 px-6 py-4 border-t flex gap-3">
+                            <button
+                                onClick={() => copyToClipboard(`Email: ${successData.email}\nPassword: ${successData.temporary_password}`, 'both')}
+                                className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors text-sm"
+                            >
+                                Copy Both
+                            </button>
+                            <button
+                                onClick={handleCloseCredentialsModal}
+                                className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors text-sm"
+                            >
+                                Done - Go Back
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

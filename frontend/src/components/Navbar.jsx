@@ -1,4 +1,6 @@
 import { Search, Bell, User as UserIcon, LogOut } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import Notifications from './Notifications';
 
 const Navbar = ({ user, onLogout }) => {
     return (
@@ -15,10 +17,12 @@ const Navbar = ({ user, onLogout }) => {
             </div>
 
             <div className="flex items-center space-x-6">
-                <button className="relative p-2 text-gray-400 hover:text-scl-purple hover:bg-purple-50 rounded-xl transition-all">
-                    <Bell className="w-5 h-5" />
-                    <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
-                </button>
+                <Link
+                    to="/student/notifications"
+                    className="relative p-2 text-gray-400 hover:text-scl-purple hover:bg-purple-50 rounded-xl transition-all"
+                >
+                    <Notifications />
+                </Link>
 
                 <div className="h-8 w-px bg-gray-100mx-2"></div>
 

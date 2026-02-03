@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import axios from 'axios';
 import LoginPage from './pages/Login';
 import Dashboard from './pages/Dashboard';
+import AdminDashboard from './components/AdminDashboard';
 import Layout from './components/Layout';
 import StudentAdmissionForm from './components/StudentAdmissionForm';
 import StudentDashboard from './components/StudentDashboard';
@@ -22,6 +23,7 @@ import StudentAssessments from './components/student/StudentAssessments';
 import StudentMessages from './components/student/StudentMessages';
 import StudentFees from './components/student/StudentFees';
 import StudentSupport from './components/student/StudentSupport';
+import StudentNotifications from './pages/StudentNotifications';
 
 function App() {
     const [user, setUser] = useState(null);
@@ -54,6 +56,7 @@ function App() {
         setUser(null);
         sessionStorage.removeItem('accessToken');
         sessionStorage.removeItem('user');
+        localStorage.removeItem('studentEmail');
     };
 
     if (!isInitialized) {
@@ -156,6 +159,24 @@ function App() {
                     user && user.role === 'student' ? (
                         <Layout user={user} onLogout={handleLogout}>
                             <StudentSupport user={user} />
+                        </Layout>
+                    ) : (
+                        <LoginPage onLoginSuccess={handleLoginSuccess} />
+                    )
+                } />
+                <Route path="/student/notifications" element={
+                    user && user.role === 'student' ? (
+                        <Layout user={user} onLogout={handleLogout}>
+                            <StudentNotifications user={user} />
+                        </Layout>
+                    ) : (
+                        <LoginPage onLoginSuccess={handleLoginSuccess} />
+                    )
+                } />
+                <Route path="/admin/dashboard" element={
+                    user && user.role !== 'student' ? (
+                        <Layout user={user} onLogout={handleLogout}>
+                            <AdminDashboard user={user} />
                         </Layout>
                     ) : (
                         <LoginPage onLoginSuccess={handleLoginSuccess} />

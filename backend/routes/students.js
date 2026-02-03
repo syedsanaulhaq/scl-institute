@@ -12,6 +12,7 @@ const mysql = require('mysql2/promise');
 const crypto = require('crypto');
 const router = express.Router();
 const { sendStudentWelcomeEmail, sendConditionalApprovalEmail } = require('../utils/emailService');
+const { storeNotification } = require('./notifications');
 
 const generateTempPassword = () => crypto.randomBytes(6).toString('hex');
 
@@ -889,6 +890,10 @@ router.post('/applications/:id/review-decision', async (req, res) => {
             final_decision_confirmation
         } = req.body;
 
+        // Initialize variables for scope
+        let email = null;
+        let tempPassword = null;
+
         // Validate required fields
         if (!reviewer_name || !decision) {
             return res.status(400).json({
@@ -921,19 +926,20 @@ router.post('/applications/:id/review-decision', async (req, res) => {
         let createdUser = null;
         if (newStatus === 'accepted' || newStatus === 'conditional_accept') {
             const [appRows] = await db.execute(
-                'SELECT email, first_name, last_name, course_title FROM student_applications WHERE id = ?',
+                'SELECT email, first_name, last_name, course_title, course_code FROM student_applications WHERE id = ?',
                 [id]
             );
 
             if (appRows.length > 0) {
-                const { email, first_name, last_name, course_title } = appRows[0];
+                const { first_name, last_name, course_title, course_code } = appRows[0];
+                email = appRows[0].email;
                 const [userRows] = await db.execute(
                     'SELECT id, role FROM users WHERE email = ?',
                     [email]
                 );
 
                 if (userRows.length === 0) {
-                    const tempPassword = generateTempPassword();
+                    tempPassword = generateTempPassword();
                     await db.execute(
                         'INSERT INTO users (email, password, first_name, last_name, role) VALUES (?, ?, ?, ?, ?)',
                         [email, tempPassword, first_name, last_name, 'student']
@@ -945,40 +951,134 @@ router.post('/applications/:id/review-decision', async (req, res) => {
                         status: 'created'
                     };
                     console.log(`[STUDENT USER] Created account for ${email} (Application ${id})`);
-
-                    // Send welcome email for accepted students
-                    if (newStatus === 'accepted') {
-                        const emailResult = await sendStudentWelcomeEmail(
-                            email,
-                            first_name,
-                            last_name,
-                            tempPassword,
-                            course_title
-                        );
-                        console.log(`[EMAIL SENT] Welcome email to ${email}:`, emailResult.success ? 'Success' : 'Failed');
-                    }
-                    // Send conditional approval email
-                    else if (newStatus === 'conditional_accept') {
-                        const emailResult = await sendConditionalApprovalEmail(
-                            email,
-                            first_name,
-                            last_name,
-                            course_title,
-                            detailed_comments || 'Please refer to your admissions portal for conditions.'
-                        );
-                        console.log(`[EMAIL SENT] Conditional approval email to ${email}:`, emailResult.success ? 'Success' : 'Failed');
-                    }
                 } else {
-                    const existingUser = userRows[0];
-                    if (existingUser.role !== 'student') {
-                        await db.execute('UPDATE users SET role = ? WHERE id = ?', ['student', existingUser.id]);
+                    // User already exists - get their password from database
+                    const [userDetails] = await db.execute(
+                        'SELECT password FROM users WHERE email = ?',
+                        [email]
+                    );
+                    if (userDetails.length > 0) {
+                        tempPassword = userDetails[0].password;
                     }
-                    createdUser = {
-                        username: email,
-                        password: null,
-                        role: 'student',
-                        status: 'exists'
-                    };
+                    console.log(`[STUDENT USER] User already exists for ${email} (Application ${id})`);
+                }
+
+                // Enroll student in Moodle course if accepted
+                let moodleResult = null;
+                if (newStatus === 'accepted') {
+                    moodleResult = await enrollStudentInMoodle(
+                        email,
+                        first_name,
+                        last_name,
+                        course_code
+                    );
+                    if (moodleResult.success) {
+                        console.log(`[MOODLE] Student ${email} enrolled successfully`);
+                    } else {
+                        console.warn(`[MOODLE] Enrollment warning for ${email}: ${moodleResult.message}`);
+                    }
+                }
+
+                // Send welcome email for accepted students
+                if (newStatus === 'accepted') {
+                    const emailResult = await sendStudentWelcomeEmail(
+                        email,
+                        first_name,
+                        last_name,
+                        tempPassword,
+                        course_title
+                    );
+                    console.log(`[EMAIL SENT] Welcome email to ${email}:`, emailResult.success ? 'Success' : 'Failed');
+
+                    // Store notification in database (for local testing without email)
+                    const notificationBody = `
+Welcome to SCL Institute!
+
+Your student account has been created. Here are your login credentials:
+
+📧 Email/Username: ${email}
+🔐 Temporary Password: ${tempPassword}
+
+Course: ${course_title}
+
+Please login at: http://localhost:3000/student/login
+You can also access Moodle at: http://localhost:9090
+
+Note: Please change your password after first login.
+                    `;
+                    
+                    await storeNotification(
+                        email,
+                        'welcome',
+                        'Welcome to SCL Institute - Your Credentials',
+                        notificationBody,
+                        {
+                            applicant_name: `${first_name} ${last_name}`,
+                            course: course_title,
+                            credentials: {
+                                email,
+                                password: tempPassword
+                            },
+                            moodle_enrollment: moodleResult?.success || false,
+                            portal_url: 'http://localhost:3000/student/login',
+                            moodle_url: 'http://localhost:9090'
+                        }
+                    );
+                    console.log(`[NOTIFICATION] Welcome notification stored for ${email}`);
+                }
+                // Send conditional approval email
+                else if (newStatus === 'conditional_accept') {
+                    const emailResult = await sendConditionalApprovalEmail(
+                        email,
+                        first_name,
+                        last_name,
+                        course_title,
+                        detailed_comments || 'Please refer to your admissions portal for conditions.'
+                    );
+                    console.log(`[EMAIL SENT] Conditional approval email to ${email}:`, emailResult.success ? 'Success' : 'Failed');
+
+                    // Store conditional approval notification
+                    const conditionBody = `
+Conditional Offer - SCL Institute
+
+Dear ${first_name} ${last_name},
+
+Congratulations! You have received a conditional offer for:
+
+📚 Course: ${course_title}
+
+Conditions:
+${detailed_comments || 'Please refer to your admissions portal for specific conditions.'}
+
+Your temporary account credentials have been created:
+📧 Email/Username: ${email}
+🔐 Temporary Password: ${tempPassword}
+
+Please login to your portal at: http://localhost:3000/student/login
+
+Once you fulfill the conditions, you will be fully enrolled in the course and Moodle LMS.
+
+Best regards,
+SCL Institute Admissions Team
+                    `;
+
+                    await storeNotification(
+                        email,
+                        'conditional_offer',
+                        'Conditional Offer - SCL Institute',
+                        conditionBody,
+                        {
+                            applicant_name: `${first_name} ${last_name}`,
+                            course: course_title,
+                            conditions: detailed_comments || 'Check portal for details',
+                            credentials: {
+                                email,
+                                password: tempPassword
+                            },
+                            portal_url: 'http://localhost:3000/student/login'
+                        }
+                    );
+                    console.log(`[NOTIFICATION] Conditional offer notification stored for ${email}`);
                 }
             }
         }
@@ -1076,7 +1176,12 @@ router.post('/applications/:id/review-decision', async (req, res) => {
                 decision,
                 reviewer: reviewer_name,
                 is_update: existingReviews.length > 0,
-                created_user: createdUser
+                created_user: createdUser,
+                student_credentials: newStatus === 'accepted' ? {
+                    email: email,
+                    temporary_password: tempPassword,
+                    note: 'Share this password with the student or they can use "Forgot Password" to reset'
+                } : null
             }
         });
 
@@ -1089,5 +1194,578 @@ router.post('/applications/:id/review-decision', async (req, res) => {
         });
     }
 });
+
+// Upload document for student application
+router.post('/applications/:id/upload-document', upload.single('document'), async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { documentType } = req.body;
+        const file = req.file;
+
+        if (!file) {
+            return res.status(400).json({
+                success: false,
+                message: 'No file uploaded'
+            });
+        }
+
+        if (!documentType) {
+            return res.status(400).json({
+                success: false,
+                message: 'Document type is required'
+            });
+        }
+
+        // Store file path relative to uploads directory
+        const filePath = `/uploads/student-documents/${file.filename}`;
+
+        // Update the application with the document path
+        const updateQuery = `UPDATE student_applications SET ${documentType} = ? WHERE id = ?`;
+        await db.execute(updateQuery, [filePath, id]);
+
+        console.log(`[DOCUMENT UPLOAD] Application ${id}: ${documentType} uploaded - ${file.filename}`);
+
+        res.json({
+            success: true,
+            message: 'Document uploaded successfully',
+            data: {
+                documentType,
+                fileName: file.filename,
+                filePath
+            }
+        });
+
+    } catch (error) {
+        console.error('Error uploading document:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to upload document',
+            error: error.message
+        });
+    }
+});
+
+// Helper function to enroll student in Moodle course
+async function enrollStudentInMoodle(email, firstName, lastName, courseCode) {
+    try {
+        const axios = require('axios');
+        const moodleToken = process.env.MOODLE_TOKEN || 'e86dd021aaa42f78114e6c67cc9d8ff1';
+        const moodleUrl = process.env.MOODLE_INTERNAL_URL || 'http://scli-moodle-dev:8080';
+
+        // Step 1: Get all courses to find matching course
+        const coursesResponse = await axios.get(
+            `${moodleUrl}/webservice/rest/server.php`,
+            {
+                params: {
+                    wstoken: moodleToken,
+                    wsfunction: 'core_course_get_courses',
+                    moodlewsrestformat: 'json'
+                }
+            }
+        );
+
+        const courses = coursesResponse.data || [];
+        const targetCourse = courses.find(c => 
+            c.idnumber === courseCode || 
+            c.shortname === courseCode ||
+            c.fullname?.includes(courseCode)
+        );
+
+        if (!targetCourse) {
+            console.log(`[MOODLE] No course found for code: ${courseCode}`);
+            return { success: false, message: 'Course not found in Moodle' };
+        }
+
+        console.log(`[MOODLE] Found course: ${targetCourse.fullname} (ID: ${targetCourse.id})`);
+
+        // Step 2: Create user in Moodle if not exists
+        try {
+            const usersResponse = await axios.post(
+                `${moodleUrl}/webservice/rest/server.php`,
+                {
+                    wstoken: moodleToken,
+                    wsfunction: 'core_user_create_users',
+                    users: [
+                        {
+                            username: email,
+                            password: require('crypto').randomBytes(6).toString('hex'),
+                            firstname: firstName,
+                            lastname: lastName,
+                            email: email,
+                            preferences: [
+                                {
+                                    type: 'auth_forcepasswordchange',
+                                    value: '1'
+                                }
+                            ]
+                        }
+                    ],
+                    moodlewsrestformat: 'json'
+                }
+            );
+
+            console.log(`[MOODLE] User created/verified in Moodle for ${email}`);
+        } catch (userCreateError) {
+            if (userCreateError.response?.data?.exception !== 'invalid_parameter_exception') {
+                console.log(`[MOODLE] User ${email} already exists or creation skipped`);
+            }
+        }
+
+        // Step 3: Get user ID from Moodle
+        const userSearchResponse = await axios.post(
+            `${moodleUrl}/webservice/rest/server.php`,
+            {
+                wstoken: moodleToken,
+                wsfunction: 'core_user_get_users',
+                criteria: [
+                    {
+                        key: 'email',
+                        value: email
+                    }
+                ],
+                moodlewsrestformat: 'json'
+            }
+        );
+
+        const users = userSearchResponse.data?.users || [];
+        if (users.length === 0) {
+            return { success: false, message: 'User not found in Moodle after creation' };
+        }
+
+        const moodleUser = users[0];
+        console.log(`[MOODLE] Found Moodle user ID: ${moodleUser.id}`);
+
+        // Step 4: Enroll user in course
+        const enrollResponse = await axios.post(
+            `${moodleUrl}/webservice/rest/server.php`,
+            {
+                wstoken: moodleToken,
+                wsfunction: 'enrol_manual_enrol_users',
+                enrolments: [
+                    {
+                        userid: moodleUser.id,
+                        courseid: targetCourse.id,
+                        roleid: 5 // 5 = Student role in Moodle
+                    }
+                ],
+                moodlewsrestformat: 'json'
+            }
+        );
+
+        console.log(`[MOODLE] Student ${email} enrolled in course ${targetCourse.fullname}`);
+        return { 
+            success: true, 
+            message: `Enrolled in ${targetCourse.fullname}`,
+            moodleCourseId: targetCourse.id,
+            moodleUserId: moodleUser.id
+        };
+
+    } catch (error) {
+        console.error('[MOODLE ENROLL ERROR]', error.message);
+        return { 
+            success: false, 
+            message: `Moodle enrollment failed: ${error.message}` 
+        };
+    }
+}
+
+// Bulk approve applications
+router.post('/bulk-approve', async (req, res) => {
+    try {
+        const { applicationIds, reviewer_name } = req.body;
+
+        if (!applicationIds || !Array.isArray(applicationIds) || applicationIds.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Please provide application IDs'
+            });
+        }
+
+        const results = [];
+        let successCount = 0;
+
+        for (const appId of applicationIds) {
+            try {
+                // Get application details
+                const [apps] = await db.execute(
+                    'SELECT * FROM student_applications WHERE id = ?',
+                    [appId]
+                );
+
+                if (apps.length === 0) {
+                    results.push({ appId, success: false, message: 'Application not found' });
+                    continue;
+                }
+
+                const app = apps[0];
+
+                // Update application status
+                await db.execute(
+                    'UPDATE student_applications SET application_status = ? WHERE id = ?',
+                    ['accepted', appId]
+                );
+
+                // Create user account
+                const tempPassword = require('crypto').randomBytes(6).toString('hex');
+                const email = app.email;
+                const username = email.split('@')[0];
+
+                await db.execute(
+                    `INSERT INTO users (email, first_name, last_name, password, role, status) 
+                     VALUES (?, ?, ?, ?, ?, ?)`,
+                    [email, app.first_name, app.last_name, tempPassword, 'student', 'active']
+                );
+
+                console.log(`[BULK APPROVE] Application ${appId}: User created with credentials`);
+
+                // Enroll in Moodle course
+                const moodleEnroll = await enrollStudentInMoodle(
+                    app.email,
+                    app.first_name,
+                    app.last_name,
+                    app.course_code
+                );
+
+                if (moodleEnroll.success) {
+                    console.log(`[BULK APPROVE] Application ${appId}: Enrolled in Moodle`);
+                } else {
+                    console.warn(`[BULK APPROVE] Application ${appId}: Moodle enrollment warning - ${moodleEnroll.message}`);
+                }
+
+                // Send welcome email
+                try {
+                    const { sendStudentWelcomeEmail } = require('../utils/emailService');
+                    await sendStudentWelcomeEmail({
+                        email: app.email,
+                        firstName: app.first_name,
+                        lastName: app.last_name,
+                        username: email,
+                        tempPassword: tempPassword,
+                        courseTitle: app.course_title
+                    });
+                    console.log(`[EMAIL SENT] Welcome email sent to ${app.email}`);
+                } catch (emailError) {
+                    console.error(`[EMAIL ERROR] Failed to send email to ${app.email}:`, emailError.message);
+                }
+
+                // Store notification in database
+                const bulkNotificationBody = `
+Welcome to SCL Institute!
+
+Your student account has been created. Here are your login credentials:
+
+📧 Email/Username: ${app.email}
+🔐 Temporary Password: ${tempPassword}
+
+Course: ${app.course_title}
+
+Please login at: http://localhost:3000/student/login
+You can also access Moodle at: http://localhost:9090
+
+Note: Please change your password after first login.
+                `;
+                
+                await storeNotification(
+                    app.email,
+                    'welcome',
+                    'Welcome to SCL Institute - Your Credentials',
+                    bulkNotificationBody,
+                    {
+                        applicant_name: `${app.first_name} ${app.last_name}`,
+                        course: app.course_title,
+                        credentials: {
+                            email: app.email,
+                            password: tempPassword
+                        },
+                        moodle_enrollment: moodleEnroll.success || false,
+                        portal_url: 'http://localhost:3000/student/login',
+                        moodle_url: 'http://localhost:9090'
+                    }
+                );
+                console.log(`[NOTIFICATION] Welcome notification stored for ${app.email} (Bulk)`);
+
+                results.push({
+                    appId,
+                    success: true,
+                    studentName: `${app.first_name} ${app.last_name}`,
+                    email: app.email,
+                    moodleEnrollment: moodleEnroll.success
+                });
+                successCount++;
+
+            } catch (appError) {
+                console.error(`Error processing application ${appId}:`, appError.message);
+                results.push({
+                    appId,
+                    success: false,
+                    message: appError.message
+                });
+            }
+        }
+
+        res.json({
+            success: true,
+            message: `Approved ${successCount} of ${applicationIds.length} applications`,
+            data: {
+                totalProcessed: applicationIds.length,
+                successCount,
+                results
+            }
+        });
+
+    } catch (error) {
+        console.error('Error in bulk approve:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to process bulk approval',
+            error: error.message
+        });
+    }
+});
+
+// Bulk reject applications
+router.post('/bulk-reject', async (req, res) => {
+    try {
+        const { applicationIds, reason } = req.body;
+
+        if (!applicationIds || !Array.isArray(applicationIds) || applicationIds.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Please provide application IDs'
+            });
+        }
+
+        const results = [];
+        let successCount = 0;
+
+        for (const appId of applicationIds) {
+            try {
+                // Get application details
+                const [apps] = await db.execute(
+                    'SELECT * FROM student_applications WHERE id = ?',
+                    [appId]
+                );
+
+                if (apps.length === 0) {
+                    results.push({ appId, success: false, message: 'Application not found' });
+                    continue;
+                }
+
+                const app = apps[0];
+
+                // Update application status
+                await db.execute(
+                    'UPDATE student_applications SET application_status = ? WHERE id = ?',
+                    ['rejected', appId]
+                );
+
+                console.log(`[BULK REJECT] Application ${appId}: Rejected`);
+
+                // Send rejection email (optional - implement if email template exists)
+
+                results.push({
+                    appId,
+                    success: true,
+                    studentName: `${app.first_name} ${app.last_name}`,
+                    email: app.email
+                });
+                successCount++;
+
+            } catch (appError) {
+                console.error(`Error processing application ${appId}:`, appError.message);
+                results.push({
+                    appId,
+                    success: false,
+                    message: appError.message
+                });
+            }
+        }
+
+        res.json({
+            success: true,
+            message: `Rejected ${successCount} of ${applicationIds.length} applications`,
+            data: {
+                totalProcessed: applicationIds.length,
+                successCount,
+                results
+            }
+        });
+
+    } catch (error) {
+        console.error('Error in bulk reject:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to process bulk rejection',
+            error: error.message
+        });
+    }
+});
+
+// Get student's programme/course details from Moodle
+router.get('/programme/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        // Get student application to find course code
+        const [apps] = await db.execute(
+            'SELECT course_code, course_title FROM student_applications WHERE id = ?',
+            [id]
+        );
+
+        if (apps.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Application not found'
+            });
+        }
+
+        const app = apps[0];
+        const courseCode = app.course_code || app.programme_code;
+        const courseTitle = app.course_title || app.programme_title;
+
+        // Fetch course details from Moodle
+        // This would normally call Moodle API, but for now we'll return structured data
+        const moodleToken = process.env.MOODLE_TOKEN || 'e86dd021aaa42f78114e6c67cc9d8ff1';
+        const moodleUrl = process.env.MOODLE_INTERNAL_URL || 'http://scli-moodle-dev:8080';
+
+        // Fetch courses from Moodle
+        const axios = require('axios');
+        try {
+            const coursesResponse = await axios.get(
+                `${moodleUrl}/webservice/rest/server.php`,
+                {
+                    params: {
+                        wstoken: moodleToken,
+                        wsfunction: 'core_course_get_courses',
+                        moodlewsrestformat: 'json'
+                    }
+                }
+            );
+
+            const allCourses = coursesResponse.data || [];
+            const studentCourse = allCourses.find(c => 
+                c.idnumber === courseCode || 
+                c.shortname === courseCode ||
+                c.fullname?.includes(courseCode)
+            );
+
+            // Get course modules/sections if course found
+            let modules = [];
+            if (studentCourse) {
+                try {
+                    const sectionsResponse = await axios.get(
+                        `${moodleUrl}/webservice/rest/server.php`,
+                        {
+                            params: {
+                                wstoken: moodleToken,
+                                wsfunction: 'core_course_get_contents',
+                                courseid: studentCourse.id,
+                                moodlewsrestformat: 'json'
+                            }
+                        }
+                    );
+
+                    const sections = sectionsResponse.data || [];
+                    modules = sections.map((section, idx) => ({
+                        code: `MOD${idx + 1}`,
+                        name: section.name || `Module ${idx + 1}`,
+                        credits: 20,
+                        semester: idx < 3 ? 'Semester 1' : 'Semester 2',
+                        modules: section.modules || []
+                    }));
+                } catch (e) {
+                    console.log('Could not fetch course sections from Moodle:', e.message);
+                }
+            }
+
+            res.json({
+                success: true,
+                data: {
+                    programme: {
+                        code: courseCode,
+                        title: courseTitle || studentCourse?.fullname || courseCode,
+                        type: 'Bachelor Degree',
+                        studyMode: 'Full-time',
+                        duration: '1 Year',
+                        moodleCourseId: studentCourse?.id,
+                        startDate: studentCourse?.startdate ? new Date(studentCourse.startdate * 1000) : null,
+                        endDate: studentCourse?.enddate ? new Date(studentCourse.enddate * 1000) : null
+                    },
+                    modules: modules.length > 0 ? modules : generateDefaultModules(courseCode),
+                    outcomes: [
+                        'Understand core principles and theories',
+                        'Apply knowledge in practical scenarios',
+                        'Develop critical thinking and analysis skills',
+                        'Prepare for professional practice',
+                        'Engage in reflective learning'
+                    ]
+                }
+            });
+
+        } catch (moodleError) {
+            console.log('Moodle API error, returning default programme data:', moodleError.message);
+            
+            // Fallback to default programme structure
+            res.json({
+                success: true,
+                data: {
+                    programme: {
+                        code: courseCode,
+                        title: courseTitle,
+                        type: 'Bachelor Degree',
+                        studyMode: 'Full-time',
+                        duration: '1 Year',
+                        startDate: new Date()
+                    },
+                    modules: generateDefaultModules(courseCode),
+                    outcomes: [
+                        'Understand core principles and theories',
+                        'Apply knowledge in practical scenarios',
+                        'Develop critical thinking and analysis skills'
+                    ]
+                }
+            });
+        }
+
+    } catch (error) {
+        console.error('Error fetching programme:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch programme details',
+            error: error.message
+        });
+    }
+});
+
+// Helper function to generate default modules based on course code
+function generateDefaultModules(courseCode) {
+    const modulesByCode = {
+        'CS001': [
+            { code: 'CS101', name: 'Programming Fundamentals', credits: 20, semester: 'Semester 1' },
+            { code: 'CS102', name: 'Data Structures', credits: 20, semester: 'Semester 1' },
+            { code: 'CS103', name: 'Web Development', credits: 20, semester: 'Semester 1' },
+            { code: 'CS201', name: 'Software Engineering', credits: 20, semester: 'Semester 2' },
+            { code: 'CS202', name: 'Database Systems', credits: 20, semester: 'Semester 2' },
+            { code: 'CS203', name: 'Cloud Computing', credits: 20, semester: 'Semester 2' }
+        ],
+        'BUS002': [
+            { code: 'BUS101', name: 'Business Fundamentals', credits: 20, semester: 'Semester 1' },
+            { code: 'BUS102', name: 'Marketing Principles', credits: 20, semester: 'Semester 1' },
+            { code: 'BUS103', name: 'Financial Accounting', credits: 20, semester: 'Semester 1' },
+            { code: 'BUS201', name: 'Strategic Management', credits: 20, semester: 'Semester 2' },
+            { code: 'BUS202', name: 'Operations Management', credits: 20, semester: 'Semester 2' },
+            { code: 'BUS203', name: 'Business Analytics', credits: 20, semester: 'Semester 2' }
+        ]
+    };
+
+    return modulesByCode[courseCode] || [
+        { code: 'MOD101', name: 'Module 1', credits: 20, semester: 'Semester 1' },
+        { code: 'MOD102', name: 'Module 2', credits: 20, semester: 'Semester 1' },
+        { code: 'MOD103', name: 'Module 3', credits: 20, semester: 'Semester 1' },
+        { code: 'MOD201', name: 'Module 4', credits: 20, semester: 'Semester 2' },
+        { code: 'MOD202', name: 'Module 5', credits: 20, semester: 'Semester 2' },
+        { code: 'MOD203', name: 'Module 6', credits: 20, semester: 'Semester 2' }
+    ];
+}
 
 module.exports = router;

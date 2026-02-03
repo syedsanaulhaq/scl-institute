@@ -27,6 +27,7 @@ const LoginPage = ({ onLoginSuccess }) => {
             const userData = response.data.user;
             sessionStorage.setItem('accessToken', response.data.tokens.accessToken);
             sessionStorage.setItem('user', JSON.stringify(userData));
+            localStorage.setItem('studentEmail', userData.email);
             onLoginSuccess(userData);
             
             // Redirect based on user role

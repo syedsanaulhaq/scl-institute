@@ -6,7 +6,10 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
 
 const StudentProgramme = ({ user }) => {
     const [programmeData, setProgrammeData] = useState(null);
+    const [courseModules, setCourseModules] = useState([]);
+    const [learningOutcomes, setLearningOutcomes] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
 
     useEffect(() => {
         fetchProgrammeData();
@@ -14,30 +17,52 @@ const StudentProgramme = ({ user }) => {
 
     const fetchProgrammeData = async () => {
         try {
-            const response = await axios.get(`${API_URL}/students/applications`);
-            if (response.data?.success) {
-                const apps = response.data.data?.applications || [];
+            setLoading(true);
+            // First get student's application to find their course
+            const appsResponse = await axios.get(`${API_URL}/students/applications`);
+            if (appsResponse.data?.success) {
+                const apps = appsResponse.data.data?.applications || [];
                 const studentApp = apps.find(app => app.email === user.email);
-                setProgrammeData(studentApp);
+                
+                if (studentApp) {
+                    // Then fetch the programme details (which will try to get from Moodle)
+                    const progResponse = await axios.get(`${API_URL}/students/programme/${studentApp.id}`);
+                    if (progResponse.data?.success) {
+                        const { programme, modules, outcomes } = progResponse.data.data;
+                        setProgrammeData({
+                            ...studentApp,
+                            ...programme
+                        });
+                        setCourseModules(modules || []);
+                        setLearningOutcomes(outcomes || []);
+                    }
+                } else {
+                    setError('No application found');
+                }
             }
-        } catch (error) {
-            console.error('Error fetching programme:', error);
+        } catch (err) {
+            console.error('Error fetching programme:', err);
+            setError('Failed to load programme details');
         } finally {
             setLoading(false);
         }
     };
 
-    const modules = [
-        { code: 'BUS101', name: 'Business Fundamentals', credits: 20, semester: 'Semester 1' },
-        { code: 'BUS102', name: 'Marketing Principles', credits: 20, semester: 'Semester 1' },
-        { code: 'BUS103', name: 'Financial Accounting', credits: 20, semester: 'Semester 1' },
-        { code: 'BUS201', name: 'Strategic Management', credits: 20, semester: 'Semester 2' },
-        { code: 'BUS202', name: 'Operations Management', credits: 20, semester: 'Semester 2' },
-        { code: 'BUS203', name: 'Business Analytics', credits: 20, semester: 'Semester 2' }
+    const modules = courseModules.length > 0 ? courseModules : [
+        { code: 'MOD101', name: 'Module 1', credits: 20, semester: 'Semester 1' },
+        { code: 'MOD102', name: 'Module 2', credits: 20, semester: 'Semester 1' },
+        { code: 'MOD103', name: 'Module 3', credits: 20, semester: 'Semester 1' },
+        { code: 'MOD201', name: 'Module 4', credits: 20, semester: 'Semester 2' },
+        { code: 'MOD202', name: 'Module 5', credits: 20, semester: 'Semester 2' },
+        { code: 'MOD203', name: 'Module 6', credits: 20, semester: 'Semester 2' }
     ];
 
     if (loading) {
-        return <div className="p-8 text-center">Loading...</div>;
+        return <div className="p-8 text-center">Loading programme details...</div>;
+    }
+
+    if (error) {
+        return <div className="p-8 text-center text-red-600">{error}</div>;
     }
 
     return (
@@ -48,24 +73,26 @@ const StudentProgramme = ({ user }) => {
             <div className="bg-gradient-to-r from-blue-600 to-blue-800 rounded-lg shadow p-6 mb-6 text-white">
                 <div className="flex items-start justify-between">
                     <div>
-                        <h2 className="text-2xl font-bold mb-2">{programmeData?.programme_title}</h2>
-                        <p className="text-blue-100 mb-4">Programme Code: {programmeData?.programme_code}</p>
+                        <h2 className="text-2xl font-bold mb-2">{programmeData?.title || programmeData?.course_title || 'Programme Title'}</h2>
+                        <p className="text-blue-100 mb-4">Programme Code: {programmeData?.code || programmeData?.course_code || 'N/A'}</p>
                         <div className="grid grid-cols-2 gap-4 text-sm">
                             <div>
                                 <p className="text-blue-200">Programme Type</p>
-                                <p className="font-semibold">{programmeData?.programme_type}</p>
+                                <p className="font-semibold">{programmeData?.type || 'Bachelor Degree'}</p>
                             </div>
                             <div>
                                 <p className="text-blue-200">Study Mode</p>
-                                <p className="font-semibold">{programmeData?.study_mode}</p>
+                                <p className="font-semibold">{programmeData?.studyMode || 'Full-time'}</p>
                             </div>
                             <div>
-                                <p className="text-blue-200">Intake Date</p>
-                                <p className="font-semibold">{new Date(programmeData?.intake_date).toLocaleDateString()}</p>
+                                <p className="text-blue-200">Start Date</p>
+                                <p className="font-semibold">
+                                    {programmeData?.startDate ? new Date(programmeData.startDate).toLocaleDateString() : 'TBD'}
+                                </p>
                             </div>
                             <div>
                                 <p className="text-blue-200">Duration</p>
-                                <p className="font-semibold">1 Year Full-time</p>
+                                <p className="font-semibold">{programmeData?.duration || '1 Year Full-time'}</p>
                             </div>
                         </div>
                     </div>
@@ -124,6 +151,21 @@ const StudentProgramme = ({ user }) => {
                     ))}
                 </div>
             </div>
+
+            {/* Learning Outcomes */}
+            {learningOutcomes.length > 0 && (
+                <div className="bg-white rounded-lg shadow p-6 mb-6">
+                    <h2 className="text-xl font-bold text-gray-900 mb-4">Learning Outcomes</h2>
+                    <div className="space-y-3">
+                        {learningOutcomes.map((outcome, index) => (
+                            <div key={index} className="flex items-start gap-3 p-4 bg-green-50 rounded-lg border border-green-200">
+                                <Target className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                                <p className="text-gray-900">{outcome}</p>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
 
             {/* Programme Handbook */}
             <div className="bg-white rounded-lg shadow p-6">

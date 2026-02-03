@@ -55,6 +55,7 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
     // Admin menu items
     const adminMenuItems = [
         { name: 'Dashboard', icon: LayoutDashboard, path: '/' },
+        { name: 'Admissions Hub', icon: BarChart3, path: '/admin/dashboard' },
         {
             name: 'Student Admission',
             icon: Users,
