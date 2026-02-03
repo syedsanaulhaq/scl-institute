@@ -13,6 +13,8 @@ import ApplicationRequests from './components/ApplicationRequests';
 import ApplicantsList from './components/ApplicantsList';
 import ApplicationReport from './components/ApplicationReport';
 import ApplicationReview from './components/ApplicationReview';
+import StudentPortalDashboard from './components/student/StudentPortalDashboard';
+import StudentProfile from './components/student/StudentProfile';
 
 function App() {
     const [user, setUser] = useState(null);
@@ -58,8 +60,32 @@ function App() {
                 <Route path="/login" element={<LoginPage onLoginSuccess={handleLoginSuccess} />} />
                 <Route path="/" element={
                     user ? (
+                        user.role === 'student' ? (
+                            <Layout user={user} onLogout={handleLogout}>
+                                <StudentPortalDashboard user={user} />
+                            </Layout>
+                        ) : (
+                            <Layout user={user} onLogout={handleLogout}>
+                                <Dashboard user={user} onLogout={handleLogout} />
+                            </Layout>
+                        )
+                    ) : (
+                        <LoginPage onLoginSuccess={handleLoginSuccess} />
+                    )
+                } />
+                <Route path="/student/dashboard" element={
+                    user && user.role === 'student' ? (
                         <Layout user={user} onLogout={handleLogout}>
-                            <Dashboard user={user} onLogout={handleLogout} />
+                            <StudentPortalDashboard user={user} />
+                        </Layout>
+                    ) : (
+                        <LoginPage onLoginSuccess={handleLoginSuccess} />
+                    )
+                } />
+                <Route path="/student/profile" element={
+                    user && user.role === 'student' ? (
+                        <Layout user={user} onLogout={handleLogout}>
+                            <StudentProfile user={user} />
                         </Layout>
                     ) : (
                         <LoginPage onLoginSuccess={handleLoginSuccess} />

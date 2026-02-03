@@ -15,7 +15,14 @@ import {
     FileText,
     UserPlus,
     BarChart3,
-    UserCheck
+    UserCheck,
+    User,
+    BookOpen,
+    Calendar,
+    ClipboardList,
+    Bell,
+    HelpCircle,
+    DollarSign
 } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
@@ -45,7 +52,8 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
         }
     };
 
-    const menuItems = [
+    // Admin menu items
+    const adminMenuItems = [
         { name: 'Dashboard', icon: LayoutDashboard, path: '/' },
         {
             name: 'Student Admission',
@@ -63,6 +71,23 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
         { name: 'Settings', icon: Settings, path: '/settings' },
     ];
 
+    // Student menu items
+    const studentMenuItems = [
+        { name: 'Dashboard', icon: LayoutDashboard, path: '/student/dashboard' },
+        { name: 'My Profile', icon: User, path: '/student/profile' },
+        { name: 'Admissions & Enrolment', icon: FileText, path: '/student/admissions' },
+        { name: 'My Programme', icon: GraduationCap, path: '/student/programme' },
+        { name: 'Timetable', icon: Calendar, path: '/student/timetable' },
+        { name: 'Learning Materials', icon: BookOpen, isExternal: true, path: 'http://localhost:9090' },
+        { name: 'Assessments & Grades', icon: ClipboardList, path: '/student/assessments' },
+        { name: 'Messages', icon: Bell, path: '/student/messages' },
+        { name: 'Fees & Payments', icon: DollarSign, path: '/student/fees' },
+        { name: 'Support', icon: HelpCircle, path: '/student/support' },
+    ];
+
+    // Select menu based on user role
+    const menuItems = user?.role === 'student' ? studentMenuItems : adminMenuItems;
+
     const toggleSubMenu = (menuKey) => {
         setExpandedMenus(prev => ({
             ...prev,
@@ -75,6 +100,8 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
             toggleSubMenu(item.key);
         } else if (item.isSSO) {
             handleAccessLMS();
+        } else if (item.isExternal) {
+            window.open(item.path, '_blank');
         } else if (item.path) {
             navigate(item.path);
         }
