@@ -1,10 +1,12 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { User, Lock, Loader2, Eye, EyeOff, ShieldCheck } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
 
 const LoginPage = ({ onLoginSuccess }) => {
+    const navigate = useNavigate();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
@@ -26,6 +28,13 @@ const LoginPage = ({ onLoginSuccess }) => {
             sessionStorage.setItem('accessToken', response.data.tokens.accessToken);
             sessionStorage.setItem('user', JSON.stringify(userData));
             onLoginSuccess(userData);
+            
+            // Redirect based on user role
+            if (userData.role === 'student') {
+                navigate('/student/dashboard');
+            } else {
+                navigate('/');
+            }
         } catch (err) {
             setError(err.response?.data?.message || 'Login failed. Please check your credentials.');
         } finally {
