@@ -1661,18 +1661,79 @@ router.get('/programme/:id', async (req, res) => {
                     [studentCourse.id]
                 );
 
+                const [activityRows] = await moodleDb.execute(
+                    `
+                    SELECT cs.id AS section_id,
+                           cm.id AS cmid,
+                           m.name AS module_type,
+                           CASE m.name
+                               WHEN 'assign' THEN a.name
+                               WHEN 'quiz' THEN q.name
+                               WHEN 'resource' THEN r.name
+                               WHEN 'page' THEN p.name
+                               WHEN 'forum' THEN f.name
+                               WHEN 'url' THEN u.name
+                               WHEN 'book' THEN b.name
+                               WHEN 'data' THEN d.name
+                               WHEN 'lesson' THEN l.name
+                               WHEN 'scorm' THEN s.name
+                               WHEN 'wiki' THEN w.name
+                               WHEN 'choice' THEN c.name
+                               WHEN 'feedback' THEN fb.name
+                               WHEN 'glossary' THEN g.name
+                               WHEN 'label' THEN lb.name
+                               ELSE NULL
+                           END AS activity_name
+                    FROM mdl_course_sections cs
+                    LEFT JOIN mdl_course_modules cm ON cm.section = cs.id AND cm.deletioninprogress = 0
+                    LEFT JOIN mdl_modules m ON m.id = cm.module
+                    LEFT JOIN mdl_assign a ON a.id = cm.instance
+                    LEFT JOIN mdl_quiz q ON q.id = cm.instance
+                    LEFT JOIN mdl_resource r ON r.id = cm.instance
+                    LEFT JOIN mdl_page p ON p.id = cm.instance
+                    LEFT JOIN mdl_forum f ON f.id = cm.instance
+                    LEFT JOIN mdl_url u ON u.id = cm.instance
+                    LEFT JOIN mdl_book b ON b.id = cm.instance
+                    LEFT JOIN mdl_data d ON d.id = cm.instance
+                    LEFT JOIN mdl_lesson l ON l.id = cm.instance
+                    LEFT JOIN mdl_scorm s ON s.id = cm.instance
+                    LEFT JOIN mdl_wiki w ON w.id = cm.instance
+                    LEFT JOIN mdl_choice c ON c.id = cm.instance
+                    LEFT JOIN mdl_feedback fb ON fb.id = cm.instance
+                    LEFT JOIN mdl_glossary g ON g.id = cm.instance
+                    LEFT JOIN mdl_label lb ON lb.id = cm.instance
+                    WHERE cs.course = ? AND cs.section > 0
+                    ORDER BY cs.section ASC, cm.id ASC
+                    `,
+                    [studentCourse.id]
+                );
+
                 await moodleDb.end();
+
+                const activitiesBySection = (activityRows || []).reduce((acc, row) => {
+                    if (!row.section_id || !row.cmid) {
+                        return acc;
+                    }
+
+                    if (!acc[row.section_id]) {
+                        acc[row.section_id] = [];
+                    }
+
+                    acc[row.section_id].push({
+                        id: row.cmid,
+                        type: row.module_type || 'activity',
+                        title: row.activity_name || row.module_type || 'Activity'
+                    });
+
+                    return acc;
+                }, {});
 
                 const modules = (sectionRows || []).map((section, idx) => ({
                     code: `SEC${String(section.section).padStart(2, '0')}`,
                     name: section.name || `Section ${section.section || idx + 1}`,
                     credits: 20,
                     semester: idx < 3 ? 'Semester 1' : 'Semester 2',
-                    modules: Array.from({ length: section.module_count || 0 }, (_, i) => ({
-                        id: i + 1,
-                        type: 'activity',
-                        title: `Activity ${i + 1}`
-                    }))
+                    modules: activitiesBySection[section.id] || []
                 }));
 
                 return res.json({
