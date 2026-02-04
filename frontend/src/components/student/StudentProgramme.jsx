@@ -136,7 +136,7 @@ const StudentProgramme = ({ user }) => {
             {courseModules.length > 0 && (
                 <div className="bg-white rounded-lg shadow mb-8">
                     <div className="p-6 border-b border-gray-200">
-                        <h2 className="text-lg font-bold text-gray-900">Sections</h2>
+                        <h2 className="text-2xl font-bold text-gray-900">Course Content</h2>
                     </div>
                     <div className="divide-y divide-gray-200">
                         {courseModules.map((module, index) => (
