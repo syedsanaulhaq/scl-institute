@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Clock, MapPin, Video, Users } from 'lucide-react';
+import { Clock, MapPin, Video, Users, Calendar } from 'lucide-react';
 import axios from 'axios';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
@@ -11,29 +11,6 @@ const StudentTimetable = ({ user }) => {
     const [error, setError] = useState('');
 
     const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
-
-    // Sample hardcoded timetable data
-    const sampleTimetable = {
-        Monday: [
-            { time: '09:00 - 11:00', module: 'Business Fundamentals', code: 'BUS101', room: 'Room 301', type: 'Lecture', instructor: 'Dr. Smith' },
-            { time: '14:00 - 16:00', module: 'Marketing Principles', code: 'BUS102', room: 'Room 205', type: 'Seminar', instructor: 'Prof. Johnson' }
-        ],
-        Tuesday: [
-            { time: '10:00 - 12:00', module: 'Financial Accounting', code: 'BUS103', room: 'Room 401', type: 'Lecture', instructor: 'Dr. Williams' },
-            { time: '13:00 - 15:00', module: 'Business Fundamentals', code: 'BUS101', room: 'Online', type: 'Workshop', instructor: 'Dr. Smith', online: true }
-        ],
-        Wednesday: [
-            { time: '09:00 - 11:00', module: 'Marketing Principles', code: 'BUS102', room: 'Room 205', type: 'Lecture', instructor: 'Prof. Johnson' },
-            { time: '15:00 - 17:00', module: 'Financial Accounting', code: 'BUS103', room: 'Room 302', type: 'Tutorial', instructor: 'Dr. Williams' }
-        ],
-        Thursday: [
-            { time: '11:00 - 13:00', module: 'Business Fundamentals', code: 'BUS101', room: 'Room 301', type: 'Seminar', instructor: 'Dr. Smith' }
-        ],
-        Friday: [
-            { time: '09:00 - 11:00', module: 'Marketing Principles', code: 'BUS102', room: 'Online', type: 'Lecture', instructor: 'Prof. Johnson', online: true },
-            { time: '14:00 - 16:00', module: 'Financial Accounting', code: 'BUS103', room: 'Room 401', type: 'Workshop', instructor: 'Dr. Williams' }
-        ]
-    };
 
     useEffect(() => {
         fetchTimetableData();
@@ -49,19 +26,20 @@ const StudentTimetable = ({ user }) => {
                 const studentApp = apps.find(app => app.email === user?.email);
                 
                 if (studentApp) {
-                    // Try to fetch timetable from backend
+                    // Try to fetch timetable from backend (queries Moodle events/assignments)
                     try {
                         const timetableResponse = await axios.get(`${API_URL}/students/timetable/${studentApp.id}`);
                         if (timetableResponse.data?.success && Object.keys(timetableResponse.data.data || {}).length > 0) {
                             setTimetableData(timetableResponse.data.data);
                         } else {
-                            // Fall back to sample data if no Moodle data
-                            setTimetableData(sampleTimetable);
+                            // No data from backend, try to show message
+                            setError('No schedule data available. Check your course in Moodle for events and assignments.');
+                            setTimetableData({});
                         }
                     } catch (err) {
-                        console.warn('Could not fetch from backend, using sample data:', err.message);
-                        // Fall back to sample data
-                        setTimetableData(sampleTimetable);
+                        console.warn('Could not fetch timetable from backend:', err.message);
+                        setError('Could not load schedule from Moodle. Data is pulled from course events and assignment due dates in Moodle.');
+                        setTimetableData({});
                     }
                 } else {
                     setError('No application found');
@@ -69,8 +47,8 @@ const StudentTimetable = ({ user }) => {
             }
         } catch (err) {
             console.error('Error fetching timetable:', err);
-            // Use sample data as fallback
-            setTimetableData(sampleTimetable);
+            setError('Failed to load timetable data');
+            setTimetableData({});
         } finally {
             setLoading(false);
         }
@@ -174,8 +152,24 @@ const StudentTimetable = ({ user }) => {
                     </div>
                 </div>
             ) : (
-                <div className="bg-white rounded-lg shadow p-8 text-center">
-                    <p className="text-gray-600">No timetable data available. Please check back later or contact your instructor.</p>
+                <div className="bg-white rounded-lg shadow p-8">
+                    <div className="text-center">
+                        <Calendar className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                        <p className="text-gray-600 mb-2">No schedule data available</p>
+                        <p className="text-sm text-gray-500">Schedule is pulled from:</p>
+                        <ul className="text-sm text-gray-500 mt-2 space-y-1">
+                            <li>• Course events created in Moodle</li>
+                            <li>• Assignment due dates</li>
+                            <li>• Quiz dates and deadlines</li>
+                        </ul>
+                        <p className="text-sm text-gray-600 mt-4">Add events to your course in Moodle to see them here.</p>
+                        <button
+                            onClick={() => window.open('http://localhost:9090/my/', '_blank')}
+                            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded text-sm font-medium hover:bg-blue-700"
+                        >
+                            View Moodle Calendar
+                        </button>
+                    </div>
                 </div>
             )}
         </div>
