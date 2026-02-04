@@ -208,7 +208,7 @@ const StudentProgramme = ({ user }) => {
             {programmeData?.summary && (
                 <div ref={outcomesRef} className="bg-white rounded-lg shadow p-6 mb-8">
                     <h2 className="text-2xl font-bold text-gray-900 mb-4">Course Summary</h2>
-                    <div className="prose prose-sm max-w-none text-gray-700" dangerouslySetInnerHTML={{ __html: programmeData.summary }} />
+                    <div className="text-gray-700 text-sm leading-relaxed" dangerouslySetInnerHTML={{ __html: programmeData.summary }} />
                 </div>
             )}
 
