@@ -257,9 +257,12 @@ const StudentProgramme = ({ user }) => {
                                                         </span>
                                                     </div>
                                                     <div className="flex-1">
-                                                        <p className="font-medium text-gray-900">{activity.title || activity.name || 'Activity'}</p>
+                                                        <div className="mb-2">
+                                                            <span className="text-xs text-gray-600 font-semibold">Title:</span>
+                                                            <p className="font-bold text-gray-900">{activity.title || activity.name || 'Activity'}</p>
+                                                        </div>
                                                         {activity.type && (
-                                                            <p className="text-xs text-gray-600 mt-0.5">
+                                                            <p className="text-xs text-gray-600">
                                                                 Type: <span className="font-semibold">{activity.type}</span>
                                                             </p>
                                                         )}
