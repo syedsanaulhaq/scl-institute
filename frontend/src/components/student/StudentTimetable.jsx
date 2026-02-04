@@ -18,23 +18,16 @@ const StudentTimetable = ({ user }) => {
 
     const handleViewInMoodle = async (moodleUrl) => {
         try {
-            const response = await axios.post(`${API_URL}/sso/generate`, { 
-                email: user?.email 
-            });
+            const ssoPayload = { email: user?.email };
+            
+            // If moodleUrl is provided, add it as redirect_to so user goes straight to the activity after SSO
+            if (moodleUrl) {
+                ssoPayload.redirect_to = moodleUrl;
+            }
+            
+            const response = await axios.post(`${API_URL}/sso/generate`, ssoPayload);
             if (response.data?.success && response.data?.redirectUrl) {
-                // If moodleUrl is provided, construct the full URL with SSO token
-                let finalUrl = response.data.redirectUrl;
-                if (moodleUrl) {
-                    // Extract the token from the redirect URL
-                    const tokenMatch = response.data.redirectUrl.match(/token=([^&]+)/);
-                    if (tokenMatch) {
-                        const token = tokenMatch[1];
-                        const moodleBaseUrl = 'http://localhost:9090';
-                        // Construct full URL with base, path, and token
-                        finalUrl = `${moodleBaseUrl}${moodleUrl}&token=${token}`;
-                    }
-                }
-                window.open(finalUrl, '_blank');
+                window.open(response.data.redirectUrl, '_blank');
             } else {
                 alert('Could not generate SSO token. Please try again.');
             }

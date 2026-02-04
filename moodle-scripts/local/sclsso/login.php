@@ -3,6 +3,7 @@ require_once('../../config.php');
 require_once($CFG->libdir.'/adminlib.php');
 
 $token = optional_param('token', '', PARAM_ALPHANUMEXT);
+$redirect = optional_param('redirect', '', PARAM_URL);
 
 if (empty($token)) {
     redirect($CFG->wwwroot, 'Invalid or missing token');
@@ -77,6 +78,12 @@ $delstmt->execute();
 
 $scldb->close();
 
-// Redirect to courses page
-redirect($CFG->wwwroot . '/my/courses.php', 'Login successful');
+// Redirect to provided location or default to courses page
+if (!empty($redirect)) {
+    // Ensure the redirect is a valid Moodle URL
+    $redirectUrl = $CFG->wwwroot . $redirect;
+    redirect($redirectUrl, 'Login successful');
+} else {
+    redirect($CFG->wwwroot . '/my/courses.php', 'Login successful');
+}
 ?>

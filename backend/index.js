@@ -163,7 +163,7 @@ app.post('/api/v1/auth/login', async (req, res) => {
 });
 
 app.post('/api/sso/generate', async (req, res) => {
-    const { email } = req.body;
+    const { email, redirect_to } = req.body;
     console.log(`[SSO] Generating token for ${email}...`);
     
     // Get real user data from database instead of hardcoded array
@@ -190,8 +190,14 @@ app.post('/api/sso/generate', async (req, res) => {
             'INSERT INTO sso_tokens (token, email, firstname, lastname, role) VALUES (?, ?, ?, ?, ?)',
             [token, user.email, firstname, lastname, user.role]
         );
-        const moodleUrl = process.env.MOODLE_URL || 'http://localhost:8080';
-        const redirectUrl = `${moodleUrl}/local/sclsso/login.php?token=${token}`;
+        const moodleUrl = process.env.MOODLE_URL || 'http://localhost:9090';
+        let redirectUrl = `${moodleUrl}/local/sclsso/login.php?token=${token}`;
+        
+        // If redirect_to is provided, encode it and append to the SSO login URL
+        if (redirect_to) {
+            redirectUrl += `&redirect=${encodeURIComponent(redirect_to)}`;
+        }
+        
         console.log(`[SSO] Token created. Redirect: ${redirectUrl}`);
         res.json({ success: true, redirectUrl });
     } catch (err) {
