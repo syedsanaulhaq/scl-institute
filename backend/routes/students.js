@@ -1748,7 +1748,8 @@ router.get('/programme/:id', async (req, res) => {
                             moodleCourseId: studentCourse.id,
                             startDate: studentCourse.startdate ? new Date(studentCourse.startdate * 1000) : app.intake_start_date,
                             endDate: studentCourse.enddate ? new Date(studentCourse.enddate * 1000) : null,
-                            summary: studentCourse.summary || null
+                            summary: studentCourse.summary || null,
+                            courseImage: null // Will be populated if image exists
                         },
                         modules: modules.length > 0 ? modules : generateDefaultModules(courseCode),
                         outcomes: [

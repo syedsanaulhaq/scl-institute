@@ -141,12 +141,20 @@ const StudentProgramme = ({ user }) => {
                             <div className="prose prose-sm max-w-none text-gray-700" dangerouslySetInnerHTML={{ __html: programmeData.summary }} />
                         </div>
                         <div className="w-64 flex-shrink-0">
-                            <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg h-64 flex items-center justify-center shadow-md">
-                                <div className="text-center">
-                                    <Award className="w-20 h-20 text-white mx-auto mb-3" />
-                                    <p className="text-white font-semibold">{programmeData?.title || 'Course'}</p>
+                            {programmeData?.courseImage ? (
+                                <img 
+                                    src={programmeData.courseImage} 
+                                    alt={programmeData.title || 'Course'} 
+                                    className="w-full h-64 object-cover rounded-lg shadow-md"
+                                />
+                            ) : (
+                                <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg h-64 flex items-center justify-center shadow-md">
+                                    <div className="text-center">
+                                        <Award className="w-20 h-20 text-white mx-auto mb-3" />
+                                        <p className="text-white font-semibold text-sm px-4">{programmeData?.title || 'Course'}</p>
+                                    </div>
                                 </div>
-                            </div>
+                            )}
                         </div>
                     </div>
                 </div>
