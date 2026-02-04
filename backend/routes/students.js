@@ -2014,10 +2014,26 @@ router.get('/timetable/:id', async (req, res) => {
             console.log(`Timetable: Found course ID ${courseId} for code '${courseCode}'`);
 
             // Get events from mdl_event table for this course
+            // Join with course modules to get activity links
             const [eventRows] = await moodlePool.execute(
                 `
-                SELECT e.id, e.name, e.eventtype, e.timestart, e.timeduration, e.description
+                SELECT 
+                    e.id, e.name, e.eventtype, e.timestart, e.timeduration, e.description,
+                    CASE 
+                        WHEN e.modulename = 'quiz' THEN CONCAT('/mod/quiz/view.php?id=', cm.id)
+                        WHEN e.modulename = 'assign' THEN CONCAT('/mod/assign/view.php?id=', cm.id)
+                        WHEN e.modulename = 'forum' THEN CONCAT('/mod/forum/view.php?id=', cm.id)
+                        WHEN e.modulename = 'lesson' THEN CONCAT('/mod/lesson/view.php?id=', cm.id)
+                        ELSE NULL
+                    END as moodle_url,
+                    cm.id as cm_id
                 FROM mdl_event e
+                LEFT JOIN mdl_course_modules cm ON cm.course = e.courseid AND (
+                    (e.modulename = 'quiz' AND cm.module = (SELECT id FROM mdl_modules WHERE name = 'quiz') AND cm.instance = e.instance) OR
+                    (e.modulename = 'assign' AND cm.module = (SELECT id FROM mdl_modules WHERE name = 'assign') AND cm.instance = e.instance) OR
+                    (e.modulename = 'forum' AND cm.module = (SELECT id FROM mdl_modules WHERE name = 'forum') AND cm.instance = e.instance) OR
+                    (e.modulename = 'lesson' AND cm.module = (SELECT id FROM mdl_modules WHERE name = 'lesson') AND cm.instance = e.instance)
+                )
                 WHERE e.courseid = ? AND e.visible = 1
                 ORDER BY e.timestart ASC
                 `,
@@ -2061,14 +2077,21 @@ router.get('/timetable/:id', async (req, res) => {
                         const duration = event.timeduration ? Math.floor(event.timeduration / 3600) : 1;
                         const endTime = new Date(event.timestart * 1000 + event.timeduration * 1000).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
 
-                        timetable[dayName].push({
+                        const eventObj = {
                             type: 'Event',
                             module: event.name,
                             code: 'EVT',
                             time: `${timeStr} - ${endTime}`,
                             room: 'TBD',
                             instructor: 'TBD'
-                        });
+                        };
+                        
+                        // Add moodle_url if available
+                        if (event.moodle_url) {
+                            eventObj.moodle_url = event.moodle_url;
+                        }
+                        
+                        timetable[dayName].push(eventObj);
                     }
                 });
             }
@@ -2082,7 +2105,7 @@ router.get('/timetable/:id', async (req, res) => {
                         const dayName = dayNames[dayIndex];
                         const timeStr = dueDate.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
 
-                        timetable[dayName].push({
+                        const assignmentObj = {
                             type: 'Assignment',
                             module: assignment.name,
                             code: 'ASSGN',
@@ -2090,8 +2113,17 @@ router.get('/timetable/:id', async (req, res) => {
                             room: 'Online',
                             online: true,
                             instructor: 'Submit online'
-                        });
+                        };
+                        
+                        // Add moodle_url for assignment
+                        if (assignment.cm_id) {
+                            assignmentObj.moodle_url = `/mod/assign/view.php?id=${assignment.cm_id}`;
+                        }
+                        
+                        timetable[dayName].push(assignmentObj);
                     }
+                });
+            }
                 });
             }
 

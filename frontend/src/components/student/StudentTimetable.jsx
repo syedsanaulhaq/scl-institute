@@ -16,13 +16,23 @@ const StudentTimetable = ({ user }) => {
         fetchTimetableData();
     }, [user]);
 
-    const handleViewInMoodle = async () => {
+    const handleViewInMoodle = async (moodleUrl) => {
         try {
             const response = await axios.post(`${API_URL}/sso/generate`, { 
                 email: user?.email 
             });
             if (response.data?.success && response.data?.redirectUrl) {
-                window.open(response.data.redirectUrl, '_blank');
+                // If moodleUrl is provided, modify the redirect to include the specific activity
+                let finalUrl = response.data.redirectUrl;
+                if (moodleUrl) {
+                    // Extract the token from the redirect URL and replace the path
+                    const tokenMatch = response.data.redirectUrl.match(/token=([^&]+)/);
+                    if (tokenMatch) {
+                        const token = tokenMatch[1];
+                        finalUrl = `${moodleUrl}?token=${token}`;
+                    }
+                }
+                window.open(finalUrl, '_blank');
             } else {
                 alert('Could not generate SSO token. Please try again.');
             }
@@ -161,7 +171,7 @@ const StudentTimetable = ({ user }) => {
                                                 </div>
                                             )}
                                             <button
-                                                onClick={handleViewInMoodle}
+                                                onClick={() => handleViewInMoodle(session.moodle_url)}
                                                 className="w-full mt-2 px-2 py-1 bg-blue-600 text-white text-xs font-medium rounded hover:bg-blue-700 transition"
                                             >
                                                 View in Moodle
