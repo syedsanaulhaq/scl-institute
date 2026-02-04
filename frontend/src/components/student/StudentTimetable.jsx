@@ -9,8 +9,24 @@ const StudentTimetable = ({ user }) => {
     const [timetableData, setTimetableData] = useState({});
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [eventTypeFilters, setEventTypeFilters] = useState({
+        Lecture: true,
+        Seminar: true,
+        Workshop: true,
+        Tutorial: true,
+        Assignment: true,
+        Quiz: true,
+        Event: true
+    });
 
     const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+
+    const toggleEventType = (type) => {
+        setEventTypeFilters(prev => ({
+            ...prev,
+            [type]: !prev[type]
+        }));
+    };
 
     useEffect(() => {
         fetchTimetableData();
@@ -113,16 +129,23 @@ const StudentTimetable = ({ user }) => {
                 </select>
             </div>
 
-            {/* Legend */}
+            {/* Legend with Filters */}
             <div className="bg-white rounded-lg shadow p-4 mb-6">
-                <h3 className="font-semibold text-gray-900 mb-3">Event Types</h3>
+                <h3 className="font-semibold text-gray-900 mb-3">Filter by Event Type</h3>
                 <div className="flex flex-wrap gap-3">
-                    <span className="px-3 py-1 bg-blue-100 text-blue-700 border border-blue-300 rounded-lg text-sm">Lecture</span>
-                    <span className="px-3 py-1 bg-green-100 text-green-700 border border-green-300 rounded-lg text-sm">Seminar</span>
-                    <span className="px-3 py-1 bg-purple-100 text-purple-700 border border-purple-300 rounded-lg text-sm">Workshop</span>
-                    <span className="px-3 py-1 bg-orange-100 text-orange-700 border border-orange-300 rounded-lg text-sm">Tutorial</span>
-                    <span className="px-3 py-1 bg-red-100 text-red-700 border border-red-300 rounded-lg text-sm">Assignment</span>
-                    <span className="px-3 py-1 bg-yellow-100 text-yellow-700 border border-yellow-300 rounded-lg text-sm">Quiz</span>
+                    {Object.keys(eventTypeFilters).map(type => (
+                        <button
+                            key={type}
+                            onClick={() => toggleEventType(type)}
+                            className={`px-3 py-1 border rounded-lg text-sm font-medium transition ${
+                                eventTypeFilters[type]
+                                    ? getTypeColor(type)
+                                    : 'bg-gray-50 text-gray-400 border-gray-300 opacity-50'
+                            }`}
+                        >
+                            {eventTypeFilters[type] ? '✓ ' : ''}{type}
+                        </button>
+                    ))}
                 </div>
             </div>
 
@@ -136,7 +159,7 @@ const StudentTimetable = ({ user }) => {
                                     {day}
                                 </div>
                                 <div className="p-3 space-y-3">
-                                    {timetableData[day]?.map((session, index) => (
+                                    {timetableData[day]?.filter(session => eventTypeFilters[session.type]).map((session, index) => (
                                         <div key={index} className={`p-3 rounded-lg border-l-4 ${getTypeColor(session.type)} border`}>
                                             <div className="flex items-center gap-2 mb-2">
                                                 <Clock className="w-4 h-4" />
