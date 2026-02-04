@@ -20,6 +20,8 @@ const StudentPortalDashboard = ({ user }) => {
     const [studentData, setStudentData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [announcements, setAnnouncements] = useState([]);
+    const [ssoLoading, setSsoLoading] = useState(false);
+    const [ssoError, setSsoError] = useState('');
 
     useEffect(() => {
         fetchStudentData();
@@ -40,6 +42,26 @@ const StudentPortalDashboard = ({ user }) => {
             console.error('Error fetching student data:', error);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleAccessLMS = async () => {
+        try {
+            setSsoLoading(true);
+            setSsoError('');
+            const response = await axios.post(`${API_URL}/sso/generate`, {
+                email: user.email
+            });
+
+            if (response.data?.success && response.data?.redirectUrl) {
+                window.open(response.data.redirectUrl, '_blank', 'noopener,noreferrer');
+            } else {
+                setSsoError('Failed to generate SSO link');
+            }
+        } catch (err) {
+            setSsoError(err.response?.data?.message || 'Failed to access Moodle');
+        } finally {
+            setSsoLoading(false);
         }
     };
 
@@ -87,10 +109,9 @@ const StudentPortalDashboard = ({ user }) => {
         { 
             name: 'Learning Materials', 
             icon: BookOpen, 
-            path: 'http://localhost:9090',
             color: 'bg-green-500',
             description: 'Access LMS and course resources',
-            external: true
+            isSSO: true
         },
         { 
             name: 'Timetable', 
@@ -161,21 +182,43 @@ const StudentPortalDashboard = ({ user }) => {
             {/* Quick Links Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                 {quickLinks.map((link, index) => (
-                    <a
-                        key={index}
-                        href={link.external ? link.path : `#${link.path}`}
-                        target={link.external ? "_blank" : undefined}
-                        rel={link.external ? "noopener noreferrer" : undefined}
-                        className="bg-white rounded-lg shadow hover:shadow-lg transition-shadow p-6 border border-gray-100 hover:border-blue-200"
-                    >
-                        <div className={`${link.color} w-12 h-12 rounded-lg flex items-center justify-center mb-4`}>
-                            <link.icon className="w-6 h-6 text-white" />
-                        </div>
-                        <h3 className="font-semibold text-gray-900 mb-2">{link.name}</h3>
-                        <p className="text-sm text-gray-600">{link.description}</p>
-                    </a>
+                    link.isSSO ? (
+                        <button
+                            key={index}
+                            type="button"
+                            onClick={handleAccessLMS}
+                            disabled={ssoLoading}
+                            className="bg-white rounded-lg shadow hover:shadow-lg transition-shadow p-6 border border-gray-100 hover:border-blue-200 text-left disabled:opacity-60"
+                        >
+                            <div className={`${link.color} w-12 h-12 rounded-lg flex items-center justify-center mb-4`}>
+                                <link.icon className="w-6 h-6 text-white" />
+                            </div>
+                            <h3 className="font-semibold text-gray-900 mb-2">{link.name}</h3>
+                            <p className="text-sm text-gray-600">{link.description}</p>
+                        </button>
+                    ) : (
+                        <a
+                            key={index}
+                            href={link.external ? link.path : `#${link.path}`}
+                            target={link.external ? "_blank" : undefined}
+                            rel={link.external ? "noopener noreferrer" : undefined}
+                            className="bg-white rounded-lg shadow hover:shadow-lg transition-shadow p-6 border border-gray-100 hover:border-blue-200"
+                        >
+                            <div className={`${link.color} w-12 h-12 rounded-lg flex items-center justify-center mb-4`}>
+                                <link.icon className="w-6 h-6 text-white" />
+                            </div>
+                            <h3 className="font-semibold text-gray-900 mb-2">{link.name}</h3>
+                            <p className="text-sm text-gray-600">{link.description}</p>
+                        </a>
+                    )
                 ))}
             </div>
+
+            {ssoError && (
+                <div className="mb-6 p-3 bg-red-50 text-red-700 border border-red-200 rounded-lg text-sm">
+                    {ssoError}
+                </div>
+            )}
 
             {/* Two Column Layout */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -226,14 +269,14 @@ const StudentPortalDashboard = ({ user }) => {
                         <h3 className="text-xl font-bold mb-2">Access Your Learning Management System</h3>
                         <p className="text-purple-100">Access course materials, submit assignments, and track your progress</p>
                     </div>
-                    <a
-                        href="http://localhost:9090"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="bg-white text-purple-600 px-6 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors"
+                    <button
+                        type="button"
+                        onClick={handleAccessLMS}
+                        disabled={ssoLoading}
+                        className="bg-white text-purple-600 px-6 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors disabled:opacity-60"
                     >
                         Open LMS
-                    </a>
+                    </button>
                 </div>
             </div>
         </div>

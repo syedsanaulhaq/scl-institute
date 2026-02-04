@@ -41,7 +41,7 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
             });
 
             if (response.data.success) {
-                window.open(response.data.redirectUrl, '_blank');
+                window.open(response.data.redirectUrl, '_blank', 'noopener,noreferrer');
             } else {
                 console.error('Failed to generate SSO token');
             }
@@ -79,7 +79,7 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
         { name: 'Admissions & Enrolment', icon: FileText, path: '/student/admissions' },
         { name: 'My Programme', icon: GraduationCap, path: '/student/programme' },
         { name: 'Timetable', icon: Calendar, path: '/student/timetable' },
-        { name: 'Learning Materials', icon: BookOpen, isExternal: true, path: 'http://localhost:9090' },
+        { name: 'Access LMS', icon: BookOpen, isSSO: true },
         { name: 'Assessments & Grades', icon: ClipboardList, path: '/student/assessments' },
         { name: 'Messages', icon: Bell, path: '/student/messages' },
         { name: 'Fees & Payments', icon: DollarSign, path: '/student/fees' },

@@ -14,6 +14,8 @@ export default function NotificationsPage() {
     const [filter, setFilter] = useState('all');
     const [loading, setLoading] = useState(false);
     const [email, setEmail] = useState(null);
+    const [ssoLoading, setSsoLoading] = useState(false);
+    const [ssoError, setSsoError] = useState('');
 
     useEffect(() => {
         const storedEmail = localStorage.getItem('studentEmail');
@@ -88,6 +90,27 @@ export default function NotificationsPage() {
         }
     };
 
+    const handleAccessLMS = async () => {
+        try {
+            if (!email) return;
+            setSsoLoading(true);
+            setSsoError('');
+            const response = await axios.post(`${API_URL}/sso/generate`, {
+                email
+            });
+
+            if (response.data?.success && response.data?.redirectUrl) {
+                window.open(response.data.redirectUrl, '_blank', 'noopener,noreferrer');
+            } else {
+                setSsoError('Failed to generate SSO link');
+            }
+        } catch (err) {
+            setSsoError(err.response?.data?.message || 'Failed to access Moodle');
+        } finally {
+            setSsoLoading(false);
+        }
+    };
+
     const getFilteredNotifications = () => {
         if (filter === 'unread') {
             return notifications.filter(n => !n.is_read);
@@ -138,6 +161,13 @@ export default function NotificationsPage() {
         });
     };
 
+    const formatNotificationBody = (text) => {
+        if (!text) return '';
+        return text
+            .replace(/https?:\/\/localhost:9090\S*/gi, 'Moodle LMS (use button below)')
+            .replace(/https?:\/\/lms\.sclsandbox\.xyz\S*/gi, 'Moodle LMS (use button below)');
+    };
+
     const filteredNotifications = getFilteredNotifications();
     const unreadCount = notifications.filter(n => !n.is_read).length;
 
@@ -171,9 +201,26 @@ export default function NotificationsPage() {
                         {/* Notification Body */}
                         <div className="bg-white rounded p-6 mb-6">
                             <div className="whitespace-pre-wrap text-gray-700 leading-relaxed">
-                                {selectedNotification.body || selectedNotification.message}
+                                {formatNotificationBody(selectedNotification.body || selectedNotification.message)}
                             </div>
                         </div>
+
+                        {(selectedNotification?.notification_data?.moodle_url ||
+                            (selectedNotification.body || selectedNotification.message || '').match(/https?:\/\/localhost:9090|https?:\/\/lms\.sclsandbox\.xyz/i)) && (
+                            <div className="mb-6">
+                                <button
+                                    type="button"
+                                    onClick={handleAccessLMS}
+                                    disabled={ssoLoading}
+                                    className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-60"
+                                >
+                                    Open Moodle (SSO)
+                                </button>
+                                {ssoError && (
+                                    <p className="mt-2 text-sm text-red-600">{ssoError}</p>
+                                )}
+                            </div>
+                        )}
 
                         {/* Data Section */}
                         {selectedNotification.notification_data && (

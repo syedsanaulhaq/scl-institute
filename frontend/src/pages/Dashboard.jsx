@@ -36,7 +36,7 @@ const Dashboard = ({ user, onLogout }) => {
             });
 
             if (response.data.success) {
-                window.open(response.data.redirectUrl, '_blank');
+                window.open(response.data.redirectUrl, '_blank', 'noopener,noreferrer');
             } else {
                 setError('Failed to generate SSO token');
             }

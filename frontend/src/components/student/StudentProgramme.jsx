@@ -10,6 +10,8 @@ const StudentProgramme = ({ user }) => {
     const [learningOutcomes, setLearningOutcomes] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [ssoLoading, setSsoLoading] = useState(false);
+    const [ssoError, setSsoError] = useState('');
 
     useEffect(() => {
         fetchProgrammeData();
@@ -48,6 +50,26 @@ const StudentProgramme = ({ user }) => {
         }
     };
 
+    const handleAccessLMS = async () => {
+        try {
+            setSsoLoading(true);
+            setSsoError('');
+            const response = await axios.post(`${API_URL}/sso/generate`, {
+                email: user.email
+            });
+
+            if (response.data?.success && response.data?.redirectUrl) {
+                window.open(response.data.redirectUrl, '_blank', 'noopener,noreferrer');
+            } else {
+                setSsoError('Failed to generate SSO link');
+            }
+        } catch (err) {
+            setSsoError(err.response?.data?.message || 'Failed to access Moodle');
+        } finally {
+            setSsoLoading(false);
+        }
+    };
+
     const modules = courseModules.length > 0 ? courseModules : [
         { code: 'MOD101', name: 'Module 1', credits: 20, semester: 'Semester 1' },
         { code: 'MOD102', name: 'Module 2', credits: 20, semester: 'Semester 1' },
@@ -56,6 +78,13 @@ const StudentProgramme = ({ user }) => {
         { code: 'MOD202', name: 'Module 5', credits: 20, semester: 'Semester 2' },
         { code: 'MOD203', name: 'Module 6', credits: 20, semester: 'Semester 2' }
     ];
+
+    const totalActivities = courseModules.reduce(
+        (sum, module) => sum + (module.modules?.length || 0),
+        0
+    );
+
+    const showMoodleContent = courseModules.length > 0;
 
     if (loading) {
         return <div className="p-8 text-center">Loading programme details...</div>;
@@ -102,15 +131,19 @@ const StudentProgramme = ({ user }) => {
 
             {/* Quick Actions */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                <a href="http://localhost:9090" target="_blank" rel="noopener noreferrer" 
-                   className="flex items-center gap-3 p-4 bg-white rounded-lg shadow hover:shadow-md transition-shadow">
+                <button
+                    type="button"
+                    onClick={handleAccessLMS}
+                    className="flex items-center gap-3 p-4 bg-white rounded-lg shadow hover:shadow-md transition-shadow disabled:opacity-60"
+                    disabled={ssoLoading}
+                >
                     <BookOpen className="w-8 h-8 text-blue-600" />
                     <div>
-                        <p className="font-semibold text-gray-900">Learning Materials</p>
-                        <p className="text-xs text-gray-600">Access course content</p>
+                        <p className="font-semibold text-gray-900">Open Moodle (SSO)</p>
+                        <p className="text-xs text-gray-600">Live course content & activities</p>
                     </div>
                     <ExternalLink className="w-4 h-4 text-gray-400 ml-auto" />
-                </a>
+                </button>
                 <button className="flex items-center gap-3 p-4 bg-white rounded-lg shadow hover:shadow-md transition-shadow">
                     <Calendar className="w-8 h-8 text-green-600" />
                     <div className="text-left">
@@ -127,9 +160,55 @@ const StudentProgramme = ({ user }) => {
                 </button>
             </div>
 
+            {ssoError && (
+                <div className="mb-6 p-3 bg-red-50 text-red-700 border border-red-200 rounded-lg text-sm">
+                    {ssoError}
+                </div>
+            )}
+
+            {/* Moodle Course Snapshot */}
+            <div className="bg-white rounded-lg shadow p-6 mb-6">
+                <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-xl font-bold text-gray-900">Moodle Course Snapshot</h2>
+                    <button
+                        type="button"
+                        onClick={handleAccessLMS}
+                        className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-2"
+                    >
+                        Open in Moodle <ExternalLink className="w-4 h-4" />
+                    </button>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="p-4 bg-blue-50 rounded-lg border border-blue-100">
+                        <p className="text-sm text-blue-700">Sections</p>
+                        <p className="text-2xl font-bold text-blue-900">{courseModules.length || 0}</p>
+                    </div>
+                    <div className="p-4 bg-green-50 rounded-lg border border-green-100">
+                        <p className="text-sm text-green-700">Activities</p>
+                        <p className="text-2xl font-bold text-green-900">{totalActivities}</p>
+                    </div>
+                    <div className="p-4 bg-purple-50 rounded-lg border border-purple-100">
+                        <p className="text-sm text-purple-700">Status</p>
+                        <p className="text-2xl font-bold text-purple-900">
+                            {showMoodleContent ? 'Live' : 'Pending'}
+                        </p>
+                    </div>
+                </div>
+                {!showMoodleContent && (
+                    <p className="mt-4 text-sm text-gray-600">
+                        Moodle content is not available yet. Open Moodle to view the live course content.
+                    </p>
+                )}
+            </div>
+
             {/* Programme Modules */}
             <div className="bg-white rounded-lg shadow p-6 mb-6">
-                <h2 className="text-xl font-bold text-gray-900 mb-4">Programme Modules</h2>
+                <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-xl font-bold text-gray-900">Programme Modules</h2>
+                    <span className="text-xs text-gray-500">
+                        {showMoodleContent ? 'From Moodle' : 'Default list'}
+                    </span>
+                </div>
                 <div className="space-y-3">
                     {modules.map((module, index) => (
                         <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border hover:border-blue-300 transition-colors cursor-pointer">
@@ -140,6 +219,11 @@ const StudentProgramme = ({ user }) => {
                                 <div>
                                     <p className="font-semibold text-gray-900">{module.name}</p>
                                     <p className="text-sm text-gray-600">{module.code} • {module.credits} Credits</p>
+                                    {module.modules?.length > 0 && (
+                                        <p className="text-xs text-gray-500 mt-1">
+                                            {module.modules.length} activities in Moodle
+                                        </p>
+                                    )}
                                 </div>
                             </div>
                             <div className="text-right">

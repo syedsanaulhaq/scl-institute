@@ -1606,9 +1606,9 @@ router.get('/programme/:id', async (req, res) => {
     try {
         const { id } = req.params;
 
-        // Get student application to find course code
+        // Get student application to find course info
         const [apps] = await db.execute(
-            'SELECT course_code, course_title FROM student_applications WHERE id = ?',
+            'SELECT course_code, course_title, course_type, mode_of_study, intake_start_date FROM student_applications WHERE id = ?',
             [id]
         );
 
@@ -1623,13 +1623,91 @@ router.get('/programme/:id', async (req, res) => {
         const courseCode = app.course_code || app.programme_code;
         const courseTitle = app.course_title || app.programme_title;
 
-        // Fetch course details from Moodle
-        // This would normally call Moodle API, but for now we'll return structured data
+        // Try Moodle DB first for accurate course data
+        try {
+            const moodleDb = mysql.createPool({
+                host: 'scli-moodle-db-dev',
+                port: 3306,
+                user: 'bn_moodle',
+                password: 'bitnami_moodle_password',
+                database: 'bitnami_moodle',
+                waitForConnections: true,
+                connectionLimit: 5,
+                queueLimit: 0
+            });
+
+            const [courseRows] = await moodleDb.execute(
+                `
+                SELECT id, idnumber, shortname, fullname, startdate, enddate, summary
+                FROM mdl_course
+                WHERE (idnumber = ? OR shortname = ? OR fullname LIKE ?)
+                ORDER BY id DESC
+                LIMIT 1
+                `,
+                [courseCode, courseCode, `%${courseTitle || courseCode}%`]
+            );
+
+            if (courseRows.length > 0) {
+                const studentCourse = courseRows[0];
+                const [sectionRows] = await moodleDb.execute(
+                    `
+                    SELECT cs.id, cs.section, cs.name, COUNT(cm.id) AS module_count
+                    FROM mdl_course_sections cs
+                    LEFT JOIN mdl_course_modules cm ON cm.section = cs.id AND cm.deletioninprogress = 0
+                    WHERE cs.course = ? AND cs.section > 0
+                    GROUP BY cs.id, cs.section, cs.name
+                    ORDER BY cs.section ASC
+                    `,
+                    [studentCourse.id]
+                );
+
+                await moodleDb.end();
+
+                const modules = (sectionRows || []).map((section, idx) => ({
+                    code: `SEC${String(section.section).padStart(2, '0')}`,
+                    name: section.name || `Section ${section.section || idx + 1}`,
+                    credits: 20,
+                    semester: idx < 3 ? 'Semester 1' : 'Semester 2',
+                    modules: Array.from({ length: section.module_count || 0 }, () => ({}))
+                }));
+
+                return res.json({
+                    success: true,
+                    data: {
+                        programme: {
+                            code: courseCode,
+                            title: courseTitle || studentCourse.fullname || courseCode,
+                            type: app.course_type || 'Bachelor Degree',
+                            studyMode: app.mode_of_study || 'Full-time',
+                            duration: '1 Year',
+                            moodleCourseId: studentCourse.id,
+                            startDate: studentCourse.startdate ? new Date(studentCourse.startdate * 1000) : app.intake_start_date,
+                            endDate: studentCourse.enddate ? new Date(studentCourse.enddate * 1000) : null,
+                            summary: studentCourse.summary || null
+                        },
+                        modules: modules.length > 0 ? modules : generateDefaultModules(courseCode),
+                        outcomes: [
+                            'Understand core principles and theories',
+                            'Apply knowledge in practical scenarios',
+                            'Develop critical thinking and analysis skills',
+                            'Prepare for professional practice',
+                            'Engage in reflective learning'
+                        ],
+                        source: 'moodle-db'
+                    }
+                });
+            }
+
+            await moodleDb.end();
+        } catch (moodleDbError) {
+            console.log('Moodle DB error, falling back to API/default:', moodleDbError.message);
+        }
+
+        // Fallback: Moodle API
         const moodleToken = process.env.MOODLE_TOKEN || 'e86dd021aaa42f78114e6c67cc9d8ff1';
         const moodleUrl = process.env.MOODLE_INTERNAL_URL || 'http://scli-moodle-dev:8080';
-
-        // Fetch courses from Moodle
         const axios = require('axios');
+
         try {
             const coursesResponse = await axios.get(
                 `${moodleUrl}/webservice/rest/server.php`,
@@ -1649,7 +1727,6 @@ router.get('/programme/:id', async (req, res) => {
                 c.fullname?.includes(courseCode)
             );
 
-            // Get course modules/sections if course found
             let modules = [];
             if (studentCourse) {
                 try {
@@ -1678,17 +1755,17 @@ router.get('/programme/:id', async (req, res) => {
                 }
             }
 
-            res.json({
+            return res.json({
                 success: true,
                 data: {
                     programme: {
                         code: courseCode,
                         title: courseTitle || studentCourse?.fullname || courseCode,
-                        type: 'Bachelor Degree',
-                        studyMode: 'Full-time',
+                        type: app.course_type || 'Bachelor Degree',
+                        studyMode: app.mode_of_study || 'Full-time',
                         duration: '1 Year',
                         moodleCourseId: studentCourse?.id,
-                        startDate: studentCourse?.startdate ? new Date(studentCourse.startdate * 1000) : null,
+                        startDate: studentCourse?.startdate ? new Date(studentCourse.startdate * 1000) : app.intake_start_date,
                         endDate: studentCourse?.enddate ? new Date(studentCourse.enddate * 1000) : null
                     },
                     modules: modules.length > 0 ? modules : generateDefaultModules(courseCode),
@@ -1698,31 +1775,32 @@ router.get('/programme/:id', async (req, res) => {
                         'Develop critical thinking and analysis skills',
                         'Prepare for professional practice',
                         'Engage in reflective learning'
-                    ]
+                    ],
+                    source: 'moodle-api'
                 }
             });
 
         } catch (moodleError) {
             console.log('Moodle API error, returning default programme data:', moodleError.message);
             
-            // Fallback to default programme structure
-            res.json({
+            return res.json({
                 success: true,
                 data: {
                     programme: {
                         code: courseCode,
                         title: courseTitle,
-                        type: 'Bachelor Degree',
-                        studyMode: 'Full-time',
+                        type: app.course_type || 'Bachelor Degree',
+                        studyMode: app.mode_of_study || 'Full-time',
                         duration: '1 Year',
-                        startDate: new Date()
+                        startDate: app.intake_start_date || new Date()
                     },
                     modules: generateDefaultModules(courseCode),
                     outcomes: [
                         'Understand core principles and theories',
                         'Apply knowledge in practical scenarios',
                         'Develop critical thinking and analysis skills'
-                    ]
+                    ],
+                    source: 'default'
                 }
             });
         }
@@ -1767,5 +1845,39 @@ function generateDefaultModules(courseCode) {
         { code: 'MOD203', name: 'Module 6', credits: 20, semester: 'Semester 2' }
     ];
 }
+
+// Manual re-enrollment endpoint for testing/fixing
+router.post('/enroll-moodle', async (req, res) => {
+    try {
+        const { email, firstName, lastName, courseCode } = req.body;
+
+        if (!email || !courseCode) {
+            return res.status(400).json({
+                success: false,
+                message: 'Email and course code are required'
+            });
+        }
+
+        const moodleResult = await enrollStudentInMoodle(email, firstName || 'Student', lastName || 'User', courseCode);
+
+        res.json({
+            success: moodleResult.success,
+            message: moodleResult.message,
+            data: moodleResult.success ? {
+                email,
+                courseCode,
+                moodleCourseId: moodleResult.moodleCourseId,
+                moodleUserId: moodleResult.moodleUserId
+            } : null
+        });
+    } catch (error) {
+        console.error('Error in manual enrollment:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to enroll student',
+            error: error.message
+        });
+    }
+});
 
 module.exports = router;

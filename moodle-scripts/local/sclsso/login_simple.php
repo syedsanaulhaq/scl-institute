@@ -8,38 +8,32 @@ if (empty($token)) {
     redirect($CFG->wwwroot, 'Invalid or missing token');
 }
 
-// Connect to SCL backend database to validate token
+// Connect to SCL backend database
 $scldb = new mysqli('scli-mysql-dev', 'scl_user', 'scl_password', 'scl_institute');
 
 if ($scldb->connect_error) {
-    redirect($CFG->wwwroot, 'Database connection failed');
-}
-
-// Query to get user information for the token
-$stmt = $scldb->prepare("SELECT email, firstname, lastname, role FROM sso_tokens WHERE token = ? AND created_at > DATE_SUB(NOW(), INTERVAL 1 HOUR)");
-
-if (!$stmt) {
-    $scldb->close();
     redirect($CFG->wwwroot, 'Database error');
 }
 
+// Query token
+$stmt = $scldb->prepare("SELECT email, firstname, lastname, role FROM sso_tokens WHERE token = ? AND created_at > DATE_SUB(NOW(), INTERVAL 1 HOUR)");
 $stmt->bind_param("s", $token);
 $stmt->execute();
 $result = $stmt->get_result();
 
 if ($result->num_rows === 0) {
     $scldb->close();
-    redirect($CFG->wwwroot, 'Invalid or expired token');
+    redirect($CFG->wwwroot, 'Invalid token');
 }
 
 $tokenData = $result->fetch_assoc();
 $email = $tokenData['email'];
 $firstname = $tokenData['firstname'] ?: 'SCL';
 $lastname = $tokenData['lastname'] ?: 'User';
+$userrole = $tokenData['role'] ?: 'user';
 
 // Find or create Moodle user
 if (!$user = $DB->get_record('user', array('email' => $email, 'deleted' => 0))) {
-    // Create new user
     $user = new stdClass();
     $user->auth = 'manual';
     $user->confirmed = 1;
@@ -57,10 +51,8 @@ if (!$user = $DB->get_record('user', array('email' => $email, 'deleted' => 0))) 
     $user->timezone = 'Europe/London';
     $user->timecreated = time();
     $user->timemodified = time();
-    
     $user->id = $DB->insert_record('user', $user);
 } else {
-    // Update existing user
     $user->firstname = $firstname;
     $user->lastname = $lastname;
     $user->timemodified = time();
