@@ -38,6 +38,9 @@ $firstname = $tokenData['firstname'] ?: 'SCL';
 $lastname = $tokenData['lastname'] ?: 'User';
 $redirectUrl = !empty($tokenData['redirect_url']) ? $tokenData['redirect_url'] : null;  // Get redirect URL from database
 
+// Write debug info to file
+file_put_contents('/tmp/sso_debug.txt', date('Y-m-d H:i:s') . " - Token: $token, Email: $email, RedirectURL: " . var_export($redirectUrl, true) . "\n", FILE_APPEND);
+
 error_log('[SSO] Token data retrieved: email=' . $email . ', redirect_url=' . ($redirectUrl ?: 'NULL'));
 
 // Find or create Moodle user
@@ -75,22 +78,25 @@ complete_user_login($user);
 
 error_log('[SSO] User logged in: ' . $email);
 
-// Delete the token
-$delstmt = $scldb->prepare("DELETE FROM sso_tokens WHERE token = ?");
-$delstmt->bind_param("s", $token);
-$delstmt->execute();
+// Don't delete the token for debugging
+//$ delstmt = $scldb->prepare("DELETE FROM sso_tokens WHERE token = ?");
+//$delstmt->bind_param("s", $token);
+//$delstmt->execute();
 
 $scldb->close();
 
 // Redirect to provided location or default to courses page
-error_log('[SSO] About to redirect. redirectUrl=' . ($redirectUrl ?: 'EMPTY'));
+error_log('[SSO] About to redirect. redirectUrl=' . var_export($redirectUrl, true));
+error_log('[SSO] !empty($redirectUrl)=' . (int)!empty($redirectUrl));
 if (!empty($redirectUrl)) {
     // The redirectUrl is stored from the token, e.g., /mod/quiz/view.php?id=21
     $finalUrl = $CFG->wwwroot . $redirectUrl;
     error_log('[SSO] Redirecting to activity: ' . $finalUrl);
+    error_log('[SSO] calling redirect() with: ' . $finalUrl);
     redirect($finalUrl, 'Login successful');
 } else {
     error_log('[SSO] No redirect URL, redirecting to courses');
+    error_log('[SSO] calling redirect() with: ' . $CFG->wwwroot . '/my/courses.php');
     redirect($CFG->wwwroot . '/my/courses.php', 'Login successful');
 }
 ?>
