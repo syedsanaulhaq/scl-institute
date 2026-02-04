@@ -1947,4 +1947,159 @@ router.post('/enroll-moodle', async (req, res) => {
     }
 });
 
+// Get student timetable from Moodle course events and assignments
+router.get('/timetable/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        // Get student's application
+        const [appRows] = await db.execute(
+            'SELECT id, course_code FROM applications WHERE id = ?',
+            [id]
+        );
+
+        if (appRows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Application not found'
+            });
+        }
+
+        const courseCode = appRows[0].course_code;
+
+        // Connect to Moodle database
+        const moodleDb = mysql.createConnection({
+            host: process.env.MOODLE_DB_HOST || 'localhost',
+            user: process.env.MOODLE_DB_USER || 'root',
+            password: process.env.MOODLE_DB_PASSWORD || 'moodleroot',
+            database: process.env.MOODLE_DB_NAME || 'bitnami_moodle'
+        });
+
+        try {
+            await moodleDb.promise().query('SELECT 1');
+
+            // Get course ID
+            const [courseRows] = await moodleDb.execute(
+                `SELECT id FROM mdl_course WHERE idnumber = ? OR shortname = ? LIMIT 1`,
+                [courseCode, courseCode]
+            );
+
+            if (courseRows.length === 0) {
+                return res.json({
+                    success: true,
+                    data: {} // Return empty timetable
+                });
+            }
+
+            const courseId = courseRows[0].id;
+
+            // Get events from mdl_event table for this course
+            const [eventRows] = await moodleDb.execute(
+                `
+                SELECT e.id, e.name, e.eventtype, e.timestart, e.timeduration, e.description
+                FROM mdl_event e
+                WHERE e.courseid = ? AND e.timestart > ? AND e.visible = 1
+                ORDER BY e.timestart ASC
+                `,
+                [courseId, Math.floor(Date.now() / 1000) - 86400 * 7] // Events from last week onwards
+            );
+
+            // Get assignments with due dates
+            const [assignmentRows] = await moodleDb.execute(
+                `
+                SELECT a.id, a.name, a.duedate, cm.id as cm_id
+                FROM mdl_assign a
+                JOIN mdl_course_modules cm ON cm.instance = a.id AND cm.module = (SELECT id FROM mdl_modules WHERE name = 'assign')
+                WHERE cm.course = ? AND a.duedate > ?
+                ORDER BY a.duedate ASC
+                `,
+                [courseId, Math.floor(Date.now() / 1000) - 86400 * 7]
+            );
+
+            // Organize by day of week
+            const timetable = {
+                Monday: [],
+                Tuesday: [],
+                Wednesday: [],
+                Thursday: [],
+                Friday: [],
+                Saturday: [],
+                Sunday: []
+            };
+
+            const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+            // Add events to timetable
+            if (eventRows && eventRows.length > 0) {
+                eventRows.forEach(event => {
+                    if (event.timestart) {
+                        const eventDate = new Date(event.timestart * 1000);
+                        const dayIndex = eventDate.getDay();
+                        const dayName = dayNames[dayIndex];
+                        const timeStr = eventDate.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+                        
+                        const duration = event.timeduration ? Math.floor(event.timeduration / 3600) : 1;
+                        const endTime = new Date(event.timestart * 1000 + event.timeduration * 1000).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+
+                        timetable[dayName].push({
+                            type: 'Event',
+                            module: event.name,
+                            code: 'EVT',
+                            time: `${timeStr} - ${endTime}`,
+                            room: 'TBD',
+                            instructor: 'TBD'
+                        });
+                    }
+                });
+            }
+
+            // Add assignments (as "Assignment" type events due on specific days)
+            if (assignmentRows && assignmentRows.length > 0) {
+                assignmentRows.forEach(assignment => {
+                    if (assignment.duedate) {
+                        const dueDate = new Date(assignment.duedate * 1000);
+                        const dayIndex = dueDate.getDay();
+                        const dayName = dayNames[dayIndex];
+                        const timeStr = dueDate.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+
+                        timetable[dayName].push({
+                            type: 'Assignment',
+                            module: assignment.name,
+                            code: 'ASSGN',
+                            time: `Due: ${timeStr}`,
+                            room: 'Online',
+                            online: true,
+                            instructor: 'Submit online'
+                        });
+                    }
+                });
+            }
+
+            // If no data from Moodle, return what we have (might be empty)
+            return res.json({
+                success: true,
+                data: timetable
+            });
+
+        } catch (moodleError) {
+            console.log('Moodle DB error:', moodleError.message);
+            // Return empty timetable on error
+            return res.json({
+                success: true,
+                data: {}
+            });
+        } finally {
+            await moodleDb.end();
+        }
+
+    } catch (error) {
+        console.error('Error fetching timetable:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch timetable',
+            error: error.message
+        });
+    }
+});
+
 module.exports = router;
