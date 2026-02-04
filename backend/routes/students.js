@@ -1668,7 +1668,11 @@ router.get('/programme/:id', async (req, res) => {
                     name: section.name || `Section ${section.section || idx + 1}`,
                     credits: 20,
                     semester: idx < 3 ? 'Semester 1' : 'Semester 2',
-                    modules: Array.from({ length: section.module_count || 0 }, () => ({}))
+                    modules: Array.from({ length: section.module_count || 0 }, (_, i) => ({
+                        id: i + 1,
+                        type: 'activity',
+                        title: `Activity ${i + 1}`
+                    }))
                 }));
 
                 return res.json({
