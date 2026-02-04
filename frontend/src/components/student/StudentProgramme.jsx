@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BookOpen, Calendar, Award, Target, ExternalLink } from 'lucide-react';
 import axios from 'axios';
 
@@ -11,6 +11,7 @@ const StudentProgramme = ({ user }) => {
     const [error, setError] = useState('');
     const [ssoLoading, setSsoLoading] = useState(false);
     const [ssoError, setSsoError] = useState('');
+    const outcomesRef = React.useRef(null);
 
     useEffect(() => {
         fetchProgrammeData();
@@ -66,6 +67,10 @@ const StudentProgramme = ({ user }) => {
         } finally {
             setSsoLoading(false);
         }
+    };
+
+    const scrollToOutcomes = () => {
+        outcomesRef.current?.scrollIntoView({ behavior: 'smooth' });
     };
 
     if (loading) {
@@ -126,14 +131,20 @@ const StudentProgramme = ({ user }) => {
                     </div>
                     <ExternalLink className="w-4 h-4 text-gray-400 ml-auto" />
                 </button>
-                <button className="flex items-center gap-3 p-4 bg-white rounded-lg shadow hover:shadow-md transition-shadow">
+                <button 
+                    type="button"
+                    onClick={() => alert('Timetable feature coming soon. Check your course schedule in Moodle.')}
+                    className="flex items-center gap-3 p-4 bg-white rounded-lg shadow hover:shadow-md transition-shadow cursor-pointer">
                     <Calendar className="w-8 h-8 text-green-600" />
                     <div className="text-left">
                         <p className="font-semibold text-gray-900">Timetable</p>
                         <p className="text-xs text-gray-600">View class schedule</p>
                     </div>
                 </button>
-                <button className="flex items-center gap-3 p-4 bg-white rounded-lg shadow hover:shadow-md transition-shadow">
+                <button 
+                    type="button"
+                    onClick={scrollToOutcomes}
+                    className="flex items-center gap-3 p-4 bg-white rounded-lg shadow hover:shadow-md transition-shadow cursor-pointer">
                     <Target className="w-8 h-8 text-purple-600" />
                     <div className="text-left">
                         <p className="font-semibold text-gray-900">Learning Outcomes</p>
@@ -203,7 +214,7 @@ const StudentProgramme = ({ user }) => {
 
             {/* Learning Outcomes */}
             {learningOutcomes.length > 0 && (
-                <div className="bg-white rounded-lg shadow p-6">
+                <div ref={outcomesRef} className="bg-white rounded-lg shadow p-6">
                     <h2 className="text-xl font-bold text-gray-900 mb-4">Learning Outcomes</h2>
                     <div className="space-y-3">
                         {learningOutcomes.map((outcome, index) => (
