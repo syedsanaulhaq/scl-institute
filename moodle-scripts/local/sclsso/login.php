@@ -3,7 +3,6 @@ require_once('../../config.php');
 require_once($CFG->libdir.'/adminlib.php');
 
 $token = optional_param('token', '', PARAM_ALPHANUMEXT);
-$redirect = optional_param('redirect', '', PARAM_RAW);  // Use PARAM_RAW to preserve the redirect URL
 
 if (empty($token)) {
     redirect($CFG->wwwroot, 'Invalid or missing token');
@@ -17,7 +16,7 @@ if ($scldb->connect_error) {
 }
 
 // Query to get user information for the token
-$stmt = $scldb->prepare("SELECT email, firstname, lastname, role FROM sso_tokens WHERE token = ? AND created_at > DATE_SUB(NOW(), INTERVAL 1 HOUR)");
+$stmt = $scldb->prepare("SELECT email, firstname, lastname, role, redirect_url FROM sso_tokens WHERE token = ? AND created_at > DATE_SUB(NOW(), INTERVAL 1 HOUR)");
 
 if (!$stmt) {
     $scldb->close();
@@ -37,6 +36,7 @@ $tokenData = $result->fetch_assoc();
 $email = $tokenData['email'];
 $firstname = $tokenData['firstname'] ?: 'SCL';
 $lastname = $tokenData['lastname'] ?: 'User';
+$redirectUrl = $tokenData['redirect_url'];  // Get redirect URL from database
 
 // Find or create Moodle user
 if (!$user = $DB->get_record('user', array('email' => $email, 'deleted' => 0))) {
@@ -79,13 +79,13 @@ $delstmt->execute();
 $scldb->close();
 
 // Redirect to provided location or default to courses page
-if (!empty($redirect)) {
-    // The redirect parameter is already a path like /mod/quiz/view.php?id=21
-    $redirectUrl = $CFG->wwwroot . $redirect;
-    error_log('[SSO] Redirecting to: ' . $redirectUrl);
-    redirect($redirectUrl, 'Login successful');
+if (!empty($redirectUrl)) {
+    // The redirectUrl is stored from the token, e.g., /mod/quiz/view.php?id=21
+    $finalUrl = $CFG->wwwroot . $redirectUrl;
+    error_log('[SSO] Redirecting to: ' . $finalUrl);
+    redirect($finalUrl, 'Login successful');
 } else {
-    error_log('[SSO] No redirect provided, redirecting to courses');
+    error_log('[SSO] No redirect URL stored, redirecting to courses');
     redirect($CFG->wwwroot . '/my/courses.php', 'Login successful');
 }
 ?>

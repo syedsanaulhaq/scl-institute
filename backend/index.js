@@ -45,6 +45,7 @@ async function initDB() {
                 firstname VARCHAR(255),
                 lastname VARCHAR(255),
                 role VARCHAR(50),
+                redirect_url VARCHAR(500),
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         `);
@@ -187,16 +188,15 @@ app.post('/api/sso/generate', async (req, res) => {
     try {
         console.log(`[SSO] Inserting token into DB...`);
         await pool.query(
-            'INSERT INTO sso_tokens (token, email, firstname, lastname, role) VALUES (?, ?, ?, ?, ?)',
-            [token, user.email, firstname, lastname, user.role]
+            'INSERT INTO sso_tokens (token, email, firstname, lastname, role, redirect_url) VALUES (?, ?, ?, ?, ?, ?)',
+            [token, user.email, firstname, lastname, user.role, redirect_to || null]
         );
         const moodleUrl = process.env.MOODLE_URL || 'http://localhost:9090';
         let redirectUrl = `${moodleUrl}/local/sclsso/login.php?token=${token}`;
         
-        // If redirect_to is provided, encode it and append to the SSO login URL
+        // Log the redirect if provided
         if (redirect_to) {
-            redirectUrl += `&redirect=${encodeURIComponent(redirect_to)}`;
-            console.log(`[SSO] Adding redirect: ${redirect_to}`);
+            console.log(`[SSO] Token includes redirect to: ${redirect_to}`);
         }
         
         console.log(`[SSO] Token created. Final Redirect URL: ${redirectUrl}`);
