@@ -36,7 +36,7 @@ $tokenData = $result->fetch_assoc();
 $email = $tokenData['email'];
 $firstname = $tokenData['firstname'] ?: 'SCL';
 $lastname = $tokenData['lastname'] ?: 'User';
-$redirectUrl = $tokenData['redirect_url'];  // Get redirect URL from database
+$redirectUrl = !empty($tokenData['redirect_url']) ? $tokenData['redirect_url'] : null;  // Get redirect URL from database
 
 error_log('[SSO] Token data retrieved: email=' . $email . ', redirect_url=' . ($redirectUrl ?: 'NULL'));
 
