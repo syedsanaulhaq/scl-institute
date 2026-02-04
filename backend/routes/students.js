@@ -1954,7 +1954,7 @@ router.get('/timetable/:id', async (req, res) => {
 
         // Get student's application
         const [appRows] = await db.execute(
-            'SELECT id, course_code FROM applications WHERE id = ?',
+            'SELECT id, course_code FROM student_applications WHERE id = ?',
             [id]
         );
 
