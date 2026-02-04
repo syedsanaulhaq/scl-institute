@@ -6,6 +6,7 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
 
 const StudentProgramme = ({ user }) => {
     const [programmeData, setProgrammeData] = useState(null);
+    const [courseModules, setCourseModules] = useState([]);
     const [learningOutcomes, setLearningOutcomes] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
@@ -30,11 +31,12 @@ const StudentProgramme = ({ user }) => {
                     // Then fetch the programme details
                     const progResponse = await axios.get(`${API_URL}/students/programme/${studentApp.id}`);
                     if (progResponse.data?.success) {
-                        const { programme, outcomes } = progResponse.data.data;
+                        const { programme, modules, outcomes } = progResponse.data.data;
                         setProgrammeData({
                             ...studentApp,
                             ...programme
                         });
+                        setCourseModules(modules || []);
                         setLearningOutcomes(outcomes || []);
                     }
                 } else {
@@ -211,6 +213,38 @@ const StudentProgramme = ({ user }) => {
                     {ssoLoading ? 'Connecting...' : 'Open Learning Management System'}
                 </button>
             </div>
+
+            {/* Programme Modules */}
+            {courseModules.length > 0 && (
+                <div className="bg-white rounded-lg shadow p-6 mb-8">
+                    <h2 className="text-xl font-bold text-gray-900 mb-4">Programme Sections</h2>
+                    <div className="space-y-3">
+                        {courseModules.map((module, index) => (
+                            <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200 hover:border-blue-300 transition-colors">
+                                <div className="flex items-center gap-4 flex-1">
+                                    <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                                        <BookOpen className="w-6 h-6 text-blue-600" />
+                                    </div>
+                                    <div>
+                                        <p className="font-semibold text-gray-900">{module.name}</p>
+                                        <p className="text-sm text-gray-600">{module.credits} Credits</p>
+                                        {module.modules?.length > 0 && (
+                                            <p className="text-xs text-gray-500 mt-1">
+                                                {module.modules.length} activities in Moodle
+                                            </p>
+                                        )}
+                                    </div>
+                                </div>
+                                <div className="text-right">
+                                    <span className="inline-block px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
+                                        {module.semester}
+                                    </span>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
 
             {/* Learning Outcomes */}
             {learningOutcomes.length > 0 && (
