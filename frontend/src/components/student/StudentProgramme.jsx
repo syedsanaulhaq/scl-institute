@@ -134,9 +134,21 @@ const StudentProgramme = ({ user }) => {
 
             {/* Course Summary from Moodle */}
             {programmeData?.summary && (
-                <div ref={outcomesRef} className="bg-white rounded-lg shadow p-6 mb-8">
-                    <h2 className="text-2xl font-bold text-gray-900 mb-4">Course Summary</h2>
-                    <div className="prose prose-sm max-w-none text-gray-700" dangerouslySetInnerHTML={{ __html: programmeData.summary }} />
+                <div ref={outcomesRef} className="bg-white rounded-lg shadow p-8 mb-8">
+                    <div className="flex gap-8">
+                        <div className="flex-1">
+                            <h2 className="text-2xl font-bold text-gray-900 mb-4">Course Summary</h2>
+                            <div className="prose prose-sm max-w-none text-gray-700" dangerouslySetInnerHTML={{ __html: programmeData.summary }} />
+                        </div>
+                        <div className="w-64 flex-shrink-0">
+                            <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg h-64 flex items-center justify-center shadow-md">
+                                <div className="text-center">
+                                    <Award className="w-20 h-20 text-white mx-auto mb-3" />
+                                    <p className="text-white font-semibold">{programmeData?.title || 'Course'}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             )}
 
