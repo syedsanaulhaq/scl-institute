@@ -217,48 +217,28 @@ const StudentProgramme = ({ user }) => {
             {/* Programme Modules */}
             {courseModules.length > 0 && (
                 <div className="bg-white rounded-lg shadow p-6 mb-8">
-                    <h2 className="text-xl font-bold text-gray-900 mb-4">Programme Sections</h2>
+                    <div className="flex items-center justify-between mb-6">
+                        <h2 className="text-xl font-bold text-gray-900">Programme Modules</h2>
+                        <span className="text-sm text-gray-600">From Moodle</span>
+                    </div>
                     <div className="space-y-6">
                         {courseModules.map((module, index) => (
-                            <div key={index} className="border border-gray-200 rounded-lg overflow-hidden">
-                                {/* Section Header */}
-                                <div className="flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 transition-colors">
-                                    <div className="flex items-center gap-4 flex-1">
-                                        <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                                            <BookOpen className="w-6 h-6 text-blue-600" />
-                                        </div>
-                                        <div>
-                                            <p className="font-semibold text-gray-900">{module.name}</p>
-                                            <p className="text-sm text-gray-600">{module.credits} Credits</p>
-                                            {module.modules?.length > 0 && (
-                                                <p className="text-xs text-gray-500 mt-1">
-                                                    {module.modules.length} activities
-                                                </p>
-                                            )}
-                                        </div>
-                                    </div>
-                                    <div className="text-right">
-                                        <span className="inline-block px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
-                                            {module.semester}
-                                        </span>
-                                    </div>
-                                </div>
-
-                                {/* Section Activities/Content */}
-                                {module.modules?.length > 0 && (
-                                    <div className="bg-white border-t border-gray-200 p-4">
-                                        <p className="text-sm font-semibold text-gray-700 mb-3">Course Content:</p>
-                                        <ul className="space-y-2 list-disc list-inside">
-                                            {module.modules.map((activity, actIndex) => (
-                                                <li key={actIndex} className="text-gray-800">
-                                                    <span className="font-medium">{activity.title || activity.name || 'Activity'}</span>
-                                                    {activity.type && (
-                                                        <span className="text-xs text-gray-600 ml-2">({activity.type})</span>
-                                                    )}
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    </div>
+                            <div key={index}>
+                                <h3 className="text-lg font-semibold text-gray-900 mb-3">{module.name}</h3>
+                                {module.modules?.length > 0 ? (
+                                    <ul className="space-y-1 ml-4">
+                                        {module.modules.map((activity, actIndex) => (
+                                            <li key={actIndex} className="text-gray-700 flex items-start gap-2">
+                                                <span className="text-gray-400 mt-0.5">--</span>
+                                                <span>{activity.title || activity.name || 'Activity'}</span>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                ) : (
+                                    <p className="text-gray-500 text-sm ml-4">No activities yet</p>
+                                )}
+                                {index < courseModules.length - 1 && (
+                                    <div className="border-t border-gray-200 mt-6"></div>
                                 )}
                             </div>
                         ))}
