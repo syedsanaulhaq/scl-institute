@@ -77,6 +77,6 @@ $delstmt->execute();
 
 $scldb->close();
 
-// Redirect to dashboard
-redirect($CFG->wwwroot . '/my/', 'Login successful');
+// Redirect to courses page
+redirect($CFG->wwwroot . '/my/courses.php', 'Login successful');
 ?>
