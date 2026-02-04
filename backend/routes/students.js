@@ -2018,7 +2018,7 @@ router.get('/timetable/:id', async (req, res) => {
             const [eventRows] = await moodlePool.execute(
                 `
                 SELECT 
-                    e.id, e.name, e.eventtype, e.timestart, e.timeduration, e.description,
+                    e.id, e.name, e.eventtype, e.modulename, e.timestart, e.timeduration, e.description,
                     CASE 
                         WHEN e.modulename = 'quiz' THEN CONCAT('/mod/quiz/view.php?id=', cm.id)
                         WHEN e.modulename = 'assign' THEN CONCAT('/mod/assign/view.php?id=', cm.id)
@@ -2077,10 +2077,22 @@ router.get('/timetable/:id', async (req, res) => {
                         const duration = event.timeduration ? Math.floor(event.timeduration / 3600) : 1;
                         const endTime = new Date(event.timestart * 1000 + event.timeduration * 1000).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
 
+                        // Map Moodle modulename to display type
+                        let displayType = 'Event';
+                        if (event.modulename === 'quiz') {
+                            displayType = 'Quiz';
+                        } else if (event.modulename === 'assign') {
+                            displayType = 'Assignment';
+                        } else if (event.modulename === 'forum') {
+                            displayType = 'Forum';
+                        } else if (event.modulename === 'lesson') {
+                            displayType = 'Lesson';
+                        }
+
                         const eventObj = {
-                            type: 'Event',
+                            type: displayType,
                             module: event.name,
-                            code: 'EVT',
+                            code: event.modulename ? event.modulename.toUpperCase() : 'EVT',
                             time: `${timeStr} - ${endTime}`,
                             room: 'TBD',
                             instructor: 'TBD'
