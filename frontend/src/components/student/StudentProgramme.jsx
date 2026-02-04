@@ -184,14 +184,22 @@ const StudentProgramme = ({ user }) => {
                     onClick={scrollToOutcomes}
                     className="px-4 py-2 bg-gray-200 text-gray-900 rounded text-sm font-medium hover:bg-gray-300 transition-colors"
                 >
-                    Learning Outcomes
+                    Course Summary
                 </button>
             </div>
 
-            {/* Learning Outcomes */}
-            {learningOutcomes.length > 0 && (
+            {/* Course Summary from Moodle */}
+            {programmeData?.summary && (
+                <div ref={outcomesRef} className="bg-white rounded-lg shadow p-6 mb-8">
+                    <h2 className="text-2xl font-bold text-gray-900 mb-4">Course Summary</h2>
+                    <div className="prose prose-sm max-w-none text-gray-700" dangerouslySetInnerHTML={{ __html: programmeData.summary }} />
+                </div>
+            )}
+
+            {/* Learning Outcomes - Fallback if no summary */}
+            {!programmeData?.summary && learningOutcomes.length > 0 && (
                 <div ref={outcomesRef} className="bg-white rounded-lg shadow p-6">
-                    <h2 className="text-xl font-bold text-gray-900 mb-4">Learning Outcomes</h2>
+                    <h2 className="text-2xl font-bold text-gray-900 mb-4">Learning Outcomes</h2>
                     <div className="space-y-3">
                         {learningOutcomes.map((outcome, index) => (
                             <div key={index} className="flex items-start gap-3">
