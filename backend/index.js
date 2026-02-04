@@ -196,9 +196,10 @@ app.post('/api/sso/generate', async (req, res) => {
         // If redirect_to is provided, encode it and append to the SSO login URL
         if (redirect_to) {
             redirectUrl += `&redirect=${encodeURIComponent(redirect_to)}`;
+            console.log(`[SSO] Adding redirect: ${redirect_to}`);
         }
         
-        console.log(`[SSO] Token created. Redirect: ${redirectUrl}`);
+        console.log(`[SSO] Token created. Final Redirect URL: ${redirectUrl}`);
         res.json({ success: true, redirectUrl });
     } catch (err) {
         console.error("[SSO] Generate Error:", err.message);
