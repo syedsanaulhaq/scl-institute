@@ -22,14 +22,16 @@ const StudentTimetable = ({ user }) => {
                 email: user?.email 
             });
             if (response.data?.success && response.data?.redirectUrl) {
-                // If moodleUrl is provided, modify the redirect to include the specific activity
+                // If moodleUrl is provided, construct the full URL with SSO token
                 let finalUrl = response.data.redirectUrl;
                 if (moodleUrl) {
-                    // Extract the token from the redirect URL and replace the path
+                    // Extract the token from the redirect URL
                     const tokenMatch = response.data.redirectUrl.match(/token=([^&]+)/);
                     if (tokenMatch) {
                         const token = tokenMatch[1];
-                        finalUrl = `${moodleUrl}?token=${token}`;
+                        const moodleBaseUrl = 'http://localhost:9090';
+                        // Construct full URL with base, path, and token
+                        finalUrl = `${moodleBaseUrl}${moodleUrl}&token=${token}`;
                     }
                 }
                 window.open(finalUrl, '_blank');
