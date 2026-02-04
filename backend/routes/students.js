@@ -1650,29 +1650,7 @@ router.get('/programme/:id', async (req, res) => {
             if (courseRows.length > 0) {
                 const studentCourse = courseRows[0];
                 
-                // Get course image URL
-                const [imageRows] = await moodleDb.execute(
-                    `
-                    SELECT f.id, f.contextid, f.filename, f.contenthash
-                    FROM mdl_files f
-                    WHERE f.component = 'course' 
-                    AND f.filearea = 'overviewfiles' 
-                    AND f.filename NOT LIKE '.%'
-                    AND f.itemid = 0
-                    LIMIT 1
-                    `
-                );
-                
-                let courseImageUrl = null;
-                if (imageRows.length > 0) {
-                    const imageFile = imageRows[0];
-                    const moodleUrl = process.env.MOODLE_URL || 'http://localhost:9090';
-                    // Use contenthash for the URL path to ensure file is found in Moodle storage
-                    const hash = imageFile.contenthash;
-                    const hashPath = hash.substring(0, 2) + '/' + hash.substring(2);
-                    courseImageUrl = `${moodleUrl}/pluginfile.php/${imageFile.contextid}/course/overviewfiles/${hashPath}/${imageFile.filename}`;
-                }
-                
+                // Get course image - try to read from disk directly
                 const [sectionRows] = await moodleDb.execute(
                     `
                     SELECT cs.id, cs.section, cs.name, COUNT(cm.id) AS module_count
@@ -1772,8 +1750,7 @@ router.get('/programme/:id', async (req, res) => {
                             moodleCourseId: studentCourse.id,
                             startDate: studentCourse.startdate ? new Date(studentCourse.startdate * 1000) : app.intake_start_date,
                             endDate: studentCourse.enddate ? new Date(studentCourse.enddate * 1000) : null,
-                            summary: studentCourse.summary || null,
-                            courseImage: courseImageUrl
+                            summary: studentCourse.summary || null
                         },
                         modules: modules.length > 0 ? modules : generateDefaultModules(courseCode),
                         outcomes: [

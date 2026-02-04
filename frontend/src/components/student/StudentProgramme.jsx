@@ -132,31 +132,11 @@ const StudentProgramme = ({ user }) => {
                 </div>
             )}
 
-            {/* Course Summary from Moodle */}
+            {/* Programme Summary from Moodle */}
             {programmeData?.summary && (
                 <div ref={outcomesRef} className="bg-white rounded-lg shadow p-8 mb-8">
-                    <div className="flex gap-8">
-                        <div className="flex-1">
-                            <h2 className="text-2xl font-bold text-gray-900 mb-4">Course Summary</h2>
-                            <div className="prose prose-sm max-w-none text-gray-700" dangerouslySetInnerHTML={{ __html: programmeData.summary }} />
-                        </div>
-                        <div className="w-64 flex-shrink-0">
-                            {programmeData?.courseImage ? (
-                                <img 
-                                    src={programmeData.courseImage} 
-                                    alt={programmeData.title || 'Course'} 
-                                    className="w-full h-64 object-cover rounded-lg shadow-md"
-                                />
-                            ) : (
-                                <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg h-64 flex items-center justify-center shadow-md">
-                                    <div className="text-center">
-                                        <Award className="w-20 h-20 text-white mx-auto mb-3" />
-                                        <p className="text-white font-semibold text-sm px-4">{programmeData?.title || 'Course'}</p>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    </div>
+                    <h2 className="text-2xl font-bold text-gray-900 mb-4">Programme Summary</h2>
+                    <div className="prose prose-sm max-w-none text-gray-700" dangerouslySetInnerHTML={{ __html: programmeData.summary }} />
                 </div>
             )}
 
@@ -179,7 +159,7 @@ const StudentProgramme = ({ user }) => {
             {courseModules.length > 0 && (
                 <div className="bg-white rounded-lg shadow mb-8">
                     <div className="p-6 border-b border-gray-200">
-                        <h2 className="text-2xl font-bold text-gray-900">Course Content</h2>
+                        <h2 className="text-2xl font-bold text-gray-900">Programme Content</h2>
                     </div>
                     <div className="divide-y divide-gray-200">
                         {courseModules.map((module, index) => (
