@@ -1978,20 +1978,36 @@ router.get('/timetable/:id', async (req, res) => {
         try {
             await moodleDb.promise().query('SELECT 1');
 
-            // Get course ID
+            // Get course ID - try multiple ways to find the course
+            let courseId = null;
+            
+            // First try by idnumber or shortname
             const [courseRows] = await moodleDb.execute(
                 `SELECT id FROM mdl_course WHERE idnumber = ? OR shortname = ? LIMIT 1`,
                 [courseCode, courseCode]
             );
-
-            if (courseRows.length === 0) {
+            
+            if (courseRows.length > 0) {
+                courseId = courseRows[0].id;
+            } else {
+                // Try by fullname match
+                const [fullnameRows] = await moodleDb.execute(
+                    `SELECT id FROM mdl_course WHERE fullname LIKE ? LIMIT 1`,
+                    [`%${courseCode}%`]
+                );
+                if (fullnameRows.length > 0) {
+                    courseId = fullnameRows[0].id;
+                }
+            }
+            
+            // If still no course found, just return empty data
+            if (!courseId) {
+                console.log(`Timetable: No course found for code '${courseCode}'`);
                 return res.json({
                     success: true,
-                    data: {} // Return empty timetable
+                    data: {}
                 });
             }
-
-            const courseId = courseRows[0].id;
 
             // Get events from mdl_event table for this course
             const [eventRows] = await moodleDb.execute(
