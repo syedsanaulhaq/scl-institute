@@ -12,7 +12,15 @@ const StudentProgramme = ({ user }) => {
     const [error, setError] = useState('');
     const [ssoLoading, setSsoLoading] = useState(false);
     const [ssoError, setSsoError] = useState('');
+    const [expandedSections, setExpandedSections] = useState({});
     const outcomesRef = React.useRef(null);
+
+    const toggleSection = (index) => {
+        setExpandedSections(prev => ({
+            ...prev,
+            [index]: !prev[index]
+        }));
+    };
 
     useEffect(() => {
         fetchProgrammeData();
@@ -88,7 +96,7 @@ const StudentProgramme = ({ user }) => {
             <h1 className="text-3xl font-bold text-gray-900 mb-8">My Programme</h1>
 
             {/* Programme Overview */}
-            <div className="bg-gradient-to-r from-blue-600 to-blue-800 rounded-lg shadow p-6 mb-6 text-white">
+            <div className="bg-gradient-to-r from-blue-600 to-blue-800 rounded-lg shadow p-6 mb-8 text-white">
                 <div className="flex items-start justify-between">
                     <div>
                         <h2 className="text-2xl font-bold mb-2">{programmeData?.title || programmeData?.course_title || 'Programme Title'}</h2>
@@ -118,124 +126,67 @@ const StudentProgramme = ({ user }) => {
                 </div>
             </div>
 
-            {/* Quick Actions */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                <button
-                    type="button"
-                    onClick={handleAccessLMS}
-                    className="flex items-center gap-3 p-4 bg-white rounded-lg shadow hover:shadow-md transition-shadow disabled:opacity-60"
-                    disabled={ssoLoading}
-                >
-                    <BookOpen className="w-8 h-8 text-blue-600" />
-                    <div>
-                        <p className="font-semibold text-gray-900">Open Moodle (SSO)</p>
-                        <p className="text-xs text-gray-600">Live course content & activities</p>
-                    </div>
-                    <ExternalLink className="w-4 h-4 text-gray-400 ml-auto" />
-                </button>
-                <button 
-                    type="button"
-                    onClick={() => alert('Timetable feature coming soon. Check your course schedule in Moodle.')}
-                    className="flex items-center gap-3 p-4 bg-white rounded-lg shadow hover:shadow-md transition-shadow cursor-pointer">
-                    <Calendar className="w-8 h-8 text-green-600" />
-                    <div className="text-left">
-                        <p className="font-semibold text-gray-900">Timetable</p>
-                        <p className="text-xs text-gray-600">View class schedule</p>
-                    </div>
-                </button>
-                <button 
-                    type="button"
-                    onClick={scrollToOutcomes}
-                    className="flex items-center gap-3 p-4 bg-white rounded-lg shadow hover:shadow-md transition-shadow cursor-pointer">
-                    <Target className="w-8 h-8 text-purple-600" />
-                    <div className="text-left">
-                        <p className="font-semibold text-gray-900">Learning Outcomes</p>
-                        <p className="text-xs text-gray-600">Programme objectives</p>
-                    </div>
-                </button>
-            </div>
-
             {ssoError && (
                 <div className="mb-6 p-3 bg-red-50 text-red-700 border border-red-200 rounded-lg text-sm">
                     {ssoError}
                 </div>
             )}
 
-            {/* Programme Overview */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                <div className="bg-white rounded-lg shadow p-6">
-                    <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                            <BookOpen className="w-6 h-6 text-blue-600" />
-                        </div>
-                        <div>
-                            <p className="text-sm text-gray-600">Programme</p>
-                            <p className="font-semibold text-gray-900">{programmeData?.title || programmeData?.course_title}</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="bg-white rounded-lg shadow p-6">
-                    <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                            <Award className="w-6 h-6 text-green-600" />
-                        </div>
-                        <div>
-                            <p className="text-sm text-gray-600">Type</p>
-                            <p className="font-semibold text-gray-900">{programmeData?.type || 'Bachelor Degree'}</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="bg-white rounded-lg shadow p-6">
-                    <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                            <Calendar className="w-6 h-6 text-purple-600" />
-                        </div>
-                        <div>
-                            <p className="text-sm text-gray-600">Study Mode</p>
-                            <p className="font-semibold text-gray-900">{programmeData?.studyMode || 'Full-time'}</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {/* Access LMS Button */}
-            <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg shadow-lg p-8 mb-8 text-center">
-                <h2 className="text-2xl font-bold text-white mb-3">Access Your Course</h2>
-                <p className="text-blue-100 mb-6">View course materials, assignments, and collaborate with peers</p>
-                <button
-                    onClick={handleAccessLMS}
-                    disabled={ssoLoading}
-                    className="inline-flex items-center gap-2 bg-white text-blue-600 font-bold px-8 py-3 rounded-lg hover:bg-blue-50 transition-colors disabled:opacity-50"
-                >
-                    <ExternalLink className="w-5 h-5" />
-                    {ssoLoading ? 'Connecting...' : 'Open Learning Management System'}
-                </button>
-            </div>
-
-            {/* Programme Modules */}
+            {/* Programme Modules - Moodle Style */}
             {courseModules.length > 0 && (
-                <div className="bg-white rounded-lg shadow p-6 mb-8">
-                    <h2 className="text-xl font-bold text-gray-900 mb-6">Programme Modules</h2>
+                <div className="bg-white rounded-lg shadow mb-8">
+                    <div className="p-6 border-b border-gray-200">
+                        <h2 className="text-lg font-bold text-gray-900">Sections</h2>
+                    </div>
                     <div className="divide-y divide-gray-200">
                         {courseModules.map((module, index) => (
-                            <div key={index} className="py-4">
-                                <h3 className="text-base font-semibold text-gray-900 mb-2">{module.name}</h3>
-                                {module.modules?.length > 0 ? (
-                                    <ul className="ml-4 text-sm text-gray-700">
-                                        {module.modules.map((activity, actIndex) => (
-                                            <li key={actIndex} className="py-1">
-                                                • {activity.title || activity.name || 'Activity'}
-                                            </li>
-                                        ))}
-                                    </ul>
-                                ) : null}
+                            <div key={index} className="border-b border-gray-100">
+                                <button
+                                    onClick={() => toggleSection(index)}
+                                    className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <span className={`text-gray-600 transition-transform ${expandedSections[index] ? 'rotate-180' : ''}`}>
+                                            ▼
+                                        </span>
+                                        <h3 className="text-base font-medium text-gray-900">{module.name}</h3>
+                                    </div>
+                                </button>
+                                {expandedSections[index] && module.modules?.length > 0 && (
+                                    <div className="px-6 py-4 bg-gray-50 border-t border-gray-200">
+                                        <ul className="space-y-3">
+                                            {module.modules.map((activity, actIndex) => (
+                                                <li key={actIndex} className="flex items-center gap-3 text-sm text-gray-700">
+                                                    <BookOpen className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                                                    <span>{activity.title || activity.name || 'Activity'}</span>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                )}
                             </div>
                         ))}
                     </div>
                 </div>
             )}
+
+            {/* Simple Access LMS Button */}
+            <div className="flex gap-3 mb-8">
+                <button
+                    onClick={handleAccessLMS}
+                    disabled={ssoLoading}
+                    className="px-4 py-2 bg-blue-600 text-white rounded text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-60"
+                >
+                    {ssoLoading ? 'Connecting...' : 'Open in Moodle'}
+                </button>
+                <button 
+                    type="button"
+                    onClick={scrollToOutcomes}
+                    className="px-4 py-2 bg-gray-200 text-gray-900 rounded text-sm font-medium hover:bg-gray-300 transition-colors"
+                >
+                    Learning Outcomes
+                </button>
+            </div>
 
             {/* Learning Outcomes */}
             {learningOutcomes.length > 0 && (
