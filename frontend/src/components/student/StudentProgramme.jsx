@@ -217,29 +217,20 @@ const StudentProgramme = ({ user }) => {
             {/* Programme Modules */}
             {courseModules.length > 0 && (
                 <div className="bg-white rounded-lg shadow p-6 mb-8">
-                    <div className="flex items-center justify-between mb-6">
-                        <h2 className="text-xl font-bold text-gray-900">Programme Modules</h2>
-                        <span className="text-sm text-gray-600">From Moodle</span>
-                    </div>
-                    <div className="space-y-6">
+                    <h2 className="text-xl font-bold text-gray-900 mb-6">Programme Modules</h2>
+                    <div className="divide-y divide-gray-200">
                         {courseModules.map((module, index) => (
-                            <div key={index}>
-                                <h3 className="text-lg font-semibold text-gray-900 mb-3">{module.name}</h3>
+                            <div key={index} className="py-4">
+                                <h3 className="text-base font-semibold text-gray-900 mb-2">{module.name}</h3>
                                 {module.modules?.length > 0 ? (
-                                    <ul className="space-y-1 ml-4">
+                                    <ul className="ml-4 text-sm text-gray-700">
                                         {module.modules.map((activity, actIndex) => (
-                                            <li key={actIndex} className="text-gray-700 flex items-start gap-2">
-                                                <span className="text-gray-400 mt-0.5">--</span>
-                                                <span>{activity.title || activity.name || 'Activity'}</span>
+                                            <li key={actIndex} className="py-1">
+                                                • {activity.title || activity.name || 'Activity'}
                                             </li>
                                         ))}
                                     </ul>
-                                ) : (
-                                    <p className="text-gray-500 text-sm ml-4">No activities yet</p>
-                                )}
-                                {index < courseModules.length - 1 && (
-                                    <div className="border-t border-gray-200 mt-6"></div>
-                                )}
+                                ) : null}
                             </div>
                         ))}
                     </div>
