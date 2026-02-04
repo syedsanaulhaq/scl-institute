@@ -16,6 +16,22 @@ const StudentTimetable = ({ user }) => {
         fetchTimetableData();
     }, [user]);
 
+    const handleViewInMoodle = async () => {
+        try {
+            const response = await axios.post(`${API_URL}/sso/generate`, { 
+                email: user?.email 
+            });
+            if (response.data?.success && response.data?.redirectUrl) {
+                window.open(response.data.redirectUrl, '_blank');
+            } else {
+                alert('Could not generate SSO token. Please try again.');
+            }
+        } catch (err) {
+            console.error('SSO Error:', err);
+            alert('Failed to authenticate with Moodle');
+        }
+    };
+
     const fetchTimetableData = async () => {
         try {
             setLoading(true);
@@ -145,7 +161,7 @@ const StudentTimetable = ({ user }) => {
                                                 </div>
                                             )}
                                             <button
-                                                onClick={() => window.open('http://localhost:9090/my/', '_blank')}
+                                                onClick={handleViewInMoodle}
                                                 className="w-full mt-2 px-2 py-1 bg-blue-600 text-white text-xs font-medium rounded hover:bg-blue-700 transition"
                                             >
                                                 View in Moodle
@@ -170,7 +186,7 @@ const StudentTimetable = ({ user }) => {
                         </ul>
                         <p className="text-sm text-gray-600 mt-4">Add events to your course in Moodle to see them here.</p>
                         <button
-                            onClick={() => window.open('http://localhost:9090/my/', '_blank')}
+                            onClick={handleViewInMoodle}
                             className="mt-4 px-4 py-2 bg-blue-600 text-white rounded text-sm font-medium hover:bg-blue-700"
                         >
                             View Moodle Calendar
