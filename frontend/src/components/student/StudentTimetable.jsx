@@ -139,11 +139,17 @@ const StudentTimetable = ({ user }) => {
                                                 </div>
                                             )}
                                             {session.instructor && (
-                                                <div className="flex items-center gap-2 text-xs text-gray-600">
+                                                <div className="flex items-center gap-2 text-xs text-gray-600 mb-2">
                                                     <Users className="w-3 h-3" />
                                                     <span>{session.instructor}</span>
                                                 </div>
                                             )}
+                                            <button
+                                                onClick={() => window.open('http://localhost:9090/my/', '_blank')}
+                                                className="w-full mt-2 px-2 py-1 bg-blue-600 text-white text-xs font-medium rounded hover:bg-blue-700 transition"
+                                            >
+                                                View in Moodle
+                                            </button>
                                         </div>
                                     ))}
                                 </div>

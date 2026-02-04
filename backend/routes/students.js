@@ -1967,22 +1967,23 @@ router.get('/timetable/:id', async (req, res) => {
 
         const courseCode = appRows[0].course_code;
 
-        // Connect to Moodle database
-        const moodleDb = mysql.createConnection({
-            host: process.env.MOODLE_DB_HOST || 'localhost',
+        // Get connection from Moodle database pool
+        const moodlePool = mysql.createPool({
+            host: process.env.MOODLE_DB_HOST || 'scli-moodle-db',
             user: process.env.MOODLE_DB_USER || 'root',
             password: process.env.MOODLE_DB_PASSWORD || 'moodleroot',
-            database: process.env.MOODLE_DB_NAME || 'bitnami_moodle'
+            database: process.env.MOODLE_DB_NAME || 'bitnami_moodle',
+            waitForConnections: true,
+            connectionLimit: 2,
+            queueLimit: 0
         });
 
         try {
-            await moodleDb.promise().query('SELECT 1');
-
             // Get course ID - try multiple ways to find the course
             let courseId = null;
             
-            // First try by idnumber or shortname
-            const [courseRows] = await moodleDb.execute(
+            // First try exact match by idnumber or shortname
+            const [courseRows] = await moodlePool.execute(
                 `SELECT id FROM mdl_course WHERE idnumber = ? OR shortname = ? LIMIT 1`,
                 [courseCode, courseCode]
             );
@@ -1990,13 +1991,13 @@ router.get('/timetable/:id', async (req, res) => {
             if (courseRows.length > 0) {
                 courseId = courseRows[0].id;
             } else {
-                // Try by fullname match
-                const [fullnameRows] = await moodleDb.execute(
-                    `SELECT id FROM mdl_course WHERE fullname LIKE ? LIMIT 1`,
-                    [`%${courseCode}%`]
+                // Try by idnumber starting with the code (e.g., "DEG-001 B.Sc Computer Science" contains "DEG-001")
+                const [idnumberRows] = await moodlePool.execute(
+                    `SELECT id FROM mdl_course WHERE idnumber LIKE ? OR fullname LIKE ? OR shortname LIKE ? LIMIT 1`,
+                    [`${courseCode}%`, `%${courseCode}%`, `%${courseCode}%`]
                 );
-                if (fullnameRows.length > 0) {
-                    courseId = fullnameRows[0].id;
+                if (idnumberRows.length > 0) {
+                    courseId = idnumberRows[0].id;
                 }
             }
             
@@ -2005,23 +2006,26 @@ router.get('/timetable/:id', async (req, res) => {
                 console.log(`Timetable: No course found for code '${courseCode}'`);
                 return res.json({
                     success: true,
-                    data: {}
+                    data: {},
+                    debug: { courseCode, courseId: null, message: 'Course not found in Moodle' }
                 });
             }
 
+            console.log(`Timetable: Found course ID ${courseId} for code '${courseCode}'`);
+
             // Get events from mdl_event table for this course
-            const [eventRows] = await moodleDb.execute(
+            const [eventRows] = await moodlePool.execute(
                 `
                 SELECT e.id, e.name, e.eventtype, e.timestart, e.timeduration, e.description
                 FROM mdl_event e
-                WHERE e.courseid = ? AND e.timestart > ? AND e.visible = 1
+                WHERE e.courseid = ? AND e.visible = 1
                 ORDER BY e.timestart ASC
                 `,
-                [courseId, Math.floor(Date.now() / 1000) - 86400 * 7] // Events from last week onwards
+                [courseId]
             );
 
             // Get assignments with due dates
-            const [assignmentRows] = await moodleDb.execute(
+            const [assignmentRows] = await moodlePool.execute(
                 `
                 SELECT a.id, a.name, a.duedate, cm.id as cm_id
                 FROM mdl_assign a
@@ -2104,8 +2108,6 @@ router.get('/timetable/:id', async (req, res) => {
                 success: true,
                 data: {}
             });
-        } finally {
-            await moodleDb.end();
         }
 
     } catch (error) {
