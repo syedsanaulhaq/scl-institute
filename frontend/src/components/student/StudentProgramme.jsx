@@ -248,28 +248,16 @@ const StudentProgramme = ({ user }) => {
                                 {module.modules?.length > 0 && (
                                     <div className="bg-white border-t border-gray-200 p-4">
                                         <p className="text-sm font-semibold text-gray-700 mb-3">Course Content:</p>
-                                        <div className="space-y-2">
+                                        <ul className="space-y-2 list-disc list-inside">
                                             {module.modules.map((activity, actIndex) => (
-                                                <div key={actIndex} className="flex items-start gap-3 p-3 bg-blue-50 rounded-lg border border-blue-100">
-                                                    <div className="flex-shrink-0">
-                                                        <span className="inline-flex items-center justify-center h-8 w-8 rounded-full bg-blue-600 text-white text-xs font-medium">
-                                                            {actIndex + 1}
-                                                        </span>
-                                                    </div>
-                                                    <div className="flex-1">
-                                                        <div className="mb-2">
-                                                            <span className="text-xs text-gray-600 font-semibold">Title:</span>
-                                                            <p className="font-bold text-gray-900">{activity.title || activity.name || 'Activity'}</p>
-                                                        </div>
-                                                        {activity.type && (
-                                                            <p className="text-xs text-gray-600">
-                                                                Type: <span className="font-semibold">{activity.type}</span>
-                                                            </p>
-                                                        )}
-                                                    </div>
-                                                </div>
+                                                <li key={actIndex} className="text-gray-800">
+                                                    <span className="font-medium">{activity.title || activity.name || 'Activity'}</span>
+                                                    {activity.type && (
+                                                        <span className="text-xs text-gray-600 ml-2">({activity.type})</span>
+                                                    )}
+                                                </li>
                                             ))}
-                                        </div>
+                                        </ul>
                                     </div>
                                 )}
                             </div>
