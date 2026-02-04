@@ -132,6 +132,29 @@ const StudentProgramme = ({ user }) => {
                 </div>
             )}
 
+            {/* Course Summary from Moodle */}
+            {programmeData?.summary && (
+                <div ref={outcomesRef} className="bg-white rounded-lg shadow p-6 mb-8">
+                    <h2 className="text-2xl font-bold text-gray-900 mb-4">Course Summary</h2>
+                    <div className="prose prose-sm max-w-none text-gray-700" dangerouslySetInnerHTML={{ __html: programmeData.summary }} />
+                </div>
+            )}
+
+            {/* Learning Outcomes - Fallback if no summary */}
+            {!programmeData?.summary && learningOutcomes.length > 0 && (
+                <div ref={outcomesRef} className="bg-white rounded-lg shadow p-6 mb-8">
+                    <h2 className="text-2xl font-bold text-gray-900 mb-4">Learning Outcomes</h2>
+                    <div className="space-y-3">
+                        {learningOutcomes.map((outcome, index) => (
+                            <div key={index} className="flex items-start gap-3">
+                                <Target className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                                <p className="text-gray-900">{outcome}</p>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
             {/* Programme Modules - Moodle Style */}
             {courseModules.length > 0 && (
                 <div className="bg-white rounded-lg shadow mb-8">
@@ -178,13 +201,6 @@ const StudentProgramme = ({ user }) => {
                     className="px-4 py-2 bg-blue-600 text-white rounded text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-60"
                 >
                     {ssoLoading ? 'Connecting...' : 'Open in Moodle'}
-                </button>
-                <button 
-                    type="button"
-                    onClick={scrollToOutcomes}
-                    className="px-4 py-2 bg-gray-200 text-gray-900 rounded text-sm font-medium hover:bg-gray-300 transition-colors"
-                >
-                    Course Summary
                 </button>
             </div>
 
