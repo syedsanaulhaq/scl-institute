@@ -1666,8 +1666,11 @@ router.get('/programme/:id', async (req, res) => {
                 let courseImageUrl = null;
                 if (imageRows.length > 0) {
                     const imageFile = imageRows[0];
-                    const moodleUrl = process.env.MOODLE_URL || 'http://localhost';
-                    courseImageUrl = `${moodleUrl}/pluginfile.php/${imageFile.contextid}/course/overviewfiles/0/${imageFile.filename}`;
+                    const moodleUrl = process.env.MOODLE_URL || 'http://localhost:9090';
+                    // Use contenthash for the URL path to ensure file is found in Moodle storage
+                    const hash = imageFile.contenthash;
+                    const hashPath = hash.substring(0, 2) + '/' + hash.substring(2);
+                    courseImageUrl = `${moodleUrl}/pluginfile.php/${imageFile.contextid}/course/overviewfiles/${hashPath}/${imageFile.filename}`;
                 }
                 
                 const [sectionRows] = await moodleDb.execute(
