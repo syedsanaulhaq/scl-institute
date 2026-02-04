@@ -2124,8 +2124,6 @@ router.get('/timetable/:id', async (req, res) => {
                     }
                 });
             }
-                });
-            }
 
             // If no data from Moodle, return what we have (might be empty)
             return res.json({
