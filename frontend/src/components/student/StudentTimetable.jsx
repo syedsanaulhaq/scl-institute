@@ -304,6 +304,7 @@ const StudentTimetable = ({ user }) => {
                             ))}
                     </div>
                 </div>
+            ) : (
                 <div className="bg-white rounded-lg shadow p-8">
                     <div className="text-center">
                         <Calendar className="w-16 h-16 text-gray-300 mx-auto mb-4" />
