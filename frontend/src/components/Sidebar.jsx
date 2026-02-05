@@ -72,18 +72,86 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
         { name: 'Settings', icon: Settings, path: '/settings' },
     ];
 
-    // Student menu items
+    // Student menu items organized by linked modules
     const studentMenuItems = [
         { name: 'Dashboard', icon: LayoutDashboard, path: '/student/dashboard' },
         { name: 'My Profile', icon: User, path: '/student/profile' },
-        { name: 'Admissions & Enrolment', icon: FileText, path: '/student/admissions' },
-        { name: 'My Programme', icon: GraduationCap, path: '/student/programme' },
-        { name: 'Timetable', icon: Calendar, path: '/student/timetable' },
-        { name: 'Access LMS', icon: BookOpen, isSSO: true },
-        { name: 'Assessments & Grades', icon: ClipboardList, path: '/student/assessments' },
-        { name: 'Messages', icon: Bell, path: '/student/messages' },
-        { name: 'Fees & Payments', icon: DollarSign, path: '/student/fees' },
-        { name: 'Support', icon: HelpCircle, path: '/student/support' },
+        
+        // Admissions Module
+        {
+            name: 'Admissions',
+            icon: FileText,
+            isParent: true,
+            key: 'admissions',
+            subItems: [
+                { name: 'Admissions & Enrolment', icon: UserCheck, path: '/student/admissions' },
+                { name: 'Right to Study', icon: ShieldCheck, path: '/student/right-to-study' },
+                { name: 'Student Contract', icon: FileText, path: '/student/contract' },
+                { name: 'Induction & Orientation', icon: BookOpen, path: '/student/induction' },
+                { name: 'Course Changes', icon: ClipboardList, path: '/student/course-changes' },
+                { name: 'Documents Centre', icon: FileText, path: '/student/documents' },
+            ]
+        },
+
+        // LMS Module
+        {
+            name: 'Learning (LMS)',
+            icon: GraduationCap,
+            isParent: true,
+            key: 'lms',
+            subItems: [
+                { name: 'My Programme', icon: BookOpen, path: '/student/programme' },
+                { name: 'Timetable', icon: Calendar, path: '/student/timetable' },
+                { name: 'Access Moodle LMS', icon: GraduationCap, isSSO: true },
+                { name: 'Learning Materials', icon: BookOpen, path: '/student/materials' },
+                { name: 'Assessments & Exams', icon: ClipboardList, path: '/student/assessments' },
+                { name: 'Grades & Progress', icon: BarChart3, path: '/student/grades' },
+                { name: 'Attendance', icon: UserCheck, path: '/student/attendance' },
+                { name: 'Library Resources', icon: BookOpen, path: '/student/library' },
+            ]
+        },
+
+        // Support Module
+        {
+            name: 'Support',
+            icon: HelpCircle,
+            isParent: true,
+            key: 'support',
+            subItems: [
+                { name: 'Messages & Announcements', icon: Bell, path: '/student/messages' },
+                { name: 'Student Support', icon: HelpCircle, path: '/student/support' },
+                { name: 'Feedback & Evaluations', icon: ClipboardList, path: '/student/feedback' },
+                { name: 'Complaints & Appeals', icon: FileText, path: '/student/complaints' },
+                { name: 'Disability Support', icon: HelpCircle, path: '/student/disability' },
+                { name: 'Safeguarding', icon: ShieldCheck, path: '/student/safeguarding' },
+                { name: 'Employability', icon: BarChart3, path: '/student/employability' },
+                { name: 'Financial Support', icon: DollarSign, path: '/student/financial-support' },
+                { name: 'Help & IT Support', icon: HelpCircle, path: '/student/help' },
+            ]
+        },
+
+        // Finance Module
+        {
+            name: 'Finance',
+            icon: DollarSign,
+            isParent: true,
+            key: 'finance',
+            subItems: [
+                { name: 'Fees & Payments', icon: DollarSign, path: '/student/fees' },
+            ]
+        },
+
+        // Compliance Module
+        {
+            name: 'Compliance',
+            icon: ShieldCheck,
+            isParent: true,
+            key: 'compliance',
+            subItems: [
+                { name: 'Data Protection', icon: ShieldCheck, path: '/student/data-protection' },
+                { name: 'Health & Safety', icon: HelpCircle, path: '/student/health-safety' },
+            ]
+        },
     ];
 
     // Select menu based on user role
@@ -91,8 +159,12 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
 
     const toggleSubMenu = (menuKey) => {
         setExpandedMenus(prev => ({
-            ...prev,
-            [menuKey]: !prev[menuKey]
+            // Close all other menus
+            admissions: menuKey === 'admissions' ? !prev.admissions : false,
+            lms: menuKey === 'lms' ? !prev.lms : false,
+            support: menuKey === 'support' ? !prev.support : false,
+            finance: menuKey === 'finance' ? !prev.finance : false,
+            compliance: menuKey === 'compliance' ? !prev.compliance : false,
         }));
     };
 
@@ -105,6 +177,14 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
             window.open(item.path, '_blank');
         } else if (item.path) {
             navigate(item.path);
+        }
+    };
+
+    const handleSubItemClick = (subItem) => {
+        if (subItem.isSSO) {
+            handleAccessLMS();
+        } else if (subItem.path) {
+            navigate(subItem.path);
         }
     };
 
@@ -131,7 +211,7 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
                 </div>
 
                 {/* Navigation Items */}
-                <nav className="flex-1 px-2 py-4 space-y-1">
+                <nav className="flex-1 px-2 py-4 space-y-1 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent hover:scrollbar-thumb-white/40">
                     {menuItems.map((item) => {
                         const isActive = location.pathname === item.path;
                         const isExpanded = item.isParent && expandedMenus[item.key];
@@ -151,7 +231,7 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
                                     <div className={`flex items-center justify-center transition-all duration-300 ${isOpen ? 'pl-3 w-10' : 'w-full'}`}>
                                         <item.icon className={`w-4 h-4 ${isActive ? 'scale-110' : 'group-hover:scale-110 transition-transform'}`} />
                                     </div>
-                                    <span className={`font-medium whitespace-nowrap transition-all duration-300 text-xs overflow-hidden ${
+                                    <span className={`font-medium whitespace-nowrap transition-all duration-300 text-sm overflow-hidden ${
                                         isOpen ? 'opacity-100 ml-3 flex-1 text-left' : 'opacity-0 w-0'
                                     }`}>
                                         {item.name}
@@ -182,15 +262,16 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
                                             return (
                                                 <button
                                                     key={subItem.name}
-                                                    onClick={() => navigate(subItem.path)}
-                                                    className={`w-full flex items-center h-10 rounded-lg transition-all duration-200 group relative pl-4 ${
+                                                    onClick={() => handleSubItemClick(subItem)}
+                                                    disabled={subItem.isSSO && loading}
+                                                    className={`w-full flex items-center justify-start h-10 rounded-lg transition-all duration-200 group relative pl-4 ${
                                                         isSubActive
                                                             ? 'bg-scl-purple/50 text-white shadow-md'
                                                             : 'text-purple-100/60 hover:bg-white/5 hover:text-white'
-                                                    }`}
+                                                    } ${subItem.isSSO && loading ? 'opacity-50 cursor-not-allowed' : ''}`}
                                                 >
-                                                    <subItem.icon className="w-4 h-4 mr-3" />
-                                                    <span className="font-medium text-sm">
+                                                    <subItem.icon className="w-4 h-4 mr-3 flex-shrink-0" />
+                                                    <span className="font-medium text-xs text-left">
                                                         {subItem.name}
                                                     </span>
                                                 </button>

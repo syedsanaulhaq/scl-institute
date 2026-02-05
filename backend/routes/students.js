@@ -478,10 +478,33 @@ router.get('/applications', async (req, res) => {
                     sa.last_name,
                     sa.email,
                     sa.course_title,
+                    sa.programme_name,
                     sa.course_code,
+                    sa.course_type,
+                    sa.mode_of_study,
                     sa.application_status,
                     sa.submitted_at,
+                    sa.created_at,
+                    sa.updated_at,
                     sa.intake_start_date,
+                    sa.intake_month,
+                    sa.intake_year,
+                    sa.entry_route,
+                    sa.offer_accepted,
+                    sa.documents_verified,
+                    sa.passport_id_document,
+                    sa.academic_certificates,
+                    sa.academic_transcripts,
+                    sa.english_certificate,
+                    sa.contact_number,
+                    sa.address_line1,
+                    sa.address_line2,
+                    sa.town_city,
+                    sa.postcode,
+                    sa.country_of_residence,
+                    sa.date_of_birth,
+                    sa.gender,
+                    sa.nationality,
                     c.department
                 FROM student_applications sa
                 LEFT JOIN courses c ON sa.course_code = c.course_code
@@ -503,10 +526,33 @@ router.get('/applications', async (req, res) => {
                         sa.last_name,
                         sa.email,
                         sa.course_title,
+                        sa.programme_name,
                         sa.course_code,
+                        sa.course_type,
+                        sa.mode_of_study,
                         sa.application_status,
                         sa.submitted_at,
-                        sa.intake_start_date
+                        sa.created_at,
+                        sa.updated_at,
+                        sa.intake_start_date,
+                        sa.intake_month,
+                        sa.intake_year,
+                        sa.entry_route,
+                        sa.offer_accepted,
+                        sa.documents_verified,
+                        sa.passport_id_document,
+                        sa.academic_certificates,
+                        sa.academic_transcripts,
+                        sa.english_certificate,
+                        sa.contact_number,
+                        sa.address_line1,
+                        sa.address_line2,
+                        sa.town_city,
+                        sa.postcode,
+                        sa.country_of_residence,
+                        sa.date_of_birth,
+                        sa.gender,
+                        sa.nationality
                     FROM student_applications sa
                     ${whereClause}
                     ORDER BY sa.id DESC
@@ -2382,5 +2428,238 @@ router.get('/grades/:id', async (req, res) => {
         });
     }
 });
+
+// ===============================================
+// RIGHT TO STUDY - DOCUMENTS & COMPLIANCE
+// ===============================================
+
+// Get Right to Study documents for student
+router.get('/right-to-study/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const [applications] = await db.execute(
+            `SELECT id, full_name, email, passport_id_document, visa_immigration_document, 
+                     right_to_study_verified, compliance_confirmed_at, documents_verified
+             FROM student_applications 
+             WHERE id = ?`,
+            [id]
+        );
+
+        if (!applications.length) {
+            return res.status(404).json({
+                success: false,
+                message: 'Student not found'
+            });
+        }
+
+        const app = applications[0];
+
+        // Get uploaded documents
+        const [documents] = await db.execute(
+            `SELECT document_type, original_filename, upload_date, file_path 
+             FROM application_documents 
+             WHERE application_id = ? AND document_type IN ('passport_id', 'visa_immigration', 'brp_card', 'residency_proof')`,
+            [id]
+        );
+
+        // Format documents with expiry tracking (mock expiry dates - would come from document metadata)
+        const formattedDocs = documents.map(doc => ({
+            id: doc.original_filename,
+            type: getDocumentType(doc.document_type),
+            status: app.documents_verified === 'Yes' ? 'Approved' : 'Pending Review',
+            uploadDate: doc.upload_date,
+            filePath: doc.file_path,
+            expiryDate: calculateExpiryDate(doc.document_type), // Mock calculation
+            daysUntilExpiry: calculateDaysUntilExpiry(doc.document_type)
+        }));
+
+        res.json({
+            success: true,
+            student: {
+                id: app.id,
+                name: app.full_name,
+                email: app.email,
+                complianceConfirmed: !!app.compliance_confirmed_at,
+                rightToStudyVerified: app.right_to_study_verified === 'Yes',
+                complianceConfirmedAt: app.compliance_confirmed_at
+            },
+            documents: formattedDocs
+        });
+
+    } catch (error) {
+        console.error('Error fetching right to study documents:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch documents',
+            error: error.message
+        });
+    }
+});
+
+// Update compliance confirmation
+router.put('/right-to-study/:id/confirm-compliance', async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        await db.execute(
+            `UPDATE student_applications 
+             SET compliance_confirmed_at = NOW(), right_to_study_verified = 'Yes'
+             WHERE id = ?`,
+            [id]
+        );
+
+        res.json({
+            success: true,
+            message: 'Compliance confirmed successfully'
+        });
+
+    } catch (error) {
+        console.error('Error updating compliance:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to update compliance',
+            error: error.message
+        });
+    }
+});
+
+// Update student profile information
+router.put('/applications/:id/update-profile', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const {
+            first_name,
+            last_name,
+            contact_number,
+            date_of_birth,
+            address_line1,
+            address_line2,
+            town_city,
+            postcode,
+            country_of_residence,
+            gender,
+            nationality,
+            emergency_contact_name,
+            emergency_contact_relationship,
+            emergency_contact_phone,
+            emergency_contact_email,
+            next_of_kin_name,
+            next_of_kin_relationship,
+            next_of_kin_phone,
+            next_of_kin_email,
+            next_of_kin_address,
+            passport_number,
+            passport_expiry_date,
+            visa_status,
+            visa_expiry_date,
+            brp_number,
+            brp_expiry_date
+        } = req.body;
+
+        // Build the update query with only provided fields
+        const updateFields = [];
+        const updateValues = [];
+
+        const fieldMap = {
+            first_name,
+            last_name,
+            contact_number,
+            date_of_birth,
+            address_line1,
+            address_line2,
+            town_city,
+            postcode,
+            country_of_residence,
+            gender,
+            nationality,
+            emergency_contact_name,
+            emergency_contact_relationship,
+            emergency_contact_phone,
+            emergency_contact_email,
+            next_of_kin_name,
+            next_of_kin_relationship,
+            next_of_kin_phone,
+            next_of_kin_email,
+            next_of_kin_address,
+            passport_number,
+            passport_expiry_date,
+            visa_status,
+            visa_expiry_date,
+            brp_number,
+            brp_expiry_date
+        };
+
+        for (const [field, value] of Object.entries(fieldMap)) {
+            if (value !== undefined && value !== null) {
+                updateFields.push(`${field} = ?`);
+                updateValues.push(value);
+            }
+        }
+
+        if (updateFields.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'No fields to update'
+            });
+        }
+
+        updateValues.push(id);
+
+        const updateQuery = `UPDATE student_applications SET ${updateFields.join(', ')} WHERE id = ?`;
+
+        const [result] = await db.execute(updateQuery, updateValues);
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Student not found'
+            });
+        }
+
+        res.json({
+            success: true,
+            message: 'Profile updated successfully',
+            data: { id }
+        });
+
+    } catch (error) {
+        console.error('Error updating profile:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to update profile',
+            error: error.message
+        });
+    }
+});
+
+// Helper functions
+function getDocumentType(docType) {
+    const typeMap = {
+        'passport_id': 'Passport',
+        'visa_immigration': 'UK Visa',
+        'brp_card': 'BRP Card',
+        'residency_proof': 'Residency Proof'
+    };
+    return typeMap[docType] || docType;
+}
+
+function calculateExpiryDate(docType) {
+    const today = new Date();
+    const expiryMap = {
+        'passport_id': new Date(today.getFullYear() + 10, today.getMonth(), today.getDate()),
+        'visa_immigration': new Date(today.getFullYear() + 5, today.getMonth(), today.getDate()),
+        'brp_card': new Date(today.getFullYear() + 10, today.getMonth(), today.getDate()),
+        'residency_proof': new Date(today.getFullYear() + 2, today.getMonth(), today.getDate())
+    };
+    return (expiryMap[docType] || new Date()).toISOString().split('T')[0];
+}
+
+function calculateDaysUntilExpiry(docType) {
+    const today = new Date();
+    const expiryDate = new Date(calculateExpiryDate(docType));
+    const diffTime = expiryDate - today;
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+}
 
 module.exports = router;

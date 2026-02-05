@@ -17,6 +17,7 @@ import ApplicationReview from './components/ApplicationReview';
 import StudentPortalDashboard from './components/student/StudentPortalDashboard';
 import StudentProfile from './components/student/StudentProfile';
 import StudentAdmissions from './components/student/StudentAdmissions';
+import StudentRightToStudy from './components/student/StudentRightToStudy';
 import StudentProgramme from './components/student/StudentProgramme';
 import StudentTimetable from './components/student/StudentTimetable';
 import StudentAssessments from './components/student/StudentAssessments';
@@ -105,6 +106,15 @@ function App() {
                     user && user.role === 'student' ? (
                         <Layout user={user} onLogout={handleLogout}>
                             <StudentAdmissions user={user} />
+                        </Layout>
+                    ) : (
+                        <LoginPage onLoginSuccess={handleLoginSuccess} />
+                    )
+                } />
+                <Route path="/student/right-to-study" element={
+                    user && user.role === 'student' ? (
+                        <Layout user={user} onLogout={handleLogout}>
+                            <StudentRightToStudy user={user} />
                         </Layout>
                     ) : (
                         <LoginPage onLoginSuccess={handleLoginSuccess} />
