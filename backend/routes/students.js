@@ -2162,4 +2162,227 @@ router.get('/timetable/:id', async (req, res) => {
     }
 });
 
+// Get student assessments from Moodle
+router.get('/assessments/:id', async (req, res) => {
+    try {
+        const studentId = req.params.id;
+        
+        // Get student's course from application
+        const [appRows] = await pool.query(
+            `SELECT course_code FROM student_applications WHERE id = ?`,
+            [studentId]
+        );
+
+        if (appRows.length === 0) {
+            return res.json({
+                success: true,
+                data: []
+            });
+        }
+
+        const courseCode = appRows[0].course_code;
+        
+        // Get Moodle course ID
+        const moodlePool = mysql.createPool({
+            host: 'scli-moodle-db',
+            port: 3306,
+            user: 'root',
+            password: 'moodleroot',
+            database: 'bitnami_moodle',
+            waitForConnections: true,
+            connectionLimit: 5,
+            queueLimit: 0
+        });
+
+        const [courseRows] = await moodlePool.execute(
+            `SELECT id FROM mdl_course WHERE idnumber LIKE ? OR fullname LIKE ? OR shortname LIKE ? LIMIT 1`,
+            [`${courseCode}%`, `%${courseCode}%`, `%${courseCode}%`]
+        );
+
+        if (courseRows.length === 0) {
+            return res.json({
+                success: true,
+                data: []
+            });
+        }
+
+        const courseId = courseRows[0].id;
+
+        // Get assignments with due dates from mdl_assign
+        const [assignments] = await moodlePool.execute(
+            `
+            SELECT 
+                a.id, 
+                a.name, 
+                a.duedate, 
+                a.allowsubmissionsfromdate,
+                cm.id as cm_id,
+                c.shortname as course_shortname
+            FROM mdl_assign a
+            JOIN mdl_course_modules cm ON cm.instance = a.id AND cm.module = (SELECT id FROM mdl_modules WHERE name = 'assign')
+            JOIN mdl_course c ON c.id = cm.course
+            WHERE cm.course = ? AND a.allowsubmissionsfromdate <= ?
+            ORDER BY a.duedate ASC
+            `,
+            [courseId, Math.floor(Date.now() / 1000)]
+        );
+
+        const assessments = assignments.map(assign => ({
+            id: assign.id,
+            module: assign.course_shortname,
+            code: 'ASSIGN',
+            title: assign.name,
+            type: 'Coursework',
+            dueDate: new Date(assign.duedate * 1000).toISOString().split('T')[0],
+            weight: '100%',
+            status: 'pending',
+            submitted: false,
+            moodle_url: `/mod/assign/view.php?id=${assign.cm_id}`
+        }));
+
+        moodlePool.end();
+
+        return res.json({
+            success: true,
+            data: assessments
+        });
+
+    } catch (error) {
+        console.error('Error fetching assessments:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch assessments',
+            error: error.message
+        });
+    }
+});
+
+// Get student grades from Moodle gradebook
+router.get('/grades/:id', async (req, res) => {
+    try {
+        const studentId = req.params.id;
+        
+        // Get student's user email from our database
+        const [userRows] = await pool.query(
+            `SELECT email FROM users WHERE id = ?`,
+            [studentId]
+        );
+
+        if (userRows.length === 0) {
+            return res.json({
+                success: true,
+                data: []
+            });
+        }
+
+        const userEmail = userRows[0].email;
+
+        // Get student's course
+        const [appRows] = await pool.query(
+            `SELECT course_code FROM student_applications WHERE id = ?`,
+            [studentId]
+        );
+
+        if (appRows.length === 0) {
+            return res.json({
+                success: true,
+                data: []
+            });
+        }
+
+        const courseCode = appRows[0].course_code;
+
+        // Connect to Moodle database
+        const moodlePool = mysql.createPool({
+            host: 'scli-moodle-db',
+            port: 3306,
+            user: 'root',
+            password: 'moodleroot',
+            database: 'bitnami_moodle',
+            waitForConnections: true,
+            connectionLimit: 5,
+            queueLimit: 0
+        });
+
+        // Get Moodle user ID by email
+        const [moodleUsers] = await moodlePool.execute(
+            `SELECT id FROM mdl_user WHERE email = ?`,
+            [userEmail]
+        );
+
+        if (moodleUsers.length === 0) {
+            moodlePool.end();
+            return res.json({
+                success: true,
+                data: []
+            });
+        }
+
+        const moodleUserId = moodleUsers[0].id;
+
+        // Get course ID
+        const [courseRows] = await moodlePool.execute(
+            `SELECT id FROM mdl_course WHERE idnumber LIKE ? OR fullname LIKE ? OR shortname LIKE ? LIMIT 1`,
+            [`${courseCode}%`, `%${courseCode}%`, `%${courseCode}%`]
+        );
+
+        if (courseRows.length === 0) {
+            moodlePool.end();
+            return res.json({
+                success: true,
+                data: []
+            });
+        }
+
+        const courseId = courseRows[0].id;
+
+        // Get grades from gradebook
+        const [grades] = await moodlePool.execute(
+            `
+            SELECT 
+                gi.itemname,
+                gi.itemmodule,
+                gg.finalgrade,
+                gi.grademax,
+                gg.timemodified,
+                cm.id as cm_id
+            FROM mdl_grade_items gi
+            LEFT JOIN mdl_grade_grades gg ON gi.id = gg.itemid AND gg.userid = ?
+            LEFT JOIN mdl_course_modules cm ON cm.instance = gi.iteminstance AND cm.module = (SELECT id FROM mdl_modules WHERE name = gi.itemmodule)
+            WHERE gi.courseid = ? AND gi.itemtype = 'mod' AND gg.finalgrade IS NOT NULL
+            ORDER BY gg.timemodified DESC
+            `,
+            [moodleUserId, courseId]
+        );
+
+        const gradeData = grades.map(grade => ({
+            id: grade.itemname,
+            module: grade.itemname,
+            code: grade.itemmodule ? grade.itemmodule.toUpperCase() : 'MOD',
+            type: grade.itemmodule || 'Assessment',
+            grade: grade.finalgrade ? parseFloat(grade.finalgrade).toFixed(2) : 'N/A',
+            maxGrade: grade.grademax ? parseFloat(grade.grademax).toFixed(2) : '100',
+            percentage: grade.grademax ? Math.round((grade.finalgrade / grade.grademax) * 100) : 0,
+            submittedDate: grade.timemodified ? new Date(grade.timemodified * 1000).toISOString().split('T')[0] : 'N/A',
+            feedback: 'See Moodle for detailed feedback',
+            moodle_url: grade.cm_id ? `/mod/${grade.itemmodule}/view.php?id=${grade.cm_id}` : null
+        }));
+
+        moodlePool.end();
+
+        return res.json({
+            success: true,
+            data: gradeData
+        });
+
+    } catch (error) {
+        console.error('Error fetching grades:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch grades',
+            error: error.message
+        });
+    }
+});
+
 module.exports = router;
