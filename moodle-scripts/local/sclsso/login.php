@@ -2,6 +2,52 @@
 require_once('../../config.php');
 require_once($CFG->libdir.'/adminlib.php');
 
+/**
+ * Assign Moodle roles based on SCL system roles
+ * Maps SCL roles to Moodle manager/admin roles
+ */
+function assignMoodleRoles($userid, $sclRole) {
+    global $DB, $CFG;
+    
+    if (empty($sclRole)) {
+        return;
+    }
+    
+    error_log('[SSO] Assigning roles for user ' . $userid . ' with SCL role: ' . $sclRole);
+    
+    // Define role mapping from SCL to Moodle
+    $roleMapping = array(
+        'Super Admin' => 'manager',           // Super Admin -> Moodle Manager
+        'LMS Manager' => 'manager',           // LMS Manager -> Moodle Manager
+        'Admissions Officer' => 'manager',    // Admissions Officer -> Moodle Manager
+        'Faculty & HR Manager' => 'manager',  // Faculty & HR Manager -> Moodle Manager
+        'Teacher' => 'editingteacher',        // Teacher -> Moodle Editing Teacher
+        'Manager' => 'manager',               // Manager -> Moodle Manager
+    );
+    
+    // Get the Moodle role ID for the mapped role
+    $moodleRole = isset($roleMapping[$sclRole]) ? $roleMapping[$sclRole] : null;
+    
+    if (empty($moodleRole)) {
+        error_log('[SSO] No role mapping found for SCL role: ' . $sclRole);
+        return;
+    }
+    
+    // Get the Moodle role ID
+    $role = $DB->get_record('role', array('shortname' => $moodleRole));
+    
+    if (!$role) {
+        error_log('[SSO] Moodle role not found: ' . $moodleRole);
+        return;
+    }
+    
+    // Assign the role at system context (all courses)
+    $context = context_system::instance();
+    role_assign($role->id, $userid, $context->id);
+    
+    error_log('[SSO] Role assigned: user ' . $userid . ' assigned Moodle role ' . $moodleRole . ' (ID: ' . $role->id . ')');
+}
+
 $token = optional_param('token', '', PARAM_ALPHANUMEXT);
 
 if (empty($token)) {
@@ -38,10 +84,24 @@ $firstname = $tokenData['firstname'] ?: 'SCL';
 $lastname = $tokenData['lastname'] ?: 'User';
 $redirectUrl = !empty($tokenData['redirect_url']) ? $tokenData['redirect_url'] : null;  // Get redirect URL from database
 
-// Write debug info to file
-file_put_contents('/tmp/sso_debug.txt', date('Y-m-d H:i:s') . " - Token: $token, Email: $email, RedirectURL: " . var_export($redirectUrl, true) . "\n", FILE_APPEND);
+// Get detailed user info from SCL database including role from user_roles table
+$sclRole = null;
+$roleStmt = $scldb->prepare("SELECT r.name FROM user_roles ur JOIN roles r ON ur.role_id = r.id WHERE ur.user_id = (SELECT id FROM users WHERE email = ?) LIMIT 1");
+if ($roleStmt) {
+    $roleStmt->bind_param("s", $email);
+    $roleStmt->execute();
+    $roleResult = $roleStmt->get_result();
+    if ($roleResult->num_rows > 0) {
+        $roleData = $roleResult->fetch_assoc();
+        $sclRole = $roleData['name'];
+    }
+    $roleStmt->close();
+}
 
-error_log('[SSO] Token data retrieved: email=' . $email . ', redirect_url=' . ($redirectUrl ?: 'NULL'));
+// Write debug info to file
+file_put_contents('/tmp/sso_debug.txt', date('Y-m-d H:i:s') . " - Token: $token, Email: $email, SCL Role: $sclRole, RedirectURL: " . var_export($redirectUrl, true) . "\n", FILE_APPEND);
+
+error_log('[SSO] Token data retrieved: email=' . $email . ', role=' . ($sclRole ?: 'none') . ', redirect_url=' . ($redirectUrl ?: 'NULL'));
 
 // Find or create Moodle user
 if (!$user = $DB->get_record('user', array('email' => $email, 'deleted' => 0))) {
@@ -75,6 +135,9 @@ if (!$user = $DB->get_record('user', array('email' => $email, 'deleted' => 0))) 
     $DB->update_record('user', $user);
     error_log('[SSO] Existing user updated: ' . $email);
 }
+
+// Assign Moodle roles based on SCL roles
+assignMoodleRoles($user->id, $sclRole);
 
 // Log the user in
 complete_user_login($user);
