@@ -64,7 +64,7 @@ const Dashboard = ({ user, onLogout }) => {
             title: 'Student Applications',
             description: 'Review incoming student admission requests, applications, and manage enrollment decisions.',
             icon: Users,
-            roles: ['admin', 'admission_officer'],
+            roles: ['Super Admin', 'Admissions Officer'],
             color: 'green',
             path: '/applications'
         },
@@ -73,7 +73,7 @@ const Dashboard = ({ user, onLogout }) => {
             title: 'Student Management',
             description: 'Student records, admissions, enrollment tracking and comprehensive management dashboard.',
             icon: Users2,
-            roles: ['admin', 'admission_officer', 'student'],
+            roles: ['Super Admin', 'Admissions Officer', 'Student'],
             color: 'blue',
             path: '/students'
         },
@@ -82,7 +82,7 @@ const Dashboard = ({ user, onLogout }) => {
             title: 'Partner & Associates Management',
             description: 'Manage institutional partnerships and external associate directories.',
             icon: Users,
-            roles: ['admin', 'partner_manager'],
+            roles: ['Super Admin', 'Partners Manager'],
             color: 'indigo'
         },
         {
@@ -90,7 +90,7 @@ const Dashboard = ({ user, onLogout }) => {
             title: 'Accreditation, QA & Compliance',
             description: 'Track accreditation status, quality assurance audits, and regulatory compliance.',
             icon: ShieldCheck,
-            roles: ['admin', 'compliance_officer'],
+            roles: ['Super Admin', 'Compliance Officer'],
             color: 'indigo'
         },
         {
@@ -98,7 +98,7 @@ const Dashboard = ({ user, onLogout }) => {
             title: 'Course Offerings & Program Catalog',
             description: 'Define and manage full program lifecycle, modules, and credit structures.',
             icon: Library,
-            roles: ['admin', 'faculty', 'student', 'admission_officer'],
+            roles: ['Super Admin', 'Teacher', 'Student', 'Admissions Officer'],
             color: 'purple'
         },
         {
@@ -106,7 +106,7 @@ const Dashboard = ({ user, onLogout }) => {
             title: 'Student Portal',
             description: 'Access induction resources, support requests, and formal appeals.',
             icon: UserCircle,
-            roles: ['admin', 'student'],
+            roles: ['Super Admin', 'Student'],
             color: 'emerald'
         },
         {
@@ -114,7 +114,7 @@ const Dashboard = ({ user, onLogout }) => {
             title: 'Faculty Management & HR Directory',
             description: 'Staff directory, workload management, and HR essentials.',
             icon: UserSquare2,
-            roles: ['admin', 'hr_admin', 'faculty'],
+            roles: ['Super Admin', 'Faculty & HR Manager', 'Teacher'],
             color: 'orange'
         },
         {
@@ -122,7 +122,7 @@ const Dashboard = ({ user, onLogout }) => {
             title: 'Learning Management (Moodle)',
             description: 'Seamless Single Sign-On access to the Moodle education platform.',
             icon: GraduationCap,
-            roles: ['admin', 'faculty', 'student'],
+            roles: ['Super Admin', 'LMS Manager', 'Teacher', 'Student'],
             color: 'scl-purple',
             isSSO: true
         },
@@ -131,7 +131,7 @@ const Dashboard = ({ user, onLogout }) => {
             title: 'Governance & ERP Lite Essentials',
             description: 'Core institutional records, financial summaries, and governance tools.',
             icon: Settings2,
-            roles: ['admin'],
+            roles: ['Super Admin'],
             color: 'slate'
         }
     ];
