@@ -134,66 +134,8 @@ const Home = ({ selectedTheme = 'modern', onApplyNow, onChangeTheme }) => {
         fetchCourses();
     }, []);
 
-    // Use Moodle courses ONLY - no defaults
-    const programs = moodleCourses.length > 0 ? moodleCourses : [
-        // Test with Moodle data if fetch hasn't completed yet
-        {
-            id: 17,
-            name: 'ACCA (Fundamentals)',
-            code: 'ACCA (Fundamentals)',
-            description: 'Professional program designed for career advancement',
-            icon: '📚'
-        },
-        {
-            id: 15,
-            name: 'Advanced Excel for Business (CPD)',
-            code: 'Advanced Excel for Business (CPD)',
-            description: 'Professional program designed for career advancement',
-            icon: '📚'
-        },
-        {
-            id: 6,
-            name: 'B.Eng Mechanical Engineering',
-            code: 'B.Eng Mechanical Engineering',
-            description: 'Professional program designed for career advancement',
-            icon: '📚'
-        },
-        {
-            id: 5,
-            name: 'B.Sc Computer Science',
-            code: 'B.Sc Computer Science',
-            description: 'Understand core principles and theories',
-            icon: '📚'
-        },
-        {
-            id: 20,
-            name: 'B.Tech Computer Science Engineering',
-            code: 'BTECH-CSE',
-            description: 'B.Tech Computer Science Engineering Programme',
-            icon: '📚'
-        },
-        {
-            id: 7,
-            name: 'BA Business Administration',
-            code: 'BA Business Administration',
-            description: 'Professional program designed for career advancement',
-            icon: '📚'
-        },
-        {
-            id: 19,
-            name: 'Cisco CCNA Prep',
-            code: 'Cisco CCNA Prep',
-            description: 'Professional program designed for career advancement',
-            icon: '📚'
-        },
-        {
-            id: 14,
-            name: 'Cybersecurity Essentials (CPD)',
-            code: 'Cybersecurity Essentials (CPD)',
-            description: 'Professional program designed for career advancement',
-            icon: '📚'
-        }
-    ];
+    // Use Moodle courses ONLY - fetch dynamically from API
+    const programs = moodleCourses.length > 0 ? moodleCourses : [];
 
     // Debug: Log which programs are being used on EVERY RENDER
     useEffect(() => {
@@ -556,11 +498,14 @@ const Home = ({ selectedTheme = 'modern', onApplyNow, onChangeTheme }) => {
                         </p>
                     </div>
                     
-                    {coursesLoading && programs.length === 0 ? (
-                        <div className="flex justify-center items-center py-12">
-                            <Loader className="h-8 w-8 animate-spin text-blue-600" />
+                    {coursesLoading || programs.length === 0 ? (
+                        <div className="flex justify-center items-center py-16">
+                            <div className="text-center">
+                                <Loader className="h-8 w-8 animate-spin text-blue-600 mx-auto mb-4" />
+                                <p className="text-gray-600">Loading programs from Moodle...</p>
+                            </div>
                         </div>
-                    ) : programs.length > 0 ? (
+                    ) : (
                         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
                             {programs.map((program, index) => (
                                 <div key={`program-${index}`} className="bg-white rounded-lg shadow hover:shadow-md transition-shadow p-4 border-l-4 border-l-blue-600 group cursor-pointer">
@@ -579,11 +524,6 @@ const Home = ({ selectedTheme = 'modern', onApplyNow, onChangeTheme }) => {
                                     </button>
                                 </div>
                             ))}
-                        </div>
-                    ) : (
-                        <div className="bg-blue-50 rounded-lg p-12 text-center">
-                            <p className="text-gray-700 mb-2">No programs available yet.</p>
-                            <p className="text-sm text-gray-500">Programs: {programs.length} | Loading: {coursesLoading ? 'yes' : 'no'} | Courses: {moodleCourses.length}</p>
                         </div>
                     )}
                 </div>
