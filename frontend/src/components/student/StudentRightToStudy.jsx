@@ -14,6 +14,23 @@ const formatDate = (dateString) => {
     return `${day}/${month}/${year}`;
 };
 
+// Mock expiry date calculation (in real system, this would come from document metadata)
+const calculateExpiryDate = (docType) => {
+    const today = new Date();
+    const years = docType.includes('passport') ? 10 : 5; // Passports 10 years, others 5 years
+    const expiryDate = new Date(today);
+    expiryDate.setFullYear(today.getFullYear() + years);
+    return expiryDate.toISOString().split('T')[0];
+};
+
+const calculateDaysUntilExpiry = (docType) => {
+    const expiryDate = new Date(calculateExpiryDate(docType));
+    const today = new Date();
+    const diffTime = expiryDate - today;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays;
+};
+
 const StudentRightToStudy = ({ user }) => {
     const [studentApp, setStudentApp] = useState(null);
     const [documents, setDocuments] = useState([]);
@@ -249,12 +266,20 @@ const StudentRightToStudy = ({ user }) => {
 
             if (response.data?.success) {
                 setMessage({ type: 'success', text: 'Document uploaded successfully.' });
-                await fetchStudentData();
+                console.log('Upload successful, refreshing data...');
+                try {
+                    await fetchStudentData();
+                    console.log('Data refreshed successfully');
+                } catch (refreshError) {
+                    console.error('Error refreshing data:', refreshError);
+                    // Still show success since upload worked
+                }
             } else {
                 setMessage({ type: 'error', text: response.data?.message || 'Upload failed.' });
             }
         } catch (error) {
             console.error('Upload error:', error);
+            console.error('Error response:', error.response);
             setMessage({ type: 'error', text: error.response?.data?.message || 'Upload failed.' });
         } finally {
             setUploadingDoc(null);
@@ -486,6 +511,49 @@ const StudentRightToStudy = ({ user }) => {
                                 </div>
                             );
                         })}
+                    </div>
+                )}
+            </div>
+
+            {/* Save & Submit Button */}
+            <div className="bg-white rounded-lg shadow-md p-6 mt-6">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h3 className="text-lg font-bold text-gray-900">Submit Right to Study Compliance</h3>
+                        <p className="text-sm text-gray-600 mt-1">
+                            Confirm that all uploaded documents are valid and you have the right to study in the UK
+                        </p>
+                    </div>
+                    <button
+                        onClick={handleComplianceConfirm}
+                        disabled={saveLoading || !complianceConfirmed || studentApp?.complianceConfirmed}
+                        className="px-6 py-3 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center gap-2"
+                    >
+                        {studentApp?.complianceConfirmed ? (
+                            <>
+                                <CheckCircle className="w-5 h-5" />
+                                Submitted
+                            </>
+                        ) : (
+                            <>
+                                {saveLoading ? 'Saving...' : 'Save & Submit'}
+                            </>
+                        )}
+                    </button>
+                </div>
+                {studentApp?.complianceConfirmed && (
+                    <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+                        <p className="text-sm text-green-800 flex items-center gap-2">
+                            <CheckCircle className="w-4 h-4" />
+                            Compliance confirmed on {formatDate(studentApp?.complianceConfirmedAt)}
+                        </p>
+                    </div>
+                )}
+                {!complianceConfirmed && !studentApp?.complianceConfirmed && (
+                    <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                        <p className="text-sm text-yellow-800">
+                            Please check the compliance confirmation checkbox above before submitting
+                        </p>
                     </div>
                 )}
             </div>
