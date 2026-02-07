@@ -83,21 +83,38 @@ const Home = ({ selectedTheme = 'modern', onApplyNow, onChangeTheme }) => {
         const fetchCourses = async () => {
             try {
                 setCoursesLoading(true);
-                // Fetch from Moodle database via backend API
-                const response = await axios.get('http://localhost:4000/api/notifications/courses/public');
-                if (response.data && response.data.courses) {
+                // Try multiple ways to reach the backend API
+                let response;
+                try {
+                    // First try: relative path (for production)
+                    response = await axios.get('/api/notifications/courses/public', {
+                        timeout: 5000
+                    });
+                } catch (err1) {
+                    console.log('Relative path failed, trying localhost...');
+                    // Second try: localhost (for local development)
+                    response = await axios.get('http://localhost:4000/api/notifications/courses/public', {
+                        timeout: 5000
+                    });
+                }
+                
+                if (response.data && response.data.courses && response.data.courses.length > 0) {
                     // Map Moodle courses to display format
                     const formattedCourses = response.data.courses.slice(0, 8).map(course => ({
                         id: course.id,
                         name: course.name || course.fullname,
                         code: course.code || course.shortname,
-                        description: 'Professional program designed for career advancement',
+                        description: course.description || 'Professional program designed for career advancement',
                         icon: '📚'
                     }));
                     setMoodleCourses(formattedCourses);
+                    console.log('✓ Loaded', formattedCourses.length, 'courses from Moodle');
+                } else {
+                    console.log('No courses found in API response');
+                    setMoodleCourses([]);
                 }
             } catch (err) {
-                console.log('Could not fetch Moodle courses:', err.message);
+                console.error('❌ Could not fetch Moodle courses:', err.message);
                 // Fall back to default programs
                 setMoodleCourses([]);
             } finally {
@@ -216,37 +233,6 @@ const Home = ({ selectedTheme = 'modern', onApplyNow, onChangeTheme }) => {
             subtitle: "Future-ready education",
             description: "Experience cutting-edge technology and innovative teaching methods that prepare you for tomorrow's challenges.",
             image: "https://images.unsplash.com/photo-1509062522246-3755977927d7?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80"
-        }
-    ];
-
-    const programs = [
-        {
-            name: "Computer Science Engineering",
-            duration: "4 Years",
-            type: "B.Tech",
-            description: "Advanced computing, AI, and software development",
-            icon: "💻"
-        },
-        {
-            name: "Business Administration",
-            duration: "3 Years",
-            type: "BBA",
-            description: "Leadership, management, and entrepreneurship",
-            icon: "📊"
-        },
-        {
-            name: "Data Science",
-            duration: "2 Years",
-            type: "M.Sc",
-            description: "Analytics, machine learning, and big data",
-            icon: "📈"
-        },
-        {
-            name: "Digital Marketing",
-            duration: "1 Year",
-            type: "Diploma",
-            description: "SEO, social media, and online strategies",
-            icon: "📱"
         }
     ];
 

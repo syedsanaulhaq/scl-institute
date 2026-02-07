@@ -9,6 +9,13 @@ export default defineConfig({
     port: 7777,
     watch: {
       usePolling: true
+    },
+    proxy: {
+      '/api': {
+        target: 'http://scli-backend:4000',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, '/api')
+      }
     }
   }
 })
