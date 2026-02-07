@@ -595,4 +595,4 @@ const StudentRightToStudy = ({ user }) => {
     );
 };
 
-export default StudentRightToStudyFull;
+export default StudentRightToStudy;
