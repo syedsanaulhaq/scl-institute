@@ -234,6 +234,52 @@ router.get('/announcements', async (req, res) => {
     }
 });
 
+// Get all visible courses for public portal
+router.get('/courses/public', async (req, res) => {
+    try {
+        const moodleConnection = await moodlePool.getConnection();
+        
+        try {
+            // Get all visible courses
+            const [courses] = await moodleConnection.query(`
+                SELECT id, fullname, shortname, summary
+                FROM mdl_course
+                WHERE visible = 1 AND id > 1
+                ORDER BY fullname ASC
+            `);
+
+            moodleConnection.release();
+
+            res.json({
+                success: true,
+                count: courses.length,
+                courses: courses.map(c => ({
+                    id: c.id,
+                    name: c.fullname,
+                    code: c.shortname,
+                    description: c.summary ? stripHtmlTags(c.summary).substring(0, 100) : 'Professional program designed for career advancement'
+                }))
+            });
+
+        } catch (queryErr) {
+            moodleConnection.release();
+            console.error("[MOODLE PUBLIC COURSES] Query failed:", queryErr.message);
+            
+            res.status(500).json({
+                success: false,
+                message: 'Unable to fetch courses'
+            });
+        }
+
+    } catch (error) {
+        console.error("[PUBLIC COURSES] Fetch failed:", error.message);
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+});
+
 // Get enrolled courses for a specific student
 router.get('/courses/:student_email', async (req, res) => {
     try {

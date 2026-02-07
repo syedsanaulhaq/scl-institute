@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import axios from 'axios';
 import { 
     GraduationCap, 
     BookOpen, 
@@ -20,7 +21,8 @@ import {
     Globe,
     Target,
     Heart,
-    Palette
+    Palette,
+    Loader
 } from 'lucide-react';
 
 const themes = {
@@ -71,8 +73,75 @@ const Home = ({ selectedTheme = 'modern', onApplyNow, onChangeTheme }) => {
     const [isScrolled, setIsScrolled] = useState(false);
     const [showThemePanel, setShowThemePanel] = useState(false);
     const [selectedDesignTheme, setSelectedDesignTheme] = useState('light');
+    const [moodleCourses, setMoodleCourses] = useState([]);
+    const [coursesLoading, setCoursesLoading] = useState(true);
 
     const theme = themes[selectedTheme];
+
+    // Fetch courses from Moodle
+    useEffect(() => {
+        const fetchCourses = async () => {
+            try {
+                setCoursesLoading(true);
+                // Fetch from Moodle database via backend API
+                const response = await axios.get('http://localhost:4000/api/notifications/courses/public');
+                if (response.data && response.data.courses) {
+                    // Map Moodle courses to display format
+                    const formattedCourses = response.data.courses.slice(0, 8).map(course => ({
+                        id: course.id,
+                        name: course.name || course.fullname,
+                        code: course.code || course.shortname,
+                        description: 'Professional program designed for career advancement',
+                        icon: '📚'
+                    }));
+                    setMoodleCourses(formattedCourses);
+                }
+            } catch (err) {
+                console.log('Could not fetch Moodle courses:', err.message);
+                // Fall back to default programs
+                setMoodleCourses([]);
+            } finally {
+                setCoursesLoading(false);
+            }
+        };
+        fetchCourses();
+    }, []);
+
+    // Use Moodle courses if available, otherwise use defaults
+    const programs = moodleCourses.length > 0 ? moodleCourses : [
+        {
+            name: "Computer Science Engineering",
+            duration: "4 Years",
+            type: "B.Tech",
+            description: "Advanced computing, AI, and software development",
+            icon: "💻",
+            code: "CSE"
+        },
+        {
+            name: "Business Administration",
+            duration: "3 Years",
+            type: "BBA",
+            description: "Leadership, management, and entrepreneurship",
+            icon: "📊",
+            code: "BBA"
+        },
+        {
+            name: "Data Science",
+            duration: "2 Years",
+            type: "M.Sc",
+            description: "Analytics, machine learning, and big data",
+            icon: "📈",
+            code: "MDS"
+        },
+        {
+            name: "Digital Marketing",
+            duration: "1 Year",
+            type: "Diploma",
+            description: "SEO, social media, and online strategies",
+            icon: "📱",
+            code: "DM"
+        }
+    ];
 
     const designThemes = {
         light: {
@@ -443,39 +512,42 @@ const Home = ({ selectedTheme = 'modern', onApplyNow, onChangeTheme }) => {
             </section>
 
             {/* Programs Section */}
-            <section id="programs" className={`py-20 ${theme.bgPattern}`}>
+            <section id="programs" className={`py-16 ${theme.bgPattern}`}>
                 <div className="max-w-7xl mx-auto px-4">
-                    <div className="text-center mb-12 sm:mb-16">
-                        <h2 className={`text-3xl sm:text-4xl md:text-5xl font-bold text-${theme.primary} mb-4 sm:mb-6`}>
+                    <div className="text-center mb-10">
+                        <h2 className={`text-3xl sm:text-4xl font-bold text-${theme.primary} mb-3`}>
                             Our Programs
                         </h2>
-                        <p className={`text-lg sm:text-xl text-${theme.secondary} max-w-3xl mx-auto px-4`}>
-                            Discover a wide range of programs designed to prepare you for success in today's competitive world
+                        <p className={`text-base sm:text-lg text-${theme.secondary} max-w-2xl mx-auto`}>
+                            Discover a wide range of programs designed for your success
                         </p>
                     </div>
                     
-                    <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-                        {programs.map((program, index) => (
-                            <div key={index} className="bg-white rounded-xl shadow-lg hover:shadow-2xl transition-shadow p-6 border-l-4 border-l-blue-600">
-                                <div className="text-4xl mb-4">{program.icon}</div>
-                                <h3 className={`text-xl font-bold text-${theme.primary} mb-2`}>
-                                    {program.name}
-                                </h3>
-                                <div className="flex items-center gap-2 mb-4">
-                                    <span className={`bg-${theme.accent} text-white px-3 py-1 rounded-full text-sm font-semibold`}>
-                                        {program.type}
-                                    </span>
-                                    <span className={`text-${theme.secondary}`}>
-                                        {program.duration}
-                                    </span>
+                    {coursesLoading ? (
+                        <div className="flex justify-center items-center py-12">
+                            <Loader className="h-8 w-8 animate-spin text-blue-600" />
+                        </div>
+                    ) : (
+                        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+                            {programs.map((program, index) => (
+                                <div key={index} className={`bg-white rounded-lg shadow hover:shadow-md transition-shadow p-4 border-l-4 border-l-${theme.primary} group cursor-pointer`}>
+                                    <div className="text-3xl mb-3">{program.icon}</div>
+                                    <h3 className={`text-base font-semibold text-${theme.primary} mb-2 line-clamp-2 group-hover:text-${theme.secondary}`}>
+                                        {program.name}
+                                    </h3>
+                                    {program.code && (
+                                        <p className={`text-xs text-${theme.secondary} font-medium mb-3 uppercase tracking-wide`}>
+                                            {program.code}
+                                        </p>
+                                    )}
+                                    <p className="text-sm text-gray-600 mb-3 line-clamp-2">{program.description}</p>
+                                    <button className={`text-sm text-${theme.primary} font-medium hover:text-${theme.secondary} transition-colors flex items-center gap-1 group-hover:gap-2`}>
+                                        Learn More <ArrowRight size={14} />
+                                    </button>
                                 </div>
-                                <p className="text-gray-600 mb-4">{program.description}</p>
-                                <button className={`text-${theme.primary} font-semibold hover:text-${theme.secondary} transition-colors flex items-center gap-2`}>
-                                    Learn More <ArrowRight size={16} />
-                                </button>
-                            </div>
-                        ))}
-                    </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
             </section>
 
