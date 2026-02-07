@@ -81,69 +81,73 @@ const Home = ({ selectedTheme = 'modern', onApplyNow, onChangeTheme }) => {
     // Fetch courses from Moodle
     useEffect(() => {
         const fetchCourses = async () => {
+            setCoursesLoading(true);
+            console.log('🔄 [FETCH] Starting course fetch...');
+            
             try {
-                setCoursesLoading(true);
-                console.log('🔄 Fetching Moodle courses...');
+                console.log('📡 [FETCH] Attempting API call to /api/notifications/courses/public');
+                const response = await axios.get('/api/notifications/courses/public', {
+                    timeout: 10000
+                });
                 
-                // Try relative path first (should work with Vite proxy)
-                let response;
-                try {
-                    console.log('📡 Attempting to fetch from /api/notifications/courses/public');
-                    response = await axios.get('/api/notifications/courses/public', {
-                        timeout: 5000
-                    });
-                    console.log('✅ API response received:', response.data);
-                } catch (err1) {
-                    console.log('⚠️ Relative path failed:', err1.message);
-                    console.log('📡 Attempting to fetch from http://localhost:4000/api/notifications/courses/public');
-                    response = await axios.get('http://localhost:4000/api/notifications/courses/public', {
-                        timeout: 5000
-                    });
-                    console.log('✅ Fallback API response received:', response.data);
-                }
+                console.log('✅ [FETCH] API response received:', response.status, response.data);
                 
-                if (response && response.data && response.data.courses && Array.isArray(response.data.courses) && response.data.courses.length > 0) {
-                    console.log('📚 Processing', response.data.courses.length, 'courses from Moodle');
+                const courseData = response.data?.courses;
+                console.log('📊 [FETCH] Course data type:', typeof courseData, 'is Array:', Array.isArray(courseData), 'length:', courseData?.length);
+                
+                if (Array.isArray(courseData) && courseData.length > 0) {
+                    console.log('📚 [FETCH] Processing', courseData.length, 'courses');
                     
                     // Map Moodle courses to display format
-                    const formattedCourses = response.data.courses.slice(0, 8).map((course, idx) => ({
-                        id: course.id,
-                        name: course.name || course.fullname || `Course ${idx + 1}`,
-                        code: course.code || course.shortname || `CODE${idx + 1}`,
-                        description: course.description || 'Professional program designed for career advancement',
-                        icon: '📚'
-                    }));
+                    const formattedCourses = courseData.slice(0, 8).map((course, idx) => {
+                        const formatted = {
+                            id: course.id,
+                            name: course.name || course.fullname || `Course ${idx + 1}`,
+                            code: course.code || course.shortname || `CODE${idx + 1}`,
+                            description: course.description || 'Professional program designed for career advancement',
+                            icon: '📚'
+                        };
+                        console.log(`  [${idx}]`, formatted.name);
+                        return formatted;
+                    });
                     
-                    console.log('✅ Formatted courses:', formattedCourses);
+                    console.log('✅ [FETCH] Formatted', formattedCourses.length, 'courses, setting state...');
                     setMoodleCourses(formattedCourses);
-                    console.log('✓ Successfully loaded', formattedCourses.length, 'courses from Moodle');
+                    console.log('✓ [FETCH] State updated with', formattedCourses.length, 'courses');
                 } else {
-                    console.warn('⚠️ No courses found or invalid response structure:', response?.data);
+                    console.warn('⚠️ [FETCH] No valid course array found:', courseData);
                     setMoodleCourses([]);
                 }
             } catch (err) {
-                console.error('❌ Error fetching Moodle courses:', err.message, err);
-                console.error('Stack:', err.stack);
+                console.error('❌ [FETCH] Error:', err.message);
+                if (err.response) {
+                    console.error('  Status:', err.response.status);
+                    console.error('  Data:', err.response.data);
+                }
                 setMoodleCourses([]);
             } finally {
+                console.log('🏁 [FETCH] Setting coursesLoading to false');
                 setCoursesLoading(false);
             }
         };
+        
         fetchCourses();
     }, []);
 
     // Use Moodle courses ONLY - no defaults
     const programs = moodleCourses.length > 0 ? moodleCourses : [];
 
-    // Debug: Log which programs are being used
-    console.log('📊 Programs state:', {
-        moodleCoursesLength: moodleCourses.length,
-        coursesLoading,
-        usingMoodle: moodleCourses.length > 0,
-        programsCount: programs.length,
-        firstProgram: programs[0]?.name,
-        moodleCoursesData: moodleCourses
-    });
+    // Debug: Log which programs are being used on EVERY RENDER
+    useEffect(() => {
+        console.log('🎨 [RENDER] Current state:', {
+            moodleCoursesLength: moodleCourses.length,
+            coursesLoading,
+            usingMoodle: moodleCourses.length > 0,
+            programsCount: programs.length,
+            firstProgram: programs[0]?.name,
+            allCourseNames: moodleCourses.map(c => c.name)
+        });
+    }, [moodleCourses, coursesLoading]);
 
     const designThemes = {
         light: {
