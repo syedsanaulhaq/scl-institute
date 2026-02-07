@@ -14,7 +14,7 @@ const formatDate = (dateString) => {
     return `${day}/${month}/${year}`;
 };
 
-const StudentRightToStudy = () => {
+const StudentRightToStudy = ({ user }) => {
     const [studentApp, setStudentApp] = useState(null);
     const [documents, setDocuments] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -28,8 +28,8 @@ const StudentRightToStudy = () => {
     const baseUrl = API_URL.replace(/\/api$/, '');
 
     const documentTypes = [
-        { label: 'Passport', type: 'passport_id' },
-        { label: 'UK Visa', type: 'visa_immigration' },
+        { label: 'Passport', type: 'passport_id_document' },
+        { label: 'UK Visa', type: 'visa_immigration_document' },
         { label: 'BRP Card', type: 'brp_card' },
         { label: 'Residency Proof', type: 'residency_proof' }
     ];
@@ -83,20 +83,17 @@ const StudentRightToStudy = () => {
 
     useEffect(() => {
         fetchStudentData();
-    }, []);
+    }, [user]);
 
     const fetchStudentData = async () => {
         try {
-            const userStr = localStorage.getItem('user');
-            if (!userStr) {
+            if (!user || !user.email) {
                 setMessage({ type: 'error', text: 'User session not found. Please log in again.' });
                 setLoading(false);
                 return;
             }
             
-            const user = JSON.parse(userStr);
-            
-            // Get student application by email
+            // Get student application by email - same as admissions page
             const appResponse = await axios.get(`${API_URL}/students/applications`);
             if (appResponse.data?.success) {
                 const apps = appResponse.data.data?.applications || [];
@@ -108,14 +105,72 @@ const StudentRightToStudy = () => {
                 }
 
                 setAppId(studentApp.id);
+                setStudentApp({
+                    id: studentApp.id,
+                    name: `${studentApp.first_name} ${studentApp.last_name}`.trim(),
+                    email: studentApp.email,
+                    complianceConfirmed: !!studentApp.compliance_confirmed_at,
+                    rightToStudyVerified: studentApp.right_to_study_verified === 'Yes',
+                    complianceConfirmedAt: studentApp.compliance_confirmed_at
+                });
 
-                // Fetch Right to Study documents
-                const docsResponse = await axios.get(`${API_URL}/students/right-to-study/${studentApp.id}`);
-                if (docsResponse.data.success) {
-                    setStudentApp(docsResponse.data.student);
-                    setDocuments(docsResponse.data.documents);
-                    setComplianceConfirmed(docsResponse.data.student.complianceConfirmed);
+                // Build documents from application data columns
+                const rightToStudyDocs = [];
+                
+                if (studentApp.passport_id_document) {
+                    rightToStudyDocs.push({
+                        id: `passport-${studentApp.id}`,
+                        type: 'Passport',
+                        documentType: 'passport_id_document',
+                        status: studentApp.documents_verified === 'Yes' ? 'Approved' : 'Pending Review',
+                        uploadDate: studentApp.updated_at,
+                        fileName: studentApp.passport_id_document,
+                        expiryDate: calculateExpiryDate('passport_id_document'),
+                        daysUntilExpiry: calculateDaysUntilExpiry('passport_id_document')
+                    });
                 }
+
+                if (studentApp.visa_immigration_document) {
+                    rightToStudyDocs.push({
+                        id: `visa-${studentApp.id}`,
+                        type: 'UK Visa',
+                        documentType: 'visa_immigration_document',
+                        status: studentApp.documents_verified === 'Yes' ? 'Approved' : 'Pending Review',
+                        uploadDate: studentApp.updated_at,
+                        fileName: studentApp.visa_immigration_document,
+                        expiryDate: calculateExpiryDate('visa_immigration_document'),
+                        daysUntilExpiry: calculateDaysUntilExpiry('visa_immigration_document')
+                    });
+                }
+
+                if (studentApp.brp_card) {
+                    rightToStudyDocs.push({
+                        id: `brp-${studentApp.id}`,
+                        type: 'BRP Card',
+                        documentType: 'brp_card',
+                        status: studentApp.documents_verified === 'Yes' ? 'Approved' : 'Pending Review',
+                        uploadDate: studentApp.updated_at,
+                        fileName: studentApp.brp_card,
+                        expiryDate: calculateExpiryDate('brp_card'),
+                        daysUntilExpiry: calculateDaysUntilExpiry('brp_card')
+                    });
+                }
+
+                if (studentApp.residency_proof) {
+                    rightToStudyDocs.push({
+                        id: `residency-${studentApp.id}`,
+                        type: 'Residency Proof',
+                        documentType: 'residency_proof',
+                        status: studentApp.documents_verified === 'Yes' ? 'Approved' : 'Pending Review',
+                        uploadDate: studentApp.updated_at,
+                        fileName: studentApp.residency_proof,
+                        expiryDate: calculateExpiryDate('residency_proof'),
+                        daysUntilExpiry: calculateDaysUntilExpiry('residency_proof')
+                    });
+                }
+
+                setDocuments(rightToStudyDocs);
+                setComplianceConfirmed(!!studentApp.compliance_confirmed_at);
             }
         } catch (error) {
             console.error('Error fetching student data:', error);
@@ -212,12 +267,14 @@ const StudentRightToStudy = () => {
         }
     };
 
-    const handleViewDocument = (filePath) => {
-        if (!filePath) {
+    const handleViewDocument = (fileName) => {
+        if (!fileName) {
             setMessage({ type: 'error', text: 'Document file not available.' });
             return;
         }
-        window.open(`${baseUrl}${filePath}`, '_blank', 'noopener,noreferrer');
+        // For now, show alert with filename since we don't have direct file download yet
+        alert(`Document: ${fileName}`);
+        // TODO: Implement proper document download from backend
     };
 
     const getStatusBadge = (status) => {
@@ -411,17 +468,19 @@ const StudentRightToStudy = () => {
                                     )}
 
                                     <div className="ml-14 mt-4 flex gap-3">
-                                        <button
-                                            onClick={() => handleViewDocument(doc.filePath)}
-                                            className="px-4 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                                        >
-                                            View Document
-                                        </button>
+                                        {doc.fileName && (
+                                            <button
+                                                onClick={() => handleViewDocument(doc.fileName)}
+                                                className="px-4 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                            >
+                                                View Document
+                                            </button>
+                                        )}
                                         <button
                                             onClick={() => triggerFileInput(resolveDocType(doc))}
                                             className="px-4 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                                         >
-                                            Upload New Version
+                                            {doc.fileName ? 'Upload New Version' : 'Upload Document'}
                                         </button>
                                     </div>
                                 </div>
