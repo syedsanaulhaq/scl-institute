@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Upload, FileText, AlertCircle, CheckCircle, Calendar, Shield } from 'lucide-react';
+import { Upload, FileText, CheckCircle, AlertCircle, Calendar, Shield } from 'lucide-react';
 import axios from 'axios';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
@@ -14,21 +14,27 @@ const formatDate = (dateString) => {
     return `${day}/${month}/${year}`;
 };
 
-// Mock expiry date calculation (in real system, this would come from document metadata)
-const calculateExpiryDate = (docType) => {
+const calculateExpiryDate = (documentType) => {
     const today = new Date();
-    const years = docType.includes('passport') ? 10 : 5; // Passports 10 years, others 5 years
     const expiryDate = new Date(today);
-    expiryDate.setFullYear(today.getFullYear() + years);
-    return expiryDate.toISOString().split('T')[0];
+    
+    const expiryConfig = {
+        'passport_id_document': 10 * 365,
+        'visa_immigration_document': 2 * 365,
+        'brp_card': 10 * 365,
+        'residency_proof': 1 * 365
+    };
+
+    const days = expiryConfig[documentType] || 365;
+    expiryDate.setDate(expiryDate.getDate() + days);
+    return expiryDate.toISOString();
 };
 
-const calculateDaysUntilExpiry = (docType) => {
-    const expiryDate = new Date(calculateExpiryDate(docType));
+const calculateDaysUntilExpiry = (documentType) => {
     const today = new Date();
-    const diffTime = expiryDate - today;
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays;
+    const expiryDate = new Date(calculateExpiryDate(documentType));
+    const timeDiff = expiryDate.getTime() - today.getTime();
+    return Math.ceil(timeDiff / (1000 * 3600 * 24));
 };
 
 const StudentRightToStudy = ({ user }) => {
@@ -65,22 +71,22 @@ const StudentRightToStudy = ({ user }) => {
             {
                 id: 'demo-passport',
                 type: 'Passport',
-                documentType: 'passport_id',
+                documentType: 'passport_id_document',
                 status: 'Approved',
                 uploadDate: new Date().toISOString(),
                 filePath: null,
-                expiryDate: calculateExpiryDate('passport_id'),
-                daysUntilExpiry: calculateDaysUntilExpiry('passport_id')
+                expiryDate: calculateExpiryDate('passport_id_document'),
+                daysUntilExpiry: calculateDaysUntilExpiry('passport_id_document')
             },
             {
                 id: 'demo-visa',
                 type: 'UK Visa',
-                documentType: 'visa_immigration',
+                documentType: 'visa_immigration_document',
                 status: 'Pending Review',
                 uploadDate: new Date().toISOString(),
                 filePath: null,
-                expiryDate: calculateExpiryDate('visa_immigration'),
-                daysUntilExpiry: calculateDaysUntilExpiry('visa_immigration')
+                expiryDate: calculateExpiryDate('visa_immigration_document'),
+                daysUntilExpiry: calculateDaysUntilExpiry('visa_immigration_document')
             },
             {
                 id: 'demo-brp',
@@ -331,12 +337,12 @@ const StudentRightToStudy = ({ user }) => {
     const resolveDocType = (doc) => {
         if (doc.documentType) return doc.documentType;
         const map = {
-            Passport: 'passport_id',
-            'UK Visa': 'visa_immigration',
+            Passport: 'passport_id_document',
+            'UK Visa': 'visa_immigration_document',
             'BRP Card': 'brp_card',
             'Residency Proof': 'residency_proof'
         };
-        return map[doc.type] || 'passport_id';
+        return map[doc.type] || 'passport_id_document';
     };
 
     if (loading) {
@@ -589,4 +595,4 @@ const StudentRightToStudy = ({ user }) => {
     );
 };
 
-export default StudentRightToStudy;
+export default StudentRightToStudyFull;
