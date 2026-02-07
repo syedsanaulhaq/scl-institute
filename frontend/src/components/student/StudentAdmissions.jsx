@@ -351,8 +351,10 @@ const StudentAdmissions = ({ user }) => {
                 alert('Induction completed successfully!');
                 // Keep the induction data in state so the completion status is reflected in the sidebar
                 // Don't clear it - it's needed to show step 6 as completed
-                // Optionally refresh application data to reflect any backend updates
-                fetchApplicationData();
+                // Refresh application data and navigate to summary
+                await fetchApplicationData();
+                await fetchInductionData();
+                setActiveTab('summary');
             } else {
                 alert('Failed to save induction: ' + (response.data?.message || 'Unknown error'));
             }
@@ -426,8 +428,9 @@ const StudentAdmissions = ({ user }) => {
             const uploadedRequiredDocs = requiredDocs.filter(doc => applicationData[doc.field]);
             const allRequiredDocsUploaded = uploadedRequiredDocs.length === requiredDocs.length;
             
+            // Mark as completed when all required docs are uploaded
             let documentsStatus = 'pending';
-            if (allRequiredDocsUploaded && applicationData.documents_verified) {
+            if (allRequiredDocsUploaded) {
                 documentsStatus = 'completed';
             } else if (uploadedRequiredDocs.length > 0) {
                 documentsStatus = 'in_progress';
@@ -509,6 +512,16 @@ const StudentAdmissions = ({ user }) => {
                     }`}
                 >
                     Induction
+                </button>
+                <button
+                    onClick={() => setActiveTab('summary')}
+                    className={`py-3 px-4 font-medium border-b-2 transition-colors ${
+                        activeTab === 'summary'
+                            ? 'border-blue-600 text-blue-600'
+                            : 'border-transparent text-gray-600 hover:text-gray-900'
+                    }`}
+                >
+                    Summary
                 </button>
             </div>
 
@@ -899,6 +912,149 @@ const StudentAdmissions = ({ user }) => {
                         >
                             <CheckCircle className="w-5 h-5" />
                             {savingInduction ? 'Saving...' : 'Complete Induction'}
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* SUMMARY TAB */}
+            {activeTab === 'summary' && (
+                <div className="bg-white rounded-b-lg shadow p-6">
+                    <div className="mb-6 p-6 bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-lg">
+                        <div className="flex items-center gap-4 mb-4">
+                            <CheckCircle className="w-12 h-12 text-green-600" />
+                            <div>
+                                <h2 className="text-2xl font-bold text-gray-900">Enrolment Complete!</h2>
+                                <p className="text-gray-600">Congratulations! You have successfully completed all enrolment steps.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Student Information */}
+                    <div className="mb-6 p-6 bg-gray-50 rounded-lg">
+                        <h3 className="text-lg font-bold text-gray-900 mb-4">Student Information</h3>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <p className="text-sm text-gray-600">Student Name</p>
+                                <p className="font-medium text-gray-900">{applicationData?.first_name} {applicationData?.middle_names} {applicationData?.last_name}</p>
+                            </div>
+                            <div>
+                                <p className="text-sm text-gray-600">Email</p>
+                                <p className="font-medium text-gray-900">{applicationData?.email}</p>
+                            </div>
+                            <div>
+                                <p className="text-sm text-gray-600">Contact Number</p>
+                                <p className="font-medium text-gray-900">{applicationData?.contact_number}</p>
+                            </div>
+                            <div>
+                                <p className="text-sm text-gray-600">Date of Birth</p>
+                                <p className="font-medium text-gray-900">{formatDate(applicationData?.date_of_birth)}</p>
+                            </div>
+                            <div>
+                                <p className="text-sm text-gray-600">Nationality</p>
+                                <p className="font-medium text-gray-900">{applicationData?.nationality}</p>
+                            </div>
+                            <div>
+                                <p className="text-sm text-gray-600">Application Reference</p>
+                                <p className="font-medium text-gray-900">{applicationData?.application_reference}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Programme Details */}
+                    <div className="mb-6 p-6 bg-gray-50 rounded-lg">
+                        <h3 className="text-lg font-bold text-gray-900 mb-4">Programme Details</h3>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <p className="text-sm text-gray-600">Programme</p>
+                                <p className="font-medium text-gray-900">{applicationData?.course_title}</p>
+                            </div>
+                            <div>
+                                <p className="text-sm text-gray-600">Course Code</p>
+                                <p className="font-medium text-gray-900">{applicationData?.course_code}</p>
+                            </div>
+                            <div>
+                                <p className="text-sm text-gray-600">Mode of Study</p>
+                                <p className="font-medium text-gray-900">{applicationData?.mode_of_study}</p>
+                            </div>
+                            <div>
+                                <p className="text-sm text-gray-600">Start Date</p>
+                                <p className="font-medium text-gray-900">{formatDate(applicationData?.intake_start_date)}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Uploaded Documents Summary */}
+                    <div className="mb-6 p-6 bg-gray-50 rounded-lg">
+                        <h3 className="text-lg font-bold text-gray-900 mb-4">Uploaded Documents</h3>
+                        <div className="space-y-2">
+                            {documents.map((doc, index) => (
+                                applicationData?.[doc.field] && (
+                                    <div key={index} className="flex items-center justify-between p-3 bg-white rounded border">
+                                        <div className="flex items-center gap-3">
+                                            <CheckCircle className="w-5 h-5 text-green-600" />
+                                            <span className="font-medium text-gray-900">{doc.name}</span>
+                                        </div>
+                                        <span className="text-sm text-gray-600">{applicationData[doc.field]}</span>
+                                    </div>
+                                )
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Induction Completion */}
+                    {inductionData.declaration_understood && inductionData.digital_signature && (
+                        <div className="mb-6 p-6 bg-gray-50 rounded-lg">
+                            <h3 className="text-lg font-bold text-gray-900 mb-4">Induction Completed</h3>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <p className="text-sm text-gray-600">Digital Signature</p>
+                                    <p className="font-medium text-gray-900">{inductionData.digital_signature}</p>
+                                </div>
+                                <div>
+                                    <p className="text-sm text-gray-600">Declaration Date</p>
+                                    <p className="font-medium text-gray-900">{formatDate(inductionData.declaration_date)}</p>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Next Steps */}
+                    <div className="p-6 bg-blue-50 border border-blue-200 rounded-lg">
+                        <h3 className="text-lg font-bold text-gray-900 mb-3">What's Next?</h3>
+                        <ul className="space-y-2 text-gray-700">
+                            <li className="flex items-start gap-2">
+                                <CheckCircle className="w-5 h-5 text-blue-600 mt-0.5" />
+                                <span>You will receive a welcome email with your student ID and login credentials</span>
+                            </li>
+                            <li className="flex items-start gap-2">
+                                <CheckCircle className="w-5 h-5 text-blue-600 mt-0.5" />
+                                <span>Access to the Moodle Learning Platform will be granted within 24 hours</span>
+                            </li>
+                            <li className="flex items-start gap-2">
+                                <CheckCircle className="w-5 h-5 text-blue-600 mt-0.5" />
+                                <span>Check your email for course orientation schedule and joining instructions</span>
+                            </li>
+                            <li className="flex items-start gap-2">
+                                <CheckCircle className="w-5 h-5 text-blue-600 mt-0.5" />
+                                <span>Your programme starts on {formatDate(applicationData?.intake_start_date)}</span>
+                            </li>
+                        </ul>
+                    </div>
+
+                    {/* Print Summary Button */}
+                    <div className="mt-6 flex justify-end gap-3">
+                        <button
+                            onClick={() => window.print()}
+                            className="px-6 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                        >
+                            Print Summary
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('status')}
+                            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                        >
+                            Back to Dashboard
                         </button>
                     </div>
                 </div>
