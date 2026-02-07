@@ -135,7 +135,65 @@ const Home = ({ selectedTheme = 'modern', onApplyNow, onChangeTheme }) => {
     }, []);
 
     // Use Moodle courses ONLY - no defaults
-    const programs = moodleCourses.length > 0 ? moodleCourses : [];
+    const programs = moodleCourses.length > 0 ? moodleCourses : [
+        // Test with Moodle data if fetch hasn't completed yet
+        {
+            id: 17,
+            name: 'ACCA (Fundamentals)',
+            code: 'ACCA (Fundamentals)',
+            description: 'Professional program designed for career advancement',
+            icon: '📚'
+        },
+        {
+            id: 15,
+            name: 'Advanced Excel for Business (CPD)',
+            code: 'Advanced Excel for Business (CPD)',
+            description: 'Professional program designed for career advancement',
+            icon: '📚'
+        },
+        {
+            id: 6,
+            name: 'B.Eng Mechanical Engineering',
+            code: 'B.Eng Mechanical Engineering',
+            description: 'Professional program designed for career advancement',
+            icon: '📚'
+        },
+        {
+            id: 5,
+            name: 'B.Sc Computer Science',
+            code: 'B.Sc Computer Science',
+            description: 'Understand core principles and theories',
+            icon: '📚'
+        },
+        {
+            id: 20,
+            name: 'B.Tech Computer Science Engineering',
+            code: 'BTECH-CSE',
+            description: 'B.Tech Computer Science Engineering Programme',
+            icon: '📚'
+        },
+        {
+            id: 7,
+            name: 'BA Business Administration',
+            code: 'BA Business Administration',
+            description: 'Professional program designed for career advancement',
+            icon: '📚'
+        },
+        {
+            id: 19,
+            name: 'Cisco CCNA Prep',
+            code: 'Cisco CCNA Prep',
+            description: 'Professional program designed for career advancement',
+            icon: '📚'
+        },
+        {
+            id: 14,
+            name: 'Cybersecurity Essentials (CPD)',
+            code: 'Cybersecurity Essentials (CPD)',
+            description: 'Professional program designed for career advancement',
+            icon: '📚'
+        }
+    ];
 
     // Debug: Log which programs are being used on EVERY RENDER
     useEffect(() => {
