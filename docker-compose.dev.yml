@@ -114,6 +114,18 @@ services:
       - /app/node_modules
     command: npm run dev
 
+  scli-public-portal:
+    build: ./public-portal
+    container_name: scli-public-portal-dev
+    ports:
+      - "7777:7777"
+    networks:
+      - scl-network-dev
+    volumes:
+      - ./public-portal:/app
+      - /app/node_modules
+    command: npm run dev
+
 networks:
   scl-network-dev:
     driver: bridge
