@@ -2580,7 +2580,7 @@ router.get('/assessments/:id', async (req, res) => {
         
         // Get Moodle course ID
         const moodlePool = mysql.createPool({
-            host: 'scli-moodle-db',
+            host: process.env.MOODLE_DB_HOST || 'scli-moodle-db-dev',
             port: 3306,
             user: 'root',
             password: 'moodleroot',
@@ -2596,6 +2596,7 @@ router.get('/assessments/:id', async (req, res) => {
         );
 
         if (courseRows.length === 0) {
+            moodlePool.end();
             return res.json({
                 success: true,
                 data: []
@@ -2655,25 +2656,10 @@ router.get('/assessments/:id', async (req, res) => {
 router.get('/grades/:id', async (req, res) => {
     try {
         const studentId = req.params.id;
-        
-        // Get student's user email from our database
-        const [userRows] = await db.query(
-            `SELECT email FROM users WHERE id = ?`,
-            [studentId]
-        );
 
-        if (userRows.length === 0) {
-            return res.json({
-                success: true,
-                data: []
-            });
-        }
-
-        const userEmail = userRows[0].email;
-
-        // Get student's course
+        // Get student's email and course from application
         const [appRows] = await db.query(
-            `SELECT course_code FROM student_applications WHERE id = ?`,
+            `SELECT email, course_code FROM student_applications WHERE id = ?`,
             [studentId]
         );
 
@@ -2684,11 +2670,12 @@ router.get('/grades/:id', async (req, res) => {
             });
         }
 
+        const userEmail = appRows[0].email;
         const courseCode = appRows[0].course_code;
 
         // Connect to Moodle database
         const moodlePool = mysql.createPool({
-            host: 'scli-moodle-db',
+            host: process.env.MOODLE_DB_HOST || 'scli-moodle-db-dev',
             port: 3306,
             user: 'root',
             password: 'moodleroot',
@@ -2749,6 +2736,20 @@ router.get('/grades/:id', async (req, res) => {
             [moodleUserId, courseId]
         );
 
+        const [courseTotals] = await moodlePool.query(
+            `
+            SELECT 
+                gg.finalgrade,
+                gi.grademax,
+                gg.timemodified
+            FROM mdl_grade_items gi
+            LEFT JOIN mdl_grade_grades gg ON gi.id = gg.itemid AND gg.userid = ?
+            WHERE gi.courseid = ? AND gi.itemtype = 'course'
+            LIMIT 1
+            `,
+            [moodleUserId, courseId]
+        );
+
         const gradeData = grades.map(grade => ({
             id: grade.itemname,
             module: grade.itemname,
@@ -2764,9 +2765,21 @@ router.get('/grades/:id', async (req, res) => {
 
         moodlePool.end();
 
+        const courseSummary = courseTotals.length > 0 ? {
+            finalGrade: courseTotals[0].finalgrade ? parseFloat(courseTotals[0].finalgrade).toFixed(2) : null,
+            maxGrade: courseTotals[0].grademax ? parseFloat(courseTotals[0].grademax).toFixed(2) : '100',
+            percentage: courseTotals[0].grademax && courseTotals[0].finalgrade
+                ? Math.round((courseTotals[0].finalgrade / courseTotals[0].grademax) * 100)
+                : null,
+            updatedAt: courseTotals[0].timemodified ? new Date(courseTotals[0].timemodified * 1000).toISOString().split('T')[0] : null
+        } : null;
+
         return res.json({
             success: true,
-            data: gradeData
+            data: {
+                grades: gradeData,
+                courseSummary
+            }
         });
 
     } catch (error) {
@@ -3090,13 +3103,14 @@ router.get('/contract-pdf', async (req, res) => {
 });
 
 // Submit a course change request (Deferral, Withdrawal, Transfer)
-router.post('/applications/:id/course-change-request', async (req, res) => {
+router.post('/applications/:id/course-change-request', upload.single('supporting_document'), async (req, res) => {
     try {
         const { id } = req.params;
         const {
             type_of_request, effective_date, justification, current_study_mode,
             policy_confirmation, digital_signature, request_date
         } = req.body;
+        const file = req.file;
 
         if (!type_of_request || !effective_date) {
             return res.status(400).json({
@@ -3107,7 +3121,7 @@ router.post('/applications/:id/course-change-request', async (req, res) => {
 
         // Get application details
         const [apps] = await db.execute(
-            'SELECT id, student_name, course_title, course_start_date FROM student_applications WHERE id = ?',
+            'SELECT id, first_name, last_name, course_title, programme_name, intake_start_date FROM student_applications WHERE id = ?',
             [id]
         );
 
@@ -3119,18 +3133,23 @@ router.post('/applications/:id/course-change-request', async (req, res) => {
         }
 
         const app = apps[0];
+        const studentName = `${app.first_name} ${app.last_name}`.trim();
+        const courseTitle = app.programme_name || app.course_title;
+        const courseStartDate = app.intake_start_date;
+        const supportingDocumentPath = file ? `/uploads/student-documents/${file.filename}` : null;
+        const policyConfirmed = policy_confirmation === '1' || policy_confirmation === 'true' || policy_confirmation === true;
 
         // Insert course change request
         const [result] = await db.execute(
             `INSERT INTO course_change_requests (
                 application_id, student_id, student_name, course_title, course_start_date,
                 current_study_mode, type_of_request, effective_date, justification,
-                policy_confirmation, digital_signature, request_date
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                supporting_document, policy_confirmation, digital_signature, request_date
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
-                id, id, app.student_name, app.course_title, app.course_start_date,
+                id, id, studentName, courseTitle, courseStartDate,
                 current_study_mode, type_of_request, effective_date, justification,
-                policy_confirmation ? 1 : 0, digital_signature, request_date
+                supportingDocumentPath, policyConfirmed ? 1 : 0, digital_signature, request_date
             ]
         );
 

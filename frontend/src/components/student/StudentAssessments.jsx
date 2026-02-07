@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { FileText, Upload, CheckCircle, Clock, AlertTriangle, Download } from 'lucide-react';
+import { FileText, Upload, CheckCircle, Clock, AlertTriangle } from 'lucide-react';
 import axios from 'axios';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
@@ -8,7 +8,6 @@ const StudentAssessments = ({ user }) => {
     const [selectedTab, setSelectedTab] = useState('upcoming');
     const [assessments, setAssessments] = useState([]);
     const [submittedAssessments, setSubmittedAssessments] = useState([]);
-    const [grades, setGrades] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
 
@@ -25,7 +24,7 @@ const StudentAssessments = ({ user }) => {
                 const studentApp = apps.find(app => app.email === user?.email);
                 
                 if (studentApp) {
-                    // Fetch assessments
+                    // Fetch assessments only
                     const assessResponse = await axios.get(`${API_URL}/students/assessments/${studentApp.id}`);
                     if (assessResponse.data?.success) {
                         const allAssessments = assessResponse.data.data || [];
@@ -38,17 +37,11 @@ const StudentAssessments = ({ user }) => {
                         setAssessments(upcoming);
                         setSubmittedAssessments(submitted);
                     }
-
-                    // Fetch grades
-                    const gradesResponse = await axios.get(`${API_URL}/students/grades/${studentApp.id}`);
-                    if (gradesResponse.data?.success) {
-                        setGrades(gradesResponse.data.data || []);
-                    }
                 }
             }
         } catch (err) {
-            console.error('Error fetching data:', err);
-            setError('Could not load assessments and grades from Moodle');
+            console.error('Error fetching assessments:', err);
+            setError('Could not load assessments from Moodle');
         } finally {
             setLoading(false);
         }
@@ -83,13 +76,6 @@ const StudentAssessments = ({ user }) => {
         return days;
     };
 
-    const getGradeColor = (percentage) => {
-        if (percentage >= 70) return 'text-green-600';
-        if (percentage >= 60) return 'text-blue-600';
-        if (percentage >= 50) return 'text-yellow-600';
-        return 'text-red-600';
-    };
-
     const handleViewInMoodle = async (moodleUrl) => {
         try {
             const ssoPayload = { email: user?.email };
@@ -107,7 +93,7 @@ const StudentAssessments = ({ user }) => {
     };
 
     if (loading) {
-        return <div className="p-8 text-center">Loading assessments and grades...</div>;
+        return <div className="p-8 text-center">Loading assessments...</div>;
     }
 
     if (error) {
@@ -116,7 +102,33 @@ const StudentAssessments = ({ user }) => {
 
     return (
         <div className="p-6 bg-gray-50 min-h-screen">
-            <h1 className="text-3xl font-bold text-gray-900 mb-8">Assessments & Grades</h1>
+            <h1 className="text-3xl font-bold text-gray-900 mb-8">Assessments & Exams</h1>
+
+            {/* LMS Guidance */}
+            <div className="bg-white rounded-lg shadow p-6 mb-8">
+                <div className="flex items-start justify-between gap-6 flex-wrap">
+                    <div>
+                        <h2 className="text-xl font-bold text-gray-900 mb-2">Assessment Information (LMS)</h2>
+                        <p className="text-sm text-gray-600 mb-4">
+                            All assessment details, exam schedules, submission areas, and academic integrity guidance are available in Moodle.
+                        </p>
+                        <ul className="text-sm text-gray-700 space-y-2 list-disc list-inside">
+                            <li>Assessment briefs & requirements</li>
+                            <li>Exam timetable (if applicable)</li>
+                            <li>Submission area (upload + timestamp + receipts)</li>
+                            <li>Academic integrity / misconduct guidance</li>
+                        </ul>
+                    </div>
+                    <div className="flex items-center">
+                        <button
+                            onClick={() => handleViewInMoodle()}
+                            className="px-5 py-2 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 transition"
+                        >
+                            Open Moodle (SSO)
+                        </button>
+                    </div>
+                </div>
+            </div>
 
             {/* Tab Navigation */}
             <div className="flex gap-4 mb-8 border-b border-gray-200">
@@ -139,16 +151,6 @@ const StudentAssessments = ({ user }) => {
                     }`}
                 >
                     Submitted ({submittedAssessments.length})
-                </button>
-                <button
-                    onClick={() => setSelectedTab('grades')}
-                    className={`pb-4 px-4 font-semibold border-b-2 transition ${
-                        selectedTab === 'grades'
-                            ? 'border-blue-600 text-blue-600'
-                            : 'border-transparent text-gray-600 hover:text-gray-900'
-                    }`}
-                >
-                    Grades ({grades.length})
                 </button>
             </div>
 
@@ -262,63 +264,6 @@ const StudentAssessments = ({ user }) => {
                                 </div>
                             </div>
                         ))
-                    )}
-                </div>
-            )}
-
-            {/* Grades */}
-            {selectedTab === 'grades' && (
-                <div className="space-y-4">
-                    {grades.length === 0 ? (
-                        <div className="bg-white rounded-lg shadow p-8 text-center">
-                            <AlertTriangle className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                            <p className="text-gray-600">No grades available yet</p>
-                        </div>
-                    ) : (
-                        <div className="bg-white rounded-lg shadow overflow-hidden">
-                            <table className="w-full">
-                                <thead className="bg-gray-100 border-b border-gray-200">
-                                    <tr>
-                                        <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">Assessment</th>
-                                        <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">Module</th>
-                                        <th className="px-6 py-3 text-center text-xs font-semibold text-gray-700">Grade</th>
-                                        <th className="px-6 py-3 text-center text-xs font-semibold text-gray-700">Percentage</th>
-                                        <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700">Submitted</th>
-                                        <th className="px-6 py-3 text-center text-xs font-semibold text-gray-700">Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-200">
-                                    {grades.map(grade => (
-                                        <tr key={grade.id} className="hover:bg-gray-50 transition">
-                                            <td className="px-6 py-4">
-                                                <p className="font-medium text-gray-900">{grade.module}</p>
-                                                <p className="text-xs text-gray-600">{grade.type}</p>
-                                            </td>
-                                            <td className="px-6 py-4 text-sm text-gray-600">{grade.code}</td>
-                                            <td className="px-6 py-4 text-center font-semibold text-gray-900">
-                                                {grade.grade} / {grade.maxGrade}
-                                            </td>
-                                            <td className="px-6 py-4 text-center">
-                                                <span className={`font-semibold ${getGradeColor(grade.percentage)}`}>
-                                                    {grade.percentage}%
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4 text-sm text-gray-600">{grade.submittedDate}</td>
-                                            <td className="px-6 py-4 text-center">
-                                                {grade.moodle_url && (
-                                                    <button
-                                                        onClick={() => handleViewInMoodle(grade.moodle_url)}
-                                                        className="text-blue-600 hover:text-blue-700 font-medium text-sm"
-                                                    >
-                                                        View
-                                                    </button>
-                                                )}
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
                     )}
                 </div>
             )}

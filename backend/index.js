@@ -20,18 +20,7 @@ const app = express();
 const PORT = process.env.PORT || 4000;
 
 // Database Connection Definition
-const pool = mysql.createPool({
-    host: process.env.DB_HOST || 'localhost',
-    port: process.env.DB_PORT || 33061,
-    user: process.env.DB_USER,
-    password: process.env.DB_PASS,
-    database: process.env.DB_NAME,
-    waitForConnections: true,
-    connectionLimit: 10,
-    queueLimit: 0,
-    enableKeepAlive: true,
-    keepAliveInitialDelay: 0
-});
+const pool = require('./db');
 
 // Create Tokens Table on Startup
 async function initDB() {
@@ -72,16 +61,19 @@ app.use((req, res, next) => {
 app.use(cors());
 app.use(bodyParser.json());
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/documents', express.static(path.join(__dirname, 'public', 'documents')));
 
 // Import routes
 const studentRoutes = require('./routes/students');
 const moodleRoutes = require('./routes/moodle');
 const { router: notificationsRouter } = require('./routes/notifications');
+const supportRoutes = require('./routes/support');
 
 // Use routes
 app.use('/api/students', studentRoutes);
 app.use('/api/moodle', moodleRoutes);
 app.use('/api/notifications', notificationsRouter);
+app.use('/api/support', supportRoutes);
 
 // Routes
 app.get('/api/health', (req, res) => {

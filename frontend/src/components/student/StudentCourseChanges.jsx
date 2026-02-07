@@ -4,6 +4,16 @@ import axios from 'axios';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
 
+const formatDate = (dateString) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    if (Number.isNaN(date.getTime())) return dateString;
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
+};
+
 export default function StudentCourseChanges({ user }) {
     const [applicationData, setApplicationData] = useState(null);
     const [requests, setRequests] = useState([]);
@@ -22,6 +32,12 @@ export default function StudentCourseChanges({ user }) {
         request_date: new Date().toISOString().split('T')[0],
         supporting_document: null
     });
+
+    useEffect(() => {
+        if (applicationData?.mode_of_study && !formData.current_study_mode) {
+            setFormData(prev => ({ ...prev, current_study_mode: applicationData.mode_of_study }));
+        }
+    }, [applicationData?.mode_of_study]);
 
     useEffect(() => {
         fetchApplicationData();
@@ -82,16 +98,23 @@ export default function StudentCourseChanges({ user }) {
 
         try {
             setSubmitting(true);
+            const payload = new FormData();
+            payload.append('type_of_request', formData.type_of_request);
+            payload.append('current_study_mode', formData.current_study_mode);
+            payload.append('effective_date', formData.effective_date);
+            payload.append('justification', formData.justification);
+            payload.append('policy_confirmation', formData.policy_confirmation ? '1' : '0');
+            payload.append('digital_signature', formData.digital_signature);
+            payload.append('request_date', formData.request_date);
+            if (formData.supporting_document) {
+                payload.append('supporting_document', formData.supporting_document);
+            }
+
             const response = await axios.post(
                 `${API_URL}/students/applications/${applicationData.id}/course-change-request`,
+                payload,
                 {
-                    type_of_request: formData.type_of_request,
-                    current_study_mode: formData.current_study_mode,
-                    effective_date: formData.effective_date,
-                    justification: formData.justification,
-                    policy_confirmation: formData.policy_confirmation,
-                    digital_signature: formData.digital_signature,
-                    request_date: formData.request_date
+                    headers: { 'Content-Type': 'multipart/form-data' }
                 }
             );
 
@@ -100,7 +123,7 @@ export default function StudentCourseChanges({ user }) {
                 // Reset form
                 setFormData({
                     type_of_request: 'Deferral',
-                    current_study_mode: '',
+                    current_study_mode: applicationData?.mode_of_study || '',
                     effective_date: '',
                     justification: '',
                     policy_confirmation: false,
@@ -184,20 +207,20 @@ export default function StudentCourseChanges({ user }) {
                     {/* Auto-filled Fields */}
                     <div className="grid grid-cols-2 gap-4 mb-6 p-4 bg-gray-50 rounded-lg">
                         <div>
+                            <p className="text-sm text-gray-600 mb-1">Student ID</p>
+                            <p className="font-bold text-gray-900">{applicationData?.application_reference || applicationData?.id}</p>
+                        </div>
+                        <div>
                             <p className="text-sm text-gray-600 mb-1">Student Name</p>
                             <p className="font-bold text-gray-900">{applicationData?.first_name} {applicationData?.last_name}</p>
                         </div>
                         <div>
                             <p className="text-sm text-gray-600 mb-1">Course Title</p>
-                            <p className="font-bold text-gray-900">{applicationData?.programme_name}</p>
+                            <p className="font-bold text-gray-900">{applicationData?.programme_name || applicationData?.course_title}</p>
                         </div>
                         <div>
                             <p className="text-sm text-gray-600 mb-1">Course Start Date</p>
-                            <p className="font-bold text-gray-900">{applicationData?.intake_start_date}</p>
-                        </div>
-                        <div>
-                            <p className="text-sm text-gray-600 mb-1">Current Study Mode</p>
-                            <p className="font-bold text-gray-900">{applicationData?.mode_of_study}</p>
+                            <p className="font-bold text-gray-900">{formatDate(applicationData?.intake_start_date)}</p>
                         </div>
                     </div>
 
@@ -216,6 +239,24 @@ export default function StudentCourseChanges({ user }) {
                                 <option value="Deferral">Deferral</option>
                                 <option value="Withdrawal">Withdrawal</option>
                                 <option value="Transfer">Transfer</option>
+                            </select>
+                        </div>
+
+                        {/* Current Study Mode */}
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Current Study Mode
+                            </label>
+                            <select
+                                value={formData.current_study_mode}
+                                onChange={(e) => setFormData(prev => ({ ...prev, current_study_mode: e.target.value }))}
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            >
+                                <option value="">Select study mode</option>
+                                <option value="Full-time">Full-time</option>
+                                <option value="Part-time">Part-time</option>
+                                <option value="Online">Online</option>
+                                <option value="Blended">Blended</option>
                             </select>
                         </div>
 
@@ -244,6 +285,22 @@ export default function StudentCourseChanges({ user }) {
                                 rows="5"
                                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                             />
+                        </div>
+
+                        {/* Supporting Documents */}
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Supporting Documents
+                            </label>
+                            <div className="flex items-center gap-3">
+                                <input
+                                    type="file"
+                                    onChange={(e) => setFormData(prev => ({ ...prev, supporting_document: e.target.files?.[0] || null }))}
+                                    accept=".pdf,.jpg,.jpeg,.png"
+                                    className="block w-full text-sm text-gray-600"
+                                />
+                            </div>
+                            <p className="text-xs text-gray-500 mt-1">Accepted formats: PDF, JPG, PNG (max 10MB)</p>
                         </div>
 
                         {/* Digital Signature */}
@@ -338,7 +395,7 @@ export default function StudentCourseChanges({ user }) {
                                 <div className="flex items-start justify-between mb-4">
                                     <div>
                                         <h3 className="text-xl font-bold text-gray-900">{request.type_of_request} Request</h3>
-                                        <p className="text-sm text-gray-600 mt-1">Submitted on {new Date(request.created_at).toLocaleDateString()}</p>
+                                        <p className="text-sm text-gray-600 mt-1">Submitted on {formatDate(request.created_at)}</p>
                                     </div>
                                     {getStatusBadge(request.decision)}
                                 </div>
@@ -350,8 +407,21 @@ export default function StudentCourseChanges({ user }) {
                                     </div>
                                     <div>
                                         <p className="text-sm text-gray-600 mb-1">Effective Date</p>
-                                        <p className="font-medium text-gray-900">{new Date(request.effective_date).toLocaleDateString()}</p>
+                                            <p className="font-medium text-gray-900">{formatDate(request.effective_date)}</p>
                                     </div>
+                                        {request.supporting_document && (
+                                            <div className="col-span-2">
+                                                <p className="text-sm text-gray-600 mb-1">Supporting Document</p>
+                                                <a
+                                                    href={`${API_URL.replace('/api', '')}${request.supporting_document}`}
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                    className="text-blue-600 hover:underline text-sm"
+                                                >
+                                                    View document
+                                                </a>
+                                            </div>
+                                        )}
                                     {request.justification && (
                                         <div className="col-span-2">
                                             <p className="text-sm text-gray-600 mb-1">Justification</p>
@@ -366,10 +436,13 @@ export default function StudentCourseChanges({ user }) {
                                         <div className="space-y-2 text-sm">
                                             <p><strong>Decision:</strong> {request.decision}</p>
                                             {request.reviewed_by && <p><strong>Reviewed By:</strong> {request.reviewed_by}</p>}
-                                            {request.review_date && <p><strong>Review Date:</strong> {new Date(request.review_date).toLocaleDateString()}</p>}
+                                            {request.review_date && <p><strong>Review Date:</strong> {formatDate(request.review_date)}</p>}
                                             {request.rejection_reason && <p><strong>Reason:</strong> {request.rejection_reason}</p>}
                                             {request.committee_comments && (
                                                 <p><strong>Comments:</strong> {request.committee_comments}</p>
+                                            )}
+                                            {typeof request.final_decision_confirmation !== 'undefined' && (
+                                                <p><strong>Final Decision Confirmation:</strong> {request.final_decision_confirmation ? 'Confirmed' : 'Pending'}</p>
                                             )}
                                         </div>
                                     </div>

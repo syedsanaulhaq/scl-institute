@@ -49,6 +49,268 @@ async function initNotificationsTable() {
 // Initialize on load
 initNotificationsTable();
 
+// ============================================
+// ANNOUNCEMENTS SYSTEM (EARLY - before /:id routes)
+// ============================================
+
+// Initialize Announcements Table
+async function initAnnouncementsTable() {
+    try {
+        const connection = await pool.getConnection();
+        await connection.query(`
+            CREATE TABLE IF NOT EXISTS announcements (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                title VARCHAR(255) NOT NULL,
+                content TEXT NOT NULL,
+                priority VARCHAR(20) DEFAULT 'medium',
+                category VARCHAR(50),
+                target_audience VARCHAR(50) DEFAULT 'all',
+                published_by VARCHAR(255),
+                is_active BOOLEAN DEFAULT TRUE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                INDEX idx_priority (priority),
+                INDEX idx_category (category),
+                INDEX idx_active (is_active),
+                INDEX idx_created (created_at)
+            )
+        `);
+        console.log("[DB] Announcements table verified/created");
+        connection.release();
+    } catch (err) {
+        console.error("[DB] Announcements table init failed:", err.message);
+    }
+}
+
+initAnnouncementsTable();
+
+// Moodle Database Connection
+const moodlePool = mysql.createPool({
+    host: process.env.MOODLE_DB_HOST || 'scli-moodle-db',
+    port: process.env.MOODLE_DB_PORT || 3306,
+    user: process.env.MOODLE_DB_USER || 'bn_moodle',
+    password: process.env.MOODLE_DB_PASS || 'bitnami_moodle_password',
+    database: process.env.MOODLE_DB_NAME || 'bitnami_moodle',
+    waitForConnections: true,
+    connectionLimit: 5,
+    queueLimit: 0
+});
+
+// Get announcements from Moodle courses for a specific student
+router.get('/announcements', async (req, res) => {
+    try {
+        const { student_email, limit = 50 } = req.query;
+
+        if (!student_email) {
+            // Return empty if no student email provided
+            return res.json({
+                success: true,
+                count: 0,
+                announcements: []
+            });
+        }
+
+        const moodleConnection = await moodlePool.getConnection();
+        
+        try {
+            // Get Moodle user by email
+            const [moodleUsers] = await moodleConnection.query(
+                'SELECT id FROM mdl_user WHERE email = ? AND deleted = 0',
+                [student_email]
+            );
+
+            if (moodleUsers.length === 0) {
+                moodleConnection.release();
+                return res.json({
+                    success: true,
+                    count: 0,
+                    announcements: [],
+                    message: 'Student not enrolled in Moodle yet'
+                });
+            }
+
+            const moodleUserId = moodleUsers[0].id;
+
+            // Get enrolled courses for this user
+            const [enrolledCourses] = await moodleConnection.query(`
+                SELECT DISTINCT c.id, c.fullname, c.shortname
+                FROM mdl_course c
+                INNER JOIN mdl_enrol e ON e.courseid = c.id
+                INNER JOIN mdl_user_enrolments ue ON ue.enrolid = e.id
+                WHERE ue.userid = ? AND c.visible = 1
+            `, [moodleUserId]);
+
+            if (enrolledCourses.length === 0) {
+                moodleConnection.release();
+                return res.json({
+                    success: true,
+                    count: 0,
+                    announcements: [],
+                    courses: [],
+                    message: 'No course enrollments found'
+                });
+            }
+
+            const courseIds = enrolledCourses.map(c => c.id);
+
+            // Try to get forum posts from announcement forums in enrolled courses
+            // In Moodle, announcements are forum posts in forums with type 'news'
+            let announcements = [];
+            try {
+                const [forumResults] = await moodleConnection.query(`
+                    SELECT 
+                        fp.id,
+                        fp.subject as title,
+                        fp.message as content,
+                        FROM_UNIXTIME(fp.created) as created_at,
+                        FROM_UNIXTIME(fp.modified) as updated_at,
+                        c.fullname as course_name,
+                        c.shortname as course_code,
+                        CONCAT(u.firstname, ' ', u.lastname) as published_by,
+                        'high' as priority,
+                        'course' as category
+                    FROM mdl_forum_posts fp
+                    INNER JOIN mdl_forum_discussions fd ON fd.id = fp.discussion
+                    INNER JOIN mdl_forum f ON f.id = fd.forum
+                    INNER JOIN mdl_course c ON c.id = f.course
+                    INNER JOIN mdl_user u ON u.id = fp.userid
+                    WHERE f.course IN (${courseIds.join(',')})
+                    AND f.type = 'news'
+                    AND fp.parent = 0
+                    ORDER BY fp.created DESC
+                    LIMIT ?
+                `, [parseInt(limit)]);
+                announcements = forumResults || [];
+            } catch (forumErr) {
+                console.log("[FORUMS] Could not fetch forum announcements, returning courses only:", forumErr.message);
+                announcements = [];
+            }
+
+            moodleConnection.release();
+
+            // Format announcements for frontend
+            const formattedAnnouncements = announcements.map(ann => ({
+                id: ann.id || Math.random(),
+                title: ann.title || 'Announcement',
+                content: stripHtmlTags(ann.content) || '',
+                priority: ann.priority,
+                category: ann.category,
+                course_name: ann.course_name,
+                course_code: ann.course_code,
+                published_by: ann.published_by,
+                is_active: true,
+                created_at: ann.created_at,
+                updated_at: ann.updated_at
+            }));
+
+            res.json({
+                success: true,
+                count: formattedAnnouncements.length,
+                announcements: formattedAnnouncements,
+                courses: enrolledCourses.map(c => ({ id: c.id, name: c.fullname, code: c.shortname }))
+            });
+
+        } catch (moodleError) {
+            moodleConnection.release();
+            console.error("[MOODLE ANNOUNCEMENTS] Query failed:", moodleError.message);
+            
+            // Fallback to empty announcements
+            res.json({
+                success: true,
+                count: 0,
+                announcements: [],
+                courses: [],
+                message: 'Unable to fetch Moodle announcements',
+                error: moodleError.message
+            });
+        }
+
+    } catch (error) {
+        console.error("[ANNOUNCEMENTS] Fetch failed:", error.message);
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+});
+
+// Get enrolled courses for a specific student
+router.get('/courses/:student_email', async (req, res) => {
+    try {
+        const { student_email } = req.params;
+
+        const moodleConnection = await moodlePool.getConnection();
+        
+        try {
+            // Get Moodle user by email
+            const [moodleUsers] = await moodleConnection.query(
+                'SELECT id FROM mdl_user WHERE email = ? AND deleted = 0',
+                [student_email]
+            );
+
+            if (moodleUsers.length === 0) {
+                moodleConnection.release();
+                return res.json({
+                    success: true,
+                    courses: [],
+                    message: 'Student not found in Moodle'
+                });
+            }
+
+            const moodleUserId = moodleUsers[0].id;
+
+            // Get enrolled courses for this user
+            const [enrolledCourses] = await moodleConnection.query(`
+                SELECT DISTINCT c.id, c.fullname as name, c.shortname as code
+                FROM mdl_course c
+                INNER JOIN mdl_enrol e ON e.courseid = c.id
+                INNER JOIN mdl_user_enrolments ue ON ue.enrolid = e.id
+                WHERE ue.userid = ? AND c.visible = 1 AND c.id != 1
+                ORDER BY c.fullname ASC
+            `, [moodleUserId]);
+
+            moodleConnection.release();
+
+            console.log(`[COURSES] Found ${enrolledCourses.length} courses for student ${student_email}`);
+
+            res.json({
+                success: true,
+                courses: enrolledCourses
+            });
+
+        } catch (moodleError) {
+            moodleConnection.release();
+            console.error("[COURSES] Query failed:", moodleError.message);
+            res.json({
+                success: true,
+                courses: [],
+                error: moodleError.message
+            });
+        }
+
+    } catch (error) {
+        console.error("[COURSES] Fetch failed:", error.message);
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+});
+
+// Helper function to strip HTML tags from Moodle content
+function stripHtmlTags(html) {
+    if (!html) return '';
+    return html
+        .replace(/<[^>]*>/g, '') // Remove HTML tags
+        .replace(/&nbsp;/g, ' ') // Replace &nbsp; with space
+        .replace(/&amp;/g, '&')  // Replace &amp; with &
+        .replace(/&lt;/g, '<')   // Replace &lt; with <
+        .replace(/&gt;/g, '>')   // Replace &gt; with >
+        .replace(/&quot;/g, '"') // Replace &quot; with "
+        .replace(/&#39;/g, "'")  // Replace &#39; with '
+        .trim();
+}
+
 // Store a notification in database
 async function storeNotification(email, type, subject, body, notificationData = {}) {
     try {
@@ -293,50 +555,9 @@ async function initAnnouncementsTable() {
 }
 
 initAnnouncementsTable();
-
-// Get all active announcements
-router.get('/announcements', async (req, res) => {
-    try {
-        const { priority, category, limit = 50 } = req.query;
-
-        const connection = await pool.getConnection();
-        
-        let query = 'SELECT * FROM announcements WHERE is_active = TRUE';
-        let params = [];
-        
-        if (priority) {
-            query += ' AND priority = ?';
-            params.push(priority);
-        }
-        
-        if (category) {
-            query += ' AND category = ?';
-            params.push(category);
-        }
-        
-        query += ' ORDER BY priority DESC, created_at DESC LIMIT ?';
-        params.push(parseInt(limit));
-        
-        const [announcements] = await connection.query(query, params);
-        
-        connection.release();
-
-        res.json({
-            success: true,
-            count: announcements.length,
-            announcements: announcements
-        });
-
-    } catch (error) {
-        console.error("[ANNOUNCEMENTS] Fetch failed:", error.message);
-        res.status(500).json({
-            success: false,
-            message: error.message
-        });
-    }
-});
-
-// Create new announcement
+// ============================================
+// ANNOUNCEMENTS - POST ROUTES (Create, Update, Delete)
+// ============================================
 router.post('/announcements', async (req, res) => {
     try {
         const { title, content, priority, category, target_audience, published_by } = req.body;

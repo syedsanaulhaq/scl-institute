@@ -111,22 +111,19 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
             ]
         },
 
-        // Support Module
+        // Support & Wellbeing Module
         {
-            name: 'Support',
+            name: 'Support & Wellbeing',
             icon: HelpCircle,
             isParent: true,
             key: 'support',
             subItems: [
                 { name: 'Messages & Announcements', icon: Bell, path: '/student/messages' },
-                { name: 'Student Support', icon: HelpCircle, path: '/student/support' },
-                { name: 'Feedback & Evaluations', icon: ClipboardList, path: '/student/feedback' },
-                { name: 'Complaints & Appeals', icon: FileText, path: '/student/complaints' },
-                { name: 'Disability Support', icon: HelpCircle, path: '/student/disability' },
-                { name: 'Safeguarding', icon: ShieldCheck, path: '/student/safeguarding' },
-                { name: 'Employability', icon: BarChart3, path: '/student/employability' },
-                { name: 'Financial Support', icon: DollarSign, path: '/student/financial-support' },
-                { name: 'Help & IT Support', icon: HelpCircle, path: '/student/help' },
+                { name: 'Support Requests', icon: HelpCircle, path: '/student/support' },
+                { name: 'Feedback & Evaluations', icon: ClipboardList, path: '/student/support' },
+                { name: 'Complaints & Appeals', icon: FileText, path: '/student/support' },
+                { name: 'Disability Support', icon: ShieldCheck, path: '/student/support' },
+                { name: 'Safeguarding & Prevent', icon: ShieldCheck, path: '/student/support' },
             ]
         },
 
