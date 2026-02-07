@@ -50,6 +50,18 @@ const StudentAdmissions = ({ user }) => {
                 console.log('Found application:', studentApp);
                 console.log('CV Resume value:', studentApp?.cv_resume);
                 console.log('Work Reference value:', studentApp?.work_reference);
+                console.log('Academic Transcripts value:', studentApp?.academic_transcripts);
+                console.log('All document fields:', {
+                    passport_id_document: studentApp?.passport_id_document,
+                    academic_certificates: studentApp?.academic_certificates,
+                    academic_transcripts: studentApp?.academic_transcripts,
+                    english_certificate: studentApp?.english_certificate,
+                    student_contract: studentApp?.student_contract,
+                    cv_resume: studentApp?.cv_resume,
+                    work_reference: studentApp?.work_reference,
+                    proof_of_address: studentApp?.proof_of_address,
+                    visa_immigration_document: studentApp?.visa_immigration_document
+                });
                 
                 setApplicationData(studentApp || apps[0] || null);
             }

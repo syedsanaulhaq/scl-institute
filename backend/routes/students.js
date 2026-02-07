@@ -613,7 +613,18 @@ router.get('/applications', async (req, res) => {
                     sa.year_completed,
                     sa.english_proficiency,
                     sa.english_score,
-                    sa.relevant_work_experience
+                    sa.relevant_work_experience,
+                    sa.passport_id_document,
+                    sa.academic_certificates,
+                    sa.academic_transcripts,
+                    sa.english_certificate,
+                    sa.cv_resume,
+                    sa.work_reference,
+                    sa.proof_of_address,
+                    sa.visa_immigration_document,
+                    sa.student_contract,
+                    sa.brp_card,
+                    sa.residency_proof
                 FROM student_applications sa
                 ${whereClause}
                 ORDER BY sa.submitted_at DESC
@@ -650,7 +661,18 @@ router.get('/applications', async (req, res) => {
                         sa.country_of_residence,
                         sa.date_of_birth,
                         sa.gender,
-                        sa.nationality
+                        sa.nationality,
+                        sa.passport_id_document,
+                        sa.academic_certificates,
+                        sa.academic_transcripts,
+                        sa.english_certificate,
+                        sa.cv_resume,
+                        sa.work_reference,
+                        sa.proof_of_address,
+                        sa.visa_immigration_document,
+                        sa.student_contract,
+                        sa.brp_card,
+                        sa.residency_proof
                     FROM student_applications sa
                     ${whereClause}
                     ORDER BY sa.id DESC
