@@ -19,6 +19,20 @@ import axios from 'axios';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
 
+const formatDate = (dateValue) => {
+    if (!dateValue) return 'N/A';
+    try {
+        const date = new Date(dateValue);
+        if (isNaN(date.getTime())) return 'N/A';
+        const day = String(date.getDate()).padStart(2, '0');
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const year = date.getFullYear();
+        return `${day}/${month}/${year}`;
+    } catch (e) {
+        return 'N/A';
+    }
+};
+
 const ApplicationRequests = () => {
     const navigate = useNavigate();
     const [applications, setApplications] = useState([]);
@@ -258,7 +272,7 @@ const ApplicationRequests = () => {
                                         </td>
                                         <td className="px-6 py-4">
                                             <p className="text-sm text-gray-600">
-                                                {new Date(app.submitted_at).toLocaleDateString()}
+                                                {formatDate(app.submitted_at)}
                                             </p>
                                         </td>
                                         <td className="px-6 py-4">
@@ -420,7 +434,7 @@ const ApplicationRequests = () => {
                                     </div>
                                     <div className="text-right">
                                         <p className="text-sm text-gray-600">Submitted</p>
-                                        <p className="text-sm font-medium text-gray-900 mt-1">{new Date(selectedApp.submitted_at).toLocaleDateString()}</p>
+                                        <p className="text-sm font-medium text-gray-900 mt-1">{formatDate(selectedApp.submitted_at)}</p>
                                     </div>
                                 </div>
                             </div>

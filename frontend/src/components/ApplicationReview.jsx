@@ -46,7 +46,10 @@ const ApplicationReview = () => {
         try {
             const date = new Date(dateValue);
             if (isNaN(date.getTime())) return 'N/A';
-            return date.toLocaleDateString();
+            const day = String(date.getDate()).padStart(2, '0');
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const year = date.getFullYear();
+            return `${day}/${month}/${year}`;
         } catch (e) {
             return 'N/A';
         }
@@ -315,7 +318,7 @@ const ApplicationReview = () => {
                                 </div>
                                 <div>
                                     <p className="text-gray-600">Date of Birth</p>
-                                    <p className="font-medium text-gray-900">{application.date_of_birth}</p>
+                                    <p className="font-medium text-gray-900">{formatDisplayDate(application.date_of_birth)}</p>
                                 </div>
                                 <div>
                                     <p className="text-gray-600">Email</p>
@@ -373,7 +376,7 @@ const ApplicationReview = () => {
                                 </div>
                                 <div>
                                     <p className="text-gray-600">Start Date</p>
-                                    <p className="font-medium text-gray-900">{application.intake_start_date}</p>
+                                    <p className="font-medium text-gray-900">{formatDisplayDate(application.intake_start_date)}</p>
                                 </div>
                             </div>
                         </div>
@@ -392,7 +395,7 @@ const ApplicationReview = () => {
                                 </div>
                                 <div>
                                     <p className="text-gray-600">Year Completed</p>
-                                    <p className="font-medium text-gray-900">{application.year_completed}</p>
+                                    <p className="font-medium text-gray-900">{formatDisplayDate(application.year_completed)}</p>
                                 </div>
                                 <div>
                                     <p className="text-gray-600">English Proficiency</p>

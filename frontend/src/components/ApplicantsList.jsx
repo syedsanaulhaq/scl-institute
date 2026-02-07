@@ -16,6 +16,20 @@ import axios from 'axios';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
 
+const formatDate = (dateValue) => {
+    if (!dateValue) return 'N/A';
+    try {
+        const date = new Date(dateValue);
+        if (isNaN(date.getTime())) return 'N/A';
+        const day = String(date.getDate()).padStart(2, '0');
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const year = date.getFullYear();
+        return `${day}/${month}/${year}`;
+    } catch (e) {
+        return 'N/A';
+    }
+};
+
 const ApplicantsList = () => {
     const [applicants, setApplicants] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -156,7 +170,7 @@ const ApplicantsList = () => {
                                     </div>
                                     <div className="flex items-center gap-2">
                                         <Calendar className="w-4 h-4" />
-                                        <span>{new Date(applicant.submitted_at).toLocaleDateString()}</span>
+                                        <span>{formatDate(applicant.submitted_at)}</span>
                                     </div>
                                 </div>
                             </div>
@@ -219,7 +233,7 @@ const ApplicantsList = () => {
                                     </div>
                                     <div>
                                         <p className="text-sm text-gray-600">Start Date</p>
-                                        <p className="text-sm font-medium text-gray-900">{selectedApplicant.intake_start_date}</p>
+                                        <p className="text-sm font-medium text-gray-900">{formatDate(selectedApplicant.intake_start_date)}</p>
                                     </div>
                                 </div>
                             </div>
@@ -227,7 +241,7 @@ const ApplicantsList = () => {
                             <div className="bg-gray-50 rounded-lg p-4">
                                 <p className="text-sm text-gray-600">Status</p>
                                 <p className="text-sm font-medium text-gray-900 mt-1">{selectedApplicant.application_status?.replace(/_/g, ' ')}</p>
-                                <p className="text-xs text-gray-500 mt-2">Submitted: {new Date(selectedApplicant.submitted_at).toLocaleString()}</p>
+                                <p className="text-xs text-gray-500 mt-2">Submitted: {formatDate(selectedApplicant.submitted_at)}</p>
                             </div>
                         </div>
                     </div>

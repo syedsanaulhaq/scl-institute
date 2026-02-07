@@ -488,8 +488,19 @@ router.get('/applications/:id/offer-letter', async (req, res) => {
         const { id } = req.params;
 
         const [applications] = await db.execute(
-            `SELECT id, first_name, last_name, email, course_title, course_code, mode_of_study,
-                    intake_start_date, intake_month, intake_year, application_reference
+            `SELECT 
+                id, first_name, middle_names, last_name, email, contact_number,
+                course_title, course_code, course_type, mode_of_study,
+                intake_start_date, entry_route, application_reference,
+                highest_qualification, institution_name, year_completed,
+                english_proficiency, english_score,
+                address_line1, address_line2, town_city, postcode, country_of_residence,
+                date_of_birth, gender, nationality,
+                relevant_work_experience,
+                has_disabilities_support_needs, disability_support_details,
+                consent_gdpr, consent_data_sharing, consent_marketing,
+                declaration_truth, digital_signature, declaration_date,
+                application_status, created_at, updated_at, submitted_at
              FROM student_applications
              WHERE id = ?`,
             [id]
@@ -506,7 +517,7 @@ router.get('/applications/:id/offer-letter', async (req, res) => {
         const fullName = `${app.first_name} ${app.last_name}`.trim();
         const startDate = app.intake_start_date
             ? new Date(app.intake_start_date).toISOString().split('T')[0]
-            : `${app.intake_month || ''} ${app.intake_year || ''}`.trim();
+            : 'TBD';
 
         res.setHeader('Content-Type', 'application/pdf');
         res.setHeader('Content-Disposition', `attachment; filename="Offer_Letter_${app.application_reference || app.id}.pdf"`);
@@ -575,10 +586,11 @@ router.get('/applications', async (req, res) => {
                     sa.id,
                     sa.application_reference,
                     sa.first_name,
+                    sa.middle_names,
                     sa.last_name,
                     sa.email,
+                    sa.contact_number,
                     sa.course_title,
-                    sa.programme_name,
                     sa.course_code,
                     sa.course_type,
                     sa.mode_of_study,
@@ -587,20 +599,7 @@ router.get('/applications', async (req, res) => {
                     sa.created_at,
                     sa.updated_at,
                     sa.intake_start_date,
-                    sa.intake_month,
-                    sa.intake_year,
                     sa.entry_route,
-                    sa.offer_accepted,
-                    sa.documents_verified,
-                    sa.passport_id_document,
-                    sa.academic_certificates,
-                    sa.academic_transcripts,
-                    sa.english_certificate,
-                    sa.student_contract,
-                    sa.cv_resume,
-                    sa.work_reference,
-                    sa.proof_of_address,
-                    sa.contact_number,
                     sa.address_line1,
                     sa.address_line2,
                     sa.town_city,
@@ -609,9 +608,13 @@ router.get('/applications', async (req, res) => {
                     sa.date_of_birth,
                     sa.gender,
                     sa.nationality,
-                    c.department
+                    sa.highest_qualification,
+                    sa.institution_name,
+                    sa.year_completed,
+                    sa.english_proficiency,
+                    sa.english_score,
+                    sa.relevant_work_experience
                 FROM student_applications sa
-                LEFT JOIN courses c ON sa.course_code = c.course_code
                 ${whereClause}
                 ORDER BY sa.submitted_at DESC
                 LIMIT ? OFFSET ?
@@ -630,7 +633,6 @@ router.get('/applications', async (req, res) => {
                         sa.last_name,
                         sa.email,
                         sa.course_title,
-                        sa.programme_name,
                         sa.course_code,
                         sa.course_type,
                         sa.mode_of_study,
@@ -639,19 +641,7 @@ router.get('/applications', async (req, res) => {
                         sa.created_at,
                         sa.updated_at,
                         sa.intake_start_date,
-                        sa.intake_month,
-                        sa.intake_year,
                         sa.entry_route,
-                        sa.offer_accepted,
-                        sa.documents_verified,
-                        sa.passport_id_document,
-                        sa.academic_certificates,
-                        sa.academic_transcripts,
-                        sa.english_certificate,
-                        sa.student_contract,
-                        sa.cv_resume,
-                        sa.work_reference,
-                        sa.proof_of_address,
                         sa.contact_number,
                         sa.address_line1,
                         sa.address_line2,
@@ -673,145 +663,13 @@ router.get('/applications', async (req, res) => {
             }
         }
 
-        // If no applications found, use mock data for demonstration
+        // If no applications found, return empty array (not mock data)
         if (applications.length === 0) {
-            console.log('No applications found, using mock data for demonstration');
-            applications = [
-                {
-                    id: 1,
-                    application_reference: 'SCL-2026-001',
-                    first_name: 'Ahmed',
-                    last_name: 'Khan',
-                    email: 'ahmed.khan@example.com',
-                    course_title: 'Master of Computer Science',
-                    course_code: 'MCS-001',
-                    application_status: 'approved',
-                    submitted_at: '2026-01-15T10:30:00Z',
-                    intake_start_date: '2026-02-15',
-                    department: 'Computer Science'
-                },
-                {
-                    id: 2,
-                    application_reference: 'SCL-2026-002',
-                    first_name: 'Sarah',
-                    last_name: 'Johnson',
-                    email: 'sarah.johnson@example.com',
-                    course_title: 'Bachelor of Software Engineering',
-                    course_code: 'BSE-001',
-                    application_status: 'pending',
-                    submitted_at: '2026-01-20T14:15:00Z',
-                    intake_start_date: '2026-03-01',
-                    department: 'Engineering'
-                },
-                {
-                    id: 3,
-                    application_reference: 'SCL-2026-003',
-                    first_name: 'Michael',
-                    last_name: 'Chen',
-                    email: 'michael.chen@example.com',
-                    course_title: 'MBA in Business Administration',
-                    course_code: 'MBA-001',
-                    application_status: 'approved',
-                    submitted_at: '2026-01-10T09:45:00Z',
-                    intake_start_date: '2026-02-01',
-                    department: 'Business'
-                },
-                {
-                    id: 4,
-                    application_reference: 'SCL-2026-004',
-                    first_name: 'Emma',
-                    last_name: 'Wilson',
-                    email: 'emma.wilson@example.com',
-                    course_title: 'Bachelor of Computer Science',
-                    course_code: 'BCS-001',
-                    application_status: 'rejected',
-                    submitted_at: '2026-01-25T16:20:00Z',
-                    intake_start_date: '2026-03-15',
-                    department: 'Computer Science'
-                },
-                {
-                    id: 5,
-                    application_reference: 'SCL-2026-005',
-                    first_name: 'David',
-                    last_name: 'Rodriguez',
-                    email: 'david.rodriguez@example.com',
-                    course_title: 'Diploma in Data Science',
-                    course_code: 'DDS-001',
-                    application_status: 'pending',
-                    submitted_at: '2026-01-28T11:30:00Z',
-                    intake_start_date: '2026-04-01',
-                    department: 'Computer Science'
-                },
-                {
-                    id: 6,
-                    application_reference: 'SCL-2026-006',
-                    first_name: 'Lisa',
-                    last_name: 'Thompson',
-                    email: 'lisa.thompson@example.com',
-                    course_title: 'Master of Business Administration',
-                    course_code: 'MBA-002',
-                    application_status: 'approved',
-                    submitted_at: '2026-01-05T08:15:00Z',
-                    intake_start_date: '2026-02-10',
-                    department: 'Business'
-                },
-                {
-                    id: 7,
-                    application_reference: 'SCL-2026-007',
-                    first_name: 'James',
-                    last_name: 'Anderson',
-                    email: 'james.anderson@example.com',
-                    course_title: 'Bachelor of Electrical Engineering',
-                    course_code: 'BEE-001',
-                    application_status: 'pending',
-                    submitted_at: '2026-01-22T13:45:00Z',
-                    intake_start_date: '2026-03-20',
-                    department: 'Engineering'
-                },
-                {
-                    id: 8,
-                    application_reference: 'SCL-2026-008',
-                    first_name: 'Maria',
-                    last_name: 'Garcia',
-                    email: 'maria.garcia@example.com',
-                    course_title: 'Certificate in Web Development',
-                    course_code: 'CWD-001',
-                    application_status: 'approved',
-                    submitted_at: '2026-01-18T15:30:00Z',
-                    intake_start_date: '2026-02-25',
-                    department: 'Computer Science'
-                },
-                {
-                    id: 9,
-                    application_reference: 'SCL-2026-009',
-                    first_name: 'Robert',
-                    last_name: 'Taylor',
-                    email: 'robert.taylor@example.com',
-                    course_title: 'Master of Engineering Management',
-                    course_code: 'MEM-001',
-                    application_status: 'rejected',
-                    submitted_at: '2026-01-12T10:00:00Z',
-                    intake_start_date: '2026-02-28',
-                    department: 'Engineering'
-                },
-                {
-                    id: 10,
-                    application_reference: 'SCL-2026-010',
-                    first_name: 'Jennifer',
-                    last_name: 'Brown',
-                    email: 'jennifer.brown@example.com',
-                    course_title: 'Bachelor of Business Studies',
-                    course_code: 'BBS-001',
-                    application_status: 'pending',
-                    submitted_at: '2026-01-29T07:20:00Z',
-                    intake_start_date: '2026-04-15',
-                    department: 'Business'
-                }
-            ];
+            console.log('No applications found in database');
         }
 
-        // Get total count (simplified)
-        let total = 0;
+        // Get total count from database
+        let total = applications.length;
         try {
             const [countResult] = await db.execute(`
                 SELECT COUNT(*) as total
@@ -821,12 +679,7 @@ router.get('/applications', async (req, res) => {
             total = countResult[0].total;
         } catch (countError) {
             console.error('Count query failed:', countError.message);
-            total = applications.length; // Use the actual applications count (including mock data)
-        }
-
-        // If using mock data, set the total accordingly
-        if (applications.length === 10 && total === 0) {
-            total = 10;
+            total = applications.length;
         }
 
         res.json({
@@ -1094,9 +947,10 @@ router.post('/applications/:id/review-decision', async (req, res) => {
 
                 if (userRows.length === 0) {
                     tempPassword = generateTempPassword();
+                    const passwordHash = crypto.createHash('sha256').update(tempPassword).digest('hex');
                     await db.execute(
-                        'INSERT INTO users (email, password, first_name, last_name, role) VALUES (?, ?, ?, ?, ?)',
-                        [email, tempPassword, first_name, last_name, 'student']
+                        'INSERT INTO users (email, password, password_hash, first_name, last_name, role) VALUES (?, ?, ?, ?, ?, ?)',
+                        [email, tempPassword, passwordHash, first_name, last_name, 'student']
                     );
                     createdUser = {
                         username: email,
