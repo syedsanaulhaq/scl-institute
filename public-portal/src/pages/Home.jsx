@@ -83,39 +83,47 @@ const Home = ({ selectedTheme = 'modern', onApplyNow, onChangeTheme }) => {
         const fetchCourses = async () => {
             try {
                 setCoursesLoading(true);
-                // Try multiple ways to reach the backend API
+                console.log('🔄 Fetching Moodle courses...');
+                
+                // Try relative path first (should work with Vite proxy)
                 let response;
                 try {
-                    // First try: relative path (for production)
+                    console.log('📡 Attempting to fetch from /api/notifications/courses/public');
                     response = await axios.get('/api/notifications/courses/public', {
                         timeout: 5000
                     });
+                    console.log('✅ API response received:', response.data);
                 } catch (err1) {
-                    console.log('Relative path failed, trying localhost...');
-                    // Second try: localhost (for local development)
+                    console.log('⚠️ Relative path failed:', err1.message);
+                    console.log('📡 Attempting to fetch from http://localhost:4000/api/notifications/courses/public');
                     response = await axios.get('http://localhost:4000/api/notifications/courses/public', {
                         timeout: 5000
                     });
+                    console.log('✅ Fallback API response received:', response.data);
                 }
                 
-                if (response.data && response.data.courses && response.data.courses.length > 0) {
+                if (response && response.data && response.data.courses && Array.isArray(response.data.courses) && response.data.courses.length > 0) {
+                    console.log('📚 Processing', response.data.courses.length, 'courses from Moodle');
+                    
                     // Map Moodle courses to display format
-                    const formattedCourses = response.data.courses.slice(0, 8).map(course => ({
+                    const formattedCourses = response.data.courses.slice(0, 8).map((course, idx) => ({
                         id: course.id,
-                        name: course.name || course.fullname,
-                        code: course.code || course.shortname,
+                        name: course.name || course.fullname || `Course ${idx + 1}`,
+                        code: course.code || course.shortname || `CODE${idx + 1}`,
                         description: course.description || 'Professional program designed for career advancement',
                         icon: '📚'
                     }));
+                    
+                    console.log('✅ Formatted courses:', formattedCourses);
                     setMoodleCourses(formattedCourses);
-                    console.log('✓ Loaded', formattedCourses.length, 'courses from Moodle');
+                    console.log('✓ Successfully loaded', formattedCourses.length, 'courses from Moodle');
                 } else {
-                    console.log('No courses found in API response');
+                    console.warn('⚠️ No courses found or invalid response structure:', response?.data);
                     setMoodleCourses([]);
                 }
             } catch (err) {
-                console.error('❌ Could not fetch Moodle courses:', err.message);
-                // Fall back to default programs
+                console.error('❌ Error fetching Moodle courses:', err.message, err);
+                console.error('Stack:', err.stack);
                 setMoodleCourses([]);
             } finally {
                 setCoursesLoading(false);
@@ -124,41 +132,18 @@ const Home = ({ selectedTheme = 'modern', onApplyNow, onChangeTheme }) => {
         fetchCourses();
     }, []);
 
-    // Use Moodle courses if available, otherwise use defaults
-    const programs = moodleCourses.length > 0 ? moodleCourses : [
-        {
-            name: "Computer Science Engineering",
-            duration: "4 Years",
-            type: "B.Tech",
-            description: "Advanced computing, AI, and software development",
-            icon: "💻",
-            code: "CSE"
-        },
-        {
-            name: "Business Administration",
-            duration: "3 Years",
-            type: "BBA",
-            description: "Leadership, management, and entrepreneurship",
-            icon: "📊",
-            code: "BBA"
-        },
-        {
-            name: "Data Science",
-            duration: "2 Years",
-            type: "M.Sc",
-            description: "Analytics, machine learning, and big data",
-            icon: "📈",
-            code: "MDS"
-        },
-        {
-            name: "Digital Marketing",
-            duration: "1 Year",
-            type: "Diploma",
-            description: "SEO, social media, and online strategies",
-            icon: "📱",
-            code: "DM"
-        }
-    ];
+    // Use Moodle courses ONLY - no defaults
+    const programs = moodleCourses.length > 0 ? moodleCourses : [];
+
+    // Debug: Log which programs are being used
+    console.log('📊 Programs state:', {
+        moodleCoursesLength: moodleCourses.length,
+        coursesLoading,
+        usingMoodle: moodleCourses.length > 0,
+        programsCount: programs.length,
+        firstProgram: programs[0]?.name,
+        moodleCoursesData: moodleCourses
+    });
 
     const designThemes = {
         light: {
@@ -512,6 +497,13 @@ const Home = ({ selectedTheme = 'modern', onApplyNow, onChangeTheme }) => {
                     {coursesLoading ? (
                         <div className="flex justify-center items-center py-12">
                             <Loader className="h-8 w-8 animate-spin text-blue-600" />
+                        </div>
+                    ) : programs.length === 0 ? (
+                        <div className="flex justify-center items-center py-12">
+                            <div className="text-center">
+                                <p className="text-gray-600 mb-4">Loading programs from Moodle...</p>
+                                <Loader className="h-8 w-8 animate-spin text-blue-600 mx-auto" />
+                            </div>
                         </div>
                     ) : (
                         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
