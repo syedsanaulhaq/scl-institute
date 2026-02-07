@@ -86,16 +86,21 @@ $redirectUrl = !empty($tokenData['redirect_url']) ? $tokenData['redirect_url'] :
 
 // Get detailed user info from SCL database including role from user_roles table
 $sclRole = null;
-$roleStmt = $scldb->prepare("SELECT r.name FROM user_roles ur JOIN roles r ON ur.role_id = r.id WHERE ur.user_id = (SELECT id FROM users WHERE email = ?) LIMIT 1");
+$roleStmt = $scldb->prepare("SELECT r.role_name FROM user_roles ur JOIN roles r ON ur.role_id = r.id WHERE ur.user_id = (SELECT id FROM users WHERE email = ?) LIMIT 1");
 if ($roleStmt) {
     $roleStmt->bind_param("s", $email);
     $roleStmt->execute();
     $roleResult = $roleStmt->get_result();
     if ($roleResult->num_rows > 0) {
         $roleData = $roleResult->fetch_assoc();
-        $sclRole = $roleData['name'];
+        $sclRole = $roleData['role_name'];
+        error_log('[SSO] Role retrieved from user_roles: ' . $sclRole);
+    } else {
+        error_log('[SSO] No role found in user_roles table for email: ' . $email);
     }
     $roleStmt->close();
+} else {
+    error_log('[SSO] Role query preparation failed: ' . $scldb->error);
 }
 
 // Write debug info to file
