@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { FileText, CheckCircle, Clock, Upload, Download, AlertCircle, Award, GraduationCap } from 'lucide-react';
+import { FileText, CheckCircle, Clock, Upload, Download, AlertCircle, Award, GraduationCap, RefreshCw, Trash2 } from 'lucide-react';
 import axios from 'axios';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
@@ -16,14 +16,24 @@ const formatDate = (dateString) => {
 
 const StudentAdmissions = ({ user }) => {
     const [applicationData, setApplicationData] = useState(null);
+    const [inductionData, setInductionData] = useState({});
+    const [savingInduction, setSavingInduction] = useState(false);
     const [loading, setLoading] = useState(true);
     const [uploading, setUploading] = useState(null);
+    const [acceptingOffer, setAcceptingOffer] = useState(false);
+    const [downloadingOffer, setDownloadingOffer] = useState(false);
     const [activeTab, setActiveTab] = useState('status');
     const fileInputRefs = useRef({});
 
     useEffect(() => {
         fetchApplicationData();
     }, [user]);
+
+    useEffect(() => {
+        if (applicationData?.id) {
+            fetchInductionData();
+        }
+    }, [applicationData?.id]);
 
     const fetchApplicationData = async () => {
         try {
@@ -38,6 +48,8 @@ const StudentAdmissions = ({ user }) => {
                 // Find matching application by email
                 const studentApp = apps.find(app => app.email === user?.email);
                 console.log('Found application:', studentApp);
+                console.log('CV Resume value:', studentApp?.cv_resume);
+                console.log('Work Reference value:', studentApp?.work_reference);
                 
                 setApplicationData(studentApp || apps[0] || null);
             }
@@ -48,7 +60,98 @@ const StudentAdmissions = ({ user }) => {
         }
     };
 
+    const fetchInductionData = async () => {
+        try {
+            if (!applicationData?.id) return;
+            
+            const response = await axios.get(
+                `${API_URL}/students/applications/${applicationData.id}/induction`
+            );
+            
+            if (response.data?.success && response.data.data) {
+                // Set induction data from backend to populate the form and show completion status
+                const inductionRecord = response.data.data;
+                setInductionData({
+                    student_handbook: inductionRecord.student_handbook,
+                    course_handbook: inductionRecord.course_handbook,
+                    assessment_grading_policy: inductionRecord.assessment_grading_policy,
+                    code_of_conduct: inductionRecord.code_of_conduct,
+                    health_safety_guidelines: inductionRecord.health_safety_guidelines,
+                    academic_integrity: inductionRecord.academic_integrity,
+                    attendance_punctuality: inductionRecord.attendance_punctuality,
+                    it_email_usage: inductionRecord.it_email_usage,
+                    data_protection: inductionRecord.data_protection,
+                    complaints_appeals: inductionRecord.complaints_appeals,
+                    library_resources: inductionRecord.library_resources,
+                    student_support_services: inductionRecord.student_support_services,
+                    equality_diversity_inclusion: inductionRecord.equality_diversity_inclusion,
+                    safeguarding_prevent: inductionRecord.safeguarding_prevent,
+                    consent_personal_data: inductionRecord.consent_personal_data,
+                    consent_awarding_bodies: inductionRecord.consent_awarding_bodies,
+                    consent_communications: inductionRecord.consent_communications,
+                    consent_marketing_images: inductionRecord.consent_marketing_images,
+                    declaration_understood: inductionRecord.declaration_understood,
+                    digital_signature: inductionRecord.digital_signature,
+                    declaration_date: inductionRecord.declaration_date
+                });
+            }
+        } catch (error) {
+            // No induction data yet, that's fine
+            console.log('No induction data found yet');
+        }
+    };
+
+    const handleAcceptOffer = async () => {
+        if (!applicationData?.id || applicationData.offer_accepted) return;
+        try {
+            setAcceptingOffer(true);
+            const response = await axios.put(
+                `${API_URL}/students/applications/${applicationData.id}/accept-offer`
+            );
+            if (response.data?.success) {
+                setApplicationData(prev => ({ ...prev, offer_accepted: 1 }));
+            } else {
+                alert(response.data?.message || 'Failed to accept offer');
+            }
+        } catch (error) {
+            console.error('Accept offer error:', error);
+            alert(error.response?.data?.message || 'Failed to accept offer');
+        } finally {
+            setAcceptingOffer(false);
+        }
+    };
+
+    const handleDownloadOffer = async () => {
+        if (!applicationData?.id) return;
+        try {
+            setDownloadingOffer(true);
+            const response = await axios.get(
+                `${API_URL}/students/applications/${applicationData.id}/offer-letter`,
+                { responseType: 'blob' }
+            );
+            const blob = new Blob([response.data], { type: 'application/pdf' });
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute(
+                'download',
+                `Offer_Letter_${applicationData.application_reference || applicationData.id}.pdf`
+            );
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.URL.revokeObjectURL(url);
+        } catch (error) {
+            console.error('Download offer letter error:', error);
+            alert(error.response?.data?.message || 'Failed to download offer letter');
+        } finally {
+            setDownloadingOffer(false);
+        }
+    };
+
     const handleFileUpload = async (docField, file) => {
+        console.log('Uploading file:', file.name, 'Type:', file.type, 'Size:', file.size);
+        
         if (!file) return;
 
         // Check file size (max 5MB)
@@ -57,14 +160,19 @@ const StudentAdmissions = ({ user }) => {
             return;
         }
 
-        // Check file type
-        const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
-        if (!allowedTypes.includes(file.type)) {
-            alert('Only PDF and image files (JPG, PNG) are allowed');
+        // Check file type - be more flexible
+        const fileName = file.name.toLowerCase();
+        const allowedExtensions = ['.pdf', '.jpg', '.jpeg', '.png'];
+        const hasAllowedExtension = allowedExtensions.some(ext => fileName.endsWith(ext));
+        
+        if (!hasAllowedExtension) {
+            alert('Only PDF and image files (JPG, PNG) are allowed. Selected file: ' + file.name);
+            console.log('File rejected. Name:', fileName, 'Type:', file.type);
             return;
         }
 
         try {
+            console.log('Starting upload for:', docField);
             setUploading(docField);
             const formData = new FormData();
             formData.append('document', file);
@@ -81,9 +189,14 @@ const StudentAdmissions = ({ user }) => {
                 }
             );
 
+            console.log('Upload response:', response.data);
+
             if (response.data?.success) {
                 alert('Document uploaded successfully!');
-                await fetchApplicationData(); // Refresh data
+                // Add a small delay to ensure backend has processed the file
+                setTimeout(async () => {
+                    await fetchApplicationData();
+                }, 500);
             } else {
                 alert('Upload failed: ' + (response.data?.message || 'Unknown error'));
             }
@@ -98,6 +211,144 @@ const StudentAdmissions = ({ user }) => {
     const triggerFileInput = (docField) => {
         if (fileInputRefs.current[docField]) {
             fileInputRefs.current[docField].click();
+        }
+    };
+
+    const getFilenameFromPath = (filePath) => {
+        if (!filePath) return '';
+        // If it's already just a filename (original name), return it
+        if (!filePath.includes('/')) {
+            return filePath;
+        }
+        // Otherwise extract from path like /uploads/student-documents/1770439280850-64084237-Invoice-877.pdf
+        const parts = filePath.split('/');
+        return parts[parts.length - 1] || '';
+    };
+
+    const handleDownloadDocument = async (applicationId, documentType, originalFilename) => {
+        try {
+            // Get the application data to find the file path
+            const response = await axios.get(`${API_URL}/students/applications`);
+            
+            if (response.data?.success) {
+                const apps = response.data.data?.applications || [];
+                const app = apps.find(a => a.id === applicationId);
+                
+                if (app && app[documentType]) {
+                    const filePath = app[documentType];
+                    // Remove /api from the URL for file downloads since files are served at root /uploads
+                    const baseUrl = API_URL.replace('/api', '');
+                    const downloadResponse = await axios.get(`${baseUrl}${filePath}`, {
+                        responseType: 'blob'
+                    });
+                    
+                    const blob = new Blob([downloadResponse.data]);
+                    const url = window.URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.setAttribute('download', originalFilename || 'document');
+                    document.body.appendChild(link);
+                    link.click();
+                    link.remove();
+                    window.URL.revokeObjectURL(url);
+                } else {
+                    alert('Document file path not found');
+                }
+            }
+        } catch (error) {
+            console.error('Download error:', error);
+            alert('Failed to download document: ' + error.message);
+        }
+    };
+
+    const handleDeleteDocument = async (applicationId, documentType, docName) => {
+        if (!window.confirm(`Are you sure you want to delete ${docName}?`)) return;
+
+        try {
+            const response = await axios.delete(
+                `${API_URL}/students/applications/${applicationId}/document/${documentType}`
+            );
+
+            if (response.data?.success) {
+                alert('Document deleted successfully');
+                await fetchApplicationData();
+            } else {
+                alert('Failed to delete document');
+            }
+        } catch (error) {
+            console.error('Delete error:', error);
+            alert('Failed to delete document: ' + (error.response?.data?.message || error.message));
+        }
+    };
+
+    const handleInductionCheckboxChange = (field) => {
+        setInductionData(prev => ({
+            ...prev,
+            [field]: !prev[field]
+        }));
+    };
+
+    const handleSaveInduction = async () => {
+        if (!applicationData?.id) {
+            alert('Application ID not found');
+            return;
+        }
+
+        // Check if all required checkboxes are checked
+        const requiredFields = [
+            'student_handbook', 'course_handbook', 'assessment_grading_policy',
+            'code_of_conduct', 'health_safety_guidelines', 'academic_integrity',
+            'attendance_punctuality', 'it_email_usage', 'data_protection',
+            'complaints_appeals', 'library_resources', 'student_support_services',
+            'equality_diversity_inclusion', 'safeguarding_prevent',
+            'consent_personal_data', 'consent_awarding_bodies', 'consent_communications',
+            'declaration_understood'
+        ];
+
+        const allChecked = requiredFields.every(field => inductionData[field]);
+        if (!allChecked) {
+            alert('Please confirm all mandatory items and sign the declaration');
+            return;
+        }
+
+        if (!inductionData.digital_signature || inductionData.digital_signature.trim() === '') {
+            alert('Please enter your name as digital signature');
+            return;
+        }
+
+        if (!inductionData.declaration_date) {
+            alert('Please select the date of declaration');
+            return;
+        }
+
+        try {
+            setSavingInduction(true);
+            const response = await axios.post(
+                `${API_URL}/students/applications/${applicationData.id}/induction`,
+                {
+                    application_id: applicationData.id,
+                    student_id: applicationData.id,
+                    student_name: `${applicationData.first_name} ${applicationData.last_name}`,
+                    course_title: getProgrammeName(applicationData),
+                    course_start_date: applicationData.intake_start_date,
+                    ...inductionData
+                }
+            );
+
+            if (response.data?.success) {
+                alert('Induction completed successfully!');
+                // Keep the induction data in state so the completion status is reflected in the sidebar
+                // Don't clear it - it's needed to show step 6 as completed
+                // Optionally refresh application data to reflect any backend updates
+                fetchApplicationData();
+            } else {
+                alert('Failed to save induction: ' + (response.data?.message || 'Unknown error'));
+            }
+        } catch (error) {
+            console.error('Induction error:', error);
+            alert('Failed to save induction: ' + (error.response?.data?.message || error.message));
+        } finally {
+            setSavingInduction(false);
         }
     };
 
@@ -119,11 +370,30 @@ const StudentAdmissions = ({ user }) => {
         }
     };
 
+    const getProgrammeName = (app) => {
+        return app?.programme_name || app?.course_title || app?.course_code || 'Not specified';
+    };
+
+    const getStartDate = (app) => {
+        if (app?.intake_start_date) {
+            return formatDate(app.intake_start_date);
+        }
+        if (app?.intake_month && app?.intake_year) {
+            return `${app.intake_month} ${app.intake_year}`;
+        }
+        return 'Not specified';
+    };
+
+    const getStudyModeLabel = (app) => {
+        return app?.study_mode || app?.mode_of_study || 'Not specified';
+    };
+
     const documents = [
         { name: 'Passport/ID', field: 'passport_id_document', required: true },
         { name: 'Academic Certificates', field: 'academic_certificates', required: true },
         { name: 'Academic Transcripts', field: 'academic_transcripts', required: true },
         { name: 'English Certificate', field: 'english_certificate', required: true },
+        { name: 'Student Contract', field: 'student_contract', required: true },
         { name: 'CV/Resume', field: 'cv_resume', required: false },
         { name: 'Work Reference', field: 'work_reference', required: false },
         { name: 'Proof of Address', field: 'proof_of_address', required: false }
@@ -139,12 +409,34 @@ const StudentAdmissions = ({ user }) => {
         ];
 
         if (applicationData.application_status === 'accepted') {
+            // Check if required documents have been uploaded
+            const requiredDocs = documents.filter(doc => doc.required);
+            const uploadedRequiredDocs = requiredDocs.filter(doc => applicationData[doc.field]);
+            const allRequiredDocsUploaded = uploadedRequiredDocs.length === requiredDocs.length;
+            
+            let documentsStatus = 'pending';
+            if (allRequiredDocsUploaded && applicationData.documents_verified) {
+                documentsStatus = 'completed';
+            } else if (uploadedRequiredDocs.length > 0) {
+                documentsStatus = 'in_progress';
+            }
+
+            // Determine induction status based on whether it's completed
+            const inductionStatus = inductionData.declaration_understood && inductionData.digital_signature ? 'completed' : 'pending';
+            
+            // Final enrolment is pending until all previous steps are completed
+            const allPreviousCompleted = 
+                applicationData.offer_accepted && 
+                documentsStatus === 'completed' && 
+                inductionStatus === 'completed';
+            const finalEnrolmentStatus = allPreviousCompleted ? 'completed' : 'pending';
+
             baseSteps.push(
                 { id: 3, title: 'Receive Offer', status: 'completed' },
                 { id: 4, title: 'Accept Offer', status: applicationData.offer_accepted ? 'completed' : 'in_progress' },
-                { id: 5, title: 'Upload Required Documents', status: applicationData.documents_verified ? 'completed' : 'in_progress' },
-                { id: 6, title: 'Complete Induction', status: 'pending' },
-                { id: 7, title: 'Final Enrolment', status: 'pending' }
+                { id: 5, title: 'Upload Required Documents', status: documentsStatus },
+                { id: 6, title: 'Complete Induction', status: inductionStatus },
+                { id: 7, title: 'Final Enrolment', status: finalEnrolmentStatus }
             );
         }
 
@@ -187,16 +479,6 @@ const StudentAdmissions = ({ user }) => {
                     Offer & Acceptance
                 </button>
                 <button
-                    onClick={() => setActiveTab('enrolment')}
-                    className={`py-3 px-4 font-medium border-b-2 transition-colors ${
-                        activeTab === 'enrolment'
-                            ? 'border-blue-600 text-blue-600'
-                            : 'border-transparent text-gray-600 hover:text-gray-900'
-                    }`}
-                >
-                    Enrolment Steps
-                </button>
-                <button
                     onClick={() => setActiveTab('documents')}
                     className={`py-3 px-4 font-medium border-b-2 transition-colors ${
                         activeTab === 'documents'
@@ -206,11 +488,24 @@ const StudentAdmissions = ({ user }) => {
                 >
                     Documents
                 </button>
+                <button
+                    onClick={() => setActiveTab('induction')}
+                    className={`py-3 px-4 font-medium border-b-2 transition-colors ${
+                        activeTab === 'induction'
+                            ? 'border-blue-600 text-blue-600'
+                            : 'border-transparent text-gray-600 hover:text-gray-900'
+                    }`}
+                >
+                    Induction
+                </button>
             </div>
 
-            {/* APPLICATION STATUS TAB */}
-            {activeTab === 'status' && (
-                <div className="bg-white rounded-b-lg shadow p-6">
+            {/* Main Content + Sidebar Layout */}
+            <div className="flex gap-6">
+                {/* Main Content Area */}
+                <div className="flex-1">
+                    {activeTab === 'status' && (
+                    <div className="bg-white rounded-b-lg shadow p-6">
                     {applicationData ? (
                         <div className="space-y-6">
                             {/* Main Status */}
@@ -279,6 +574,16 @@ const StudentAdmissions = ({ user }) => {
                     ) : (
                         <p className="text-gray-600">No application found</p>
                     )}
+                    
+                    {/* Navigation Button */}
+                    <div className="mt-6 flex justify-end">
+                        <button
+                            onClick={() => setActiveTab('offer')}
+                            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                        >
+                            Next: Offer & Acceptance →
+                        </button>
+                    </div>
                 </div>
             )}
 
@@ -294,9 +599,13 @@ const StudentAdmissions = ({ user }) => {
                                     <div>
                                         <h3 className="text-lg font-bold text-purple-900 mb-2">Your Offer Letter</h3>
                                         <p className="text-purple-800 mb-4">Congratulations on receiving an offer to study with us! Please review and accept your offer below.</p>
-                                        <button className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors">
+                                        <button
+                                            onClick={handleDownloadOffer}
+                                            disabled={downloadingOffer}
+                                            className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-60"
+                                        >
                                             <Download className="w-4 h-4" />
-                                            Download Offer Letter
+                                            {downloadingOffer ? 'Downloading...' : 'Download Offer Letter'}
                                         </button>
                                     </div>
                                 </div>
@@ -306,15 +615,15 @@ const StudentAdmissions = ({ user }) => {
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="p-4 bg-gray-50 rounded-lg">
                                     <p className="text-sm text-gray-600 mb-1">Programme</p>
-                                    <p className="font-bold text-gray-900">{applicationData.programme_name || 'Not specified'}</p>
+                                    <p className="font-bold text-gray-900">{getProgrammeName(applicationData)}</p>
                                 </div>
                                 <div className="p-4 bg-gray-50 rounded-lg">
                                     <p className="text-sm text-gray-600 mb-1">Start Date</p>
-                                    <p className="font-bold text-gray-900">{applicationData.intake_month} {applicationData.intake_year}</p>
+                                    <p className="font-bold text-gray-900">{getStartDate(applicationData)}</p>
                                 </div>
                                 <div className="p-4 bg-gray-50 rounded-lg">
                                     <p className="text-sm text-gray-600 mb-1">Mode of Study</p>
-                                    <p className="font-bold text-gray-900">{applicationData.study_mode || 'Not specified'}</p>
+                                    <p className="font-bold text-gray-900">{getStudyModeLabel(applicationData)}</p>
                                 </div>
                                 <div className="p-4 bg-gray-50 rounded-lg">
                                     <p className="text-sm text-gray-600 mb-1">Status</p>
@@ -326,12 +635,16 @@ const StudentAdmissions = ({ user }) => {
                             <div className="p-6 border-2 border-blue-200 rounded-lg bg-blue-50">
                                 <h4 className="font-bold text-gray-900 mb-3">Accept Your Offer</h4>
                                 <p className="text-gray-700 mb-4">By accepting this offer, you confirm that you will be studying with us and agree to the terms and conditions outlined in your offer letter.</p>
-                                <button className={`px-6 py-2 rounded-lg font-medium transition-colors ${
-                                    applicationData.offer_accepted
-                                        ? 'bg-green-600 text-white cursor-default'
-                                        : 'bg-blue-600 text-white hover:bg-blue-700'
-                                }`}>
-                                    {applicationData.offer_accepted ? '✓ Offer Accepted' : 'Accept Offer'}
+                                <button
+                                    onClick={handleAcceptOffer}
+                                    disabled={applicationData.offer_accepted || acceptingOffer}
+                                    className={`px-6 py-2 rounded-lg font-medium transition-colors ${
+                                        applicationData.offer_accepted
+                                            ? 'bg-green-600 text-white cursor-default'
+                                            : 'bg-blue-600 text-white hover:bg-blue-700'
+                                    } ${acceptingOffer ? 'opacity-60' : ''}`}
+                                >
+                                    {applicationData.offer_accepted ? '✓ Offer Accepted' : (acceptingOffer ? 'Accepting...' : 'Accept Offer')}
                                 </button>
                             </div>
                         </div>
@@ -341,46 +654,15 @@ const StudentAdmissions = ({ user }) => {
                             <p className="text-gray-600">Your offer details will appear here once your application is accepted.</p>
                         </div>
                     )}
-                </div>
-            )}
-
-            {/* ENROLMENT STEPS TAB */}
-            {activeTab === 'enrolment' && (
-                <div className="bg-white rounded-b-lg shadow p-6">
-                    <div className="space-y-4">
-                        <h3 className="font-bold text-gray-900 text-lg mb-6">Your Enrolment Journey</h3>
-                        {enrolmentSteps.map((step, index) => (
-                            <div key={step.id} className="flex gap-4">
-                                <div className="flex flex-col items-center">
-                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-white ${
-                                        step.status === 'completed' ? 'bg-green-600' :
-                                        step.status === 'in_progress' ? 'bg-yellow-600' :
-                                        'bg-gray-300'
-                                    }`}>
-                                        {step.status === 'completed' ? '✓' : step.id}
-                                    </div>
-                                    {index < enrolmentSteps.length - 1 && (
-                                        <div className={`w-1 h-16 ${
-                                            step.status === 'completed' ? 'bg-green-600' : 'bg-gray-300'
-                                        }`}></div>
-                                    )}
-                                </div>
-                                <div className="pt-1">
-                                    <p className={`font-bold text-lg ${
-                                        step.status === 'completed' ? 'text-green-600' :
-                                        step.status === 'in_progress' ? 'text-yellow-600' :
-                                        'text-gray-600'
-                                    }`}>
-                                        {step.title}
-                                    </p>
-                                    <p className="text-sm text-gray-600 mt-1">
-                                        {step.status === 'completed' && 'Completed'}
-                                        {step.status === 'in_progress' && 'In progress - Action required'}
-                                        {step.status === 'pending' && 'Awaiting completion of previous steps'}
-                                    </p>
-                                </div>
-                            </div>
-                        ))}
+                    
+                    {/* Navigation Button */}
+                    <div className="mt-6 flex justify-end">
+                        <button
+                            onClick={() => setActiveTab('documents')}
+                            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                        >
+                            Next: Upload Documents →
+                        </button>
                     </div>
                 </div>
             )}
@@ -402,35 +684,58 @@ const StudentAdmissions = ({ user }) => {
                                 </div>
                                 <div className="flex items-center gap-2">
                                     {applicationData?.[doc.field] ? (
-                                        <>
-                                            <CheckCircle className="w-5 h-5 text-green-600" />
-                                            <span className="text-sm text-green-600 font-medium">Uploaded</span>
-                                            <button 
-                                                onClick={() => triggerFileInput(doc.field)}
-                                                className="ml-2 text-xs text-blue-600 hover:text-blue-700 underline"
-                                            >
-                                                Replace
-                                            </button>
-                                        </>
+                                        <div className="flex flex-col gap-2 items-end">
+                                            <div className="flex items-center gap-2">
+                                                <CheckCircle className="w-5 h-5 text-green-600" />
+                                                <span className="text-sm text-green-600 font-medium">Uploaded</span>
+                                            </div>
+                                            <div className="flex items-center gap-3">
+                                                <button 
+                                                    onClick={() => handleDownloadDocument(applicationData.id, doc.field, applicationData[doc.field])}
+                                                    className="text-blue-600 hover:text-blue-700 hover:scale-110 transition-transform"
+                                                    title="Download"
+                                                >
+                                                    <Download className="w-4 h-4" />
+                                                </button>
+                                                <button 
+                                                    onClick={() => triggerFileInput(doc.field)}
+                                                    className="text-amber-600 hover:text-amber-700 hover:scale-110 transition-transform"
+                                                    title="Replace"
+                                                >
+                                                    <RefreshCw className="w-4 h-4" />
+                                                </button>
+                                                <button 
+                                                    onClick={() => handleDeleteDocument(applicationData.id, doc.field, doc.name)}
+                                                    className="text-red-600 hover:text-red-700 hover:scale-110 transition-transform"
+                                                    title="Delete"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </button>
+                                            </div>
+                                        </div>
                                     ) : (
-                                        <>
-                                            <button 
-                                                onClick={() => triggerFileInput(doc.field)}
-                                                disabled={uploading === doc.field}
-                                                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-sm"
-                                            >
-                                                <Upload className="w-4 h-4" />
-                                                {uploading === doc.field ? 'Uploading...' : 'Upload'}
-                                            </button>
-                                        </>
+                                        <button 
+                                            onClick={() => triggerFileInput(doc.field)}
+                                            disabled={uploading === doc.field}
+                                            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-sm"
+                                        >
+                                            <Upload className="w-4 h-4" />
+                                            {uploading === doc.field ? 'Uploading...' : 'Upload'}
+                                        </button>
                                     )}
                                     <input
                                         type="file"
                                         ref={el => fileInputRefs.current[doc.field] = el}
                                         onChange={(e) => {
                                             const file = e.target.files[0];
-                                            if (file) handleFileUpload(doc.field, file);
-                                            e.target.value = '';
+                                            console.log('File selected:', file?.name);
+                                            if (file) {
+                                                handleFileUpload(doc.field, file);
+                                            }
+                                            // Reset input after handling
+                                            setTimeout(() => {
+                                                e.target.value = '';
+                                            }, 100);
                                         }}
                                         accept=".pdf,.jpg,.jpeg,.png"
                                         className="hidden"
@@ -442,8 +747,209 @@ const StudentAdmissions = ({ user }) => {
                     <p className="mt-6 text-sm text-gray-600 p-4 bg-blue-50 rounded-lg">
                         <strong>Accepted formats:</strong> PDF, JPG, PNG | <strong>Max size:</strong> 5MB per file
                     </p>
+                    
+                    {/* Navigation Button */}
+                    <div className="mt-6 flex justify-end">
+                        <button
+                            onClick={() => setActiveTab('induction')}
+                            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                        >
+                            Next: Induction →
+                        </button>
+                    </div>
                 </div>
             )}
+
+            {/* INDUCTION TAB */}
+            {activeTab === 'induction' && (
+                <div className="bg-white rounded-b-lg shadow p-6">
+                    <h3 className="text-xl font-bold text-gray-900 mb-2">Student Induction & Onboarding</h3>
+                    <p className="text-gray-600 mb-6">Please confirm that you have read and understood all the below documentation and policies.</p>
+
+                    {/* Auto-filled fields */}
+                    <div className="grid grid-cols-2 gap-4 mb-6">
+                        <div className="p-4 bg-gray-50 rounded-lg">
+                            <p className="text-sm text-gray-600 mb-1">Student ID</p>
+                            <p className="font-bold text-gray-900">{applicationData?.application_reference || applicationData?.id}</p>
+                        </div>
+                        <div className="p-4 bg-gray-50 rounded-lg">
+                            <p className="text-sm text-gray-600 mb-1">Student Name</p>
+                            <p className="font-bold text-gray-900">{applicationData?.first_name} {applicationData?.last_name}</p>
+                        </div>
+                        <div className="p-4 bg-gray-50 rounded-lg">
+                            <p className="text-sm text-gray-600 mb-1">Course Title</p>
+                            <p className="font-bold text-gray-900">{getProgrammeName(applicationData)}</p>
+                        </div>
+                        <div className="p-4 bg-gray-50 rounded-lg">
+                            <p className="text-sm text-gray-600 mb-1">Course Start Date</p>
+                            <p className="font-bold text-gray-900">{getStartDate(applicationData)}</p>
+                        </div>
+                    </div>
+
+                    {/* Checkboxes */}
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6">
+                        <h4 className="font-bold text-gray-900 mb-4">Policies & Documentation</h4>
+                        <div className="space-y-3">
+                            {[
+                                { key: 'student_handbook', label: 'Student Handbook' },
+                                { key: 'course_handbook', label: 'Course Handbook' },
+                                { key: 'assessment_grading_policy', label: 'Assessment & Grading Policy Explained' },
+                                { key: 'code_of_conduct', label: 'Code of Conduct & Disciplinary Policy Explained' },
+                                { key: 'health_safety_guidelines', label: 'Health & Safety Guidelines Provided' },
+                                { key: 'academic_integrity', label: 'Academic Integrity & Plagiarism Policy Explained' },
+                                { key: 'attendance_punctuality', label: 'Attendance & Punctuality Policy Explained' },
+                                { key: 'it_email_usage', label: 'IT & Email Usage Policy Explained' },
+                                { key: 'data_protection', label: 'Data Protection & Privacy Notice Explained' },
+                                { key: 'complaints_appeals', label: 'Complaints & Appeals Procedure Explained' },
+                                { key: 'library_resources', label: 'Library & Learning Resource Access Information Provided' },
+                                { key: 'student_support_services', label: 'Student Support Services Information Provided' },
+                                { key: 'equality_diversity_inclusion', label: 'Equality, Diversity & Inclusion Policy Explained' },
+                                { key: 'safeguarding_prevent', label: 'Safeguarding & Prevent Policy Explained' }
+                            ].map((item) => (
+                                <label key={item.key} className="flex items-center gap-3 cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        checked={inductionData[item.key] || false}
+                                        onChange={() => handleInductionCheckboxChange(item.key)}
+                                        className="w-4 h-4 rounded"
+                                    />
+                                    <span className="text-gray-700">{item.label}</span>
+                                </label>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Consents */}
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-6 mb-6">
+                        <h4 className="font-bold text-gray-900 mb-4">Consents</h4>
+                        <div className="space-y-3">
+                            {[
+                                { key: 'consent_personal_data', label: 'Consent to Process Personal Data (UK GDPR)' },
+                                { key: 'consent_awarding_bodies', label: 'Consent to Share Data with Awarding Bodies' },
+                                { key: 'consent_communications', label: 'Consent to Receive Important College Communications' },
+                                { key: 'consent_marketing_images', label: 'Consent for Use of Images/Videos in Marketing (Optional)' }
+                            ].map((item) => (
+                                <label key={item.key} className="flex items-center gap-3 cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        checked={inductionData[item.key] || false}
+                                        onChange={() => handleInductionCheckboxChange(item.key)}
+                                        className="w-4 h-4 rounded"
+                                    />
+                                    <span className="text-gray-700">{item.label}</span>
+                                </label>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Declaration */}
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 mb-6">
+                        <h4 className="font-bold text-gray-900 mb-4">Declaration</h4>
+                        <label className="flex items-start gap-3 cursor-pointer mb-4">
+                            <input
+                                type="checkbox"
+                                checked={inductionData.declaration_understood || false}
+                                onChange={() => handleInductionCheckboxChange('declaration_understood')}
+                                className="w-4 h-4 rounded mt-1"
+                            />
+                            <span className="text-gray-700">I have read and understood all the above documentation</span>
+                        </label>
+                        
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Digital Signature (Your Name)</label>
+                                <input
+                                    type="text"
+                                    value={inductionData.digital_signature || ''}
+                                    onChange={(e) => setInductionData(prev => ({ ...prev, digital_signature: e.target.value }))}
+                                    placeholder="Enter your full name"
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Date of Declaration</label>
+                                <input
+                                    type="date"
+                                    value={inductionData.declaration_date || ''}
+                                    onChange={(e) => setInductionData(prev => ({ ...prev, declaration_date: e.target.value }))}
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Save Button */}
+                    <div className="flex justify-end">
+                        <button
+                            onClick={handleSaveInduction}
+                            disabled={savingInduction}
+                            className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center gap-2"
+                        >
+                            <CheckCircle className="w-5 h-5" />
+                            {savingInduction ? 'Saving...' : 'Complete Induction'}
+                        </button>
+                    </div>
+                </div>
+            )}
+                </div>
+
+                {/* Sidebar - Enrolment Progress */}
+                <div className="w-72">
+                    <div className="bg-white rounded-lg shadow p-5 sticky top-6">
+                        <h3 className="text-lg font-bold text-gray-900 mb-4">Enrolment Progress</h3>
+                        <div className="space-y-3">
+                            {enrolmentSteps.map((step, index) => (
+                                <div 
+                                    key={step.id}
+                                    className={`flex items-start gap-3 p-3 rounded-lg border-l-4 ${
+                                        step.status === 'completed' ? 'border-green-500 bg-green-50' :
+                                        step.status === 'in_progress' ? 'border-orange-500 bg-orange-50' :
+                                        'border-gray-300 bg-gray-50'
+                                    }`}
+                                >
+                                    <div className="flex-shrink-0 mt-0.5">
+                                        {step.status === 'completed' && <CheckCircle className="w-5 h-5 text-green-600" />}
+                                        {step.status === 'in_progress' && <Clock className="w-5 h-5 text-orange-600" />}
+                                        {step.status === 'pending' && <div className="w-5 h-5 rounded-full border-2 border-gray-400" />}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <p className={`text-sm font-medium ${
+                                            step.status === 'completed' ? 'text-green-900' :
+                                            step.status === 'in_progress' ? 'text-orange-900' :
+                                            'text-gray-600'
+                                        }`}>
+                                            {step.title}
+                                        </p>
+                                        <p className="text-xs text-gray-500 mt-1">
+                                            {step.status === 'completed' && 'Completed'}
+                                            {step.status === 'in_progress' && 'In progress'}
+                                            {step.status === 'pending' && 'Pending'}
+                                        </p>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                        
+                        {/* Progress Summary */}
+                        <div className="mt-6 pt-4 border-t">
+                            <div className="text-sm">
+                                <p className="text-gray-600">Overall Progress</p>
+                                <div className="mt-2 w-full bg-gray-200 rounded-full h-2">
+                                    <div 
+                                        className="bg-blue-600 h-2 rounded-full transition-all"
+                                        style={{
+                                            width: `${(enrolmentSteps.filter(s => s.status === 'completed').length / enrolmentSteps.length) * 100}%`
+                                        }}
+                                    ></div>
+                                </div>
+                                <p className="text-xs text-gray-500 mt-1">
+                                    {enrolmentSteps.filter(s => s.status === 'completed').length} of {enrolmentSteps.length} steps completed
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     );
 };

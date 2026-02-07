@@ -10,6 +10,7 @@ const path = require('path');
 const fs = require('fs').promises;
 const mysql = require('mysql2/promise');
 const crypto = require('crypto');
+const PDFDocument = require('pdfkit');
 const router = express.Router();
 const { sendStudentWelcomeEmail, sendConditionalApprovalEmail } = require('../utils/emailService');
 const { storeNotification } = require('./notifications');
@@ -445,6 +446,105 @@ router.get('/applications/:id', async (req, res) => {
 });
 
 // ===============================================
+// ROUTE 3B: PUT /api/students/applications/:id/accept-offer
+// Student accepts offer
+// ===============================================
+router.put('/applications/:id/accept-offer', async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const [result] = await db.execute(
+            'UPDATE student_applications SET offer_accepted = 1 WHERE id = ?',
+            [id]
+        );
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Application not found'
+            });
+        }
+
+        res.json({
+            success: true,
+            message: 'Offer accepted successfully'
+        });
+    } catch (error) {
+        console.error('Error accepting offer:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to accept offer',
+            error: error.message
+        });
+    }
+});
+
+// ===============================================
+// ROUTE 3C: GET /api/students/applications/:id/offer-letter
+// Download offer letter PDF
+// ===============================================
+router.get('/applications/:id/offer-letter', async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const [applications] = await db.execute(
+            `SELECT id, first_name, last_name, email, course_title, course_code, mode_of_study,
+                    intake_start_date, intake_month, intake_year, application_reference
+             FROM student_applications
+             WHERE id = ?`,
+            [id]
+        );
+
+        if (applications.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Application not found'
+            });
+        }
+
+        const app = applications[0];
+        const fullName = `${app.first_name} ${app.last_name}`.trim();
+        const startDate = app.intake_start_date
+            ? new Date(app.intake_start_date).toISOString().split('T')[0]
+            : `${app.intake_month || ''} ${app.intake_year || ''}`.trim();
+
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="Offer_Letter_${app.application_reference || app.id}.pdf"`);
+
+        const doc = new PDFDocument({ size: 'A4', margin: 50 });
+        doc.pipe(res);
+
+        doc.fontSize(20).text('Offer Letter', { align: 'center' });
+        doc.moveDown();
+        doc.fontSize(12).text(`Date: ${new Date().toISOString().split('T')[0]}`);
+        doc.moveDown();
+        doc.text(`To: ${fullName}`);
+        doc.text(`Email: ${app.email}`);
+        doc.moveDown();
+        doc.text('We are pleased to offer you a place on the following programme:');
+        doc.moveDown();
+        doc.text(`Programme: ${app.course_title || 'N/A'}`);
+        doc.text(`Course Code: ${app.course_code || 'N/A'}`);
+        doc.text(`Mode of Study: ${app.mode_of_study || 'N/A'}`);
+        doc.text(`Start Date: ${startDate || 'N/A'}`);
+        doc.moveDown();
+        doc.text('Please review the terms and confirm acceptance via the student portal.');
+        doc.moveDown();
+        doc.text('Sincerely,');
+        doc.text('Admissions Office');
+
+        doc.end();
+    } catch (error) {
+        console.error('Error generating offer letter:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to generate offer letter',
+            error: error.message
+        });
+    }
+});
+
+// ===============================================
 // ROUTE 4: GET /api/students/applications
 // Get applications list (for admissions staff)
 // ===============================================
@@ -496,6 +596,10 @@ router.get('/applications', async (req, res) => {
                     sa.academic_certificates,
                     sa.academic_transcripts,
                     sa.english_certificate,
+                    sa.student_contract,
+                    sa.cv_resume,
+                    sa.work_reference,
+                    sa.proof_of_address,
                     sa.contact_number,
                     sa.address_line1,
                     sa.address_line2,
@@ -544,6 +648,10 @@ router.get('/applications', async (req, res) => {
                         sa.academic_certificates,
                         sa.academic_transcripts,
                         sa.english_certificate,
+                        sa.student_contract,
+                        sa.cv_resume,
+                        sa.work_reference,
+                        sa.proof_of_address,
                         sa.contact_number,
                         sa.address_line1,
                         sa.address_line2,
@@ -1262,12 +1370,67 @@ router.post('/applications/:id/upload-document', upload.single('document'), asyn
             });
         }
 
-        // Store file path relative to uploads directory
+        const allowedDocumentTypes = new Set([
+            'passport_id_document',
+            'academic_certificates',
+            'academic_transcripts',
+            'english_certificate',
+            'student_contract',
+            'cv_resume',
+            'work_reference',
+            'proof_of_address',
+            'visa_immigration_document',
+            'passport_id',
+            'visa_immigration',
+            'brp_card',
+            'residency_proof'
+        ]);
+
+        if (!allowedDocumentTypes.has(documentType)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid document type'
+            });
+        }
+
+        const columnMap = {
+            passport_id_document: 'passport_id_document',
+            academic_certificates: 'academic_certificates',
+            academic_transcripts: 'academic_transcripts',
+            english_certificate: 'english_certificate',
+            student_contract: 'student_contract',
+            cv_resume: 'cv_resume',
+            work_reference: 'work_reference',
+            proof_of_address: 'proof_of_address',
+            visa_immigration_document: 'visa_immigration_document'
+        };
+
+        // Store original filename in the application columns
         const filePath = `/uploads/student-documents/${file.filename}`;
 
-        // Update the application with the document path
-        const updateQuery = `UPDATE student_applications SET ${documentType} = ? WHERE id = ?`;
-        await db.execute(updateQuery, [filePath, id]);
+        // Update the application with the original filename when mapped to a column
+        if (columnMap[documentType]) {
+            const updateQuery = `UPDATE student_applications SET ${columnMap[documentType]} = ? WHERE id = ?`;
+            await db.execute(updateQuery, [file.originalname, id]);
+        }
+
+        // Insert into application_documents for tracking
+        await db.execute(
+            `INSERT INTO application_documents (
+                application_id, document_type, original_filename, stored_filename,
+                file_path, file_size, mime_type, uploaded_by_ip
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+            , [
+                id,
+                documentType,
+                file.originalname,
+                file.filename,
+                filePath,
+                file.size,
+                file.mimetype,
+                req.ip
+            ]
+        );
 
         console.log(`[DOCUMENT UPLOAD] Application ${id}: ${documentType} uploaded - ${file.filename}`);
 
@@ -1286,6 +1449,193 @@ router.post('/applications/:id/upload-document', upload.single('document'), asyn
         res.status(500).json({
             success: false,
             message: 'Failed to upload document',
+            error: error.message
+        });
+    }
+});
+
+// Get document file path by application ID and document type
+router.get('/applications/:id/document/:documentType', async (req, res) => {
+    try {
+        const { id, documentType } = req.params;
+
+        // Get the file path from application_documents table
+        const [result] = await db.execute(
+            `SELECT file_path FROM application_documents 
+             WHERE application_id = ? AND document_type = ? 
+             ORDER BY upload_date DESC LIMIT 1`,
+            [id, documentType]
+        );
+
+        if (result.length > 0) {
+            res.json({
+                success: true,
+                filePath: result[0].file_path
+            });
+        } else {
+            res.status(404).json({
+                success: false,
+                message: 'Document not found'
+            });
+        }
+    } catch (error) {
+        console.error('Error getting document:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to get document',
+            error: error.message
+        });
+    }
+});
+
+// Delete document by application ID and document type
+router.delete('/applications/:id/document/:documentType', async (req, res) => {
+    try {
+        const { id, documentType } = req.params;
+
+        // Get the document path first
+        const [docResult] = await db.execute(
+            `SELECT file_path FROM application_documents 
+             WHERE application_id = ? AND document_type = ? 
+             ORDER BY upload_date DESC LIMIT 1`,
+            [id, documentType]
+        );
+
+        // Delete from application_documents table
+        await db.execute(
+            `DELETE FROM application_documents 
+             WHERE application_id = ? AND document_type = ?`,
+            [id, documentType]
+        );
+
+        // Clear the document field in student_applications
+        const columnMap = {
+            passport_id_document: 'passport_id_document',
+            academic_certificates: 'academic_certificates',
+            academic_transcripts: 'academic_transcripts',
+            english_certificate: 'english_certificate',
+            cv_resume: 'cv_resume',
+            work_reference: 'work_reference',
+            proof_of_address: 'proof_of_address',
+            visa_immigration_document: 'visa_immigration_document'
+        };
+
+        if (columnMap[documentType]) {
+            await db.execute(
+                `UPDATE student_applications SET ${columnMap[documentType]} = NULL WHERE id = ?`,
+                [id]
+            );
+        }
+
+        console.log(`[DOCUMENT DELETE] Application ${id}: ${documentType} deleted`);
+
+        res.json({
+            success: true,
+            message: 'Document deleted successfully'
+        });
+    } catch (error) {
+        console.error('Error deleting document:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to delete document',
+            error: error.message
+        });
+    }
+});
+
+// Save student induction/onboarding
+router.post('/applications/:id/induction', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const {
+            student_id, student_name, course_title, course_start_date,
+            student_handbook, course_handbook, assessment_grading_policy,
+            code_of_conduct, health_safety_guidelines, academic_integrity,
+            attendance_punctuality, it_email_usage, data_protection,
+            complaints_appeals, library_resources, student_support_services,
+            equality_diversity_inclusion, safeguarding_prevent,
+            consent_personal_data, consent_awarding_bodies,
+            consent_communications, consent_marketing_images,
+            declaration_understood, digital_signature, declaration_date
+        } = req.body;
+
+        // Format dates to YYYY-MM-DD
+        const formatDateForDB = (dateString) => {
+            if (!dateString) return null;
+            const date = new Date(dateString);
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        };
+
+        const [result] = await db.execute(
+            `INSERT INTO student_induction (
+                application_id, student_id, student_name, course_title,
+                course_start_date, student_handbook, course_handbook,
+                assessment_grading_policy, code_of_conduct, health_safety_guidelines,
+                academic_integrity, attendance_punctuality, it_email_usage,
+                data_protection, complaints_appeals, library_resources,
+                student_support_services, equality_diversity_inclusion,
+                safeguarding_prevent, consent_personal_data, consent_awarding_bodies,
+                consent_communications, consent_marketing_images,
+                declaration_understood, digital_signature, declaration_date, completed_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+            [
+                id, student_id, student_name, course_title,
+                formatDateForDB(course_start_date), student_handbook ? 1 : 0, course_handbook ? 1 : 0,
+                assessment_grading_policy ? 1 : 0, code_of_conduct ? 1 : 0, health_safety_guidelines ? 1 : 0,
+                academic_integrity ? 1 : 0, attendance_punctuality ? 1 : 0, it_email_usage ? 1 : 0,
+                data_protection ? 1 : 0, complaints_appeals ? 1 : 0, library_resources ? 1 : 0,
+                student_support_services ? 1 : 0, equality_diversity_inclusion ? 1 : 0,
+                safeguarding_prevent ? 1 : 0, consent_personal_data ? 1 : 0, consent_awarding_bodies ? 1 : 0,
+                consent_communications ? 1 : 0, consent_marketing_images ? 1 : 0,
+                declaration_understood ? 1 : 0, digital_signature, formatDateForDB(declaration_date)
+            ]
+        );
+
+        console.log(`[INDUCTION COMPLETED] Application ${id}: ${student_name} completed induction`);
+
+        res.json({
+            success: true,
+            message: 'Induction completed successfully',
+            data: { id: result.insertId }
+        });
+    } catch (error) {
+        console.error('Error saving induction:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to save induction',
+            error: error.message
+        });
+    }
+});
+
+// Get student induction data
+router.get('/applications/:id/induction', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const [induction] = await db.execute(
+            'SELECT * FROM student_induction WHERE application_id = ? ORDER BY completed_at DESC LIMIT 1',
+            [id]
+        );
+
+        if (!induction || induction.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'No induction data found'
+            });
+        }
+
+        res.json({
+            success: true,
+            data: induction[0]
+        });
+    } catch (error) {
+        console.error('Error fetching induction:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch induction',
             error: error.message
         });
     }
@@ -2439,7 +2789,7 @@ router.get('/right-to-study/:id', async (req, res) => {
         const { id } = req.params;
 
         const [applications] = await db.execute(
-            `SELECT id, full_name, email, passport_id_document, visa_immigration_document, 
+            `SELECT id, first_name, last_name, email, passport_id_document, visa_immigration_document, 
                      right_to_study_verified, compliance_confirmed_at, documents_verified
              FROM student_applications 
              WHERE id = ?`,
@@ -2467,6 +2817,7 @@ router.get('/right-to-study/:id', async (req, res) => {
         const formattedDocs = documents.map(doc => ({
             id: doc.original_filename,
             type: getDocumentType(doc.document_type),
+            documentType: doc.document_type,
             status: app.documents_verified === 'Yes' ? 'Approved' : 'Pending Review',
             uploadDate: doc.upload_date,
             filePath: doc.file_path,
@@ -2474,17 +2825,46 @@ router.get('/right-to-study/:id', async (req, res) => {
             daysUntilExpiry: calculateDaysUntilExpiry(doc.document_type)
         }));
 
+        const fallbackDocs = [];
+        if (formattedDocs.length === 0) {
+            if (app.passport_id_document) {
+                fallbackDocs.push({
+                    id: `passport-${app.id}`,
+                    type: getDocumentType('passport_id'),
+                    documentType: 'passport_id',
+                    status: app.documents_verified === 'Yes' ? 'Approved' : 'Pending Review',
+                    uploadDate: null,
+                    filePath: app.passport_id_document,
+                    expiryDate: calculateExpiryDate('passport_id'),
+                    daysUntilExpiry: calculateDaysUntilExpiry('passport_id')
+                });
+            }
+
+            if (app.visa_immigration_document) {
+                fallbackDocs.push({
+                    id: `visa-${app.id}`,
+                    type: getDocumentType('visa_immigration'),
+                    documentType: 'visa_immigration',
+                    status: app.documents_verified === 'Yes' ? 'Approved' : 'Pending Review',
+                    uploadDate: null,
+                    filePath: app.visa_immigration_document,
+                    expiryDate: calculateExpiryDate('visa_immigration'),
+                    daysUntilExpiry: calculateDaysUntilExpiry('visa_immigration')
+                });
+            }
+        }
+
         res.json({
             success: true,
             student: {
                 id: app.id,
-                name: app.full_name,
+                name: `${app.first_name} ${app.last_name}`.trim(),
                 email: app.email,
                 complianceConfirmed: !!app.compliance_confirmed_at,
                 rightToStudyVerified: app.right_to_study_verified === 'Yes',
                 complianceConfirmedAt: app.compliance_confirmed_at
             },
-            documents: formattedDocs
+            documents: formattedDocs.length > 0 ? formattedDocs : fallbackDocs
         });
 
     } catch (error) {
@@ -2661,5 +3041,52 @@ function calculateDaysUntilExpiry(docType) {
     const diffTime = expiryDate - today;
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 }
+
+// Accept student contract
+router.post('/accept-contract', async (req, res) => {
+    try {
+        const { signature, acceptance_date } = req.body;
+        
+        if (!signature || !acceptance_date) {
+            return res.status(400).json({
+                success: false,
+                message: 'Signature and acceptance date are required'
+            });
+        }
+
+        // Log contract acceptance
+        console.log(`[CONTRACT ACCEPTED] Signature: ${signature}, Date: ${acceptance_date}`);
+
+        res.json({
+            success: true,
+            message: 'Contract accepted successfully',
+            data: { acceptance_date }
+        });
+    } catch (error) {
+        console.error('Error accepting contract:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to accept contract',
+            error: error.message
+        });
+    }
+});
+
+// Get contract PDF
+router.get('/contract-pdf', async (req, res) => {
+    try {
+        // For now, return a placeholder response
+        // In production, you would generate or serve an actual PDF file
+        res.json({
+            success: true,
+            message: 'Contract PDF endpoint'
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: 'Failed to get contract PDF'
+        });
+    }
+});
 
 module.exports = router;

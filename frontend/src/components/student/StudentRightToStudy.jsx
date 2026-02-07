@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Upload, FileText, AlertCircle, CheckCircle, Calendar, Shield } from 'lucide-react';
 import axios from 'axios';
 
@@ -20,6 +20,66 @@ const StudentRightToStudy = () => {
     const [loading, setLoading] = useState(true);
     const [complianceConfirmed, setComplianceConfirmed] = useState(false);
     const [saveLoading, setSaveLoading] = useState(false);
+    const [uploadingDoc, setUploadingDoc] = useState(null);
+    const [message, setMessage] = useState(null);
+    const [appId, setAppId] = useState(null);
+    const fileInputRefs = useRef({});
+
+    const baseUrl = API_URL.replace(/\/api$/, '');
+
+    const documentTypes = [
+        { label: 'Passport', type: 'passport_id' },
+        { label: 'UK Visa', type: 'visa_immigration' },
+        { label: 'BRP Card', type: 'brp_card' },
+        { label: 'Residency Proof', type: 'residency_proof' }
+    ];
+
+    const loadDummyData = () => {
+        setStudentApp({
+            id: 0,
+            name: 'Demo Student',
+            email: 'demo.student@example.com',
+            complianceConfirmed: true,
+            rightToStudyVerified: true,
+            complianceConfirmedAt: new Date().toISOString()
+        });
+
+        setDocuments([
+            {
+                id: 'demo-passport',
+                type: 'Passport',
+                documentType: 'passport_id',
+                status: 'Approved',
+                uploadDate: new Date().toISOString(),
+                filePath: null,
+                expiryDate: calculateExpiryDate('passport_id'),
+                daysUntilExpiry: calculateDaysUntilExpiry('passport_id')
+            },
+            {
+                id: 'demo-visa',
+                type: 'UK Visa',
+                documentType: 'visa_immigration',
+                status: 'Pending Review',
+                uploadDate: new Date().toISOString(),
+                filePath: null,
+                expiryDate: calculateExpiryDate('visa_immigration'),
+                daysUntilExpiry: calculateDaysUntilExpiry('visa_immigration')
+            },
+            {
+                id: 'demo-brp',
+                type: 'BRP Card',
+                documentType: 'brp_card',
+                status: 'Approved',
+                uploadDate: new Date().toISOString(),
+                filePath: null,
+                expiryDate: calculateExpiryDate('brp_card'),
+                daysUntilExpiry: calculateDaysUntilExpiry('brp_card')
+            }
+        ]);
+
+        setComplianceConfirmed(true);
+        setMessage({ type: 'success', text: 'Showing demo compliance data.' });
+    };
 
     useEffect(() => {
         fetchStudentData();
@@ -29,19 +89,28 @@ const StudentRightToStudy = () => {
         try {
             const userStr = localStorage.getItem('user');
             if (!userStr) {
+                setMessage({ type: 'error', text: 'User session not found. Please log in again.' });
                 setLoading(false);
                 return;
             }
             
             const user = JSON.parse(userStr);
             
-            // Get student application ID
-            const appResponse = await axios.get(`${API_URL}/students/application/${user.email}`);
-            if (appResponse.data.success) {
-                const appId = appResponse.data.application.id;
-                
+            // Get student application by email
+            const appResponse = await axios.get(`${API_URL}/students/applications`);
+            if (appResponse.data?.success) {
+                const apps = appResponse.data.data?.applications || [];
+                const studentApp = apps.find((app) => app.email === user.email);
+
+                if (!studentApp) {
+                    loadDummyData();
+                    return;
+                }
+
+                setAppId(studentApp.id);
+
                 // Fetch Right to Study documents
-                const docsResponse = await axios.get(`${API_URL}/students/right-to-study/${appId}`);
+                const docsResponse = await axios.get(`${API_URL}/students/right-to-study/${studentApp.id}`);
                 if (docsResponse.data.success) {
                     setStudentApp(docsResponse.data.student);
                     setDocuments(docsResponse.data.documents);
@@ -50,6 +119,7 @@ const StudentRightToStudy = () => {
             }
         } catch (error) {
             console.error('Error fetching student data:', error);
+            loadDummyData();
         } finally {
             setLoading(false);
         }
@@ -58,11 +128,10 @@ const StudentRightToStudy = () => {
     const handleComplianceConfirm = async () => {
         try {
             setSaveLoading(true);
-            const userStr = localStorage.getItem('user');
-            const user = JSON.parse(userStr);
-            
-            const appResponse = await axios.get(`${API_URL}/students/application/${user.email}`);
-            const appId = appResponse.data.application.id;
+            if (!appId) {
+                setMessage({ type: 'error', text: 'Application not found. Please refresh.' });
+                return;
+            }
 
             const response = await axios.put(
                 `${API_URL}/students/right-to-study/${appId}/confirm-compliance`
@@ -70,14 +139,85 @@ const StudentRightToStudy = () => {
 
             if (response.data.success) {
                 setComplianceConfirmed(true);
-                alert('Compliance confirmed successfully!');
+                setStudentApp((prev) => ({
+                    ...prev,
+                    complianceConfirmed: true,
+                    complianceConfirmedAt: new Date().toISOString()
+                }));
+                setMessage({ type: 'success', text: 'Compliance confirmed successfully!' });
             }
         } catch (error) {
             console.error('Error confirming compliance:', error);
-            alert('Failed to confirm compliance. Please try again.');
+            setMessage({ type: 'error', text: 'Failed to confirm compliance. Please try again.' });
         } finally {
             setSaveLoading(false);
         }
+    };
+
+    const handleFileChange = (docType, file) => {
+        if (!file) return;
+
+        // 5MB limit
+        if (file.size > 5 * 1024 * 1024) {
+            setMessage({ type: 'error', text: 'File size must be less than 5MB.' });
+            return;
+        }
+
+        const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
+        if (!allowedTypes.includes(file.type)) {
+            setMessage({ type: 'error', text: 'Only PDF, JPG, and PNG files are allowed.' });
+            return;
+        }
+
+        uploadDocument(docType, file);
+    };
+
+    const uploadDocument = async (docType, file) => {
+        if (!appId) {
+            setMessage({ type: 'error', text: 'Application not found. Please refresh.' });
+            return;
+        }
+
+        try {
+            setUploadingDoc(docType);
+            setMessage(null);
+
+            const formData = new FormData();
+            formData.append('document', file);
+            formData.append('documentType', docType);
+
+            const response = await axios.post(
+                `${API_URL}/students/applications/${appId}/upload-document`,
+                formData,
+                { headers: { 'Content-Type': 'multipart/form-data' } }
+            );
+
+            if (response.data?.success) {
+                setMessage({ type: 'success', text: 'Document uploaded successfully.' });
+                await fetchStudentData();
+            } else {
+                setMessage({ type: 'error', text: response.data?.message || 'Upload failed.' });
+            }
+        } catch (error) {
+            console.error('Upload error:', error);
+            setMessage({ type: 'error', text: error.response?.data?.message || 'Upload failed.' });
+        } finally {
+            setUploadingDoc(null);
+        }
+    };
+
+    const triggerFileInput = (docType) => {
+        if (fileInputRefs.current[docType]) {
+            fileInputRefs.current[docType].click();
+        }
+    };
+
+    const handleViewDocument = (filePath) => {
+        if (!filePath) {
+            setMessage({ type: 'error', text: 'Document file not available.' });
+            return;
+        }
+        window.open(`${baseUrl}${filePath}`, '_blank', 'noopener,noreferrer');
     };
 
     const getStatusBadge = (status) => {
@@ -106,6 +246,17 @@ const StudentRightToStudy = () => {
         return { color: 'text-gray-600', message: `Expires in ${days} days` };
     };
 
+    const resolveDocType = (doc) => {
+        if (doc.documentType) return doc.documentType;
+        const map = {
+            Passport: 'passport_id',
+            'UK Visa': 'visa_immigration',
+            'BRP Card': 'brp_card',
+            'Residency Proof': 'residency_proof'
+        };
+        return map[doc.type] || 'passport_id';
+    };
+
     if (loading) {
         return (
             <div className="flex items-center justify-center h-screen">
@@ -120,6 +271,14 @@ const StudentRightToStudy = () => {
                 <h1 className="text-3xl font-bold text-gray-900 mb-2">Right to Study - International Compliance</h1>
                 <p className="text-gray-600">Manage your immigration documents and compliance status</p>
             </div>
+
+            {message && (
+                <div className={`mb-6 p-4 rounded-lg ${
+                    message.type === 'success' ? 'bg-green-50 border border-green-200 text-green-800' : 'bg-red-50 border border-red-200 text-red-800'
+                }`}>
+                    {message.text}
+                </div>
+            )}
 
             {/* Compliance Confirmation Section */}
             <div className="bg-blue-50 border-l-4 border-blue-600 p-6 mb-6 rounded-lg">
@@ -168,22 +327,27 @@ const StudentRightToStudy = () => {
             <div className="bg-white rounded-lg shadow-md p-6 mb-6">
                 <h2 className="text-xl font-bold text-gray-900 mb-4">Upload Required Documents</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <button className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-all">
-                        <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                        <p className="text-sm font-medium text-gray-700">Upload Passport</p>
-                    </button>
-                    <button className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-all">
-                        <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                        <p className="text-sm font-medium text-gray-700">Upload UK Visa</p>
-                    </button>
-                    <button className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-all">
-                        <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                        <p className="text-sm font-medium text-gray-700">Upload BRP Card</p>
-                    </button>
-                    <button className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-all">
-                        <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                        <p className="text-sm font-medium text-gray-700">Upload Residency Proof</p>
-                    </button>
+                    {documentTypes.map((doc) => (
+                        <div key={doc.type}>
+                            <input
+                                ref={(el) => (fileInputRefs.current[doc.type] = el)}
+                                type="file"
+                                className="hidden"
+                                accept=".pdf,.jpg,.jpeg,.png"
+                                onChange={(e) => handleFileChange(doc.type, e.target.files[0])}
+                            />
+                            <button
+                                onClick={() => triggerFileInput(doc.type)}
+                                className="w-full p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-all"
+                                disabled={uploadingDoc === doc.type}
+                            >
+                                <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                                <p className="text-sm font-medium text-gray-700">
+                                    {uploadingDoc === doc.type ? 'Uploading...' : `Upload ${doc.label}`}
+                                </p>
+                            </button>
+                        </div>
+                    ))}
                 </div>
             </div>
 
@@ -213,7 +377,9 @@ const StudentRightToStudy = () => {
                                             </div>
                                             <div>
                                                 <h3 className="text-lg font-semibold text-gray-900">{doc.type}</h3>
-                                                <p className="text-sm text-gray-500">Uploaded on {formatDate(doc.uploadDate)}</p>
+                                                <p className="text-sm text-gray-500">
+                                                    Uploaded on {doc.uploadDate ? formatDate(doc.uploadDate) : '—'}
+                                                </p>
                                             </div>
                                         </div>
                                         {getStatusBadge(doc.status)}
@@ -245,10 +411,16 @@ const StudentRightToStudy = () => {
                                     )}
 
                                     <div className="ml-14 mt-4 flex gap-3">
-                                        <button className="px-4 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+                                        <button
+                                            onClick={() => handleViewDocument(doc.filePath)}
+                                            className="px-4 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                        >
                                             View Document
                                         </button>
-                                        <button className="px-4 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+                                        <button
+                                            onClick={() => triggerFileInput(resolveDocType(doc))}
+                                            className="px-4 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                        >
                                             Upload New Version
                                         </button>
                                     </div>
@@ -262,29 +434,29 @@ const StudentRightToStudy = () => {
             {/* Audit Trail */}
             <div className="bg-white rounded-lg shadow-md p-6 mt-6">
                 <h2 className="text-xl font-bold text-gray-900 mb-4">Compliance Audit Trail</h2>
-                <div className="space-y-3">
-                    <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
-                        <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-                        <div>
-                            <p className="text-sm font-medium text-gray-900">Passport verified and approved</p>
-                            <p className="text-xs text-gray-500">January 15, 2026 at 10:30 AM by Admissions Office</p>
-                        </div>
+                {documents.length === 0 ? (
+                    <p className="text-sm text-gray-600">No audit entries yet.</p>
+                ) : (
+                    <div className="space-y-3">
+                        {documents.map((doc) => (
+                            <div key={`audit-${doc.id}`} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+                                {doc.status === 'Approved' ? (
+                                    <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                                ) : (
+                                    <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+                                )}
+                                <div>
+                                    <p className="text-sm font-medium text-gray-900">
+                                        {doc.type} {doc.status === 'Approved' ? 'verified and approved' : 'pending review'}
+                                    </p>
+                                    <p className="text-xs text-gray-500">
+                                        {doc.uploadDate ? formatDate(doc.uploadDate) : 'Date not available'}
+                                    </p>
+                                </div>
+                            </div>
+                        ))}
                     </div>
-                    <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
-                        <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-                        <div>
-                            <p className="text-sm font-medium text-gray-900">UK Visa verified and approved</p>
-                            <p className="text-xs text-gray-500">January 15, 2026 at 10:35 AM by Admissions Office</p>
-                        </div>
-                    </div>
-                    <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
-                        <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
-                        <div>
-                            <p className="text-sm font-medium text-gray-900">BRP Card pending review</p>
-                            <p className="text-xs text-gray-500">February 1, 2026 at 2:15 PM - Awaiting verification</p>
-                        </div>
-                    </div>
-                </div>
+                )}
             </div>
         </div>
     );

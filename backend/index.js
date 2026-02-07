@@ -3,6 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const mysql = require('mysql2/promise');
+const path = require('path');
 const { v4: uuidv4 } = require('uuid');
 
 console.log("Backend process starting...");
@@ -70,6 +71,7 @@ app.use((req, res, next) => {
 
 app.use(cors());
 app.use(bodyParser.json());
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Import routes
 const studentRoutes = require('./routes/students');
