@@ -1,12 +1,16 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { 
-    GraduationCap, 
-    BookOpen, 
-    Users, 
-    Award, 
-    ChevronRight,
+    Search,
     Star,
+    ArrowRight,
+    Loader,
+    BookOpen,
+    Award,
+    Users,
+    Zap,
+    Globe,
+    CheckCircle,
     MapPin,
     Phone,
     Mail,
@@ -14,69 +18,13 @@ import {
     Twitter,
     Instagram,
     Linkedin,
-    Calendar,
-    Clock,
-    ArrowRight,
-    CheckCircle,
-    Globe,
-    Target,
-    Heart,
-    Palette,
-    Loader
+    Calendar
 } from 'lucide-react';
 
-const themes = {
-    modern: {
-        name: 'Modern Blue',
-        primary: 'blue-600',
-        secondary: 'blue-700', 
-        accent: 'yellow-500',
-        gradient: 'from-blue-600 to-blue-800',
-        bgPattern: 'bg-gradient-to-br from-blue-50 to-white'
-    },
-    elegant: {
-        name: 'Elegant Purple',
-        primary: 'purple-600',
-        secondary: 'purple-800',
-        accent: 'yellow-400',
-        gradient: 'from-purple-600 to-purple-900',
-        bgPattern: 'bg-gradient-to-br from-purple-50 to-white'
-    },
-    green: {
-        name: 'Nature Green',
-        primary: 'emerald-600',
-        secondary: 'emerald-800',
-        accent: 'orange-500',
-        gradient: 'from-emerald-600 to-teal-700',
-        bgPattern: 'bg-gradient-to-br from-emerald-50 to-white'
-    },
-    corporate: {
-        name: 'Corporate Dark',
-        primary: 'slate-700',
-        secondary: 'slate-900',
-        accent: 'blue-500',
-        gradient: 'from-slate-700 to-slate-900',
-        bgPattern: 'bg-gradient-to-br from-slate-100 to-white'
-    },
-    warm: {
-        name: 'Warm Orange',
-        primary: 'orange-600',
-        secondary: 'red-700',
-        accent: 'yellow-400',
-        gradient: 'from-orange-600 to-red-600',
-        bgPattern: 'bg-gradient-to-br from-orange-50 to-white'
-    }
-};
-
-const Home = ({ selectedTheme = 'modern', onApplyNow, onChangeTheme }) => {
-    const [currentSlide, setCurrentSlide] = useState(0);
-    const [isScrolled, setIsScrolled] = useState(false);
-    const [showThemePanel, setShowThemePanel] = useState(false);
-    const [selectedDesignTheme, setSelectedDesignTheme] = useState('light');
+const Home = ({ onApplyNow }) => {
     const [moodleCourses, setMoodleCourses] = useState([]);
     const [coursesLoading, setCoursesLoading] = useState(true);
-
-    const theme = themes[selectedTheme];
+    const [searchTerm, setSearchTerm] = useState('');
 
     // Fetch courses from Moodle
     useEffect(() => {
@@ -98,14 +46,17 @@ const Home = ({ selectedTheme = 'modern', onApplyNow, onChangeTheme }) => {
                 if (Array.isArray(courseData) && courseData.length > 0) {
                     console.log('📚 [FETCH] Processing', courseData.length, 'courses');
                     
-                    // Map Moodle courses to display format
-                    const formattedCourses = courseData.slice(0, 8).map((course, idx) => {
+                    // Map Moodle courses to display format with rating and image
+                    const formattedCourses = courseData.map((course, idx) => {
                         const formatted = {
                             id: course.id,
                             name: course.name || course.fullname || `Course ${idx + 1}`,
                             code: course.code || course.shortname || `CODE${idx + 1}`,
                             description: course.description || 'Professional program designed for career advancement',
-                            icon: '📚'
+                            icon: '📚',
+                            rating: 4.5 + (Math.random() * 0.5),
+                            students: Math.floor(Math.random() * 1000) + 100,
+                            image: `https://images.unsplash.com/photo-${1516534775144 + idx}?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=250&q=80`
                         };
                         console.log(`  [${idx}]`, formatted.name);
                         return formatted;
@@ -134,620 +85,325 @@ const Home = ({ selectedTheme = 'modern', onApplyNow, onChangeTheme }) => {
         fetchCourses();
     }, []);
 
-    // Use Moodle courses ONLY - fetch dynamically from API
-    const programs = moodleCourses.length > 0 ? moodleCourses : [];
+    const filteredCourses = moodleCourses.filter(course =>
+        course.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        course.code.toLowerCase().includes(searchTerm.toLowerCase())
+    );
 
-    // Debug: Log which programs are being used on EVERY RENDER
-    useEffect(() => {
-        console.log('🎨 [RENDER] Current state:', {
-            moodleCoursesLength: moodleCourses.length,
-            coursesLoading,
-            usingMoodle: moodleCourses.length > 0,
-            programsCount: programs.length,
-            firstProgram: programs[0]?.name,
-            allCourseNames: moodleCourses.map(c => c.name)
-        });
-    }, [moodleCourses, coursesLoading]);
-
-    const designThemes = {
-        light: {
-            name: 'Light',
-            bg: 'bg-white',
-            navBg: 'bg-white',
-            textPrimary: 'text-gray-900',
-            textSecondary: 'text-gray-600',
-            cardBg: 'bg-white',
-            cardBorder: 'border-gray-200',
-            shadowClass: 'shadow-lg'
-        },
-        dark: {
-            name: 'Dark',
-            bg: 'bg-gray-900',
-            navBg: 'bg-gray-800',
-            textPrimary: 'text-white',
-            textSecondary: 'text-gray-300',
-            cardBg: 'bg-gray-800',
-            cardBorder: 'border-gray-700',
-            shadowClass: 'shadow-2xl'
-        },
-        minimal: {
-            name: 'Minimal',
-            bg: 'bg-gray-50',
-            navBg: 'bg-white',
-            textPrimary: 'text-gray-900',
-            textSecondary: 'text-gray-500',
-            cardBg: 'bg-white',
-            cardBorder: 'border-gray-100',
-            shadowClass: 'shadow'
-        },
-        modern: {
-            name: 'Modern',
-            bg: 'bg-gradient-to-br from-gray-50 to-blue-50',
-            navBg: 'bg-white/95 backdrop-blur-md',
-            textPrimary: 'text-gray-900',
-            textSecondary: 'text-gray-600',
-            cardBg: 'bg-white/80 backdrop-blur-sm',
-            cardBorder: 'border-gray-200/50',
-            shadowClass: 'shadow-xl'
-        },
-        classic: {
-            name: 'Classic',
-            bg: 'bg-gray-100',
-            navBg: 'bg-gradient-to-r from-gray-800 to-gray-900',
-            textPrimary: 'text-gray-900',
-            textSecondary: 'text-gray-600',
-            cardBg: 'bg-white',
-            cardBorder: 'border-gray-300',
-            shadowClass: 'shadow'
-        }
-    };
-
-    const currentDesignTheme = designThemes[selectedDesignTheme];
-
-    const slides = [
-        {
-            title: "Excellence in Higher Education",
-            subtitle: "Empowering minds, building futures",
-            description: "Join SCL Institute and embark on a transformative journey of academic excellence and personal growth.",
-            image: "https://images.unsplash.com/photo-1541339907198-e08756dedf3f?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80"
-        },
-        {
-            title: "World-Class Faculty",
-            subtitle: "Learn from industry experts",
-            description: "Our distinguished faculty combines academic excellence with real-world experience to provide unparalleled education.",
-            image: "https://images.unsplash.com/photo-1524178232363-1fb2b075b655?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80"
-        },
-        {
-            title: "Innovation & Technology",
-            subtitle: "Future-ready education",
-            description: "Experience cutting-edge technology and innovative teaching methods that prepare you for tomorrow's challenges.",
-            image: "https://images.unsplash.com/photo-1509062522246-3755977927d7?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80"
-        }
+    const courseCategories = [
+        { name: 'Web Development', icon: '🌐', count: 12 },
+        { name: 'Data Science', icon: '📊', count: 8 },
+        { name: 'UI/UX Design', icon: '🎨', count: 6 },
+        { name: 'Business', icon: '💼', count: 10 },
+        { name: 'Cloud Computing', icon: '☁️', count: 7 }
     ];
 
-    const testimonials = [
-        {
-            name: "Rahul Kumar",
-            program: "B.Tech Computer Science",
-            text: "SCL Institute provided me with excellent education and amazing career opportunities. The faculty is top-notch!",
-            rating: 5
-        },
-        {
-            name: "Priya Sharma",
-            program: "BBA",
-            text: "The practical approach to learning here helped me develop real-world business skills that are invaluable.",
-            rating: 5
-        },
-        {
-            name: "Anjali Singh",
-            program: "M.Sc Data Science", 
-            text: "Outstanding program with excellent placement support. Highly recommend SCL Institute.",
-            rating: 5
-        }
+    const features = [
+        { icon: <BookOpen className="w-8 h-8" />, title: 'Cloud Library', desc: 'Access thousands of resources anytime, anywhere' },
+        { icon: <Award className="w-8 h-8" />, title: 'Certifications', desc: 'Industry-recognized certificates upon completion' },
+        { icon: <Users className="w-8 h-8" />, title: 'Video Lessons', desc: 'Learn from expert instructors with high-quality content' },
+        { icon: <Zap className="w-8 h-8" />, title: 'Train Your Brain', desc: 'Interactive exercises and quizzes to boost learning' },
+        { icon: <Globe className="w-8 h-8" />, title: 'Master the Skills', desc: 'Practical skills that matter in the real world' },
+        { icon: <CheckCircle className="w-8 h-8" />, title: 'Graduate the Best', desc: 'Join our network of successful graduates' }
     ];
 
-    useEffect(() => {
-        const timer = setInterval(() => {
-            setCurrentSlide((prev) => (prev + 1) % slides.length);
-        }, 5000); // Back to 5 seconds
-        return () => clearInterval(timer);
-    }, [slides.length]);
-
-    useEffect(() => {
-        const handleScroll = () => {
-            setIsScrolled(window.scrollY > 50);
-        };
-        window.addEventListener('scroll', handleScroll);
-        return () => window.removeEventListener('scroll', handleScroll);
-    }, []);
+    const events = [
+        { date: '12', month: 'Jan', title: 'Carddle Results Conference', desc: 'Join us for the annual results conference' },
+        { date: '15', month: 'Jan', title: 'Boost Your Networking Skills', desc: 'Learn networking from industry experts' },
+        { date: '18', month: 'Jan', title: 'Campus Tour 2027', desc: 'Visit our campus and meet our team' }
+    ];
 
     return (
-        <div className="min-h-screen bg-white">
-            {/* Theme Selector Button */}
-            <div className={`fixed top-1/2 right-0 transform -translate-y-1/2 z-[60] transition-transform duration-300 ${
-                showThemePanel ? '-translate-x-64' : 'translate-x-0'
-            }`}>
-                <button
-                    onClick={() => setShowThemePanel(!showThemePanel)}
-                    className={`bg-white rounded-l-lg shadow-lg px-2 py-4 hover:shadow-xl transition-all duration-300 group border border-r-0 border-gray-200 hover:border-gray-300 ${
-                        showThemePanel ? 'bg-gray-50 border-gray-300' : ''
-                    }`}
-                    title="Change Theme"
-                >
-                    <Palette className={`h-5 w-5 transition-colors ${
-                        showThemePanel ? 'text-blue-600' : 'text-gray-700 group-hover:text-blue-600'
-                    }`} />
-                    <div className="absolute top-1/2 right-full transform -translate-y-1/2 mr-2 bg-gray-900 text-white text-xs px-3 py-2 rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-200 whitespace-nowrap shadow-lg">
-                        {theme.name}
-                        <div className="absolute top-1/2 right-0 transform translate-x-1 -translate-y-1/2 w-2 h-2 bg-gray-900 rotate-45"></div>
-                    </div>
-                </button>
-            </div>
-
-            {/* Theme Panel */}
-            <div className={`fixed top-20 right-0 w-64 bg-white shadow-2xl rounded-l-lg transform transition-transform duration-300 z-50 border-l border-t border-b border-gray-200 overflow-hidden ${
-                showThemePanel ? 'translate-x-0' : 'translate-x-full'
-            }`}>
-                <div className="h-screen overflow-y-auto flex flex-col">
-                    {/* Panel Header */}
-                    <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4 flex-shrink-0">
-                        <div className="flex items-center justify-between mb-3">
-                            <div className="flex items-center space-x-2">
-                                <Palette className="h-5 w-5" />
-                                <h3 className="text-lg font-semibold">Themes</h3>
-                            </div>
-                            <button
-                                onClick={() => setShowThemePanel(false)}
-                                className="p-1 hover:bg-white/20 rounded transition-colors"
-                            >
-                                <ChevronRight className="h-4 w-4" />
-                            </button>
-                        </div>
-                    </div>
-
-                    {/* Color Theme Selection */}
-                    <div className="flex-1 p-4 overflow-y-auto">
-                        <p className="text-xs font-semibold text-gray-600 uppercase mb-3">Color Scheme</p>
-                        <div className="space-y-2">
-                            {Object.entries(themes).map(([key, themeData]) => (
-                                <button
-                                    key={key}
-                                    onClick={() => onChangeTheme(key)}
-                                    className={`w-full p-3 rounded-lg border transition-all duration-200 text-left flex items-center space-x-3 ${
-                                        selectedTheme === key
-                                            ? 'border-blue-400 bg-blue-50'
-                                            : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                                    }`}
-                                >
-                                    {/* Color Preview */}
-                                    <div className="flex space-x-1">
-                                        <div className={`w-4 h-4 rounded-full bg-${themeData.primary} border border-white shadow-sm`}></div>
-                                        <div className={`w-4 h-4 rounded-full bg-${themeData.secondary} border border-white shadow-sm`}></div>
-                                        <div className={`w-4 h-4 rounded-full bg-${themeData.accent} border border-white shadow-sm`}></div>
-                                    </div>
-                                    
-                                    {/* Theme Name */}
-                                    <div className="flex-1">
-                                        <span className="font-medium text-gray-900 text-sm">{themeData.name}</span>
-                                    </div>
-                                    
-                                    {/* Selected Indicator */}
-                                    {selectedTheme === key && (
-                                        <CheckCircle className="h-4 w-4 text-blue-600 flex-shrink-0" />
-                                    )}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {/* Overlay */}
-            {showThemePanel && (
-                <div
-                    className="fixed inset-0 bg-black/50 z-40"
-                    onClick={() => setShowThemePanel(false)}
-                ></div>
-            )}
-
+        <div className="min-h-screen bg-gray-50">
             {/* Navigation */}
-            <nav className={`fixed w-full z-50 transition-all duration-300 ${
-                isScrolled ? 'bg-white shadow-lg py-2' : 'bg-transparent py-3 sm:py-4'
-            }`}>
+            <nav className="bg-white shadow-sm sticky top-0 z-40">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-2 sm:space-x-3">
-                            <div className={`p-2 rounded-xl ${isScrolled ? `bg-${theme.primary}` : 'bg-white/20 backdrop-blur-md border border-white/30'}`}>
-                                <GraduationCap className={`h-6 w-6 sm:h-8 sm:w-8 ${isScrolled ? 'text-white' : 'text-white'}`} />
-                            </div>
-                            <div>
-                                <h1 className={`text-xl sm:text-2xl font-bold ${isScrolled ? 'text-gray-900' : 'text-white'}`}>
-                                    SCL Institute
-                                </h1>
-                                <p className={`text-xs sm:text-sm ${isScrolled ? 'text-gray-600' : 'text-white/90'} hidden sm:block`}>
-                                    Excellence in Education
-                                </p>
-                            </div>
+                    <div className="flex items-center justify-between h-16">
+                        <div className="flex items-center space-x-2">
+                            <BookOpen className="w-8 h-8 text-green-500" />
+                            <span className="text-xl font-bold text-gray-900">Smart<span className="text-green-500">+</span></span>
                         </div>
-                        
-                        <div className="hidden md:flex items-center space-x-6 lg:space-x-8">
-                            <a href="#home" className={`font-medium transition-colors ${
-                                isScrolled ? 'text-gray-700 hover:text-' + theme.primary : 'text-white hover:text-' + theme.accent
-                            }`}>Home</a>
-                            <a href="#programs" className={`font-medium transition-colors ${
-                                isScrolled ? 'text-gray-700 hover:text-' + theme.primary : 'text-white hover:text-' + theme.accent
-                            }`}>Programs</a>
-                            <a href="#about" className={`font-medium transition-colors ${
-                                isScrolled ? 'text-gray-700 hover:text-' + theme.primary : 'text-white hover:text-' + theme.accent
-                            }`}>About</a>
-                            <a href="#contact" className={`font-medium transition-colors ${
-                                isScrolled ? 'text-gray-700 hover:text-' + theme.primary : 'text-white hover:text-' + theme.accent
-                            }`}>Contact</a>
-                            <a href="http://localhost:3000" target="_blank" rel="noopener noreferrer" className={`font-semibold underline transition-colors ${
-                                isScrolled ? 'text-blue-700 hover:text-blue-900' : 'text-yellow-300 hover:text-yellow-200'
-                            }`}>SCL System</a>
-                            <button 
-                                onClick={onApplyNow}
-                                className={`bg-${theme.accent} text-white px-4 sm:px-6 py-2 rounded-full text-sm sm:text-base font-semibold hover:bg-${theme.secondary} transition-colors`}
-                            >
-                                Apply Now
-                            </button>
+                        <div className="hidden md:flex items-center space-x-8">
+                            <a href="#programs" className="text-gray-600 hover:text-gray-900">Explore</a>
+                            <a href="#features" className="text-gray-600 hover:text-gray-900">Programs</a>
+                            <a href="#events" className="text-gray-600 hover:text-gray-900">Events</a>
+                            <a href="#contact" className="text-gray-600 hover:text-gray-900">Contacts</a>
                         </div>
-                        
-                        {/* Mobile Menu Button */}
-                        <div className="md:hidden">
-                            <button className="text-white">
-                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                                </svg>
-                            </button>
-                        </div>
+                        <button 
+                            onClick={onApplyNow}
+                            className="bg-green-500 text-white px-6 py-2 rounded-full text-sm font-semibold hover:bg-green-600"
+                        >
+                            Sign Up
+                        </button>
                     </div>
                 </div>
             </nav>
 
-            {/* Hero Section with Carousel */}
-            <section className="relative h-screen overflow-hidden">
-                <div className="absolute inset-0">
-                    {slides.map((slide, index) => (
-                        <div
-                            key={index}
-                            className={`absolute inset-0 transition-opacity duration-1000 ${
-                                index === currentSlide ? 'opacity-100 z-10' : 'opacity-0 z-0'
-                            }`}
-                            style={{
-                                backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url(${slide.image})`,
-                                backgroundSize: 'cover',
-                                backgroundPosition: 'center',
-                                backgroundRepeat: 'no-repeat'
-                            }}
-                        >
-                            <div className="flex items-center justify-center h-full">
-                                <div className="text-center text-white max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-                                    <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold mb-4 sm:mb-6 drop-shadow-lg leading-tight">
-                                        {slide.title}
-                                    </h1>
-                                    <p className={`text-lg sm:text-xl md:text-2xl text-${theme.accent} font-semibold mb-3 sm:mb-4 drop-shadow-md`}>
-                                        {slide.subtitle}
-                                    </p>
-                                    <p className="text-base sm:text-lg md:text-xl mb-6 sm:mb-8 max-w-2xl mx-auto drop-shadow-md leading-relaxed">
-                                        {slide.description}
-                                    </p>
-                                    <button 
-                                        onClick={onApplyNow}
-                                        className={`bg-${theme.primary} text-white px-6 sm:px-8 py-3 sm:py-4 rounded-full text-base sm:text-lg font-semibold hover:bg-${theme.secondary} transform hover:scale-105 transition-all duration-300 shadow-2xl`}
-                                    >
-                                        Apply Now
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-                
-                {/* Navigation Arrows */}
-                <button 
-                    onClick={() => setCurrentSlide((prev) => prev === 0 ? slides.length - 1 : prev - 1)}
-                    className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-white/30 hover:bg-white/50 backdrop-blur-sm rounded-full p-3 transition-all group z-20 opacity-80 hover:opacity-100"
-                >
-                    <ChevronRight className="h-6 w-6 text-white rotate-180 group-hover:scale-110 transition-transform drop-shadow-lg" />
-                </button>
-                <button 
-                    onClick={() => setCurrentSlide((prev) => (prev + 1) % slides.length)}
-                    className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-white/30 hover:bg-white/50 backdrop-blur-sm rounded-full p-3 transition-all group z-20 opacity-80 hover:opacity-100"
-                >
-                    <ChevronRight className="h-6 w-6 text-white group-hover:scale-110 transition-transform drop-shadow-lg" />
-                </button>
-                
-                {/* Carousel Dots */}
-                <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex items-center space-x-4">
-                    <div className="bg-black/50 text-white text-sm px-3 py-1 rounded-full">
-                        {currentSlide + 1} / {slides.length}
-                    </div>
-                    <div className="flex space-x-3">
-                        {slides.map((slide, index) => (
-                            <button
-                                key={index}
-                                onClick={() => setCurrentSlide(index)}
-                                className={`w-4 h-4 rounded-full transition-all duration-300 border-2 border-white/50 ${
-                                    index === currentSlide 
-                                        ? `bg-${theme.accent} scale-125 border-white` 
-                                        : 'bg-white/30 hover:bg-white/75 hover:scale-110'
-                                }`}
-                                title={slide.title}
+            {/* Hero Section */}
+            <section className="bg-gradient-to-r from-blue-500 to-blue-600 py-16">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="text-center">
+                        <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
+                            Choose From A Range Of <span className="text-green-300">Online Courses</span>
+                        </h1>
+                        <p className="text-blue-100 text-lg mb-8">Discover world-class education at your fingertips</p>
+                        
+                        {/* Search Bar */}
+                        <div className="flex max-w-2xl mx-auto bg-white rounded-full shadow-lg overflow-hidden">
+                            <input
+                                type="text"
+                                placeholder="Search for courses..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="flex-1 px-6 py-3 outline-none"
                             />
+                            <button className="bg-green-500 text-white px-8 py-3 hover:bg-green-600">
+                                <Search className="w-5 h-5" />
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Course Categories */}
+                    <div className="mt-12 grid grid-cols-2 md:grid-cols-5 gap-4">
+                        {courseCategories.map((cat, idx) => (
+                            <div key={idx} className="bg-white rounded-lg p-6 text-center hover:shadow-lg transition-shadow cursor-pointer">
+                                <div className="text-4xl mb-2">{cat.icon}</div>
+                                <h3 className="font-semibold text-gray-900 text-sm">{cat.name}</h3>
+                                <p className="text-xs text-gray-500 mt-1">{cat.count} courses</p>
+                            </div>
                         ))}
                     </div>
                 </div>
+            </section>
 
-                {/* Scroll Down Indicator */}
-                <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 animate-bounce">
-                    <ChevronRight className="h-6 w-6 text-white rotate-90" />
+            {/* Welcome Section */}
+            <section className="py-20 bg-white">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="grid md:grid-cols-2 gap-12 items-center">
+                        <div>
+                            <h2 className="text-4xl font-bold text-gray-900 mb-4">Welcome to Smart Education</h2>
+                            <p className="text-gray-600 mb-4">We provide high-quality online education to learners around the world. Our platform combines interactive learning with expert instruction to help you achieve your goals.</p>
+                            <p className="text-gray-600 mb-8">Start your learning journey today and unlock new opportunities for career growth and personal development.</p>
+                            <button onClick={onApplyNow} className="bg-green-500 text-white px-8 py-3 rounded-lg font-semibold hover:bg-green-600">
+                                Get Started
+                            </button>
+                        </div>
+                        <div className="bg-gray-200 rounded-lg h-80 overflow-hidden">
+                            <img src="https://images.unsplash.com/photo-1552664730-d307ca884978?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&h=400&q=80" 
+                                 alt="Students learning" className="w-full h-full object-cover" />
+                        </div>
+                    </div>
                 </div>
             </section>
 
-            {/* Programs Section */}
-            <section id="programs" className={`py-16 ${theme.bgPattern}`}>
-                <div className="max-w-7xl mx-auto px-4">
-                    <div className="text-center mb-10">
-                        <h2 className={`text-3xl sm:text-4xl font-bold text-${theme.primary} mb-3`}>
-                            Our Programs
-                        </h2>
-                        <p className={`text-base sm:text-lg text-${theme.secondary} max-w-2xl mx-auto`}>
-                            Discover a wide range of programs designed for your success
-                        </p>
+            {/* Features Section */}
+            <section id="features" className="py-20 bg-gray-50">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <h2 className="text-4xl font-bold text-center text-gray-900 mb-16">Why Choose Smart Education?</h2>
+                    <div className="grid md:grid-cols-3 gap-8">
+                        {features.map((feature, idx) => (
+                            <div key={idx} className="bg-white p-8 rounded-lg text-center hover:shadow-lg transition-shadow">
+                                <div className="flex justify-center mb-4 text-green-500">
+                                    {feature.icon}
+                                </div>
+                                <h3 className="text-xl font-semibold text-gray-900 mb-2">{feature.title}</h3>
+                                <p className="text-gray-600">{feature.desc}</p>
+                            </div>
+                        ))}
                     </div>
-                    
-                    {coursesLoading || programs.length === 0 ? (
+                </div>
+            </section>
+
+            {/* Social Proof */}
+            <section className="bg-gradient-to-r from-blue-600 to-blue-700 py-16">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+                    <h2 className="text-4xl font-bold text-white mb-4">Trusted by Over <span className="text-green-300">6000+</span> Students</h2>
+                    <p className="text-blue-100 max-w-2xl mx-auto">Our community continues to grow as more students discover the power of quality online education and achieve their learning goals.</p>
+                </div>
+            </section>
+
+            {/* Courses Section */}
+            <section id="programs" className="py-20 bg-white">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <h2 className="text-4xl font-bold text-gray-900 mb-4">Our Popular <span className="text-green-500">Courses</span></h2>
+                    <p className="text-gray-600 mb-12 max-w-3xl">Explore our comprehensive collection of courses designed to help you master new skills and advance your career.</p>
+
+                    {coursesLoading ? (
                         <div className="flex justify-center items-center py-16">
                             <div className="text-center">
-                                <Loader className="h-8 w-8 animate-spin text-blue-600 mx-auto mb-4" />
+                                <Loader className="h-8 w-8 animate-spin text-green-500 mx-auto mb-4" />
                                 <p className="text-gray-600">Loading programs from Moodle...</p>
                             </div>
                         </div>
-                    ) : (
-                        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-                            {programs.map((program, index) => (
-                                <div key={`program-${index}`} className="bg-white rounded-lg shadow hover:shadow-md transition-shadow p-4 border-l-4 border-l-blue-600 group cursor-pointer">
-                                    <div className="text-3xl mb-3">{program.icon || '📚'}</div>
-                                    <h3 className="text-base font-semibold text-blue-600 mb-2 line-clamp-2 group-hover:text-blue-700">
-                                        {program.name}
-                                    </h3>
-                                    {program.code && (
-                                        <p className="text-xs text-blue-700 font-medium mb-3 uppercase tracking-wide">
-                                            {program.code}
-                                        </p>
-                                    )}
-                                    <p className="text-sm text-gray-600 mb-3 line-clamp-2">{program.description}</p>
-                                    <button className="text-sm text-blue-600 font-medium hover:text-blue-700 transition-colors flex items-center gap-1 group-hover:gap-2">
-                                        Learn More <ArrowRight size={14} />
-                                    </button>
+                    ) : filteredCourses.length > 0 ? (
+                        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+                            {filteredCourses.map((course, idx) => (
+                                <div key={idx} className="bg-white rounded-lg overflow-hidden shadow hover:shadow-lg transition-shadow">
+                                    <div className="bg-gray-300 h-40 overflow-hidden">
+                                        <img src={course.image} alt={course.name} className="w-full h-full object-cover" />
+                                    </div>
+                                    <div className="p-4">
+                                        <h3 className="font-semibold text-gray-900 text-sm mb-2 line-clamp-2">{course.name}</h3>
+                                        <div className="flex items-center mb-3">
+                                            <div className="flex text-yellow-400">
+                                                {[...Array(5)].map((_, i) => (
+                                                    <Star key={i} className="w-4 h-4" fill="currentColor" />
+                                                ))}
+                                            </div>
+                                            <span className="text-xs text-gray-500 ml-2">({course.students} students)</span>
+                                        </div>
+                                        <button className="w-full bg-green-500 text-white py-2 rounded text-sm font-semibold hover:bg-green-600">
+                                            Explore Course
+                                        </button>
+                                    </div>
                                 </div>
                             ))}
+                        </div>
+                    ) : (
+                        <div className="text-center py-12">
+                            <p className="text-gray-600">No courses found matching your search.</p>
+                        </div>
+                    )}
+
+                    {filteredCourses.length > 0 && (
+                        <div className="text-center mt-12">
+                            <button className="bg-green-500 text-white px-8 py-3 rounded-lg font-semibold hover:bg-green-600">
+                                View All Courses
+                            </button>
                         </div>
                     )}
                 </div>
             </section>
 
-            {/* Why Choose Us Section */}
-            <section className="py-20 bg-white">
-                <div className="max-w-7xl mx-auto px-4">
-                    <div className="text-center mb-12 sm:mb-16">
-                        <h2 className={`text-3xl sm:text-4xl md:text-5xl font-bold text-${theme.primary} mb-4 sm:mb-6`}>
-                            Why Choose SCL Institute?
-                        </h2>
-                        <p className={`text-lg sm:text-xl text-${theme.secondary} max-w-3xl mx-auto px-4`}>
-                            We provide world-class education with a focus on practical learning and career development
-                        </p>
-                    </div>
-
-                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-                        <div className="text-center group">
-                            <div className={`bg-gradient-to-r ${theme.gradient} p-4 rounded-full w-16 h-16 mx-auto mb-6 flex items-center justify-center group-hover:scale-110 transition-transform`}>
-                                <Award className="h-8 w-8 text-white" />
-                            </div>
-                            <h3 className={`text-xl font-bold text-${theme.primary} mb-4`}>Excellence in Education</h3>
-                            <p className="text-gray-600">Recognized for our high-quality education and innovative teaching methods.</p>
+            {/* What Makes Us Different */}
+            <section className="py-20 bg-gray-50">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="grid md:grid-cols-2 gap-12 items-center">
+                        <div className="bg-gray-300 rounded-lg h-80 overflow-hidden">
+                            <img src="https://images.unsplash.com/photo-1522202176988-41eb2a007386?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&h=400&q=80" 
+                                 alt="Difference" className="w-full h-full object-cover" />
                         </div>
-
-                        <div className="text-center group">
-                            <div className={`bg-gradient-to-r ${theme.gradient} p-4 rounded-full w-16 h-16 mx-auto mb-6 flex items-center justify-center group-hover:scale-110 transition-transform`}>
-                                <Users className="h-8 w-8 text-white" />
+                        <div>
+                            <h2 className="text-4xl font-bold text-gray-900 mb-8">What Makes Us <span className="text-green-500">Different?</span></h2>
+                            <div className="space-y-4">
+                                <div className="flex items-start">
+                                    <CheckCircle className="w-6 h-6 text-green-500 mr-3 mt-1 flex-shrink-0" />
+                                    <div>
+                                        <h3 className="font-semibold text-gray-900">Expert Curriculum</h3>
+                                        <p className="text-gray-600 text-sm">Designed by industry professionals</p>
+                                    </div>
+                                </div>
+                                <div className="flex items-start">
+                                    <CheckCircle className="w-6 h-6 text-green-500 mr-3 mt-1 flex-shrink-0" />
+                                    <div>
+                                        <h3 className="font-semibold text-gray-900">Career Support</h3>
+                                        <p className="text-gray-600 text-sm">Job placement assistance included</p>
+                                    </div>
+                                </div>
+                                <div className="flex items-start">
+                                    <CheckCircle className="w-6 h-6 text-green-500 mr-3 mt-1 flex-shrink-0" />
+                                    <div>
+                                        <h3 className="font-semibold text-gray-900">Hands-on Experience</h3>
+                                        <p className="text-gray-600 text-sm">Real-world projects and case studies</p>
+                                    </div>
+                                </div>
                             </div>
-                            <h3 className={`text-xl font-bold text-${theme.primary} mb-4`}>Expert Faculty</h3>
-                            <p className="text-gray-600">Learn from industry professionals and experienced academicians.</p>
-                        </div>
-
-                        <div className="text-center group">
-                            <div className={`bg-gradient-to-r ${theme.gradient} p-4 rounded-full w-16 h-16 mx-auto mb-6 flex items-center justify-center group-hover:scale-110 transition-transform`}>
-                                <Target className="h-8 w-8 text-white" />
-                            </div>
-                            <h3 className={`text-xl font-bold text-${theme.primary} mb-4`}>100% Placement</h3>
-                            <p className="text-gray-600">Strong industry connections ensure excellent placement opportunities.</p>
-                        </div>
-
-                        <div className="text-center group">
-                            <div className={`bg-gradient-to-r ${theme.gradient} p-4 rounded-full w-16 h-16 mx-auto mb-6 flex items-center justify-center group-hover:scale-110 transition-transform`}>
-                                <Globe className="h-8 w-8 text-white" />
-                            </div>
-                            <h3 className={`text-xl font-bold text-${theme.primary} mb-4`}>Global Recognition</h3>
-                            <p className="text-gray-600">Our degrees are recognized worldwide and valued by employers.</p>
-                        </div>
-
-                        <div className="text-center group">
-                            <div className={`bg-gradient-to-r ${theme.gradient} p-4 rounded-full w-16 h-16 mx-auto mb-6 flex items-center justify-center group-hover:scale-110 transition-transform`}>
-                                <BookOpen className="h-8 w-8 text-white" />
-                            </div>
-                            <h3 className={`text-xl font-bold text-${theme.primary} mb-4`}>Modern Curriculum</h3>
-                            <p className="text-gray-600">Updated courses that match current industry requirements and trends.</p>
-                        </div>
-
-                        <div className="text-center group">
-                            <div className={`bg-gradient-to-r ${theme.gradient} p-4 rounded-full w-16 h-16 mx-auto mb-6 flex items-center justify-center group-hover:scale-110 transition-transform`}>
-                                <Heart className="h-8 w-8 text-white" />
-                            </div>
-                            <h3 className={`text-xl font-bold text-${theme.primary} mb-4`}>Student Support</h3>
-                            <p className="text-gray-600">Comprehensive support system for academic and personal development.</p>
                         </div>
                     </div>
                 </div>
             </section>
 
-            {/* Testimonials Section */}
-            <section className={`py-20 ${theme.bgPattern}`}>
-                <div className="max-w-7xl mx-auto px-4">
-                    <div className="text-center mb-16">
-                        <h2 className={`text-4xl md:text-5xl font-bold text-${theme.primary} mb-6`}>
-                            What Our Students Say
-                        </h2>
-                        <p className={`text-xl text-${theme.secondary} max-w-3xl mx-auto`}>
-                            Hear from our successful graduates about their transformative experience at SCL Institute
-                        </p>
-                    </div>
-
-                    <div className="grid md:grid-cols-3 gap-8">
-                        {testimonials.map((testimonial, index) => (
-                            <div key={index} className="bg-white rounded-xl shadow-lg p-6 hover:shadow-2xl transition-shadow">
-                                <div className="flex items-center mb-4">
-                                    {[...Array(testimonial.rating)].map((_, i) => (
-                                        <Star key={i} className={`h-5 w-5 text-${theme.accent} fill-current`} />
-                                    ))}
-                                </div>
-                                <p className="text-gray-600 mb-6 italic">"{testimonial.text}"</p>
-                                <div>
-                                    <h4 className={`font-bold text-${theme.primary}`}>{testimonial.name}</h4>
-                                    <p className={`text-${theme.secondary} text-sm`}>{testimonial.program}</p>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </section>
-
-            {/* Contact Section */}
-            <section id="contact" className="py-20 bg-white">
-                <div className="max-w-7xl mx-auto px-4">
-                    <div className="text-center mb-16">
-                        <h2 className={`text-4xl md:text-5xl font-bold text-${theme.primary} mb-6`}>
-                            Get In Touch
-                        </h2>
-                        <p className={`text-xl text-${theme.secondary} max-w-3xl mx-auto`}>
-                            Ready to start your educational journey? Contact us today for more information
-                        </p>
-                    </div>
-
-                    <div className="grid md:grid-cols-3 gap-8">
-                        <div className="text-center group">
-                            <div className={`bg-gradient-to-r ${theme.gradient} p-4 rounded-full w-16 h-16 mx-auto mb-6 flex items-center justify-center group-hover:scale-110 transition-transform`}>
-                                <MapPin className="h-8 w-8 text-white" />
-                            </div>
-                            <h3 className={`text-xl font-bold text-${theme.primary} mb-4`}>Visit Us</h3>
-                            <p className="text-gray-600">SCL Institute Campus<br />123 Education Street<br />New Delhi, India</p>
+            {/* Events Section */}
+            <section id="events" className="py-20 bg-white">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <h2 className="text-4xl font-bold text-gray-900 mb-4">Upcoming <span className="text-green-500">Events</span></h2>
+                    <p className="text-gray-600 mb-12">Join our community events and network with fellow learners</p>
+                    
+                    <div className="grid md:grid-cols-2 gap-8">
+                        {/* Left side - Large featured event */}
+                        <div className="bg-gray-200 rounded-lg h-80 overflow-hidden">
+                            <img src="https://images.unsplash.com/photo-1552664730-d307ca884978?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&h=400&q=80" 
+                                 alt="Event" className="w-full h-full object-cover" />
                         </div>
-
-                        <div className="text-center group">
-                            <div className={`bg-gradient-to-r ${theme.gradient} p-4 rounded-full w-16 h-16 mx-auto mb-6 flex items-center justify-center group-hover:scale-110 transition-transform`}>
-                                <Phone className="h-8 w-8 text-white" />
-                            </div>
-                            <h3 className={`text-xl font-bold text-${theme.primary} mb-4`}>Call Us</h3>
-                            <p className="text-gray-600">+91 98765 43210<br />+91 87654 32109<br />Monday - Friday, 9AM - 6PM</p>
-                        </div>
-
-                        <div className="text-center group">
-                            <div className={`bg-gradient-to-r ${theme.gradient} p-4 rounded-full w-16 h-16 mx-auto mb-6 flex items-center justify-center group-hover:scale-110 transition-transform`}>
-                                <Mail className="h-8 w-8 text-white" />
-                            </div>
-                            <h3 className={`text-xl font-bold text-${theme.primary} mb-4`}>Email Us</h3>
-                            <p className="text-gray-600">info@sclinstitute.edu<br />admissions@sclinstitute.edu<br />support@sclinstitute.edu</p>
+                        
+                        {/* Right side - Event list */}
+                        <div className="space-y-6">
+                            {events.map((event, idx) => (
+                                <div key={idx} className="flex items-start border-l-4 border-green-500 pl-6">
+                                    <div className="flex-shrink-0 text-center">
+                                        <div className="text-2xl font-bold text-green-500">{event.date}</div>
+                                        <div className="text-sm text-gray-500">{event.month}</div>
+                                    </div>
+                                    <div className="ml-6">
+                                        <h3 className="font-semibold text-gray-900">{event.title}</h3>
+                                        <p className="text-gray-600 text-sm">{event.desc}</p>
+                                    </div>
+                                </div>
+                            ))}
                         </div>
                     </div>
                 </div>
             </section>
 
             {/* Footer */}
-            <footer className={`bg-${theme.secondary} text-white py-12`}>
-                <div className="max-w-7xl mx-auto px-4">
-                    <div className="grid md:grid-cols-4 gap-8">
+            <footer id="contact" className="bg-gray-900 text-white py-16">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="grid md:grid-cols-4 gap-8 mb-12">
                         <div>
-                            <div className="flex items-center space-x-3 mb-6">
-                                <GraduationCap className="h-8 w-8 text-white" />
-                                <span className="text-2xl font-bold">SCL Institute</span>
-                            </div>
-                            <p className="text-white/80 mb-4">
-                                Excellence in education since 1995. Empowering students to achieve their dreams.
-                            </p>
-                            <div className="flex space-x-4">
-                                <Facebook className={`h-6 w-6 text-white/60 hover:text-${theme.accent} cursor-pointer transition-colors`} />
-                                <Twitter className={`h-6 w-6 text-white/60 hover:text-${theme.accent} cursor-pointer transition-colors`} />
-                                <Instagram className={`h-6 w-6 text-white/60 hover:text-${theme.accent} cursor-pointer transition-colors`} />
-                                <Linkedin className={`h-6 w-6 text-white/60 hover:text-${theme.accent} cursor-pointer transition-colors`} />
-                            </div>
+                            <h3 className="font-bold text-lg mb-4 flex items-center space-x-2">
+                                <BookOpen className="w-6 h-6 text-green-500" />
+                                <span>Smart<span className="text-green-500">+</span></span>
+                            </h3>
+                            <p className="text-gray-400 text-sm">Empowering learners worldwide with quality education.</p>
                         </div>
-                        
                         <div>
-                            <h3 className="text-lg font-semibold mb-4">Quick Links</h3>
-                            <ul className="space-y-2 text-white/80">
-                                <li><a href="#" className={`hover:text-${theme.accent} transition-colors`}>About Us</a></li>
-                                <li><a href="#" className={`hover:text-${theme.accent} transition-colors`}>Programs</a></li>
-                                <li><a href="#" className={`hover:text-${theme.accent} transition-colors`}>Admissions</a></li>
-                                <li><a href="#" className={`hover:text-${theme.accent} transition-colors`}>Student Life</a></li>
-                                <li><a href="#" className={`hover:text-${theme.accent} transition-colors`}>Alumni</a></li>
+                            <h4 className="font-semibold mb-4">Explore</h4>
+                            <ul className="space-y-2 text-sm text-gray-400">
+                                <li><a href="#programs" className="hover:text-white">Courses</a></li>
+                                <li><a href="#features" className="hover:text-white">Programs</a></li>
+                                <li><a href="#events" className="hover:text-white">Events</a></li>
+                                <li><a href="#" className="hover:text-white">Blog</a></li>
                             </ul>
                         </div>
-                        
                         <div>
-                            <h3 className="text-lg font-semibold mb-4">Resources</h3>
-                            <ul className="space-y-2 text-white/80">
-                                <li><a href="#" className={`hover:text-${theme.accent} transition-colors`}>Academic Calendar</a></li>
-                                <li><a href="#" className={`hover:text-${theme.accent} transition-colors`}>Library</a></li>
-                                <li><a href="#" className={`hover:text-${theme.accent} transition-colors`}>Research</a></li>
-                                <li><a href="#" className={`hover:text-${theme.accent} transition-colors`}>Career Services</a></li>
-                                <li><a href="#" className={`hover:text-${theme.accent} transition-colors`}>Online Learning</a></li>
+                            <h4 className="font-semibold mb-4">Admissions</h4>
+                            <ul className="space-y-2 text-sm text-gray-400">
+                                <li><a href="#" className="hover:text-white">Apply Now</a></li>
+                                <li><a href="#" className="hover:text-white">Requirements</a></li>
+                                <li><a href="#" className="hover:text-white">FAQs</a></li>
+                                <li><a href="#" className="hover:text-white">Support</a></li>
                             </ul>
                         </div>
-                        
                         <div>
-                            <h3 className="text-lg font-semibold mb-4">Contact Info</h3>
-                            <div className="space-y-3 text-white/80">
-                                <div className="flex items-start space-x-3">
-                                    <MapPin className="h-5 w-5 mt-0.5" />
-                                    <span>123 Education Street, New Delhi, India</span>
-                                </div>
-                                <div className="flex items-center space-x-3">
-                                    <Phone className="h-5 w-5" />
-                                    <span>+91 98765 43210</span>
-                                </div>
-                                <div className="flex items-center space-x-3">
-                                    <Mail className="h-5 w-5" />
-                                    <span>info@sclinstitute.edu</span>
-                                </div>
-                            </div>
+                            <h4 className="font-semibold mb-4">Contact</h4>
+                            <ul className="space-y-2 text-sm text-gray-400">
+                                <li className="flex items-center space-x-2">
+                                    <Phone className="w-4 h-4" />
+                                    <span>+1 (555) 123-4567</span>
+                                </li>
+                                <li className="flex items-center space-x-2">
+                                    <Mail className="w-4 h-4" />
+                                    <span>info@smart.edu</span>
+                                </li>
+                                <li className="flex items-center space-x-2">
+                                    <MapPin className="w-4 h-4" />
+                                    <span>123 Education St, City</span>
+                                </li>
+                            </ul>
                         </div>
                     </div>
-                    
-                    <div className="border-t border-white/20 mt-8 pt-8 text-center">
-                        <p className="text-white/60">
-                            © 2024 SCL Institute. All rights reserved. | Privacy Policy | Terms of Service
-                        </p>
+
+                    <div className="border-t border-gray-800 pt-8 flex items-center justify-between">
+                        <p className="text-gray-400 text-sm">&copy; 2026 Smart Education. All rights reserved.</p>
+                        <div className="flex space-x-4">
+                            <Facebook className="w-5 h-5 text-gray-400 hover:text-white cursor-pointer" />
+                            <Twitter className="w-5 h-5 text-gray-400 hover:text-white cursor-pointer" />
+                            <Instagram className="w-5 h-5 text-gray-400 hover:text-white cursor-pointer" />
+                            <Linkedin className="w-5 h-5 text-gray-400 hover:text-white cursor-pointer" />
+                        </div>
                     </div>
                 </div>
             </footer>
-
-            <section className={`py-20 ${theme.bgPattern}`}>
-                <div className="text-center">
-                    <h3 className={`text-2xl font-bold text-${theme.primary} mb-4`}>Get Started Today</h3>
-                    <p className={`text-${theme.secondary} mb-6`}>
-                        Take the first step towards your educational journey with SCL Institute
-                    </p>
-                    <button
-                        onClick={onApplyNow}
-                        className={`bg-${theme.primary} text-white px-8 py-3 rounded-lg font-semibold hover:bg-${theme.secondary} transition-colors duration-300 shadow-lg inline-flex items-center gap-2`}
-                    >
-                        Apply Now
-                        <ArrowRight size={20} />
-                    </button>
-                </div>
-            </section>
         </div>
     );
 };
