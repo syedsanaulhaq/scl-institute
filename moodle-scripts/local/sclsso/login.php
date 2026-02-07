@@ -54,9 +54,10 @@ if (!$user = $DB->get_record('user', array('email' => $email, 'deleted' => 0))) 
     $user->suspended = 0;
     $user->mnethostid = $CFG->mnet_localhost_id;
     $user->email = $email;
-    $user->username = $email;
+    $user->username = $email; // Use email as username (must be unique)
     $user->firstname = $firstname;
     $user->lastname = $lastname;
+    $user->password = hash_internal_user_password('TempPassword123!'); // Generate random password hash
     $user->city = 'London';
     $user->country = 'GB';
     $user->lang = 'en';
@@ -65,12 +66,14 @@ if (!$user = $DB->get_record('user', array('email' => $email, 'deleted' => 0))) 
     $user->timemodified = time();
     
     $user->id = $DB->insert_record('user', $user);
+    error_log('[SSO] New user created: ' . $email . ' (ID: ' . $user->id . ')');
 } else {
     // Update existing user
     $user->firstname = $firstname;
     $user->lastname = $lastname;
     $user->timemodified = time();
     $DB->update_record('user', $user);
+    error_log('[SSO] Existing user updated: ' . $email);
 }
 
 // Log the user in
