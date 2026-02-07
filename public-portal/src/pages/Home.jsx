@@ -498,36 +498,34 @@ const Home = ({ selectedTheme = 'modern', onApplyNow, onChangeTheme }) => {
                         </p>
                     </div>
                     
-                    {coursesLoading ? (
+                    {coursesLoading && programs.length === 0 ? (
                         <div className="flex justify-center items-center py-12">
                             <Loader className="h-8 w-8 animate-spin text-blue-600" />
                         </div>
-                    ) : programs.length === 0 ? (
-                        <div className="flex justify-center items-center py-12">
-                            <div className="text-center">
-                                <p className="text-gray-600 mb-4">Loading programs from Moodle...</p>
-                                <Loader className="h-8 w-8 animate-spin text-blue-600 mx-auto" />
-                            </div>
-                        </div>
-                    ) : (
+                    ) : programs.length > 0 ? (
                         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
                             {programs.map((program, index) => (
-                                <div key={index} className={`bg-white rounded-lg shadow hover:shadow-md transition-shadow p-4 border-l-4 border-l-${theme.primary} group cursor-pointer`}>
-                                    <div className="text-3xl mb-3">{program.icon}</div>
-                                    <h3 className={`text-base font-semibold text-${theme.primary} mb-2 line-clamp-2 group-hover:text-${theme.secondary}`}>
+                                <div key={`program-${index}`} className="bg-white rounded-lg shadow hover:shadow-md transition-shadow p-4 border-l-4 border-l-blue-600 group cursor-pointer">
+                                    <div className="text-3xl mb-3">{program.icon || '📚'}</div>
+                                    <h3 className="text-base font-semibold text-blue-600 mb-2 line-clamp-2 group-hover:text-blue-700">
                                         {program.name}
                                     </h3>
                                     {program.code && (
-                                        <p className={`text-xs text-${theme.secondary} font-medium mb-3 uppercase tracking-wide`}>
+                                        <p className="text-xs text-blue-700 font-medium mb-3 uppercase tracking-wide">
                                             {program.code}
                                         </p>
                                     )}
                                     <p className="text-sm text-gray-600 mb-3 line-clamp-2">{program.description}</p>
-                                    <button className={`text-sm text-${theme.primary} font-medium hover:text-${theme.secondary} transition-colors flex items-center gap-1 group-hover:gap-2`}>
+                                    <button className="text-sm text-blue-600 font-medium hover:text-blue-700 transition-colors flex items-center gap-1 group-hover:gap-2">
                                         Learn More <ArrowRight size={14} />
                                     </button>
                                 </div>
                             ))}
+                        </div>
+                    ) : (
+                        <div className="bg-blue-50 rounded-lg p-12 text-center">
+                            <p className="text-gray-700 mb-2">No programs available yet.</p>
+                            <p className="text-sm text-gray-500">Programs: {programs.length} | Loading: {coursesLoading ? 'yes' : 'no'} | Courses: {moodleCourses.length}</p>
                         </div>
                     )}
                 </div>
