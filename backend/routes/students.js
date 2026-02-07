@@ -3089,4 +3089,120 @@ router.get('/contract-pdf', async (req, res) => {
     }
 });
 
+// Submit a course change request (Deferral, Withdrawal, Transfer)
+router.post('/applications/:id/course-change-request', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const {
+            type_of_request, effective_date, justification, current_study_mode,
+            policy_confirmation, digital_signature, request_date
+        } = req.body;
+
+        if (!type_of_request || !effective_date) {
+            return res.status(400).json({
+                success: false,
+                message: 'Type of request and effective date are required'
+            });
+        }
+
+        // Get application details
+        const [apps] = await db.execute(
+            'SELECT id, student_name, course_title, course_start_date FROM student_applications WHERE id = ?',
+            [id]
+        );
+
+        if (!apps || apps.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Application not found'
+            });
+        }
+
+        const app = apps[0];
+
+        // Insert course change request
+        const [result] = await db.execute(
+            `INSERT INTO course_change_requests (
+                application_id, student_id, student_name, course_title, course_start_date,
+                current_study_mode, type_of_request, effective_date, justification,
+                policy_confirmation, digital_signature, request_date
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+                id, id, app.student_name, app.course_title, app.course_start_date,
+                current_study_mode, type_of_request, effective_date, justification,
+                policy_confirmation ? 1 : 0, digital_signature, request_date
+            ]
+        );
+
+        console.log(`[COURSE CHANGE REQUEST] Application ${id}: ${type_of_request} request submitted by ${app.student_name}`);
+
+        res.json({
+            success: true,
+            message: 'Course change request submitted successfully',
+            data: { id: result.insertId }
+        });
+    } catch (error) {
+        console.error('Error submitting course change request:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to submit course change request',
+            error: error.message
+        });
+    }
+});
+
+// Get course change requests for an application
+router.get('/applications/:id/course-change-requests', async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const [requests] = await db.execute(
+            'SELECT * FROM course_change_requests WHERE application_id = ? ORDER BY created_at DESC',
+            [id]
+        );
+
+        res.json({
+            success: true,
+            data: requests
+        });
+    } catch (error) {
+        console.error('Error fetching course change requests:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch course change requests',
+            error: error.message
+        });
+    }
+});
+
+// Get single course change request
+router.get('/course-change-requests/:requestId', async (req, res) => {
+    try {
+        const { requestId } = req.params;
+
+        const [request] = await db.execute(
+            'SELECT * FROM course_change_requests WHERE id = ?',
+            [requestId]
+        );
+
+        if (!request || request.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Course change request not found'
+            });
+        }
+
+        res.json({
+            success: true,
+            data: request[0]
+        });
+    } catch (error) {
+        console.error('Error fetching course change request:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch course change request'
+        });
+    }
+});
+
 module.exports = router;

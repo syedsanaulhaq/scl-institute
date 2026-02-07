@@ -18,6 +18,7 @@ import StudentPortalDashboard from './components/student/StudentPortalDashboard'
 import StudentProfile from './components/student/StudentProfile';
 import StudentAdmissions from './components/student/StudentAdmissions';
 import StudentContract from './components/student/StudentContract';
+import StudentCourseChanges from './components/student/StudentCourseChanges';
 import StudentRightToStudy from './components/student/StudentRightToStudy';
 import StudentProgramme from './components/student/StudentProgramme';
 import StudentTimetable from './components/student/StudentTimetable';
@@ -116,6 +117,15 @@ function App() {
                     user && user.role === 'student' ? (
                         <Layout user={user} onLogout={handleLogout}>
                             <StudentContract user={user} />
+                        </Layout>
+                    ) : (
+                        <LoginPage onLoginSuccess={handleLoginSuccess} />
+                    )
+                } />
+                <Route path="/student/course-changes" element={
+                    user && user.role === 'student' ? (
+                        <Layout user={user} onLogout={handleLogout}>
+                            <StudentCourseChanges user={user} />
                         </Layout>
                     ) : (
                         <LoginPage onLoginSuccess={handleLoginSuccess} />
