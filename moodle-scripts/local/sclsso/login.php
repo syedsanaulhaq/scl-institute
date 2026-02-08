@@ -25,14 +25,29 @@ function assignMoodleRoles($userid, $sclRole) {
         'Manager' => 'manager',               // Manager -> Moodle Manager
     );
     
-    // Give Super Admin users site admin privileges
+    // Give Super Admin users site admin privileges AND system-level manager role
     if ($sclRole === 'Super Admin') {
+        // Add to siteadmins
         $admins = explode(',', $CFG->siteadmins);
         if (!in_array($userid, $admins)) {
             $admins[] = $userid;
             set_config('siteadmins', implode(',', $admins));
-            error_log('[SSO] Added user ' . $userid . ' as site administrator');
+            error_log('[SSO] Added user ' . $userid . ' to siteadmins');
         }
+        
+        // Also assign manager role at system context
+        $managerRole = $DB->get_record('role', array('shortname' => 'manager'));
+        if ($managerRole) {
+            $context = context_system::instance();
+            // Check if role already assigned
+            $existing = $DB->get_record('role_assignments', 
+                array('userid' => $userid, 'roleid' => $managerRole->id, 'contextid' => $context->id));
+            if (!$existing) {
+                role_assign($managerRole->id, $userid, $context->id);
+                error_log('[SSO] Assigned manager role at system context to user ' . $userid);
+            }
+        }
+        return;
     }
     
     // Get the Moodle role ID for the mapped role
