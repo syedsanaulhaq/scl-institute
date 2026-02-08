@@ -203,7 +203,9 @@ app.post('/api/sso/generate', async (req, res) => {
 
 app.post('/api/sso/verify', async (req, res) => {
     const { token, secret } = req.body;
+    console.log('[SSO] Verify request received:', { token: token?.substring(0, 10) + '...', secret: secret, bodyKeys: Object.keys(req.body) });
     if (secret !== (process.env.SSO_SECRET || 'supersecretkey')) {
+        console.log('[SSO] Secret mismatch. Received:', secret, 'Expected:', process.env.SSO_SECRET || 'supersecretkey');
         return res.status(403).json({ success: false, message: 'Invalid secret' });
     }
 

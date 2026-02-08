@@ -56,7 +56,10 @@ if (empty($token)) {
 
 // Verify token via SCL backend API
 $backendUrl = 'http://scli-backend-dev:4000/api/sso/verify';
-$postData = json_encode(['token' => $token]);
+$postData = json_encode([
+    'token' => $token,
+    'secret' => 'dev-supersecretkey-changeinproduction'
+]);
 $ch = curl_init($backendUrl);
 curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'POST');
 curl_setopt($ch, CURLOPT_POSTFIELDS, $postData);
@@ -68,15 +71,17 @@ $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 curl_close($ch);
 
 if ($httpCode !== 200) {
-    error_log('[SSO] Backend verification failed: HTTP ' . $httpCode);
-    redirect($CFG->wwwroot, 'SSO verification failed');
+    error_log('[SSO] Backend verification failed: HTTP ' . $httpCode . ' Response: ' . $response);
+    redirect($CFG->wwwroot, 'SSO verification failed - Please try again');
 }
 
-$tokenData = json_decode($response, true);
-if (!$tokenData || !isset($tokenData['email'])) {
-    error_log('[SSO] Invalid token data received from backend');
+$responseData = json_decode($response, true);
+if (!$responseData || !isset($responseData['user'])) {
+    error_log('[SSO] Invalid response structure from backend');
     redirect($CFG->wwwroot, 'Invalid token');
 }
+
+$tokenData = $responseData['user'];
 
 $email = $tokenData['email'];
 $firstname = $tokenData['firstname'] ?: 'SCL';
