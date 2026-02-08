@@ -25,6 +25,16 @@ function assignMoodleRoles($userid, $sclRole) {
         'Manager' => 'manager',               // Manager -> Moodle Manager
     );
     
+    // Give Super Admin users site admin privileges
+    if ($sclRole === 'Super Admin') {
+        $admins = explode(',', $CFG->siteadmins);
+        if (!in_array($userid, $admins)) {
+            $admins[] = $userid;
+            set_config('siteadmins', implode(',', $admins));
+            error_log('[SSO] Added user ' . $userid . ' as site administrator');
+        }
+    }
+    
     // Get the Moodle role ID for the mapped role
     $moodleRole = isset($roleMapping[$sclRole]) ? $roleMapping[$sclRole] : null;
     
