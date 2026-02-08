@@ -54,59 +54,40 @@ if (empty($token)) {
     redirect($CFG->wwwroot, 'Invalid or missing token');
 }
 
-// Connect to SCL backend database to validate token
-$scldb = new mysqli('scli-mysql-dev', 'scl_user', 'scl_password', 'scl_institute');
+// Verify token via SCL backend API
+$backendUrl = 'http://scli-backend-dev:4000/api/sso/verify';
+$postData = json_encode(['token' => $token]);
+$ch = curl_init($backendUrl);
+curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'POST');
+curl_setopt($ch, CURLOPT_POSTFIELDS, $postData);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type: application/json'));
 
-if ($scldb->connect_error) {
-    redirect($CFG->wwwroot, 'Database connection failed');
+$response = curl_exec($ch);
+$httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+curl_close($ch);
+
+if ($httpCode !== 200) {
+    error_log('[SSO] Backend verification failed: HTTP ' . $httpCode);
+    redirect($CFG->wwwroot, 'SSO verification failed');
 }
 
-// Query to get user information for the token
-$stmt = $scldb->prepare("SELECT email, firstname, lastname, role, redirect_url FROM sso_tokens WHERE token = ? AND created_at > DATE_SUB(NOW(), INTERVAL 1 HOUR)");
-
-if (!$stmt) {
-    $scldb->close();
-    redirect($CFG->wwwroot, 'Database error');
+$tokenData = json_decode($response, true);
+if (!$tokenData || !isset($tokenData['email'])) {
+    error_log('[SSO] Invalid token data received from backend');
+    redirect($CFG->wwwroot, 'Invalid token');
 }
 
-$stmt->bind_param("s", $token);
-$stmt->execute();
-$result = $stmt->get_result();
-
-if ($result->num_rows === 0) {
-    $scldb->close();
-    redirect($CFG->wwwroot, 'Invalid or expired token');
-}
-
-$tokenData = $result->fetch_assoc();
 $email = $tokenData['email'];
 $firstname = $tokenData['firstname'] ?: 'SCL';
 $lastname = $tokenData['lastname'] ?: 'User';
-$redirectUrl = !empty($tokenData['redirect_url']) ? $tokenData['redirect_url'] : null;  // Get redirect URL from database
+$redirectUrl = isset($tokenData['redirect_url']) ? $tokenData['redirect_url'] : null;
+$sclRole = isset($tokenData['role']) ? $tokenData['role'] : null;
 
-// Get detailed user info from SCL database including role from user_roles table
-$sclRole = null;
-$roleStmt = $scldb->prepare("SELECT r.role_name FROM user_roles ur JOIN roles r ON ur.role_id = r.id WHERE ur.user_id = (SELECT id FROM users WHERE email = ?) LIMIT 1");
-if ($roleStmt) {
-    $roleStmt->bind_param("s", $email);
-    $roleStmt->execute();
-    $roleResult = $roleStmt->get_result();
-    if ($roleResult->num_rows > 0) {
-        $roleData = $roleResult->fetch_assoc();
-        $sclRole = $roleData['role_name'];
-        error_log('[SSO] Role retrieved from user_roles: ' . $sclRole);
-    } else {
-        error_log('[SSO] No role found in user_roles table for email: ' . $email);
-    }
-    $roleStmt->close();
-} else {
-    error_log('[SSO] Role query preparation failed: ' . $scldb->error);
-}
+error_log('[SSO] Token verified via backend API: email=' . $email . ', role=' . ($sclRole ?: 'none'));
 
 // Write debug info to file
 file_put_contents('/tmp/sso_debug.txt', date('Y-m-d H:i:s') . " - Token: $token, Email: $email, SCL Role: $sclRole, RedirectURL: " . var_export($redirectUrl, true) . "\n", FILE_APPEND);
-
-error_log('[SSO] Token data retrieved: email=' . $email . ', role=' . ($sclRole ?: 'none') . ', redirect_url=' . ($redirectUrl ?: 'NULL'));
 
 // Find or create Moodle user
 if (!$user = $DB->get_record('user', array('email' => $email, 'deleted' => 0))) {
@@ -148,13 +129,6 @@ assignMoodleRoles($user->id, $sclRole);
 complete_user_login($user);
 
 error_log('[SSO] User logged in: ' . $email);
-
-// Don't delete the token for debugging
-//$ delstmt = $scldb->prepare("DELETE FROM sso_tokens WHERE token = ?");
-//$delstmt->bind_param("s", $token);
-//$delstmt->execute();
-
-$scldb->close();
 
 // Redirect to provided location or default to courses page
 error_log('[SSO] About to redirect. redirectUrl=' . var_export($redirectUrl, true));

@@ -135,6 +135,15 @@ function App() {
                         <LoginPage onLoginSuccess={handleLoginSuccess} />
                     )
                 } />
+                <Route path="/student/induction" element={
+                    user && user.role === 'student' ? (
+                        <Layout user={user} onLogout={handleLogout}>
+                            <StudentAdmissions user={user} initialTab="induction" />
+                        </Layout>
+                    ) : (
+                        <LoginPage onLoginSuccess={handleLoginSuccess} />
+                    )
+                } />
                 <Route path="/student/contract" element={
                     user && user.role === 'student' ? (
                         <Layout user={user} onLogout={handleLogout}>

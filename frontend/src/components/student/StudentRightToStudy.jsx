@@ -414,29 +414,47 @@ const StudentRightToStudy = ({ user }) => {
             {/* Document Upload Section */}
             <div className="bg-white rounded-lg shadow-md p-6 mb-6">
                 <h2 className="text-xl font-bold text-gray-900 mb-4">Upload Required Documents</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-3">
                     {documentTypes.map((doc) => (
-                        <div key={doc.type}>
-                            <input
-                                ref={(el) => (fileInputRefs.current[doc.type] = el)}
-                                type="file"
-                                className="hidden"
-                                accept=".pdf,.jpg,.jpeg,.png"
-                                onChange={(e) => handleFileChange(doc.type, e.target.files[0])}
-                            />
-                            <button
-                                onClick={() => triggerFileInput(doc.type)}
-                                className="w-full p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-all"
-                                disabled={uploadingDoc === doc.type}
-                            >
-                                <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                                <p className="text-sm font-medium text-gray-700">
-                                    {uploadingDoc === doc.type ? 'Uploading...' : `Upload ${doc.label}`}
-                                </p>
-                            </button>
+                        <div key={doc.type} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border">
+                            <div className="flex items-center gap-3">
+                                <FileText className="w-5 h-5 text-gray-600" />
+                                <p className="font-medium text-gray-900">{doc.label}</p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                {studentApp?.[doc.type] ? (
+                                    <div className="flex flex-col gap-2 items-end">
+                                        <div className="flex items-center gap-2">
+                                            <CheckCircle className="w-5 h-5 text-green-600" />
+                                            <span className="text-sm text-green-600 font-medium">Uploaded</span>
+                                        </div>
+                                        <div className="flex items-center gap-2 text-xs text-gray-500">
+                                            <span>{studentApp[doc.type]}</span>
+                                        </div>
+                                    </div>
+                                ) : null}
+                                <button
+                                    onClick={() => triggerFileInput(doc.type)}
+                                    disabled={uploadingDoc === doc.type}
+                                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-sm"
+                                >
+                                    <Upload className="w-4 h-4" />
+                                    {uploadingDoc === doc.type ? 'Uploading...' : 'Upload'}
+                                </button>
+                                <input
+                                    ref={(el) => (fileInputRefs.current[doc.type] = el)}
+                                    type="file"
+                                    className="hidden"
+                                    accept=".pdf,.jpg,.jpeg,.png"
+                                    onChange={(e) => handleFileChange(doc.type, e.target.files[0])}
+                                />
+                            </div>
                         </div>
                     ))}
                 </div>
+                <p className="mt-6 text-sm text-gray-600 p-4 bg-blue-50 rounded-lg">
+                    <strong>Accepted formats:</strong> PDF, JPG, PNG | <strong>Max size:</strong> 5MB per file
+                </p>
             </div>
 
             {/* Documents List with Expiry Tracking */}
@@ -517,49 +535,6 @@ const StudentRightToStudy = ({ user }) => {
                                 </div>
                             );
                         })}
-                    </div>
-                )}
-            </div>
-
-            {/* Save & Submit Button */}
-            <div className="bg-white rounded-lg shadow-md p-6 mt-6">
-                <div className="flex items-center justify-between">
-                    <div>
-                        <h3 className="text-lg font-bold text-gray-900">Submit Right to Study Compliance</h3>
-                        <p className="text-sm text-gray-600 mt-1">
-                            Confirm that all uploaded documents are valid and you have the right to study in the UK
-                        </p>
-                    </div>
-                    <button
-                        onClick={handleComplianceConfirm}
-                        disabled={saveLoading || !complianceConfirmed || studentApp?.complianceConfirmed}
-                        className="px-6 py-3 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center gap-2"
-                    >
-                        {studentApp?.complianceConfirmed ? (
-                            <>
-                                <CheckCircle className="w-5 h-5" />
-                                Submitted
-                            </>
-                        ) : (
-                            <>
-                                {saveLoading ? 'Saving...' : 'Save & Submit'}
-                            </>
-                        )}
-                    </button>
-                </div>
-                {studentApp?.complianceConfirmed && (
-                    <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-                        <p className="text-sm text-green-800 flex items-center gap-2">
-                            <CheckCircle className="w-4 h-4" />
-                            Compliance confirmed on {formatDate(studentApp?.complianceConfirmedAt)}
-                        </p>
-                    </div>
-                )}
-                {!complianceConfirmed && !studentApp?.complianceConfirmed && (
-                    <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                        <p className="text-sm text-yellow-800">
-                            Please check the compliance confirmation checkbox above before submitting
-                        </p>
                     </div>
                 )}
             </div>

@@ -14,7 +14,7 @@ const formatDate = (dateString) => {
     return `${day}/${month}/${year}`;
 };
 
-const StudentAdmissions = ({ user }) => {
+const StudentAdmissions = ({ user, initialTab }) => {
     const [applicationData, setApplicationData] = useState(null);
     const [inductionData, setInductionData] = useState({});
     const [savingInduction, setSavingInduction] = useState(false);
@@ -22,12 +22,18 @@ const StudentAdmissions = ({ user }) => {
     const [uploading, setUploading] = useState(null);
     const [acceptingOffer, setAcceptingOffer] = useState(false);
     const [downloadingOffer, setDownloadingOffer] = useState(false);
-    const [activeTab, setActiveTab] = useState('status');
+    const [activeTab, setActiveTab] = useState(initialTab || 'status');
     const fileInputRefs = useRef({});
 
     useEffect(() => {
         fetchApplicationData();
     }, [user]);
+
+    useEffect(() => {
+        if (initialTab) {
+            setActiveTab(initialTab);
+        }
+    }, [initialTab]);
 
     useEffect(() => {
         if (applicationData?.id) {
