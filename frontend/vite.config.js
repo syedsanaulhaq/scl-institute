@@ -9,6 +9,7 @@ export default defineConfig({
         port: 3000,
         allowedHosts: [
             'scli-frontend-prod',
+            'system.sclsandbox.xyz',
             'sclsandbox.xyz',
             'localhost',
             '127.0.0.1',
