@@ -10,7 +10,7 @@ import './index.css';
 
 function App() {
     const [currentView, setCurrentView] = useState('home'); // Start with home (Design1)
-    const [selectedDesign, setSelectedDesign] = useState('design1');
+    const [selectedDesign, setSelectedDesign] = useState('home');
     const [selectedTheme, setSelectedTheme] = useState('modern');
     const [showDesignPanel, setShowDesignPanel] = useState(false);
     const [lastReference, setLastReference] = useState('');
@@ -20,7 +20,7 @@ function App() {
         design2: Design2,
         design3: Design3,
         home: Home
-    }[selectedDesign] || Design1;
+    }[selectedDesign] || Home;
 
     if (currentView === 'thankyou') {
         return (
