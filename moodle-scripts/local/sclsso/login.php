@@ -80,10 +80,17 @@ if (empty($token)) {
 }
 
 // Verify token via SCL backend API
-$backendUrl = 'http://scli-backend-dev:4000/api/sso/verify';
+// Use environment variable or fallback to backend service name
+$backendHost = getenv('SCL_BACKEND_HOST') ?: 'scli-backend-prod';
+$backendPort = getenv('SCL_BACKEND_PORT') ?: '4000';
+$backendUrl = 'http://' . $backendHost . ':' . $backendPort . '/api/sso/verify';
+$ssoSecret = getenv('SSO_SECRET') ?: 'supersecretkey';
+
+error_log('[SSO] Backend URL: ' . $backendUrl);
+
 $postData = json_encode([
     'token' => $token,
-    'secret' => 'dev-supersecretkey-changeinproduction'
+    'secret' => $ssoSecret
 ]);
 $ch = curl_init($backendUrl);
 curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'POST');

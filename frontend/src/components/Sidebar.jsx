@@ -151,8 +151,8 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
         },
     ];
 
-    // Select menu based on user role
-    const menuItems = user?.role === 'student' ? studentMenuItems : adminMenuItems;
+    // Select menu based on user role (case-insensitive)
+    const menuItems = user?.role?.toLowerCase() === 'student' ? studentMenuItems : adminMenuItems;
 
     const toggleSubMenu = (menuKey) => {
         setExpandedMenus(prev => ({

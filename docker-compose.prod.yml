@@ -43,8 +43,12 @@ services:
       - MOODLE_SITE_NAME=SCL Institute LMS
       - MOODLE_REVERSEPROXY=no
       - BITNAMI_DEBUG=true
+      - SCL_BACKEND_HOST=scli-backend-prod
+      - SCL_BACKEND_PORT=4000
+      - SSO_SECRET=supersecretkey
     volumes:
       - moodle_data_prod:/bitnami/moodle
+      - ./moodle-scripts/local/sclsso:/bitnami/moodle/local/sclsso
     networks:
       - scl-network-prod
     depends_on:

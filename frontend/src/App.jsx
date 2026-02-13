@@ -95,7 +95,7 @@ function App() {
                 <Route path="/login" element={<LoginPage onLoginSuccess={handleLoginSuccess} />} />
                 <Route path="/" element={
                     user ? (
-                        user.role === 'student' ? (
+                        user?.role?.toLowerCase() === 'student' ? (
                             <Layout user={user} onLogout={handleLogout}>
                                 <StudentPortalDashboard user={user} />
                             </Layout>
@@ -109,7 +109,7 @@ function App() {
                     )
                 } />
                 <Route path="/student/dashboard" element={
-                    user && user.role === 'student' ? (
+                    user && user?.role?.toLowerCase() === 'student' ? (
                         <Layout user={user} onLogout={handleLogout}>
                             <StudentPortalDashboard user={user} />
                         </Layout>
@@ -271,7 +271,7 @@ function App() {
                     )
                 } />
                 <Route path="/admin/dashboard" element={
-                    user && user.role !== 'student' ? (
+                    user && user?.role?.toLowerCase() !== 'student' ? (
                         <Layout user={user} onLogout={handleLogout}>
                             <AdminDashboard user={user} />
                         </Layout>

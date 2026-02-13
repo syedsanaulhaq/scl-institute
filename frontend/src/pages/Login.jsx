@@ -31,7 +31,7 @@ const LoginPage = ({ onLoginSuccess }) => {
             onLoginSuccess(userData);
             
             // Redirect based on user role
-            if (userData.role === 'student') {
+            if (userData?.role?.toLowerCase() === 'student') {
                 navigate('/student/dashboard');
             } else {
                 navigate('/');

@@ -34,6 +34,8 @@ services:
   scli-moodle:
     image: bitnamilegacy/moodle:latest
     container_name: scli-moodle
+    ports:
+      - "9090:8080"
     environment:
       - MOODLE_DATABASE_HOST=scli-moodle-db
       - MOODLE_DATABASE_PORT_NUMBER=3306
@@ -48,7 +50,7 @@ services:
     restart: on-failure
     volumes:
       - moodle_data:/bitnami/moodle
-      # - ./moodle-scripts:/bitnami/moodle/local/sclsso
+      - ./moodle-scripts/local/sclsso:/bitnami/moodle/local/sclsso
     depends_on:
       - scli-moodle-db
     networks:
@@ -66,7 +68,7 @@ services:
       - DB_USER=scl_user
       - DB_PASS=scl_password
       - DB_NAME=scl_institute
-      - MOODLE_URL=http://lms.sclsandbox.xyz
+      - MOODLE_URL=http://localhost:9090
       - SSO_SECRET=supersecretkey
     depends_on:
       - scli-mysql
