@@ -50,7 +50,7 @@ function App() {
                                     Back to Home
                                 </button>
                                 <a
-                                    href="http://localhost:3000"
+                                    href="http://system.sclsandbox.xyz"
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="px-6 py-3 rounded-lg bg-gray-900 text-white hover:bg-black transition-colors font-semibold"

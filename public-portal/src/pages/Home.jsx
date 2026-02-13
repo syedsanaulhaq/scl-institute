@@ -21,6 +21,7 @@ import {
     Calendar,
     ChevronLeft,
     ChevronRight,
+    ChevronDown,
     X
 } from 'lucide-react';
 
@@ -34,6 +35,22 @@ const Home = ({ onApplyNow }) => {
     const [selectedCourse, setSelectedCourse] = useState(null);
     const [showModal, setShowModal] = useState(false);
     const [expandedModule, setExpandedModule] = useState(null);
+    const [currentSlide, setCurrentSlide] = useState(0);
+
+    // Slideshow images for banner
+    const slideImages = [
+        '/bg_header.jpg',
+        '/parallax_01.jpg',
+        '/shutterstock_446955004.jpg'
+    ];
+
+    // Auto-rotate slideshow
+    useEffect(() => {
+        const slideInterval = setInterval(() => {
+            setCurrentSlide((prev) => (prev + 1) % slideImages.length);
+        }, 5000); // Change every 5 seconds
+        return () => clearInterval(slideInterval);
+    }, [slideImages.length]);
 
     // Fetch courses from Moodle
     useEffect(() => {
@@ -228,22 +245,44 @@ const Home = ({ onApplyNow }) => {
             <nav className="bg-white shadow-lg sticky top-0 z-40">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex items-center justify-between h-16">
-                        <div className="flex items-center space-x-2">
-                            <div className="w-8 h-8 bg-gradient-to-br from-teal-500 to-teal-600 rounded-lg flex items-center justify-center">
-                                <BookOpen className="w-5 h-5 text-white" />
+                        <div className="flex items-center gap-3">
+                            {/* SCL System Logo Design */}
+                            <div className="relative">
+                                <div className="w-14 h-14 bg-gradient-to-br from-emerald-400 via-teal-500 to-cyan-600 rounded-2xl shadow-lg flex items-center justify-center transform hover:scale-105 transition-all">
+                                    <div className="absolute inset-0 bg-white/10 backdrop-blur-sm rounded-2xl"></div>
+                                    <BookOpen className="w-7 h-7 text-white relative z-10" strokeWidth={2.5} />
+                                </div>
                             </div>
-                            <div>
-                                <span className="text-xl font-bold text-gray-900">SCL</span>
-                                <span className="text-xs uppercase tracking-wider text-teal-600 block font-semibold">Institute</span>
+                            <div className="flex flex-col">
+                                <div className="flex items-baseline gap-1">
+                                    <span className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 via-teal-600 to-cyan-600 tracking-tight">SCL</span>
+                                    <span className="text-lg font-light text-gray-600">System</span>
+                                </div>
+                                <span className="text-xs uppercase tracking-widest text-teal-600 font-bold leading-none -mt-1">Institute</span>
                             </div>
                         </div>
                         <div className="hidden md:flex items-center space-x-1">
-                            <a href="#" className="px-3 py-2 text-teal-600 hover:text-teal-700 hover:bg-teal-50 rounded font-medium transition">Home</a>
-                            <a href="#events" className="px-3 py-2 text-gray-600 hover:text-teal-600 hover:bg-teal-50 rounded transition">Events</a>
-                            <a href="#" className="px-3 py-2 text-gray-600 hover:text-teal-600 hover:bg-teal-50 rounded transition">Pages</a>
-                            <a href="#" className="px-3 py-2 text-gray-600 hover:text-teal-600 hover:bg-teal-50 rounded transition">News</a>
+                            <a href="#" className="px-3 py-2 text-teal-600 hover:text-teal-700 hover:bg-teal-50 rounded font-medium transition flex items-center gap-1">
+                                Home
+                                <ChevronDown className="w-3 h-3" />
+                            </a>
+                            <a href="#events" className="px-3 py-2 text-gray-600 hover:text-teal-600 hover:bg-teal-50 rounded transition flex items-center gap-1">
+                                Events
+                                <ChevronDown className="w-3 h-3" />
+                            </a>
+                            <a href="#" className="px-3 py-2 text-gray-600 hover:text-teal-600 hover:bg-teal-50 rounded transition flex items-center gap-1">
+                                Pages
+                                <ChevronDown className="w-3 h-3" />
+                            </a>
+                            <a href="#" className="px-3 py-2 text-gray-600 hover:text-teal-600 hover:bg-teal-50 rounded transition flex items-center gap-1">
+                                News
+                                <ChevronDown className="w-3 h-3" />
+                            </a>
                             <a href="#programs" className="px-3 py-2 text-gray-600 hover:text-teal-600 hover:bg-teal-50 rounded transition">Courses</a>
                             <a href="#contact" className="px-3 py-2 text-gray-600 hover:text-teal-600 hover:bg-teal-50 rounded transition">Contacts</a>
+                            <a href="http://system.sclsandbox.xyz" target="_blank" rel="noopener noreferrer" className="ml-2 px-4 py-2 bg-gradient-to-r from-yellow-400 to-amber-500 text-gray-900 font-semibold rounded hover:from-yellow-500 hover:to-amber-600 transition shadow-md hover:shadow-lg transform hover:scale-105">
+                                SCL System
+                            </a>
                             <button className="ml-4 p-2 text-gray-600 hover:text-teal-600 hover:bg-teal-50 rounded-full transition">
                                 <Search className="w-5 h-5" />
                             </button>
@@ -252,12 +291,55 @@ const Home = ({ onApplyNow }) => {
                 </div>
             </nav>
 
-            {/* Hero Section */}
-            <section className="relative py-20 bg-cover bg-center overflow-hidden" style={{backgroundImage: 'url(/bg_header.jpg)'}}>
-                <div className="absolute inset-0 bg-gradient-to-r from-teal-600/40 to-teal-500/35"></div>
-                <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-                    <div className="text-center">
-                        <h1 className="text-4xl md:text-5xl font-light text-white mb-5 leading-tight">
+            {/* Hero Section with Slideshow */}
+            <section className="relative h-[500px] md:h-[600px] lg:h-[700px] bg-cover bg-center overflow-hidden">
+                {/* Slideshow Background */}
+                <div className="absolute inset-0 transition-opacity duration-1000">
+                    {slideImages.map((image, idx) => (
+                        <div
+                            key={idx}
+                            className={`absolute inset-0 transition-opacity duration-1000 ${
+                                idx === currentSlide ? 'opacity-100' : 'opacity-0'
+                            }`}
+                            style={{backgroundImage: `url(${image})`, backgroundSize: 'cover', backgroundPosition: 'center'}}
+                        />
+                    ))}
+                </div>
+                
+                {/* Overlay */}
+                <div className="absolute inset-0 bg-gradient-to-r from-teal-600/50 to-teal-500/45"></div>
+                
+                {/* Slide Indicators */}
+                <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-2 z-20">
+                    {slideImages.map((_, idx) => (
+                        <button
+                            key={idx}
+                            onClick={() => setCurrentSlide(idx)}
+                            className={`h-2 rounded-full transition-all ${
+                                idx === currentSlide ? 'w-8 bg-white' : 'w-2 bg-white/50 hover:bg-white/75'
+                            }`}
+                        />
+                    ))}
+                </div>
+                
+                {/* Slide Navigation */}
+                <button
+                    onClick={() => setCurrentSlide((prev) => (prev - 1 + slideImages.length) % slideImages.length)}
+                    className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-white/20 hover:bg-white/40 text-white p-3 rounded-full transition z-20"
+                >
+                    <ChevronLeft className="w-6 h-6" />
+                </button>
+                <button
+                    onClick={() => setCurrentSlide((prev) => (prev + 1) % slideImages.length)}
+                    className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-white/20 hover:bg-white/40 text-white p-3 rounded-full transition z-20"
+                >
+                    <ChevronRight className="w-6 h-6" />
+                </button>
+                
+                {/* Content on top of slideshow */}
+                <div className="absolute inset-0 flex items-center justify-center z-10">
+                    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 w-full text-center">
+                        <h1 className="text-4xl md:text-5xl lg:text-6xl font-light text-white mb-6 leading-tight drop-shadow-lg">
                             Choose From A Range Of <span className="font-semibold">Online Courses</span>
                         </h1>
                         

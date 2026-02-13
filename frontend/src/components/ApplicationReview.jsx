@@ -28,6 +28,7 @@ const ApplicationReview = () => {
     const [showCredentialsModal, setShowCredentialsModal] = useState(false);
     const [existingReview, setExistingReview] = useState(null);
     const [isEditMode, setIsEditMode] = useState(false);
+    const [viewMode, setViewMode] = useState(false); // true = viewing existing review (read-only)
 
     // Safe date formatter
     const formatDate = (dateValue) => {
@@ -88,7 +89,8 @@ const ApplicationReview = () => {
                 const existingData = response.data.data;
                 console.log('[FETCH REVIEW] Found existing review:', existingData);
                 setExistingReview(existingData);
-                setIsEditMode(true);
+                setViewMode(true); // Show in read-only view mode
+                setIsEditMode(false); // Not editing yet
                 
                 // Parse review_notes if it's JSON (stored review data)
                 if (existingData.review_notes) {
@@ -135,11 +137,18 @@ const ApplicationReview = () => {
                 }
             } else {
                 console.log('[FETCH REVIEW] No existing review data found (data is null)');
+                setViewMode(false); // No review exists, show new form
                 setIsEditMode(false);
             }
         } catch (err) {
-            console.error('[FETCH REVIEW] Error fetching review:', err);
+            conViewMode(false);
             setIsEditMode(false);
+        }
+    };
+
+    const handleEditReview = () => {
+        setViewMode(false); // Switch to edit mode
+        setIsEditMode(true); // Mark as editing existing review   setIsEditMode(false);
         }
     };
 
@@ -480,6 +489,117 @@ const ApplicationReview = () => {
                             </div>
                         )}
 
+                        {/* View Mode - Show Existing Review (Read-Only) */}
+                        {viewMode && existingReview && (
+                            <div className="space-y-4">
+                                <div className="flex justify-between items-center mb-4 pb-4 border-b">
+                                    <div className="flex items-center gap-2">
+                                        <CheckCircle2 className="w-5 h-5 text-green-600" />
+                                        <span className="font-semibold text-gray-900">Review Completed</span>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={handleEditReview}
+                                        className="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+                                    >
+                                        Edit Review
+                                    </button>
+                                </div>
+
+                                <div className="space-y-3 text-sm">
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <p className="text-gray-600 font-medium">Reviewer Name</p>
+                                            <p className="text-gray-900">{review.reviewer_name || 'N/A'}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-gray-600 font-medium">Review Date</p>
+                                            <p className="text-gray-900">{formatDisplayDate(review.review_date)}</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <p className="text-gray-600 font-medium">Documents Verified</p>
+                                            <p className="text-gray-900">{review.documents_verified || 'N/A'}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-gray-600 font-medium">Eligibility Check</p>
+                                            <p className="text-gray-900">{review.eligibility_check || 'N/A'}</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <p className="text-gray-600 font-medium">Interview Conducted</p>
+                                            <p className="text-gray-900">{review.interview_conducted || 'N/A'}</p>
+                                        </div>
+                                        {review.interview_conducted === 'Yes' && (
+                                            <div>
+                                                <p className="text-gray-600 font-medium">Interview Outcome</p>
+                                                <p className="text-gray-900">{review.interview_outcome || 'N/A'}</p>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div>
+                                        <p className="text-gray-600 font-medium">English Requirement Met</p>
+                                        <p className="text-gray-900">{review.english_requirement_met || 'N/A'}</p>
+                                    </div>
+
+                                    {review.additional_notes && (
+                                        <div>
+                                            <p className="text-gray-600 font-medium">Additional Notes</p>
+                                            <p className="text-gray-900 whitespace-pre-wrap">{review.additional_notes}</p>
+                                        </div>
+                                    )}
+
+                                    <div className="pt-4 border-t">
+                                        <div className="mb-3">
+                                            <p className="text-gray-600 font-medium">Final Decision</p>
+                                            <p className={`text-lg font-bold ${
+                                                review.decision === 'Offer' ? 'text-green-600' :
+                                                review.decision === 'Refusal' ? 'text-red-600' :
+                                                review.decision === 'Conditional Offer' ? 'text-yellow-600' :
+                                                'text-blue-600'
+                                            }`}>
+                                                {review.decision || 'N/A'}
+                                            </p>
+                                        </div>
+
+                                        {review.reason_for_refusal && (
+                                            <div className="mb-3">
+                                                <p className="text-gray-600 font-medium">Reason for Refusal</p>
+                                                <p className="text-gray-900">{review.reason_for_refusal}</p>
+                                            </div>
+                                        )}
+
+                                        {review.detailed_comments && (
+                                            <div className="mb-3">
+                                                <p className="text-gray-600 font-medium">Detailed Comments</p>
+                                                <p className="text-gray-900 whitespace-pre-wrap">{review.detailed_comments}</p>
+                                            </div>
+                                        )}
+
+                                        {review.committee_chair_name && (
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div>
+                                                    <p className="text-gray-600 font-medium">Committee Chair</p>
+                                                    <p className="text-gray-900">{review.committee_chair_name}</p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-gray-600 font-medium">Final Decision Date</p>
+                                                    <p className="text-gray-900">{formatDisplayDate(review.final_decision_date)}</p>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Edit/New Review Form */}
+                        {!viewMode && (
                         <form onSubmit={handleSubmitReview} className="space-y-4">
                             {/* Auto-filled Fields */}
                             <div>
@@ -725,6 +845,7 @@ const ApplicationReview = () => {
                                 )}
                             </button>
                         </form>
+                        )}
                     </div>
                 </div>
             </div>

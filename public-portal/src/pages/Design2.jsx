@@ -139,7 +139,7 @@ const Design2 = ({ selectedTheme = 'modern', onApplyNow, onChangeTheme }) => {
                         <a href="#" className="text-sm text-gray-600 hover:text-gray-900">Home</a>
                         <a href="#" className="text-sm text-gray-600 hover:text-gray-900">Programs</a>
                         <a href="#" className="text-sm text-gray-600 hover:text-gray-900">About</a>
-                        <a href="http://localhost:3000" target="_blank" rel="noopener noreferrer" className="text-sm font-semibold text-blue-700 hover:text-blue-900 underline">SCL System</a>
+                        <a href="http://system.sclsandbox.xyz" target="_blank" rel="noopener noreferrer" className="text-sm font-semibold text-blue-700 hover:text-blue-900 underline">SCL System</a>
                         <button onClick={onApplyNow} className={`bg-${theme.primary} text-white px-5 py-2 rounded text-sm font-medium hover:opacity-90`}>
                             Apply
                         </button>

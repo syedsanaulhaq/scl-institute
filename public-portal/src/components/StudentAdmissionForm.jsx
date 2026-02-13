@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Upload, Calendar, User, GraduationCap, FileText, Shield, CheckCircle, AlertCircle, Download, X, FileUp, ChevronDown, ChevronRight } from 'lucide-react';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
+const API_URL = import.meta.env.VITE_API_URL || 'http://system.sclsandbox.xyz/api';
 
 const StudentAdmissionForm = ({ onSubmitSuccess }) => {
   const [activeSection, setActiveSection] = useState(1);
