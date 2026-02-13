@@ -153,6 +153,8 @@ services:
       dockerfile: Dockerfile
     container_name: scli-public-portal-prod
     restart: always
+    ports:
+      - "7777:7777"
     env_file: .env
     environment:
       - VITE_API_URL=${VITE_API_URL}
