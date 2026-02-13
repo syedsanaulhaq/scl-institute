@@ -925,7 +925,6 @@ const ApplicationReview = () => {
                                     <li>Login portal: http://localhost:3000/student/login</li>
                                 </ul>
                             </div>
-                        </div>
 
                         {/* Modal Footer */}
                         <div className="bg-gray-50 px-6 py-4 border-t flex gap-3">
