@@ -13,6 +13,8 @@ const StudentProgramme = ({ user }) => {
     const [ssoLoading, setSsoLoading] = useState(false);
     const [ssoError, setSsoError] = useState('');
     const [expandedSections, setExpandedSections] = useState({});
+    const [studentApplications, setStudentApplications] = useState([]);
+    const [selectedApplicationId, setSelectedApplicationId] = useState(null);
     const outcomesRef = React.useRef(null);
 
     const toggleSection = (index) => {
@@ -23,33 +25,54 @@ const StudentProgramme = ({ user }) => {
     };
 
     useEffect(() => {
-        fetchProgrammeData();
+        fetchAllApplications();
     }, [user]);
 
-    const fetchProgrammeData = async () => {
+    useEffect(() => {
+        if (selectedApplicationId) {
+            fetchProgrammeData(selectedApplicationId);
+        }
+    }, [selectedApplicationId]);
+
+    const fetchAllApplications = async () => {
         try {
             setLoading(true);
-            // First get student's application to find their course
+            // Get all student's applications
             const appsResponse = await axios.get(`${API_URL}/students/applications`);
             if (appsResponse.data?.success) {
                 const apps = appsResponse.data.data?.applications || [];
-                const studentApp = apps.find(app => app.email === user.email);
+                const studentApps = apps.filter(app => app.email === user.email);
                 
-                if (studentApp) {
-                    // Then fetch the programme details
-                    const progResponse = await axios.get(`${API_URL}/students/programme/${studentApp.id}`);
-                    if (progResponse.data?.success) {
-                        const { programme, modules, outcomes } = progResponse.data.data;
-                        setProgrammeData({
-                            ...studentApp,
-                            ...programme
-                        });
-                        setCourseModules(modules || []);
-                        setLearningOutcomes(outcomes || []);
-                    }
+                if (studentApps.length > 0) {
+                    setStudentApplications(studentApps);
+                    // Select the first application by default
+                    setSelectedApplicationId(studentApps[0].id);
                 } else {
-                    setError('No application found');
+                    setError('No applications found for this user');
+                    setLoading(false);
                 }
+            }
+        } catch (err) {
+            console.error('Error fetching applications:', err);
+            setError('Failed to load applications');
+            setLoading(false);
+        }
+    };
+
+    const fetchProgrammeData = async (applicationId) => {
+        try {
+            setLoading(true);
+            // Fetch the programme details for selected application
+            const progResponse = await axios.get(`${API_URL}/students/programme/${applicationId}`);
+            if (progResponse.data?.success) {
+                const { programme, modules, outcomes } = progResponse.data.data;
+                const selectedApp = studentApplications.find(app => app.id === applicationId);
+                setProgrammeData({
+                    ...selectedApp,
+                    ...programme
+                });
+                setCourseModules(modules || []);
+                setLearningOutcomes(outcomes || []);
             }
         } catch (err) {
             console.error('Error fetching programme:', err);
@@ -57,6 +80,12 @@ const StudentProgramme = ({ user }) => {
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleCourseChange = (e) => {
+        const appId = parseInt(e.target.value);
+        setSelectedApplicationId(appId);
+        setExpandedSections({});
     };
 
     const handleAccessLMS = async () => {
@@ -93,7 +122,36 @@ const StudentProgramme = ({ user }) => {
 
     return (
         <div className="p-6 bg-gray-50 min-h-screen">
-            <h1 className="text-3xl font-bold text-gray-900 mb-8">My Programme</h1>
+            <div className="mb-6">
+                <h1 className="text-3xl font-bold text-gray-900 mb-4">My Programme</h1>
+                
+                {/* Course Selector */}
+                {studentApplications.length > 1 && (
+                    <div className="bg-white rounded-lg shadow p-4 mb-6">
+                        <label htmlFor="course-select" className="block text-sm font-medium text-gray-700 mb-2">
+                            Select Course/Programme:
+                        </label>
+                        <select
+                            id="course-select"
+                            value={selectedApplicationId || ''}
+                            onChange={handleCourseChange}
+                            className="block w-full md:w-auto px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900"
+                        >
+                            {studentApplications.map((app) => (
+                                <option key={app.id} value={app.id}>
+                                    {app.course_title || app.course_code}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+                )}
+
+                {studentApplications.length === 1 && (
+                    <p className="text-sm text-gray-600">
+                        Enrolled in: <span className="font-semibold text-gray-900">{studentApplications[0]?.course_title}</span>
+                    </p>
+                )}
+            </div>
 
             {/* Programme Overview */}
             <div className="bg-gradient-to-r from-blue-600 to-blue-800 rounded-lg shadow p-6 mb-8 text-white">
