@@ -58,7 +58,21 @@ app.use((req, res, next) => {
     next();
 });
 
-app.use(cors());
+// CORS Configuration - Allow system subdomain
+app.use(cors({
+    origin: [
+        'http://system.sclsandbox.xyz',
+        'http://sclsandbox.xyz',
+        'http://185.211.6.60',
+        'http://185.211.6.60:3000',
+        'http://localhost:3000',
+        'http://localhost:7777'
+    ],
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
 app.use(bodyParser.json());
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/documents', express.static(path.join(__dirname, 'public', 'documents')));
