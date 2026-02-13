@@ -27,6 +27,14 @@ export default defineConfig({
     host: '0.0.0.0',
     port: 7777,
     middlewareMode: false,
+    allowedHosts: [
+      'scli-public-portal-prod',
+      'sclsandbox.xyz',
+      'www.sclsandbox.xyz',
+      'localhost',
+      '127.0.0.1',
+      '.sclsandbox.xyz'
+    ],
     watch: {
       usePolling: true
     },

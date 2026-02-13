@@ -182,6 +182,7 @@ services:
       - ./nginx/ssl:/etc/nginx/ssl:ro
     depends_on:
       - scli-frontend
+      - scli-public-portal
       - scli-backend
       - scli-public-portal
       - scli-moodle

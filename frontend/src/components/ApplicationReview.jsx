@@ -850,95 +850,25 @@ const ApplicationReview = () => {
                 </div>
             </div>
 
-            {/* Credentials Modal Popup */}
             {showCredentialsModal && successData && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-lg shadow-2xl max-w-md w-full p-0 overflow-hidden">
-                        {/* Modal Header */}
-                        <div className="bg-gradient-to-r from-green-600 to-green-700 p-6 flex items-center justify-between">
-                            <div>
-                                <h3 className="text-2xl font-bold text-white flex items-center gap-2">
-                                    <CheckCircle2 className="w-6 h-6" />
-                                    Approval Successful!
-                                </h3>
-                                <p className="text-green-100 text-sm mt-1">Student account created and ready to use</p>
-                            </div>
-                            <button
-                                onClick={handleCloseCredentialsModal}
-                                className="text-white hover:bg-green-600 p-2 rounded-lg transition-colors"
-                                title="Close"
-                            >
-                                <X className="w-6 h-6" />
-                            </button>
+                    <div className="bg-white rounded-lg shadow-2xl max-w-md w-full overflow-hidden">
+                        <div className="bg-gradient-to-r from-green-600 to-green-700 p-6">
+                            <h3 className="text-2xl font-bold text-white flex items-center gap-2">
+                                <CheckCircle2 className="w-6 h-6" />
+                                Approval Successful!
+                            </h3>
                         </div>
-
-                        {/* Modal Body */}
-                        <div className="p-6 space-y-4">
-                            <p className="text-gray-700 font-medium">📋 Share These Credentials with the Student:</p>
-
-                            {/* Email Box */}
-                            <div className="bg-gray-50 rounded-lg border-2 border-gray-200 p-4">
-                                <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2">Email / Username</p>
-                                <div className="flex items-center justify-between gap-3">
-                                    <p className="font-mono text-lg font-bold text-gray-900 break-all">{successData.email}</p>
-                                    <button
-                                        type="button"
-                                        onClick={() => copyToClipboard(successData.email, 'email')}
-                                        className="flex-shrink-0 p-2 bg-white hover:bg-blue-100 border border-gray-300 rounded-lg transition-colors"
-                                        title="Copy email"
-                                    >
-                                        {copiedField === 'email' ? (
-                                            <Check className="w-5 h-5 text-green-600" />
-                                        ) : (
-                                            <Copy className="w-5 h-5 text-blue-600" />
-                                        )}
-                                    </button>
-                                </div>
+                        <div className="p-6 space-y-6">
+                            <div className="bg-gray-50 p-4 rounded-lg">
+                                <p className="text-xs font-semibold text-gray-600 mb-2">Email/Username</p>
+                                <p className="font-mono text-gray-900">{successData.email}</p>
                             </div>
-
-                            {/* Password Box */}
-                            <div className="bg-gray-50 rounded-lg border-2 border-gray-200 p-4">
-                                <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2">Temporary Password</p>
-                                <div className="flex items-center justify-between gap-3">
-                                    <p className="font-mono text-lg font-bold text-gray-900 break-all">{successData.temporary_password}</p>
-                                    <button
-                                        type="button"
-                                        onClick={() => copyToClipboard(successData.temporary_password, 'password')}
-                                        className="flex-shrink-0 p-2 bg-white hover:bg-blue-100 border border-gray-300 rounded-lg transition-colors"
-                                        title="Copy password"
-                                    >
-                                        {copiedField === 'password' ? (
-                                            <Check className="w-5 h-5 text-green-600" />
-                                        ) : (
-                                            <Copy className="w-5 h-5 text-blue-600" />
-                                        )}
-                                    </button>
-                                </div>
+                            <div className="bg-gray-50 p-4 rounded-lg">
+                                <p className="text-xs font-semibold text-gray-600 mb-2">Temporary Password</p>
+                                <p className="font-mono text-gray-900">{successData.temporary_password}</p>
                             </div>
-
-                            {/* Note */}
-                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
-                                <p className="font-medium mb-1">ℹ️ Important Notes:</p>
-                                <ul className="list-disc list-inside space-y-1 text-xs">
-                                    <li>{successData.note}</li>
-                                    <li>Student will receive a notification in their portal</li>
-                                    <li>Login portal: http://localhost:3000/student/login</li>
-                                </ul>
-                            </div>
-                        </div>
-
-                        {/* Modal Footer */}
-                        <div className="bg-gray-50 px-6 py-4 border-t flex gap-3">
-                            <button
-                                onClick={() => copyToClipboard(`Email: ${successData.email}\nPassword: ${successData.temporary_password}`, 'both')}
-                                className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors text-sm"
-                            >
-                                Copy Both
-                            </button>
-                            <button
-                                onClick={handleCloseCredentialsModal}
-                                className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors text-sm"
-                            >
+                            <button onClick={handleCloseCredentialsModal} className="w-full px-4 py-2 bg-green-600 text-white rounded-lg">
                                 Done - Go Back
                             </button>
                         </div>
