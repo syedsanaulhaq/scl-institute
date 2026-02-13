@@ -96,6 +96,8 @@ services:
       dockerfile: Dockerfile
     container_name: scli-backend-prod
     restart: always
+    ports:
+      - "4000:4000"
     env_file: .env
     environment:
       - NODE_ENV=${NODE_ENV}
@@ -130,6 +132,8 @@ services:
       dockerfile: Dockerfile
     container_name: scli-frontend-prod
     restart: always
+    ports:
+      - "3000:3000"
     env_file: .env
     environment:
       - VITE_API_URL=${VITE_API_URL}
