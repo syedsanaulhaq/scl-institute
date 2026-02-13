@@ -158,7 +158,29 @@ For detailed information on how to work with branches, features, and deployments
 
 ---
 
-## 🚀 Quick Setup Commands
+## � User Documentation
+
+### For Administrators
+See [ADMIN_MANUAL.md](ADMIN_MANUAL.md) for:
+- System overview and architecture
+- Application review process
+- Student and course management
+- Notifications system
+- Reports and analytics
+- Troubleshooting guide
+
+### For Students
+See [STUDENT_MANUAL.md](STUDENT_MANUAL.md) for:
+- Getting started guide
+- Login and dashboard navigation
+- Accessing Moodle (LMS)
+- Document submission
+- Course materials and assignments
+- FAQs and support
+
+---
+
+## �🚀 Quick Setup Commands
 
 ### Development (Your Laptop)
 ```bash
