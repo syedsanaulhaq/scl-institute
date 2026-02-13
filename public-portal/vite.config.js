@@ -31,9 +31,9 @@ export default defineConfig({
       usePolling: true
     },
     hmr: {
-      host: 'localhost',
-      port: 7777,
-      protocol: 'http'
+      host: process.env.VITE_HMR_HOST || 'sclsandbox.xyz',
+      port: 443,
+      protocol: 'https'
     },
     proxy: {
       '/api': {
