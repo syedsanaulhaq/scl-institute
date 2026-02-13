@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
     LayoutDashboard, 
     User, 
@@ -17,6 +18,7 @@ import axios from 'axios';
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
 
 const StudentPortalDashboard = ({ user }) => {
+    const navigate = useNavigate();
     const [studentData, setStudentData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [announcements, setAnnouncements] = useState([]);
@@ -196,12 +198,12 @@ const StudentPortalDashboard = ({ user }) => {
                             <h3 className="font-semibold text-gray-900 mb-2">{link.name}</h3>
                             <p className="text-sm text-gray-600">{link.description}</p>
                         </button>
-                    ) : (
+                    ) : link.external ? (
                         <a
                             key={index}
-                            href={link.external ? link.path : `#${link.path}`}
-                            target={link.external ? "_blank" : undefined}
-                            rel={link.external ? "noopener noreferrer" : undefined}
+                            href={link.path}
+                            target="_blank"
+                            rel="noopener noreferrer"
                             className="bg-white rounded-lg shadow hover:shadow-lg transition-shadow p-6 border border-gray-100 hover:border-blue-200"
                         >
                             <div className={`${link.color} w-12 h-12 rounded-lg flex items-center justify-center mb-4`}>
@@ -210,6 +212,19 @@ const StudentPortalDashboard = ({ user }) => {
                             <h3 className="font-semibold text-gray-900 mb-2">{link.name}</h3>
                             <p className="text-sm text-gray-600">{link.description}</p>
                         </a>
+                    ) : (
+                        <button
+                            key={index}
+                            type="button"
+                            onClick={() => navigate(link.path)}
+                            className="bg-white rounded-lg shadow hover:shadow-lg transition-shadow p-6 border border-gray-100 hover:border-blue-200 text-left"
+                        >
+                            <div className={`${link.color} w-12 h-12 rounded-lg flex items-center justify-center mb-4`}>
+                                <link.icon className="w-6 h-6 text-white" />
+                            </div>
+                            <h3 className="font-semibold text-gray-900 mb-2">{link.name}</h3>
+                            <p className="text-sm text-gray-600">{link.description}</p>
+                        </button>
                     )
                 ))}
             </div>
