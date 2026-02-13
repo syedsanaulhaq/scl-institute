@@ -136,12 +136,10 @@ const Dashboard = ({ user, onLogout }) => {
         }
     ];
 
-    // Filter modules based on user role
-    console.log('[Dashboard] User role:', user.role, 'Type:', typeof user.role);
-    console.log('[Dashboard] First module roles:', modules[0]?.roles);
-    console.log('[Dashboard] Modules with Super Admin:', modules.filter(m => m.roles.includes('Super Admin')).length);
-    const visibleModules = modules.filter(mod => mod.roles.includes(user.role));
-    console.log('[Dashboard] Visible modules count:', visibleModules.length);
+    // Filter modules based on user role (case-insensitive comparison)
+    const visibleModules = modules.filter(mod => 
+        mod.roles.some(role => role.toLowerCase() === user.role.toLowerCase())
+    );
 
     const stats = [
         { label: 'Active Sessions', value: '12', icon: Activity, color: 'blue' },
