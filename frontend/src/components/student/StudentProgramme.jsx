@@ -37,11 +37,13 @@ const StudentProgramme = ({ user }) => {
     const fetchAllApplications = async () => {
         try {
             setLoading(true);
-            // Get all student's applications
-            const appsResponse = await axios.get(`${API_URL}/students/applications`);
+            // Get student's applications using optimized endpoint
+            const appsResponse = await axios.get(`${API_URL}/students/my-applications`, {
+                params: { email: user.email }
+            });
+            
             if (appsResponse.data?.success) {
-                const apps = appsResponse.data.data?.applications || [];
-                const studentApps = apps.filter(app => app.email === user.email);
+                const studentApps = appsResponse.data.data?.applications || [];
                 
                 if (studentApps.length > 0) {
                     setStudentApplications(studentApps);

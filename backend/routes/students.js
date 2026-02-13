@@ -1875,6 +1875,53 @@ router.post('/bulk-reject', async (req, res) => {
     }
 });
 
+// Get applications for a specific student by email (optimized)
+router.get('/my-applications', async (req, res) => {
+    try {
+        const { email } = req.query;
+
+        if (!email) {
+            return res.status(400).json({
+                success: false,
+                message: 'Email parameter is required'
+            });
+        }
+
+        const [applications] = await db.execute(`
+            SELECT 
+                id,
+                application_reference,
+                first_name,
+                last_name,
+                email,
+                course_title,
+                course_code,
+                course_type,
+                mode_of_study,
+                application_status,
+                intake_start_date,
+                created_at
+            FROM student_applications
+            WHERE email = ? AND application_status = 'accepted'
+            ORDER BY created_at DESC
+        `, [email]);
+
+        res.json({
+            success: true,
+            data: {
+                applications: applications
+            }
+        });
+    } catch (error) {
+        console.error('Error fetching student applications:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch applications',
+            error: error.message
+        });
+    }
+});
+
 // Get student's programme/course details from Moodle
 router.get('/programme/:id', async (req, res) => {
     try {
