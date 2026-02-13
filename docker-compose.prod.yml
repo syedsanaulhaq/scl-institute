@@ -136,8 +136,8 @@ services:
       - "3000:3000"
     env_file: .env
     environment:
-      - VITE_API_URL=${VITE_API_URL}
-      - VITE_ENV=${VITE_ENV}
+      - VITE_API_URL=/api
+      - VITE_ENV=production
     networks:
       - scl-network-prod
     healthcheck:
