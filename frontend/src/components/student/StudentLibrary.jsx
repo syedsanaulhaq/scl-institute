@@ -225,9 +225,9 @@ const StudentLibrary = ({ user }) => {
             {/* Library Info */}
             <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
                 <h3 className="text-lg font-semibold text-blue-900 mb-3">Library Access Information</h3>
-                <ul className="text-sm text-blue-800 space-y-2"> course materials</li>
-                    <li>• Click "Access" to open Moodle and browse your course files and resources
-                    <li>• All library resources are available 24/7 through Moodle</li>
+                <ul className="text-sm text-blue-800 space-y-2">
+                    <li>• All library resources are available 24/7 through Moodle course materials</li>
+                    <li>• Click "Access" to open Moodle and browse your course files and resources</li>
                     <li>• Use your student credentials to access external databases and journals</li>
                     <li>• Request new resources or materials through the Support Hub</li>
                     <li>• Download limits and copyright policies apply to all materials</li>
