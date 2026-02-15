@@ -5,10 +5,11 @@ import axios from 'axios';
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
 
 const StudentAttendance = ({ user }) => {
-    const [attendanceData, setAttendanceData] = useState([]);
+    const [courseGroups, setCourseGroups] = useState([]);
     const [summary, setSummary] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [expandedCourses, setExpandedCourses] = useState({});
 
     useEffect(() => {
         fetchAttendance();
@@ -30,8 +31,16 @@ const StudentAttendance = ({ user }) => {
                     // Fetch attendance data
                     const response = await axios.get(`${API_URL}/students/attendance/${studentApp.id}`);
                     if (response.data?.success) {
-                        setAttendanceData(response.data.data?.records || []);
+                        const groups = response.data.data?.courseGroups || [];
+                        setCourseGroups(groups);
                         setSummary(response.data.data?.summary || null);
+                        
+                        // Auto-expand all courses by default
+                        const expanded = {};
+                        groups.forEach(group => {
+                            expanded[group.courseId] = true;
+                        });
+                        setExpandedCourses(expanded);
                     }
                 }
             }
@@ -41,6 +50,13 @@ const StudentAttendance = ({ user }) => {
         } finally {
             setLoading(false);
         }
+    };
+
+    const toggleCourse = (courseId) => {
+        setExpandedCourses(prev => ({
+            ...prev,
+            [courseId]: !prev[courseId]
+        }));
     };
 
     const getStatusIcon = (status) => {
@@ -152,14 +168,10 @@ const StudentAttendance = ({ user }) => {
                 </div>
             )}
 
-            {/* Attendance Records */}
-            <div className="bg-white rounded-lg shadow">
-                <div className="p-6 border-b border-gray-200">
-                    <h2 className="text-xl font-bold text-gray-900">Attendance Records</h2>
-                </div>
-
-                {attendanceData.length === 0 ? (
-                    <div className="p-8 text-center">
+            {/* Attendance Records - Grouped by Course */}
+            <div className="space-y-6">
+                {courseGroups.length === 0 ? (
+                    <div className="bg-white rounded-lg shadow p-8 text-center">
                         <Calendar className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                         <p className="text-gray-600">No attendance records available yet.</p>
                         <p className="text-sm text-gray-500 mt-2">
@@ -167,57 +179,112 @@ const StudentAttendance = ({ user }) => {
                         </p>
                     </div>
                 ) : (
-                    <div className="overflow-x-auto">
-                        <table className="w-full">
-                            <thead className="bg-gray-50">
-                                <tr>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Date
-                                    </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Session
-                                    </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Module
-                                    </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Status
-                                    </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Notes
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody className="bg-white divide-y divide-gray-200">
-                                {attendanceData.map((record, index) => (
-                                    <tr key={index} className="hover:bg-gray-50">
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                            {new Date(record.date).toLocaleDateString('en-GB', {
-                                                day: '2-digit',
-                                                month: 'short',
-                                                year: 'numeric'
-                                            })}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                            {record.session}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                                            {record.module}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <div className="flex items-center gap-2">
-                                                {getStatusIcon(record.status)}
-                                                {getStatusBadge(record.status)}
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4 text-sm text-gray-600">
-                                            {record.notes || '-'}
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
+                    courseGroups.map((courseGroup) => (
+                        <div key={courseGroup.courseId} className="bg-white rounded-lg shadow">
+                            {/* Course Header */}
+                            <div 
+                                className="p-6 border-b border-gray-200 cursor-pointer hover:bg-gray-50"
+                                onClick={() => toggleCourse(courseGroup.courseId)}
+                            >
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <h2 className="text-xl font-bold text-gray-900">{courseGroup.courseName}</h2>
+                                        <p className="text-sm text-gray-600 mt-1">{courseGroup.courseCode}</p>
+                                    </div>
+                                    <div className="flex items-center gap-6">
+                                        <div className="text-right">
+                                            <p className="text-sm text-gray-600">Attendance Rate</p>
+                                            <p className={`text-2xl font-bold ${
+                                                courseGroup.summary.rate >= 80 ? 'text-green-600' : 
+                                                courseGroup.summary.rate >= 70 ? 'text-yellow-600' : 
+                                                'text-red-600'
+                                            }`}>
+                                                {courseGroup.summary.rate}%
+                                            </p>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-sm text-gray-600">
+                                                {courseGroup.records.length} sessions
+                                            </span>
+                                            <svg 
+                                                className={`w-6 h-6 text-gray-400 transition-transform ${expandedCourses[courseGroup.courseId] ? 'rotate-180' : ''}`}
+                                                fill="none" 
+                                                stroke="currentColor" 
+                                                viewBox="0 0 24 24"
+                                            >
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                            </svg>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                {/* Course Summary Stats */}
+                                <div className="mt-4 flex gap-4">
+                                    <div className="flex items-center gap-2">
+                                        <CheckCircle className="w-4 h-4 text-green-600" />
+                                        <span className="text-sm text-gray-600">Present: <span className="font-semibold">{courseGroup.summary.present}</span></span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <XCircle className="w-4 h-4 text-red-600" />
+                                        <span className="text-sm text-gray-600">Absent: <span className="font-semibold">{courseGroup.summary.absent}</span></span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <Clock className="w-4 h-4 text-yellow-600" />
+                                        <span className="text-sm text-gray-600">Late: <span className="font-semibold">{courseGroup.summary.late}</span></span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Course Attendance Table */}
+                            {expandedCourses[courseGroup.courseId] && (
+                                <div className="overflow-x-auto">
+                                    <table className="w-full">
+                                        <thead className="bg-gray-50">
+                                            <tr>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                    Date
+                                                </th>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                    Session
+                                                </th>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                    Status
+                                                </th>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                    Notes
+                                                </th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="bg-white divide-y divide-gray-200">
+                                            {courseGroup.records.map((record, index) => (
+                                                <tr key={index} className="hover:bg-gray-50">
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                        {new Date(record.date).toLocaleDateString('en-GB', {
+                                                            day: '2-digit',
+                                                            month: 'short',
+                                                            year: 'numeric'
+                                                        })}
+                                                    </td>
+                                                    <td className="px-6 py-4 text-sm text-gray-900">
+                                                        {record.session}
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap">
+                                                        <div className="flex items-center gap-2">
+                                                            {getStatusIcon(record.status)}
+                                                            {getStatusBadge(record.status)}
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-sm text-gray-600">
+                                                        {record.notes || '-'}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
+                        </div>
+                    ))
                 )}
             </div>
 

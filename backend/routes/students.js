@@ -2587,21 +2587,20 @@ router.get('/attendance/:id', async (req, res) => {
     try {
         const studentId = req.params.id;
         
-        // Get student's email and course from application
+        // Get student's email
         const [appRows] = await db.query(
-            `SELECT email, course_code FROM student_applications WHERE id = ?`,
+            `SELECT email FROM student_applications WHERE id = ?`,
             [studentId]
         );
 
         if (appRows.length === 0) {
             return res.json({
                 success: true,
-                data: { records: [], summary: null }
+                data: { courseGroups: [], summary: null }
             });
         }
 
         const userEmail = appRows[0].email;
-        const courseCode = appRows[0].course_code;
 
         try {
             // Get Moodle user ID
@@ -2613,75 +2612,29 @@ router.get('/attendance/:id', async (req, res) => {
             if (moodleUsers.length === 0) {
                 return res.json({
                     success: true,
-                    data: { records: [], summary: null }
+                    data: { courseGroups: [], summary: null }
                 });
             }
 
             const moodleUserId = moodleUsers[0].id;
 
-            // Get course ID
-            const [courseRows] = await moodleDbPool.query(
-                `SELECT id FROM mdl_course WHERE idnumber LIKE ? OR fullname LIKE ? OR shortname LIKE ? LIMIT 1`,
-                [`${courseCode}%`, `%${courseCode}%`, `%${courseCode}%`]
+            // Get all courses the student is enrolled in
+            const [enrolledCourses] = await moodleDbPool.query(
+                `SELECT DISTINCT c.id, c.fullname, c.shortname
+                FROM mdl_course c
+                JOIN mdl_enrol e ON e.courseid = c.id
+                JOIN mdl_user_enrolments ue ON ue.enrolid = e.id
+                WHERE ue.userid = ? AND c.id != 1
+                ORDER BY c.fullname`,
+                [moodleUserId]
             );
 
-            if (courseRows.length === 0) {
+            if (enrolledCourses.length === 0) {
                 return res.json({
                     success: true,
-                    data: { records: [], summary: null }
+                    data: { courseGroups: [], summary: null }
                 });
             }
-
-            const courseId = courseRows[0].id;
-
-            // Check if attendance module exists
-            const [attendanceModules] = await moodleDbPool.query(
-                `SELECT a.id, a.name 
-                FROM mdl_attendance a
-                JOIN mdl_course_modules cm ON cm.instance = a.id 
-                JOIN mdl_modules m ON m.id = cm.module AND m.name = 'attendance'
-                WHERE a.course = ?
-                LIMIT 1`,
-                [courseId]
-            );
-
-            if (attendanceModules.length === 0) {
-                // No attendance module found for this course
-                return res.json({
-                    success: true,
-                    data: { records: [], summary: null }
-                });
-            }
-
-            const attendanceId = attendanceModules[0].id;
-
-            // Get attendance sessions and student records
-            const [attendanceRecords] = await moodleDbPool.query(
-                `SELECT 
-                    sess.sessdate as date,
-                    sess.description as session,
-                    stat.acronym as status_code,
-                    stat.description as status_name,
-                    log.remarks as notes
-                FROM mdl_attendance_sessions sess
-                LEFT JOIN mdl_attendance_log log ON log.sessionid = sess.id AND log.studentid = ?
-                LEFT JOIN mdl_attendance_statuses stat ON stat.id = log.statusid
-                WHERE sess.attendanceid = ?
-                ORDER BY sess.sessdate DESC
-                LIMIT 50`,
-                [moodleUserId, attendanceId]
-            );
-
-            // Calculate summary
-            const totalSessions = attendanceRecords.length;
-            const presentCount = attendanceRecords.filter(r => r.status_code === 'P').length;
-            const absentCount = attendanceRecords.filter(r => r.status_code === 'A').length;
-            const lateCount = attendanceRecords.filter(r => r.status_code === 'L').length;
-            const excusedCount = attendanceRecords.filter(r => r.status_code === 'E').length;
-            
-            const attendanceRate = totalSessions > 0 
-                ? Math.round((presentCount / totalSessions) * 100) 
-                : 0;
 
             // Map status codes to readable status
             const statusMap = {
@@ -2691,13 +2644,94 @@ router.get('/attendance/:id', async (req, res) => {
                 'E': 'excused'
             };
 
-            const records = attendanceRecords.map(record => ({
-                date: new Date(record.date * 1000).toISOString(),
-                session: record.session || 'Class Session',
-                module: courseCode,
-                status: statusMap[record.status_code] || 'present',
-                notes: record.notes || ''
-            }));
+            let allRecords = [];
+            const courseGroups = [];
+
+            // Fetch attendance for each course
+            for (const course of enrolledCourses) {
+                // Check if attendance module exists for this course
+                const [attendanceModules] = await moodleDbPool.query(
+                    `SELECT a.id, a.name 
+                    FROM mdl_attendance a
+                    JOIN mdl_course_modules cm ON cm.instance = a.id 
+                    JOIN mdl_modules m ON m.id = cm.module AND m.name = 'attendance'
+                    WHERE a.course = ?
+                    LIMIT 1`,
+                    [course.id]
+                );
+
+                if (attendanceModules.length === 0) {
+                    continue;
+                }
+
+                const attendanceId = attendanceModules[0].id;
+
+                // Get attendance sessions and student records for this course
+                const [attendanceRecords] = await moodleDbPool.query(
+                    `SELECT 
+                        sess.sessdate as date,
+                        sess.description as session,
+                        stat.acronym as status_code,
+                        stat.description as status_name,
+                        log.remarks as notes
+                    FROM mdl_attendance_sessions sess
+                    LEFT JOIN mdl_attendance_log log ON log.sessionid = sess.id AND log.studentid = ?
+                    LEFT JOIN mdl_attendance_statuses stat ON stat.id = log.statusid
+                    WHERE sess.attendanceid = ?
+                    ORDER BY sess.sessdate DESC
+                    LIMIT 100`,
+                    [moodleUserId, attendanceId]
+                );
+
+                if (attendanceRecords.length > 0) {
+                    const records = attendanceRecords.map(record => ({
+                        date: new Date(record.date * 1000).toISOString(),
+                        session: record.session || 'Class Session',
+                        courseId: course.id,
+                        courseName: course.fullname,
+                        courseCode: course.shortname,
+                        status: statusMap[record.status_code] || 'present',
+                        notes: record.notes || ''
+                    }));
+
+                    // Calculate course-specific summary
+                    const presentCount = attendanceRecords.filter(r => r.status_code === 'P').length;
+                    const absentCount = attendanceRecords.filter(r => r.status_code === 'A').length;
+                    const lateCount = attendanceRecords.filter(r => r.status_code === 'L').length;
+                    const excusedCount = attendanceRecords.filter(r => r.status_code === 'E').length;
+                    const attendanceRate = attendanceRecords.length > 0 
+                        ? Math.round((presentCount / attendanceRecords.length) * 100) 
+                        : 0;
+
+                    courseGroups.push({
+                        courseId: course.id,
+                        courseName: course.fullname,
+                        courseCode: course.shortname,
+                        records: records,
+                        summary: {
+                            total: attendanceRecords.length,
+                            present: presentCount,
+                            absent: absentCount,
+                            late: lateCount,
+                            excused: excusedCount,
+                            rate: attendanceRate
+                        }
+                    });
+
+                    allRecords = allRecords.concat(records);
+                }
+            }
+
+            // Calculate overall summary
+            const totalSessions = allRecords.length;
+            const presentCount = allRecords.filter(r => r.status === 'present').length;
+            const absentCount = allRecords.filter(r => r.status === 'absent').length;
+            const lateCount = allRecords.filter(r => r.status === 'late').length;
+            const excusedCount = allRecords.filter(r => r.status === 'excused').length;
+            
+            const attendanceRate = totalSessions > 0 
+                ? Math.round((presentCount / totalSessions) * 100) 
+                : 0;
 
             const summary = {
                 total: totalSessions,
@@ -2710,15 +2744,14 @@ router.get('/attendance/:id', async (req, res) => {
 
             return res.json({
                 success: true,
-                data: { records, summary }
+                data: { courseGroups, summary }
             });
 
         } catch (moodleError) {
-            console.log('Moodle attendance module not available:', moodleError.message);
-            // Return empty data if attendance module isn't installed or configured
+            console.log('Moodle attendance module error:', moodleError.message);
             return res.json({
                 success: true,
-                data: { records: [], summary: null }
+                data: { courseGroups: [], summary: null }
             });
         }
 
