@@ -29,8 +29,7 @@ const StudentLibrary = ({ user }) => {
             description: 'Comprehensive introduction to programming and computer science fundamentals',
             format: 'PDF',
             size: '12.5 MB',
-            available: true,
-            moodleUrl: '/mod/resource/view.php?id=101'
+            available: true
         },
         {
             id: 2,
@@ -41,8 +40,7 @@ const StudentLibrary = ({ user }) => {
             description: 'Core principles and practices of modern business management',
             format: 'PDF',
             size: '8.3 MB',
-            available: true,
-            moodleUrl: '/mod/resource/view.php?id=102'
+            available: true
         },
         {
             id: 3,
@@ -53,8 +51,7 @@ const StudentLibrary = ({ user }) => {
             description: 'Research papers on advanced data structures and algorithmic approaches',
             format: 'PDF Collection',
             size: '45 MB',
-            available: true,
-            moodleUrl: '/mod/folder/view.php?id=103'
+            available: true
         },
         {
             id: 4,
@@ -65,8 +62,7 @@ const StudentLibrary = ({ user }) => {
             description: 'Video lectures covering HTML, CSS, JavaScript, and modern frameworks',
             format: 'MP4',
             size: '2.1 GB',
-            available: true,
-            moodleUrl: '/mod/url/view.php?id=104'
+            available: true
         },
         {
             id: 5,
@@ -77,8 +73,7 @@ const StudentLibrary = ({ user }) => {
             description: 'Complete guide to academic writing, citations, and research methodology',
             format: 'PDF',
             size: '5.8 MB',
-            available: true,
-            moodleUrl: '/mod/resource/view.php?id=105'
+            available: true
         }
     ];
 
@@ -93,9 +88,10 @@ const StudentLibrary = ({ user }) => {
 
     const handleAccessResource = async (resource) => {
         try {
+            // Redirect to Moodle files/library area with SSO
             const ssoPayload = { 
                 email: user?.email,
-                redirect_to: resource.moodleUrl 
+                redirect_to: '/my/' // Redirect to user's dashboard where they can access their course files
             };
             
             const response = await axios.post(`${API_URL}/sso/generate`, ssoPayload);
@@ -103,11 +99,11 @@ const StudentLibrary = ({ user }) => {
                 window.open(response.data.redirectUrl, '_blank');
             } else {
                 // Fallback to direct Moodle link
-                window.open(`http://system.sclsandbox.xyz:9090${resource.moodleUrl}`, '_blank');
+                window.open('http://system.sclsandbox.xyz:9090/my/', '_blank');
             }
         } catch (err) {
             console.error('SSO Error:', err);
-            window.open(`http://system.sclsandbox.xyz:9090${resource.moodleUrl}`, '_blank');
+            window.open('http://system.sclsandbox.xyz:9090/my/', '_blank');
         }
     };
 
@@ -229,7 +225,8 @@ const StudentLibrary = ({ user }) => {
             {/* Library Info */}
             <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
                 <h3 className="text-lg font-semibold text-blue-900 mb-3">Library Access Information</h3>
-                <ul className="text-sm text-blue-800 space-y-2">
+                <ul className="text-sm text-blue-800 space-y-2"> course materials</li>
+                    <li>• Click "Access" to open Moodle and browse your course files and resources
                     <li>• All library resources are available 24/7 through Moodle</li>
                     <li>• Use your student credentials to access external databases and journals</li>
                     <li>• Request new resources or materials through the Support Hub</li>
