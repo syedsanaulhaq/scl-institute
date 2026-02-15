@@ -11,9 +11,13 @@ const fs = require('fs').promises;
 const mysql = require('mysql2/promise');
 const crypto = require('crypto');
 const PDFDocument = require('pdfkit');
+const NodeCache = require('node-cache');
 const router = express.Router();
 const { sendStudentWelcomeEmail, sendConditionalApprovalEmail } = require('../utils/emailService');
 const { storeNotification } = require('./notifications');
+
+// Cache for programme data (TTL: 15 minutes)
+const programmeCache = new NodeCache({ stdTTL: 900, checkperiod: 120 });
 
 const generateTempPassword = () => crypto.randomBytes(6).toString('hex');
 
@@ -1939,6 +1943,16 @@ router.get('/programme/:id', async (req, res) => {
     try {
         const { id } = req.params;
 
+        // Check cache first
+        const cacheKey = `programme_${id}`;
+        const cached = programmeCache.get(cacheKey);
+        if (cached) {
+            console.log(`[CACHE HIT] Programme data for ID ${id}`);
+            return res.json(cached);
+        }
+
+        console.log(`[CACHE MISS] Fetching programme data for ID ${id}`);
+
         // Get student application to find course info
         const [apps] = await db.execute(
             'SELECT course_code, course_title, course_type, mode_of_study, intake_start_date FROM student_applications WHERE id = ?',
@@ -1986,83 +2000,76 @@ router.get('/programme/:id', async (req, res) => {
             }
 
             if (studentCourse) {
-                // Get course sections and activities in optimized queries
+                // OPTIMIZED: Get course sections efficiently (no modules yet)
                 const [sectionRows] = await moodleDbPool.execute(
-                    `
-                    SELECT cs.id, cs.section, cs.name, COUNT(cm.id) AS module_count
-                    FROM mdl_course_sections cs
-                    LEFT JOIN mdl_course_modules cm ON cm.section = cs.id AND cm.deletioninprogress = 0
-                    WHERE cs.course = ? AND cs.section > 0
-                    GROUP BY cs.id, cs.section, cs.name
-                    ORDER BY cs.section ASC
-                    `,
+                    `SELECT id, section, name 
+                    FROM mdl_course_sections 
+                    WHERE course = ? AND section > 0
+                    ORDER BY section ASC`,
                     [studentCourse.id]
                 );
 
-                const [activityRows] = await moodleDbPool.execute(
-                    `
-                    SELECT cs.id AS section_id,
-                           cm.id AS cmid,
-                           m.name AS module_type,
-                           CASE m.name
-                               WHEN 'assign' THEN a.name
-                               WHEN 'quiz' THEN q.name
-                               WHEN 'resource' THEN r.name
-                               WHEN 'page' THEN p.name
-                               WHEN 'forum' THEN f.name
-                               WHEN 'url' THEN u.name
-                               WHEN 'book' THEN b.name
-                               WHEN 'data' THEN d.name
-                               WHEN 'lesson' THEN l.name
-                               WHEN 'scorm' THEN s.name
-                               WHEN 'wiki' THEN w.name
-                               WHEN 'choice' THEN c.name
-                               WHEN 'feedback' THEN fb.name
-                               WHEN 'glossary' THEN g.name
-                               WHEN 'label' THEN lb.name
-                               ELSE NULL
-                           END AS activity_name
-                    FROM mdl_course_sections cs
-                    LEFT JOIN mdl_course_modules cm ON cm.section = cs.id AND cm.deletioninprogress = 0
-                    LEFT JOIN mdl_modules m ON m.id = cm.module
-                    LEFT JOIN mdl_assign a ON a.id = cm.instance
-                    LEFT JOIN mdl_quiz q ON q.id = cm.instance
-                    LEFT JOIN mdl_resource r ON r.id = cm.instance
-                    LEFT JOIN mdl_page p ON p.id = cm.instance
-                    LEFT JOIN mdl_forum f ON f.id = cm.instance
-                    LEFT JOIN mdl_url u ON u.id = cm.instance
-                    LEFT JOIN mdl_book b ON b.id = cm.instance
-                    LEFT JOIN mdl_data d ON d.id = cm.instance
-                    LEFT JOIN mdl_lesson l ON l.id = cm.instance
-                    LEFT JOIN mdl_scorm s ON s.id = cm.instance
-                    LEFT JOIN mdl_wiki w ON w.id = cm.instance
-                    LEFT JOIN mdl_choice c ON c.id = cm.instance
-                    LEFT JOIN mdl_feedback fb ON fb.id = cm.instance
-                    LEFT JOIN mdl_glossary g ON g.id = cm.instance
-                    LEFT JOIN mdl_label lb ON lb.id = cm.instance
-                    WHERE cs.course = ? AND cs.section > 0
-                    ORDER BY cs.section ASC, cm.id ASC
-                    `,
+                // OPTIMIZED: Get module metadata first (just IDs and types)
+                const [moduleMetadata] = await moodleDbPool.execute(
+                    `SELECT cm.id AS cmid, cm.section, cm.instance, m.name AS module_type
+                    FROM mdl_course_modules cm
+                    INNER JOIN mdl_modules m ON m.id = cm.module
+                    WHERE cm.course = ? AND cm.deletioninprogress = 0
+                    ORDER BY cm.section ASC, cm.id ASC`,
                     [studentCourse.id]
                 );
 
-                const activitiesBySection = (activityRows || []).reduce((acc, row) => {
-                    if (!row.section_id || !row.cmid) {
-                        return acc;
+                // Group modules by type for batch queries
+                const modulesByType = {};
+                moduleMetadata.forEach(mod => {
+                    if (!modulesByType[mod.module_type]) {
+                        modulesByType[mod.module_type] = [];
                     }
+                    modulesByType[mod.module_type].push(mod);
+                });
 
-                    if (!acc[row.section_id]) {
-                        acc[row.section_id] = [];
+                // Build activity name map efficiently with targeted queries
+                const activityNames = {};
+                
+                // Query only the tables we actually need
+                for (const [moduleType, modules] of Object.entries(modulesByType)) {
+                    const instanceIds = modules.map(m => m.instance);
+                    if (instanceIds.length === 0) continue;
+
+                    try {
+                        const tableName = `mdl_${moduleType}`;
+                        const placeholders = instanceIds.map(() => '?').join(',');
+                        const [rows] = await moodleDbPool.execute(
+                            `SELECT id, name FROM ${tableName} WHERE id IN (${placeholders})`,
+                            instanceIds
+                        );
+                        
+                        rows.forEach(row => {
+                            const mod = modules.find(m => m.instance === row.id);
+                            if (mod) {
+                                activityNames[mod.cmid] = row.name || moduleType;
+                            }
+                        });
+                    } catch (err) {
+                        // Table might not exist or query failed, use module type as name
+                        modules.forEach(mod => {
+                            activityNames[mod.cmid] = moduleType;
+                        });
                     }
+                }
 
-                    acc[row.section_id].push({
-                        id: row.cmid,
-                        type: row.module_type || 'activity',
-                        title: row.activity_name || row.module_type || 'Activity'
+                // Build activities by section
+                const activitiesBySection = {};
+                moduleMetadata.forEach(mod => {
+                    if (!activitiesBySection[mod.section]) {
+                        activitiesBySection[mod.section] = [];
+                    }
+                    activitiesBySection[mod.section].push({
+                        id: mod.cmid,
+                        type: mod.module_type || 'activity',
+                        title: activityNames[mod.cmid] || mod.module_type || 'Activity'
                     });
-
-                    return acc;
-                }, {});
+                });
 
                 const modules = (sectionRows || []).map((section, idx) => ({
                     code: `SEC${String(section.section).padStart(2, '0')}`,
@@ -2072,7 +2079,7 @@ router.get('/programme/:id', async (req, res) => {
                     modules: activitiesBySection[section.id] || []
                 }));
 
-                return res.json({
+                const response = {
                     success: true,
                     data: {
                         programme: {
@@ -2096,7 +2103,10 @@ router.get('/programme/:id', async (req, res) => {
                         ],
                         source: 'moodle-db'
                     }
-                });
+                };
+                // Cache the response
+                programmeCache.set(cacheKey, response);
+                return res.json(response);
             }
         } catch (moodleDbError) {
             console.log('Moodle DB error, falling back to API/default:', moodleDbError.message);
@@ -2154,7 +2164,7 @@ router.get('/programme/:id', async (req, res) => {
                 }
             }
 
-            return res.json({
+            const response = {
                 success: true,
                 data: {
                     programme: {
@@ -2177,12 +2187,15 @@ router.get('/programme/:id', async (req, res) => {
                     ],
                     source: 'moodle-api'
                 }
-            });
+            };
+            // Cache the response
+            programmeCache.set(cacheKey, response);
+            return res.json(response);
 
         } catch (moodleError) {
             console.log('Moodle API error, returning default programme data:', moodleError.message);
             
-            return res.json({
+            const response = {
                 success: true,
                 data: {
                     programme: {
@@ -2201,7 +2214,10 @@ router.get('/programme/:id', async (req, res) => {
                     ],
                     source: 'default'
                 }
-            });
+            };
+            // Cache the response
+            programmeCache.set(cacheKey, response);
+            return res.json(response);
         }
 
     } catch (error) {
