@@ -35,11 +35,11 @@ const db = mysql.createPool({
 
 // Moodle database connection pool (shared, not per-request)
 const moodleDbPool = mysql.createPool({
-    host: process.env.MOODLE_DB_HOST || 'scli-moodle-db-dev',
-    port: process.env.MOODLE_DB_PORT || 3306,
-    user: process.env.MOODLE_DB_USER || 'bn_moodle',
-    password: process.env.MOODLE_DB_PASS || 'bitnami_moodle_password',
-    database: process.env.MOODLE_DB_NAME || 'bitnami_moodle',
+    host: process.env.MOODLE_DATABASE_HOST || process.env.MOODLE_DB_HOST || 'scli-moodle-db-prod',
+    port: process.env.MOODLE_DATABASE_PORT || process.env.MOODLE_DB_PORT || 3306,
+    user: process.env.MOODLE_DATABASE_USER || process.env.MOODLE_DB_USER || 'bn_moodle',
+    password: process.env.MOODLE_DATABASE_PASSWORD || process.env.MOODLE_DB_PASS || 'bitnami_moodle_password',
+    database: process.env.MOODLE_DATABASE_NAME || process.env.MOODLE_DB_NAME || 'bitnami_moodle',
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0
@@ -2033,13 +2033,15 @@ router.get('/programme/:id', async (req, res) => {
                 
                 // Query only the tables we actually need
                 for (const [moduleType, modules] of Object.entries(modulesByType)) {
-                    const instanceIds = modules.map(m => m.instance);
+                    const instanceIds = modules.map(m => m.instance).filter(id => id != null);
                     if (instanceIds.length === 0) continue;
 
                     try {
                         const tableName = `mdl_${moduleType}`;
                         const placeholders = instanceIds.map(() => '?').join(',');
-                        const [rows] = await moodleDbPool.execute(
+                        
+                        // Use query() instead of execute() for dynamic table names
+                        const [rows] = await moodleDbPool.query(
                             `SELECT id, name FROM ${tableName} WHERE id IN (${placeholders})`,
                             instanceIds
                         );
@@ -2052,6 +2054,7 @@ router.get('/programme/:id', async (req, res) => {
                         });
                     } catch (err) {
                         // Table might not exist or query failed, use module type as name
+                        console.log(`Could not fetch ${moduleType} names:`, err.message);
                         modules.forEach(mod => {
                             activityNames[mod.cmid] = moduleType;
                         });
