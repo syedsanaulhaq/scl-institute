@@ -83,6 +83,7 @@ function assignMoodleRoles($userid, $sclRole) {
     } else {
         error_log('[SSO] Role already assigned: user ' . $userid . ' already has Moodle role ' . $moodleRole);
     }
+}
 
 $token = optional_param('token', '', PARAM_ALPHANUMEXT);
 
