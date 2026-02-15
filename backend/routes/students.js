@@ -29,6 +29,18 @@ const db = mysql.createPool({
     queueLimit: 0
 });
 
+// Moodle database connection pool (shared, not per-request)
+const moodleDbPool = mysql.createPool({
+    host: process.env.MOODLE_DB_HOST || 'scli-moodle-db-dev',
+    port: process.env.MOODLE_DB_PORT || 3306,
+    user: process.env.MOODLE_DB_USER || 'bn_moodle',
+    password: process.env.MOODLE_DB_PASS || 'bitnami_moodle_password',
+    database: process.env.MOODLE_DB_NAME || 'bitnami_moodle',
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0
+});
+
 // Configure multer for file uploads
 const storage = multer.diskStorage({
     destination: async (req, file, cb) => {
@@ -1944,35 +1956,38 @@ router.get('/programme/:id', async (req, res) => {
         const courseCode = app.course_code || app.programme_code;
         const courseTitle = app.course_title || app.programme_title;
 
-        // Try Moodle DB first for accurate course data
+        // Try Moodle DB first for accurate course data (using shared connection pool)
         try {
-            const moodleDb = mysql.createPool({
-                host: 'scli-moodle-db-dev',
-                port: 3306,
-                user: 'bn_moodle',
-                password: 'bitnami_moodle_password',
-                database: 'bitnami_moodle',
-                waitForConnections: true,
-                connectionLimit: 5,
-                queueLimit: 0
-            });
-
-            const [courseRows] = await moodleDb.execute(
+            // First, try to find by idnumber or shortname (indexed, faster)
+            const [courseRows] = await moodleDbPool.execute(
                 `
                 SELECT id, idnumber, shortname, fullname, startdate, enddate, summary
                 FROM mdl_course
-                WHERE (idnumber = ? OR shortname = ? OR fullname LIKE ?)
-                ORDER BY id DESC
+                WHERE idnumber = ? OR shortname = ?
                 LIMIT 1
                 `,
-                [courseCode, courseCode, `%${courseTitle || courseCode}%`]
+                [courseCode, courseCode]
             );
 
-            if (courseRows.length > 0) {
-                const studentCourse = courseRows[0];
-                
-                // Get course image - try to read from disk directly
-                const [sectionRows] = await moodleDb.execute(
+            let studentCourse = courseRows[0];
+
+            // If not found by code, fallback to LIKE search (slower)
+            if (!studentCourse && courseTitle) {
+                const [likeRows] = await moodleDbPool.execute(
+                    `
+                    SELECT id, idnumber, shortname, fullname, startdate, enddate, summary
+                    FROM mdl_course
+                    WHERE fullname LIKE ?
+                    LIMIT 1
+                    `,
+                    [`%${courseTitle}%`]
+                );
+                studentCourse = likeRows[0];
+            }
+
+            if (studentCourse) {
+                // Get course sections and activities in optimized queries
+                const [sectionRows] = await moodleDbPool.execute(
                     `
                     SELECT cs.id, cs.section, cs.name, COUNT(cm.id) AS module_count
                     FROM mdl_course_sections cs
@@ -1984,7 +1999,7 @@ router.get('/programme/:id', async (req, res) => {
                     [studentCourse.id]
                 );
 
-                const [activityRows] = await moodleDb.execute(
+                const [activityRows] = await moodleDbPool.execute(
                     `
                     SELECT cs.id AS section_id,
                            cm.id AS cmid,
@@ -2030,8 +2045,6 @@ router.get('/programme/:id', async (req, res) => {
                     `,
                     [studentCourse.id]
                 );
-
-                await moodleDb.end();
 
                 const activitiesBySection = (activityRows || []).reduce((acc, row) => {
                     if (!row.section_id || !row.cmid) {
@@ -2085,8 +2098,6 @@ router.get('/programme/:id', async (req, res) => {
                     }
                 });
             }
-
-            await moodleDb.end();
         } catch (moodleDbError) {
             console.log('Moodle DB error, falling back to API/default:', moodleDbError.message);
         }
