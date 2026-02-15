@@ -22,7 +22,7 @@ const StudentTimetable = ({ user }) => {
         Lesson: true
     });
 
-    const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+    const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
     const toggleEventType = (type) => {
         setEventTypeFilters(prev => ({
@@ -60,33 +60,9 @@ const StudentTimetable = ({ user }) => {
     };
 
     const filterEventsByWeek = (data) => {
-        const { start, end } = getWeekRange(selectedWeek);
-        const filtered = {};
-
-        Object.keys(data).forEach(day => {
-            filtered[day] = (data[day] || []).filter(session => {
-                // Parse time string "HH:MM - HH:MM" to get a date
-                if (!session.time) return true;
-                const timeMatch = session.time.match(/(\d{2}):(\d{2})/);
-                if (!timeMatch) return true;
-
-                // Create a date for this event (use current week as baseline)
-                const today = new Date();
-                const dayIndex = days.indexOf(day);
-                if (dayIndex === -1) return true;
-
-                const eventDate = new Date(today);
-                const currentDay = eventDate.getDay();
-                const currentDayIndex = currentDay === 0 ? 6 : currentDay - 1;
-                const daysOffset = dayIndex - currentDayIndex;
-                eventDate.setDate(eventDate.getDate() + daysOffset);
-                eventDate.setHours(parseInt(timeMatch[1]), parseInt(timeMatch[2]), 0, 0);
-
-                return eventDate >= start && eventDate <= end;
-            });
-        });
-
-        return filtered;
+        // Return all events from backend - they're already organized by day of week
+        // The backend pulls from Moodle events/assignments and creates a weekly schedule
+        return data;
     };
 
     useEffect(() => {
@@ -207,22 +183,15 @@ const StudentTimetable = ({ user }) => {
         return <div className="p-8 text-center text-red-600">{error}</div>;
     }
 
-    // If no data from Moodle, show fallback message
-    const hasData = Object.keys(timetableData).length > 0;
+    // Check if there are any actual events (not just empty day arrays)
+    const hasData = Object.keys(timetableData).length > 0 && 
+                    Object.values(timetableData).some(dayEvents => Array.isArray(dayEvents) && dayEvents.length > 0);
 
     return (
         <div className="p-6 bg-gray-50 min-h-screen">
             <div className="flex items-center justify-between mb-8">
                 <h1 className="text-3xl font-bold text-gray-900">My Timetable</h1>
-                <select 
-                    value={selectedWeek}
-                    onChange={(e) => setSelectedWeek(e.target.value)}
-                    className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                >
-                    <option value="current">Current Week</option>
-                    <option value="next">Next Week</option>
-                    <option value="all">Full Semester</option>
-                </select>
+                <p className="text-sm text-gray-600">Weekly Schedule from Moodle</p>
             </div>
 
             {/* Legend with Filters */}
@@ -245,10 +214,10 @@ const StudentTimetable = ({ user }) => {
                 </div>
             </div>
 
-            {/* Weekly Timetable - Grid View for Current/Next Week */}
-            {hasData && (selectedWeek === 'current' || selectedWeek === 'next') ? (
+            {/* Weekly Timetable Grid View */}
+            {hasData ? (
                 <div className="bg-white rounded-lg shadow overflow-hidden">
-                    <div className="grid grid-cols-1 lg:grid-cols-5 divide-y lg:divide-y-0 lg:divide-x">
+                    <div className="grid grid-cols-1 lg:grid-cols-7 divide-y lg:divide-y-0 lg:divide-x">
                         {days.map((day) => (
                             <div key={day} className="min-h-[400px]">
                                 <div className="bg-gray-100 p-4 font-semibold text-gray-900 text-center border-b">
@@ -295,47 +264,6 @@ const StudentTimetable = ({ user }) => {
                                 </div>
                             </div>
                         ))}
-                    </div>
-                </div>
-            ) : hasData && selectedWeek === 'all' ? (
-                // List view for Full Semester
-                <div className="bg-white rounded-lg shadow overflow-hidden">
-                    <div className="divide-y">
-                        {Object.keys(filterEventsByWeek(timetableData))
-                            .flatMap(day => 
-                                (filterEventsByWeek(timetableData)[day] || [])
-                                    .filter(session => eventTypeFilters[session.type])
-                                    .map(session => ({ day, ...session }))
-                            )
-                            .sort((a, b) => {
-                                const timeA = a.time.split(' - ')[0];
-                                const timeB = b.time.split(' - ')[0];
-                                return new Date(`2000-01-01 ${timeA}`) - new Date(`2000-01-01 ${timeB}`);
-                            })
-                            .map((session, index) => (
-                                <div key={index} className="p-4 hover:bg-gray-50 transition flex items-start justify-between">
-                                    <div className="flex-1">
-                                        <div className="flex items-center gap-3 mb-2">
-                                            <span className={`px-2 py-1 rounded text-xs font-semibold ${getTypeColor(session.type)}`}>
-                                                {session.type}
-                                            </span>
-                                            <span className="text-sm text-gray-600 font-medium">{session.day}</span>
-                                            <span className="text-sm text-gray-500">{session.time}</span>
-                                        </div>
-                                        <h3 className="font-semibold text-gray-900 mb-1">{session.module}</h3>
-                                        <p className="text-xs text-gray-600">{session.code}</p>
-                                        {session.instructor && (
-                                            <p className="text-xs text-gray-500 mt-1">Instructor: {session.instructor}</p>
-                                        )}
-                                    </div>
-                                    <button
-                                        onClick={() => handleViewInMoodle(session.moodle_url)}
-                                        className="ml-4 px-3 py-2 bg-blue-600 text-white text-xs font-medium rounded hover:bg-blue-700 transition whitespace-nowrap"
-                                    >
-                                        View
-                                    </button>
-                                </div>
-                            ))}
                     </div>
                 </div>
             ) : (
