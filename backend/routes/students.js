@@ -83,19 +83,8 @@ router.get('/courses', async (req, res) => {
         // Try to fetch from Moodle database first
         let moodleCourses = [];
         try {
-            // Connect to Moodle database
-            const moodleDb = mysql.createPool({
-                host: 'scli-moodle-db-dev',
-                port: 3306,
-                user: 'bn_moodle',
-                password: 'bitnami_moodle_password',
-                database: 'bitnami_moodle',
-                waitForConnections: true,
-                connectionLimit: 5,
-                queueLimit: 0
-            });
-
-            const [moodleResult] = await moodleDb.execute(`
+            // Use shared connection pool configured for prod environment
+            const [moodleResult] = await moodleDbPool.execute(`
                 SELECT 
                     c.id,
                     c.idnumber as course_code,
