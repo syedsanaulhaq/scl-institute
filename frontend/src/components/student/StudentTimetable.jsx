@@ -10,6 +10,10 @@ const StudentTimetable = ({ user }) => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [userEmail, setUserEmail] = useState(null);
+    const [studentApplications, setStudentApplications] = useState([]);
+    const [selectedApplicationId, setSelectedApplicationId] = useState(null);
+    const [viewMode, setViewMode] = useState('weekly'); // 'weekly' or 'monthly'
+    const [currentMonth, setCurrentMonth] = useState(new Date());
     const [eventTypeFilters, setEventTypeFilters] = useState({
         Lecture: true,
         Seminar: true,
@@ -85,8 +89,14 @@ const StudentTimetable = ({ user }) => {
         
         const email = getStudentEmail();
         setUserEmail(email);
-        fetchTimetableData(email);
+        fetchAllApplications(email);
     }, [user]);
+
+    useEffect(() => {
+        if (selectedApplicationId) {
+            fetchTimetableForApplication(selectedApplicationId);
+        }
+    }, [selectedApplicationId]);
 
     const handleViewInMoodle = async (moodleUrl) => {
         try {
@@ -115,10 +125,9 @@ const StudentTimetable = ({ user }) => {
         }
     };
 
-    const fetchTimetableData = async (emailToUse) => {
+    const fetchAllApplications = async (email) => {
         try {
             setLoading(true);
-            const email = emailToUse || userEmail || user?.email;
             
             if (!email) {
                 setError('No email available. Please log in or provide email in URL (?email=...)');
@@ -126,39 +135,62 @@ const StudentTimetable = ({ user }) => {
                 return;
             }
             
-            // Get student's application to find their course
+            // Get student's applications
             const appsResponse = await axios.get(`${API_URL}/students/applications`);
             if (appsResponse.data?.success) {
                 const apps = appsResponse.data.data?.applications || [];
-                const studentApp = apps.find(app => app.email === email);
+                const studentApps = apps.filter(app => app.email === email);
                 
-                if (studentApp) {
-                    // Try to fetch timetable from backend (queries Moodle events/assignments)
-                    try {
-                        const timetableResponse = await axios.get(`${API_URL}/students/timetable/${studentApp.id}`);
-                        if (timetableResponse.data?.success && Object.keys(timetableResponse.data.data || {}).length > 0) {
-                            setTimetableData(timetableResponse.data.data);
-                        } else {
-                            // No data from backend, try to show message
-                            setError('No schedule data available. Check your course in Moodle for events and assignments.');
-                            setTimetableData({});
-                        }
-                    } catch (err) {
-                        console.warn('Could not fetch timetable from backend:', err.message);
-                        setError('Could not load schedule from Moodle. Data is pulled from course events and assignment due dates in Moodle.');
-                        setTimetableData({});
-                    }
+                if (studentApps.length > 0) {
+                    setStudentApplications(studentApps);
+                    
+                    // Prioritize main degree programmes for default selection
+                    let defaultApp = studentApps.find(app => 
+                        app.course_type && app.course_type.toLowerCase() !== 'short course' && app.course_type.toLowerCase() !== 'cpd'
+                    ) || studentApps[0];
+                    
+                    setSelectedApplicationId(defaultApp.id);
+                    console.log(`Found ${studentApps.length} applications, defaulting to ${defaultApp.course_title}`);
                 } else {
                     setError(`No application found for ${email}`);
+                    setLoading(false);
                 }
             }
         } catch (err) {
+            console.error('Error fetching applications:', err);
+            setError('Failed to load applications');
+            setLoading(false);
+        }
+    };
+
+    const fetchTimetableForApplication = async (applicationId) => {
+        try {
+            setLoading(true);
+            setError('');
+            
+            const timetableResponse = await axios.get(`${API_URL}/students/timetable/${applicationId}`);
+            console.log('Timetable API Response:', timetableResponse.data);
+            
+            if (timetableResponse.data?.success && Object.keys(timetableResponse.data.data || {}).length > 0) {
+                console.log('Setting timetable data:', timetableResponse.data.data);
+                setTimetableData(timetableResponse.data.data);
+            } else {
+                console.log('No data from backend or empty response');
+                setError('No schedule data available. Check your course in Moodle for events and assignments.');
+                setTimetableData({});
+            }
+        } catch (err) {
             console.error('Error fetching timetable:', err);
-            setError('Failed to load timetable data');
+            setError('Could not load schedule from Moodle. Data is pulled from course events and assignment due dates in Moodle.');
             setTimetableData({});
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleCourseChange = (e) => {
+        const appId = parseInt(e.target.value);
+        setSelectedApplicationId(appId);
     };
 
     const getTypeColor = (type) => {
@@ -175,6 +207,31 @@ const StudentTimetable = ({ user }) => {
         }
     };
 
+    // Monthly calendar functions
+    const getDaysInMonth = (date) => {
+        const year = date.getFullYear();
+        const month = date.getMonth();
+        const firstDay = new Date(year, month, 1);
+        const lastDay = new Date(year, month + 1, 0);
+        const daysInMonth = lastDay.getDate();
+        const startingDayOfWeek = firstDay.getDay();
+        
+        return { daysInMonth, startingDayOfWeek, year, month };
+    };
+
+    const getEventsForDate = (date) => {
+        const dayName = days[date.getDay() === 0 ? 6 : date.getDay() - 1];
+        return (timetableData[dayName] || []).filter(session => eventTypeFilters[session.type]);
+    };
+
+    const changeMonth = (direction) => {
+        setCurrentMonth(prev => {
+            const newDate = new Date(prev);
+            newDate.setMonth(prev.getMonth() + direction);
+            return newDate;
+        });
+    };
+
     if (loading) {
         return <div className="p-8 text-center">Loading timetable...</div>;
     }
@@ -186,13 +243,61 @@ const StudentTimetable = ({ user }) => {
     // Check if there are any actual events (not just empty day arrays)
     const hasData = Object.keys(timetableData).length > 0 && 
                     Object.values(timetableData).some(dayEvents => Array.isArray(dayEvents) && dayEvents.length > 0);
+    
+    console.log('Timetable Data:', timetableData);
+    console.log('Has Data:', hasData);
+    console.log('Event Type Filters:', eventTypeFilters);
 
     return (
         <div className="p-6 bg-gray-50 min-h-screen">
-            <div className="flex items-center justify-between mb-8">
+            <div className="flex items-center justify-between mb-6">
                 <h1 className="text-3xl font-bold text-gray-900">My Timetable</h1>
-                <p className="text-sm text-gray-600">Weekly Schedule from Moodle</p>
+                
+                {/* View Mode Toggle */}
+                <div className="flex gap-2">
+                    <button
+                        onClick={() => setViewMode('weekly')}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+                            viewMode === 'weekly'
+                                ? 'bg-blue-600 text-white'
+                                : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                        }`}
+                    >
+                        Weekly View
+                    </button>
+                    <button
+                        onClick={() => setViewMode('monthly')}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+                            viewMode === 'monthly'
+                                ? 'bg-blue-600 text-white'
+                                : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                        }`}
+                    >
+                        Monthly View
+                    </button>
+                </div>
             </div>
+
+            {/* Course Selector */}
+            {studentApplications.length > 1 && (
+                <div className="bg-white rounded-lg shadow p-4 mb-6">
+                    <label htmlFor="course-select" className="block text-sm font-medium text-gray-700 mb-2">
+                        Select Course/Programme:
+                    </label>
+                    <select
+                        id="course-select"
+                        value={selectedApplicationId || ''}
+                        onChange={handleCourseChange}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    >
+                        {studentApplications.map(app => (
+                            <option key={app.id} value={app.id}>
+                                {app.course_title} ({app.course_code})
+                            </option>
+                        ))}
+                    </select>
+                </div>
+            )}
 
             {/* Legend with Filters */}
             <div className="bg-white rounded-lg shadow p-4 mb-6">
@@ -215,7 +320,7 @@ const StudentTimetable = ({ user }) => {
             </div>
 
             {/* Weekly Timetable Grid View */}
-            {hasData ? (
+            {viewMode === 'weekly' && hasData ? (
                 <div className="bg-white rounded-lg shadow overflow-hidden">
                     <div className="grid grid-cols-1 lg:grid-cols-7 divide-y lg:divide-y-0 lg:divide-x">
                         {days.map((day) => (
@@ -264,6 +369,86 @@ const StudentTimetable = ({ user }) => {
                                 </div>
                             </div>
                         ))}
+                    </div>
+                </div>
+            ) : viewMode === 'monthly' && hasData ? (
+                // Monthly Calendar View
+                <div className="bg-white rounded-lg shadow overflow-hidden">
+                    {/* Month Navigation */}
+                    <div className="flex items-center justify-between p-4 bg-gray-100 border-b">
+                        <button
+                            onClick={() => changeMonth(-1)}
+                            className="px-3 py-1 bg-white border border-gray-300 rounded hover:bg-gray-50"
+                        >
+                            ← Previous
+                        </button>
+                        <h2 className="text-lg font-bold text-gray-900">
+                            {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                        </h2>
+                        <button
+                            onClick={() => changeMonth(1)}
+                            className="px-3 py-1 bg-white border border-gray-300 rounded hover:bg-gray-50"
+                        >
+                            Next →
+                        </button>
+                    </div>
+
+                    {/* Calendar Grid */}
+                    <div className="grid grid-cols-7 divide-x divide-y">
+                        {/* Day Headers */}
+                        {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+                            <div key={day} className="p-2 bg-gray-50 text-center font-semibold text-sm text-gray-700">
+                                {day}
+                            </div>
+                        ))}
+
+                        {/* Calendar Days */}
+                        {(() => {
+                            const { daysInMonth, startingDayOfWeek, year, month } = getDaysInMonth(currentMonth);
+                            const calendarDays = [];
+                            
+                            // Empty cells before first day
+                            for (let i = 0; i < startingDayOfWeek; i++) {
+                                calendarDays.push(
+                                    <div key={`empty-${i}`} className="min-h-[120px] p-2 bg-gray-50"></div>
+                                );
+                            }
+                            
+                            // Days of the month
+                            for (let day = 1; day <= daysInMonth; day++) {
+                                const date = new Date(year, month, day);
+                                const dayEvents = getEventsForDate(date);
+                                const isToday = date.toDateString() === new Date().toDateString();
+                                
+                                calendarDays.push(
+                                    <div key={day} className={`min-h-[120px] p-2 ${isToday ? 'bg-blue-50' : 'bg-white'}`}>
+                                        <div className={`text-sm font-semibold mb-2 ${isToday ? 'text-blue-600' : 'text-gray-900'}`}>
+                                            {day}
+                                        </div>
+                                        <div className="space-y-1">
+                                            {dayEvents.slice(0, 3).map((event, idx) => (
+                                                <div
+                                                    key={idx}
+                                                    className={`text-xs p-1 rounded ${getTypeColor(event.type)} cursor-pointer hover:opacity-80`}
+                                                    onClick={() => handleViewInMoodle(event.moodle_url)}
+                                                    title={`${event.module} - ${event.time}`}
+                                                >
+                                                    <div className="font-semibold truncate">{event.type}</div>
+                                                    <div className="truncate">{event.module}</div>
+                                                </div>
+                                            ))}
+                                            {dayEvents.length > 3 && (
+                                                <div className="text-xs text-gray-500 font-medium">
+                                                    +{dayEvents.length - 3} more
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                );
+                            }
+                            
+                            return calendarDays;
+                        })()}
                     </div>
                 </div>
             ) : (
