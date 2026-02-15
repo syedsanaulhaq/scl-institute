@@ -2732,6 +2732,158 @@ router.get('/attendance/:id', async (req, res) => {
     }
 });
 
+// Get library resources from student's enrolled courses
+router.get('/library/:id', async (req, res) => {
+    try {
+        const studentId = req.params.id;
+        
+        // Get student's email
+        const [appRows] = await db.query(
+            `SELECT email, course_code FROM student_applications WHERE id = ?`,
+            [studentId]
+        );
+
+        if (appRows.length === 0) {
+            return res.json({
+                success: true,
+                data: []
+            });
+        }
+
+        const userEmail = appRows[0].email;
+
+        try {
+            // Get Moodle user ID
+            const [moodleUsers] = await moodleDbPool.query(
+                `SELECT id FROM mdl_user WHERE email = ?`,
+                [userEmail]
+            );
+
+            if (moodleUsers.length === 0) {
+                return res.json({
+                    success: true,
+                    data: []
+                });
+            }
+
+            const moodleUserId = moodleUsers[0].id;
+
+            // Get all courses the student is enrolled in
+            const [enrolledCourses] = await moodleDbPool.query(
+                `SELECT DISTINCT c.id, c.fullname, c.shortname
+                FROM mdl_course c
+                JOIN mdl_enrol e ON e.courseid = c.id
+                JOIN mdl_user_enrolments ue ON ue.enrolid = e.id
+                WHERE ue.userid = ? AND c.id != 1
+                ORDER BY c.fullname`,
+                [moodleUserId]
+            );
+
+            if (enrolledCourses.length === 0) {
+                return res.json({
+                    success: true,
+                    data: []
+                });
+            }
+
+            const courseIds = enrolledCourses.map(c => c.id);
+            const placeholders = courseIds.map(() => '?').join(',');
+
+            // Get resources (files, PDFs, documents) from enrolled courses
+            const [resources] = await moodleDbPool.query(
+                `SELECT 
+                    r.id,
+                    r.course,
+                    r.name as title,
+                    c.fullname as course_name,
+                    c.shortname as course_code,
+                    cm.id as cmid,
+                    'resource' as type,
+                    'PDF' as format
+                FROM mdl_resource r
+                JOIN mdl_course_modules cm ON cm.instance = r.id
+                JOIN mdl_modules m ON m.id = cm.module AND m.name = 'resource'
+                JOIN mdl_course c ON c.id = r.course
+                WHERE r.course IN (${placeholders}) AND cm.deletioninprogress = 0
+                ORDER BY c.fullname, r.name
+                LIMIT 50`,
+                courseIds
+            );
+
+            // Get URLs (external links, videos, etc.) from enrolled courses
+            const [urls] = await moodleDbPool.query(
+                `SELECT 
+                    u.id,
+                    u.course,
+                    u.name as title,
+                    c.fullname as course_name,
+                    c.shortname as course_code,
+                    cm.id as cmid,
+                    'url' as type,
+                    'Link' as format
+                FROM mdl_url u
+                JOIN mdl_course_modules cm ON cm.instance = u.id
+                JOIN mdl_modules m ON m.id = cm.module AND m.name = 'url'
+                JOIN mdl_course c ON c.id = u.course
+                WHERE u.course IN (${placeholders}) AND cm.deletioninprogress = 0
+                ORDER BY c.fullname, u.name
+                LIMIT 50`,
+                courseIds
+            );
+
+            // Combine and format resources
+            const allResources = [
+                ...resources.map(r => ({
+                    id: `resource-${r.id}`,
+                    title: r.title,
+                    type: 'ebooks',
+                    category: r.course_name,
+                    course_code: r.course_code,
+                    author: 'Course Material',
+                    description: `Resource from ${r.course_name}`,
+                    format: r.format,
+                    available: true,
+                    cmid: r.cmid,
+                    moodleUrl: `/mod/resource/view.php?id=${r.cmid}`
+                })),
+                ...urls.map(u => ({
+                    id: `url-${u.id}`,
+                    title: u.title,
+                    type: 'articles',
+                    category: u.course_name,
+                    course_code: u.course_code,
+                    author: 'External Resource',
+                    description: `Link from ${u.course_name}`,
+                    format: u.format,
+                    available: true,
+                    cmid: u.cmid,
+                    moodleUrl: `/mod/url/view.php?id=${u.cmid}`
+                }))
+            ];
+
+            return res.json({
+                success: true,
+                data: allResources
+            });
+
+        } catch (moodleError) {
+            console.log('Moodle library fetch error:', moodleError.message);
+            return res.json({
+                success: true,
+                data: []
+            });
+        }
+
+    } catch (error) {
+        console.error('Error fetching library resources:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch library resources',
+            error: error.message
+        });
+    }
+});
+
 // Get student grades from Moodle gradebook
 router.get('/grades/:id', async (req, res) => {
     try {

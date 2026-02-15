@@ -8,7 +8,7 @@ const StudentLibrary = ({ user }) => {
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('all');
     const [resources, setResources] = useState([]);
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true);
 
     const categories = [
         { id: 'all', name: 'All Resources', icon: BookOpen },
@@ -18,66 +18,28 @@ const StudentLibrary = ({ user }) => {
         { id: 'audio', name: 'Audio Resources', icon: Headphones }
     ];
 
-    // Sample library resources - in production, these would come from a database or Moodle
-    const libraryResources = [
-        {
-            id: 1,
-            title: 'Introduction to Computer Science',
-            type: 'ebooks',
-            category: 'Computer Science',
-            author: 'Various Authors',
-            description: 'Comprehensive introduction to programming and computer science fundamentals',
-            format: 'PDF',
-            size: '12.5 MB',
-            available: true
-        },
-        {
-            id: 2,
-            title: 'Business Management Essentials',
-            type: 'ebooks',
-            category: 'Business',
-            author: 'Dr. Sarah Johnson',
-            description: 'Core principles and practices of modern business management',
-            format: 'PDF',
-            size: '8.3 MB',
-            available: true
-        },
-        {
-            id: 3,
-            title: 'Data Structures and Algorithms',
-            type: 'articles',
-            category: 'Computer Science',
-            author: 'IEEE Computer Society',
-            description: 'Research papers on advanced data structures and algorithmic approaches',
-            format: 'PDF Collection',
-            size: '45 MB',
-            available: true
-        },
-        {
-            id: 4,
-            title: 'Web Development Tutorial Series',
-            type: 'videos',
-            category: 'Programming',
-            author: 'SCL Institute',
-            description: 'Video lectures covering HTML, CSS, JavaScript, and modern frameworks',
-            format: 'MP4',
-            size: '2.1 GB',
-            available: true
-        },
-        {
-            id: 5,
-            title: 'Academic Writing Guide',
-            type: 'ebooks',
-            category: 'Study Skills',
-            author: 'Academic Press',
-            description: 'Complete guide to academic writing, citations, and research methodology',
-            format: 'PDF',
-            size: '5.8 MB',
-            available: true
-        }
-    ];
+    // Load actual library resources from Moodle
+    useEffect(() => {
+        const fetchResources = async () => {
+            if (!user?.applicationId) return;
+            
+            try {
+                setLoading(true);
+                const response = await axios.get(`${API_URL}/students/library/${user.applicationId}`);
+                if (response.data.success) {
+                    setResources(response.data.data);
+                }
+            } catch (error) {
+                console.error('Error fetching library resources:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
 
-    const filteredResources = libraryResources.filter(resource => {
+        fetchResources();
+    }, [user?.applicationId]);
+
+    const filteredResources = resources.filter(resource => {
         const matchesCategory = selectedCategory === 'all' || resource.type === selectedCategory;
         const matchesSearch = searchQuery === '' || 
             resource.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -88,10 +50,12 @@ const StudentLibrary = ({ user }) => {
 
     const handleAccessResource = async (resource) => {
         try {
-            // Redirect to Moodle files/library area with SSO
+            // Use the actual resource URL from Moodle
+            const resourceUrl = resource.moodleUrl || '/my/';
+            
             const ssoPayload = { 
                 email: user?.email,
-                redirect_to: '/my/' // Redirect to user's dashboard where they can access their course files
+                redirect_to: resourceUrl
             };
             
             const response = await axios.post(`${API_URL}/sso/generate`, ssoPayload);
@@ -99,11 +63,11 @@ const StudentLibrary = ({ user }) => {
                 window.open(response.data.redirectUrl, '_blank');
             } else {
                 // Fallback to direct Moodle link
-                window.open('http://system.sclsandbox.xyz:9090/my/', '_blank');
+                window.open(`http://system.sclsandbox.xyz:9090${resourceUrl}`, '_blank');
             }
         } catch (err) {
             console.error('SSO Error:', err);
-            window.open('http://system.sclsandbox.xyz:9090/my/', '_blank');
+            window.open(`http://system.sclsandbox.xyz:9090${resource.moodleUrl || '/my/'}`, '_blank');
         }
     };
 
