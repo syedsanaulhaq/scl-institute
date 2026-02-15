@@ -9,6 +9,7 @@ const StudentTimetable = ({ user }) => {
     const [timetableData, setTimetableData] = useState({});
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [userEmail, setUserEmail] = useState(null);
     const [eventTypeFilters, setEventTypeFilters] = useState({
         Lecture: true,
         Seminar: true,
@@ -89,12 +90,37 @@ const StudentTimetable = ({ user }) => {
     };
 
     useEffect(() => {
-        fetchTimetableData();
+        // Get email from: 1) user object, 2) URL params, 3) localStorage
+        const getStudentEmail = () => {
+            // First try user object
+            if (user?.email) return user.email;
+            
+            // Then try URL params
+            const params = new URLSearchParams(window.location.search);
+            const emailParam = params.get('email');
+            if (emailParam) return emailParam;
+            
+            // Then try localStorage
+            const storedEmail = localStorage.getItem('studentEmail');
+            if (storedEmail) return storedEmail;
+            
+            return null;
+        };
+        
+        const email = getStudentEmail();
+        setUserEmail(email);
+        fetchTimetableData(email);
     }, [user]);
 
     const handleViewInMoodle = async (moodleUrl) => {
         try {
-            const ssoPayload = { email: user?.email };
+            const emailToUse = userEmail || user?.email;
+            if (!emailToUse) {
+                alert('No email available for SSO');
+                return;
+            }
+            
+            const ssoPayload = { email: emailToUse };
             
             // If moodleUrl is provided, add it as redirect_to so user goes straight to the activity after SSO
             if (moodleUrl) {
@@ -113,14 +139,22 @@ const StudentTimetable = ({ user }) => {
         }
     };
 
-    const fetchTimetableData = async () => {
+    const fetchTimetableData = async (emailToUse) => {
         try {
             setLoading(true);
+            const email = emailToUse || userEmail || user?.email;
+            
+            if (!email) {
+                setError('No email available. Please log in or provide email in URL (?email=...)');
+                setLoading(false);
+                return;
+            }
+            
             // Get student's application to find their course
             const appsResponse = await axios.get(`${API_URL}/students/applications`);
             if (appsResponse.data?.success) {
                 const apps = appsResponse.data.data?.applications || [];
-                const studentApp = apps.find(app => app.email === user?.email);
+                const studentApp = apps.find(app => app.email === email);
                 
                 if (studentApp) {
                     // Try to fetch timetable from backend (queries Moodle events/assignments)
@@ -139,7 +173,7 @@ const StudentTimetable = ({ user }) => {
                         setTimetableData({});
                     }
                 } else {
-                    setError('No application found');
+                    setError(`No application found for ${email}`);
                 }
             }
         } catch (err) {

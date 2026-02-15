@@ -1,0 +1,34 @@
+GNU GENERAL PUBLIC LICENSE
+Version 3, 29 June 2007
+
+Copyright © 2026 SCL Institute
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+ADDITIONAL TERMS
+
+This theme is designed for use with Moodle, which is also licensed under
+the GNU General Public License. Any derivative works must maintain
+compatibility with Moodle and follow Moodle's licensing terms.
+
+ATTRIBUTION
+
+When using this theme, please maintain attribution to SCL Institute:
+- Include "SCL Institute Theme" in your Moodle site
+- Link to http://www.sclsandbox.xyz when possible
+- Acknowledge the SCL Institute in any modifications
+
+For more information, see:
+- GPL License: https://www.gnu.org/licenses/gpl-3.0.html
+- Moodle License: https://moodle.org/

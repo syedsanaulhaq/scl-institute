@@ -1,0 +1,160 @@
+/* ===================================================
+   SCL Institute - Classic Theme Purple Header
+   Custom CSS to match Admin Site colors
+   ================================================== */
+
+/* Purple color from SCL Admin site */
+:root {
+    --scl-purple: #7c3aed;
+    --scl-purple-dark: #6d28d9;
+    --scl-purple-light: #a78bfa;
+}
+
+/* Header / Navigation Bar */
+.navbar,
+nav.navbar,
+.navbar-light,
+.fixed-top.navbar {
+    background: linear-gradient(135deg, var(--scl-purple) 0%, var(--scl-purple-dark) 100%) !important;
+    border-bottom: 3px solid var(--scl-purple-dark) !important;
+    box-shadow: 0 2px 10px rgba(124, 58, 237, 0.2) !important;
+}
+
+/* Navigation brand/logo */
+.navbar-brand,
+.navbar .navbar-brand {
+    color: #ffffff !important;
+    font-weight: 700 !important;
+}
+
+.navbar-brand:hover {
+    color: #ffffff !important;
+    opacity: 0.9;
+}
+
+/* Navigation links */
+.navbar-nav .nav-link,
+.navbar .nav-link,
+.navbar-light .navbar-nav .nav-link {
+    color: rgba(255, 255, 255, 0.9) !important;
+    transition: all 0.2s ease;
+}
+
+.navbar-nav .nav-link:hover,
+.navbar .nav-link:hover,
+.navbar-light .navbar-nav .nav-link:hover {
+    color: #ffffff !important;
+    background-color: rgba(255, 255, 255, 0.15) !important;
+    border-radius: 4px;
+}
+
+.navbar-nav .nav-link:focus,
+.navbar .nav-link:focus {
+    color: #ffffff !important;
+    background-color: rgba(255, 255, 255, 0.15) !important;
+}
+
+/* Active navigation item */
+.navbar-nav .active .nav-link,
+.navbar .navbar-nav .show > .nav-link {
+    color: #ffffff !important;
+    background-color: rgba(255, 255, 255, 0.2) !important;
+    border-radius: 4px;
+}
+
+/* Dropdown menus from navbar */
+.navbar .dropdown-menu {
+    border-top: 3px solid var(--scl-purple);
+}
+
+.navbar .dropdown-menu .dropdown-item:hover,
+.navbar .dropdown-menu .dropdown-item:focus {
+    background-color: var(--scl-purple) !important;
+    color: #ffffff !important;
+}
+
+/* User menu */
+.usermenu .dropdown-toggle {
+    color: rgba(255, 255, 255, 0.9) !important;
+}
+
+.usermenu .dropdown-toggle:hover {
+    color: #ffffff !important;
+    background-color: rgba(255, 255, 255, 0.15) !important;
+}
+
+/* Navbar toggler (mobile menu button) */
+.navbar-toggler {
+    border-color: rgba(255, 255, 255, 0.5) !important;
+}
+
+.navbar-toggler-icon {
+    filter: brightness(0) invert(1);
+}
+
+/* Primary navigation */
+#primary-navigation,
+.primary-navigation {
+    background: linear-gradient(135deg, var(--scl-purple) 0%, var(--scl-purple-dark) 100%) !important;
+}
+
+/* Page header */
+#page-header,
+.page-header-headings {
+    background: linear-gradient(135deg, var(--scl-purple) 0%, var(--scl-purple-dark) 100%) !important;
+    color: #ffffff !important;
+}
+
+/* Breadcrumb navigation */
+.breadcrumb {
+    background-color: transparent !important;
+}
+
+.breadcrumb-item a {
+    color: var(--scl-purple) !important;
+    text-decoration: none;
+}
+
+.breadcrumb-item a:hover {
+    color: var(--scl-purple-dark) !important;
+    text-decoration: underline;
+}
+
+/* Primary buttons to match theme */
+.btn-primary {
+    background-color: var(--scl-purple) !important;
+    border-color: var(--scl-purple) !important;
+}
+
+.btn-primary:hover,
+.btn-primary:focus {
+    background-color: var(--scl-purple-dark) !important;
+    border-color: var(--scl-purple-dark) !important;
+}
+
+/* Links */
+a {
+    color: var(--scl-purple);
+}
+
+a:hover {
+    color: var(--scl-purple-dark);
+}
+
+/* Activity navigation */
+.activity-navigation .nav-link {
+    color: var(--scl-purple) !important;
+}
+
+.activity-navigation .nav-link:hover {
+    background-color: rgba(124, 58, 237, 0.1) !important;
+}
+
+/* Footer links */
+.footer a {
+    color: var(--scl-purple);
+}
+
+.footer a:hover {
+    color: var(--scl-purple-dark);
+}

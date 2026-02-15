@@ -1,0 +1,1077 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SCL Institute - Admin User Manual</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f5f7fa;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            min-height: 100vh;
+        }
+
+        /* Header */
+        header {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            padding: 2rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .header-info {
+            margin-top: 1rem;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 2rem;
+            font-size: 0.95rem;
+        }
+
+        .header-info strong {
+            color: #ffd700;
+        }
+
+        /* Navigation */
+        nav {
+            background: #2d3748;
+            color: white;
+            padding: 1rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        nav a {
+            color: white;
+            text-decoration: none;
+            padding: 0.5rem 1rem;
+            display: inline-block;
+            border-radius: 4px;
+            transition: background 0.3s;
+        }
+
+        nav a:hover {
+            background: #4a5568;
+        }
+
+        /* Main Content */
+        main {
+            padding: 2rem;
+        }
+
+        section {
+            margin-bottom: 3rem;
+            scroll-margin-top: 70px;
+        }
+
+        h2 {
+            color: #f5576c;
+            font-size: 2rem;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 3px solid #f5576c;
+        }
+
+        h3 {
+            color: #4a5568;
+            font-size: 1.5rem;
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        h4 {
+            color: #2d3748;
+            font-size: 1.2rem;
+            margin-top: 1.5rem;
+            margin-bottom: 0.75rem;
+        }
+
+        p {
+            margin-bottom: 1rem;
+        }
+
+        /* Table of Contents */
+        .toc {
+            background: #fff5f7;
+            border: 2px solid #f5576c;
+            border-radius: 8px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .toc h2 {
+            border: none;
+            margin-bottom: 1.5rem;
+        }
+
+        .toc ol {
+            list-style-position: inside;
+            counter-reset: item;
+        }
+
+        .toc li {
+            margin-bottom: 0.75rem;
+            font-size: 1.05rem;
+        }
+
+        .toc a {
+            color: #f5576c;
+            text-decoration: none;
+            padding-left: 0.5rem;
+        }
+
+        .toc a:hover {
+            text-decoration: underline;
+        }
+
+        /* Lists */
+        ul, ol {
+            margin-left: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        li {
+            margin-bottom: 0.5rem;
+        }
+
+        /* Info Boxes */
+        .info-box {
+            background: #ebf8ff;
+            border-left: 4px solid #4299e1;
+            padding: 1rem 1.5rem;
+            margin: 1.5rem 0;
+            border-radius: 4px;
+        }
+
+        .warning-box {
+            background: #fffbea;
+            border-left: 4px solid #f59e0b;
+            padding: 1rem 1.5rem;
+            margin: 1.5rem 0;
+            border-radius: 4px;
+        }
+
+        .success-box {
+            background: #f0fdf4;
+            border-left: 4px solid #10b981;
+            padding: 1rem 1.5rem;
+            margin: 1.5rem 0;
+            border-radius: 4px;
+        }
+
+        .admin-box {
+            background: #fef2f2;
+            border-left: 4px solid #f5576c;
+            padding: 1rem 1.5rem;
+            margin: 1.5rem 0;
+            border-radius: 4px;
+        }
+
+        /* Code Blocks */
+        code {
+            background: #2d3748;
+            color: #f7fafc;
+            padding: 0.2rem 0.5rem;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+        }
+
+        /* Tables */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        th {
+            background: #f5576c;
+            color: white;
+            padding: 1rem;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        td {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        tr:hover {
+            background: #f7fafc;
+        }
+
+        /* Checklist */
+        .checklist {
+            list-style: none;
+            margin-left: 0;
+        }
+
+        .checklist li:before {
+            content: "✅ ";
+            margin-right: 0.5rem;
+        }
+
+        /* Steps */
+        .steps {
+            counter-reset: step-counter;
+            list-style: none;
+            margin-left: 0;
+        }
+
+        .steps li {
+            counter-increment: step-counter;
+            margin-bottom: 1.5rem;
+            padding-left: 3rem;
+            position: relative;
+        }
+
+        .steps li:before {
+            content: counter(step-counter);
+            position: absolute;
+            left: 0;
+            top: 0;
+            background: #f5576c;
+            color: white;
+            width: 2rem;
+            height: 2rem;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+
+        /* Status badges */
+        .status {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        .status-draft { background: #e0e7ff; color: #3730a3; }
+        .status-submitted { background: #fef3c7; color: #92400e; }
+        .status-under-review { background: #fed7aa; color: #9a3412; }
+        .status-accepted { background: #d1fae5; color: #065f46; }
+        .status-conditional { background: #e9d5ff; color: #6b21a8; }
+        .status-rejected { background: #fee2e2; color: #991b1b; }
+
+        /* Footer */
+        footer {
+            background: #2d3748;
+            color: white;
+            padding: 2rem;
+            text-align: center;
+        }
+
+        footer p {
+            margin-bottom: 0.5rem;
+        }
+
+        /* Print Styles */
+        @media print {
+            nav {
+                display: none;
+            }
+            
+            section {
+                page-break-inside: avoid;
+            }
+            
+            h2, h3 {
+                page-break-after: avoid;
+            }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            header h1 {
+                font-size: 1.8rem;
+            }
+            
+            main {
+                padding: 1rem;
+            }
+            
+            h2 {
+                font-size: 1.5rem;
+            }
+            
+            .header-info {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🔐 SCL Institute System - Administrator Manual</h1>
+            <p>Complete Guide for Admissions & Administrative Staff</p>
+            <div class="header-info">
+                <span><strong>Admin Portal:</strong> http://system.sclsandbox.xyz</span>
+                <span><strong>Public Website:</strong> http://sclsandbox.xyz</span>
+                <span><strong>Support:</strong> admin@sclsandbox.xyz</span>
+            </div>
+        </header>
+
+        <nav>
+            <a href="#toc">📑 Contents</a>
+            <a href="#getting-started">🚀 Getting Started</a>
+            <a href="#applications">📝 Applications</a>
+            <a href="#students">👥 Students</a>
+            <a href="#troubleshooting">🔧 Troubleshooting</a>
+        </nav>
+
+        <main>
+            <!-- Table of Contents -->
+            <section id="toc" class="toc">
+                <h2>📑 Table of Contents</h2>
+                <ol>
+                    <li><a href="#section-1">System Overview</a></li>
+                    <li><a href="#section-2">Getting Started</a></li>
+                    <li><a href="#section-3">Admin Portal Guide</a></li>
+                    <li><a href="#section-4">Application Management</a></li>
+                    <li><a href="#section-5">Student Management</a></li>
+                    <li><a href="#section-6">Course Management</a></li>
+                    <li><a href="#section-7">Notifications System</a></li>
+                    <li><a href="#section-8">Reports & Analytics</a></li>
+                    <li><a href="#section-9">Troubleshooting</a></li>
+                </ol>
+            </section>
+
+            <!-- Section 1: System Overview -->
+            <section id="section-1">
+                <h2>1. System Overview</h2>
+                <p>The SCL Institute Management System consists of two main portals:</p>
+
+                <h3>Public Portal</h3>
+                <div class="info-box">
+                    <strong>URL:</strong> http://sclsandbox.xyz
+                    <ul>
+                        <li>Student course browsing</li>
+                        <li>Online application submission</li>
+                        <li>Course information</li>
+                        <li>Contact information</li>
+                    </ul>
+                </div>
+
+                <h3>Admin System</h3>
+                <div class="admin-box">
+                    <strong>URL:</strong> http://system.sclsandbox.xyz
+                    <ul>
+                        <li>Application review and approval</li>
+                        <li>Student management</li>
+                        <li>Course management</li>
+                        <li>Notifications</li>
+                        <li>Reports and analytics</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- Section 2: Getting Started -->
+            <section id="section-2" id="getting-started">
+                <h2>2. Getting Started</h2>
+
+                <h3>Accessing the Admin System</h3>
+                <ol class="steps">
+                    <li>
+                        <strong>Navigate to:</strong> http://system.sclsandbox.xyz
+                    </li>
+                    <li>
+                        <strong>Login Credentials:</strong>
+                        <p>Email: <code>admin@sclsandbox.xyz</code></p>
+                        <p>Password: <code>password123</code></p>
+                    </li>
+                </ol>
+
+                <h3>Default Admin Accounts</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Email</th>
+                            <th>Password</th>
+                            <th>Role</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>admin@sclsandbox.xyz</td>
+                            <td>password123</td>
+                            <td>Super Admin</td>
+                        </tr>
+                        <tr>
+                            <td>admin@scl.com</td>
+                            <td>password</td>
+                            <td>Admin</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="warning-box">
+                    <strong>⚠️ Security Notice:</strong> Change default passwords immediately after first login for security purposes.
+                </div>
+            </section>
+
+            <!-- Section 3: Admin Portal Guide -->
+            <section id="section-3">
+                <h2>3. Admin Portal Guide</h2>
+
+                <h3>Dashboard Overview</h3>
+                <p>After logging in, you'll see the <strong>Admin Dashboard</strong> with:</p>
+
+                <h4>Key Metrics Cards</h4>
+                <ul>
+                    <li><strong>Total Applications</strong> - Number of applications received</li>
+                    <li><strong>Pending Reviews</strong> - Applications awaiting review</li>
+                    <li><strong>Accepted Students</strong> - Approved applications</li>
+                    <li><strong>Active Courses</strong> - Available courses</li>
+                </ul>
+
+                <h4>Quick Actions</h4>
+                <ul>
+                    <li><strong>Review Applications</strong> - Access pending applications</li>
+                    <li><strong>Manage Students</strong> - View enrolled students</li>
+                    <li><strong>Send Notifications</strong> - Broadcast messages</li>
+                    <li><strong>Generate Reports</strong> - View analytics</li>
+                </ul>
+
+                <h4>Recent Activity</h4>
+                <ul>
+                    <li>Latest application submissions</li>
+                    <li>Recent approvals/rejections</li>
+                    <li>System notifications</li>
+                </ul>
+            </section>
+
+            <!-- Section 4: Application Management -->
+            <section id="section-4" id="applications">
+                <h2>4. Application Management</h2>
+
+                <h3>Viewing Applications</h3>
+                <ol class="steps">
+                    <li>Click <strong>"Applications"</strong> in the sidebar</li>
+                    <li>Filter applications by:
+                        <ul>
+                            <li>Status (Draft, Submitted, Under Review, Accepted, Rejected)</li>
+                            <li>Course</li>
+                            <li>Date range</li>
+                        </ul>
+                    </li>
+                </ol>
+
+                <h3>Application Review Process</h3>
+
+                <h4>Step 1: Open Application</h4>
+                <ol class="steps">
+                    <li>Click <strong>"Review"</strong> button on any application</li>
+                    <li>View applicant details:
+                        <ul>
+                            <li>Personal information</li>
+                            <li>Contact details</li>
+                            <li>Course selection</li>
+                            <li>Academic background</li>
+                            <li>Submitted documents</li>
+                        </ul>
+                    </li>
+                </ol>
+
+                <h4>Step 2: Complete Review Form</h4>
+                <p>Fill in the following fields:</p>
+
+                <div class="admin-box">
+                    <strong>Auto-filled Information:</strong>
+                    <ul>
+                        <li>Application ID</li>
+                        <li>Applicant Name</li>
+                        <li>Course Applied For</li>
+                        <li>Application Date</li>
+                    </ul>
+                </div>
+
+                <div class="info-box">
+                    <strong>Reviewer Assessment:</strong>
+                    <ul>
+                        <li><strong>Reviewer Name</strong> * (Required) - Enter your full name</li>
+                        <li><strong>Review Date</strong> - Auto-populated (current date)</li>
+                        <li><strong>Documents Verified</strong> - Select: Yes / No / Pending</li>
+                        <li><strong>Eligibility Check</strong> - Select: Meets criteria / Does not meet criteria / Pending</li>
+                        <li><strong>Interview Conducted</strong> - Select: Yes / No / Not Required
+                            <ul>
+                                <li>If "Yes": <strong>Interview Outcome</strong> - Pass / Fail</li>
+                            </ul>
+                        </li>
+                        <li><strong>English Language Requirement Met</strong> - Select: Yes / No / Not Applicable</li>
+                        <li><strong>Additional Notes</strong> - Free text comments</li>
+                    </ul>
+                </div>
+
+                <div class="warning-box">
+                    <strong>Final Decision:</strong>
+                    <ul>
+                        <li><strong>Decision</strong> * (Required) - Select one:
+                            <ul>
+                                <li><strong>Offer</strong> - Approve application</li>
+                                <li><strong>Conditional Offer</strong> - Approve with conditions</li>
+                                <li><strong>Refusal</strong> - Reject application</li>
+                                <li><strong>Waitlist</strong> - Place on waiting list</li>
+                            </ul>
+                        </li>
+                        <li><strong>Reason for Refusal</strong> * (If Refusal selected)
+                            <ul>
+                                <li>Academic criteria not met</li>
+                                <li>English language requirement not met</li>
+                                <li>Insufficient documents</li>
+                                <li>Did not pass interview</li>
+                                <li>Course full</li>
+                                <li>Other</li>
+                            </ul>
+                        </li>
+                        <li><strong>Detailed Comments</strong> - Justification for decision</li>
+                        <li><strong>Committee Chair Name</strong> - Optional</li>
+                        <li><strong>Final Decision Date</strong> - Optional</li>
+                        <li><strong>Confirmation Checkbox</strong> - Confirm review decision</li>
+                    </ul>
+                </div>
+
+                <h4>Step 3: Submit Review</h4>
+                <ol class="steps">
+                    <li>Click <strong>"Submit Review"</strong> button</li>
+                    <li>For <strong>Approved applications</strong>, student credentials will be generated:
+                        <ul>
+                            <li>Email/Username</li>
+                            <li>Temporary password</li>
+                        </ul>
+                    </li>
+                    <li><strong>⚠️ IMPORTANT: Copy these credentials before closing</strong></li>
+                </ol>
+
+                <h3>Review Status Indicators</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Status</th>
+                            <th>Badge</th>
+                            <th>Description</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><span class="status status-draft">🔵 Draft</span></td>
+                            <td>Blue</td>
+                            <td>Application not yet submitted</td>
+                        </tr>
+                        <tr>
+                            <td><span class="status status-submitted">🟡 Submitted</span></td>
+                            <td>Yellow</td>
+                            <td>Awaiting review</td>
+                        </tr>
+                        <tr>
+                            <td><span class="status status-under-review">🟠 Under Review</span></td>
+                            <td>Orange</td>
+                            <td>Being processed</td>
+                        </tr>
+                        <tr>
+                            <td><span class="status status-accepted">🟢 Accepted</span></td>
+                            <td>Green</td>
+                            <td>Approved</td>
+                        </tr>
+                        <tr>
+                            <td><span class="status status-conditional">🟣 Conditional Accept</span></td>
+                            <td>Purple</td>
+                            <td>Approved with conditions</td>
+                        </tr>
+                        <tr>
+                            <td><span class="status status-rejected">🔴 Rejected</span></td>
+                            <td>Red</td>
+                            <td>Application declined</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3>Viewing Existing Reviews</h3>
+                <ul>
+                    <li>Applications with completed reviews show in <strong>read-only mode</strong></li>
+                    <li>Click <strong>"Edit Review"</strong> to modify existing reviews</li>
+                    <li>All review history is preserved</li>
+                </ul>
+
+                <h3>Bulk Operations</h3>
+                <div class="success-box">
+                    <strong>Bulk Approve Multiple Applications:</strong>
+                    <ol>
+                        <li>Select multiple applications using checkboxes</li>
+                        <li>Click "Bulk Approve" button</li>
+                        <li>Confirm the action</li>
+                        <li>All selected applications will be approved</li>
+                        <li>Student accounts created automatically</li>
+                        <li>Welcome emails sent automatically</li>
+                    </ol>
+                </div>
+            </section>
+
+            <!-- Section 5: Student Management -->
+            <section id="section-5" id="students">
+                <h2>5. Student Management</h2>
+
+                <h3>Student List</h3>
+                <ol class="steps">
+                    <li>Navigate to <strong>"Students"</strong> in sidebar</li>
+                    <li>View all enrolled students</li>
+                    <li>Filter by:
+                        <ul>
+                            <li>Course</li>
+                            <li>Status (Active, Completed, Withdrawn)</li>
+                            <li>Enrollment date</li>
+                        </ul>
+                    </li>
+                </ol>
+
+                <h3>Student Actions</h3>
+                <ul>
+                    <li><strong>View Profile</strong> - See full student details</li>
+                    <li><strong>Edit Information</strong> - Update student records</li>
+                    <li><strong>View Applications</strong> - See application history</li>
+                    <li><strong>Enrollment Status</strong> - Manage active/inactive status</li>
+                </ul>
+
+                <h3>Automatic Moodle Enrollment</h3>
+                <div class="success-box">
+                    <strong>✅ When you approve an application:</strong>
+                    <ul class="checklist">
+                        <li>Student account is created in SCL system</li>
+                        <li>Student is automatically enrolled in Moodle LMS</li>
+                        <li>Moodle course is matched by course code</li>
+                        <li>Student receives welcome email with:
+                            <ul>
+                                <li>SCL portal credentials</li>
+                                <li>Moodle access information</li>
+                                <li>Next steps</li>
+                            </ul>
+                        </li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- Section 6: Course Management -->
+            <section id="section-6">
+                <h2>6. Course Management</h2>
+
+                <h3>Viewing Courses</h3>
+                <ol class="steps">
+                    <li>Click <strong>"Courses"</strong> in sidebar</li>
+                    <li>See all available courses with:
+                        <ul>
+                            <li>Course code</li>
+                            <li>Course title</li>
+                            <li>Department</li>
+                            <li>Duration</li>
+                            <li>Status</li>
+                        </ul>
+                    </li>
+                </ol>
+
+                <h3>Course Information</h3>
+                <p>Each course displays:</p>
+                <ul>
+                    <li><strong>Course Code</strong> - Unique identifier (e.g., BTECH-CSE-001)</li>
+                    <li><strong>Course Title</strong> - Full name</li>
+                    <li><strong>Type</strong> - HND / Degree / Vocational / Short Course / CPD</li>
+                    <li><strong>Department</strong> - Engineering / Business / IT / Commerce</li>
+                    <li><strong>Duration</strong> - In months</li>
+                    <li><strong>Study Modes:</strong>
+                        <ul>
+                            <li>Full-time</li>
+                            <li>Part-time</li>
+                            <li>Online</li>
+                            <li>Blended</li>
+                        </ul>
+                    </li>
+                    <li><strong>Status</strong> - Active / Inactive</li>
+                </ul>
+
+                <h3>Available Courses</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Course Code</th>
+                            <th>Title</th>
+                            <th>Type</th>
+                            <th>Duration</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>BTECH-CSE-001</td>
+                            <td>B.Tech Computer Science</td>
+                            <td>Degree</td>
+                            <td>48 months</td>
+                        </tr>
+                        <tr>
+                            <td>BTECH-MEC-001</td>
+                            <td>B.Tech Mechanical Engineering</td>
+                            <td>Degree</td>
+                            <td>48 months</td>
+                        </tr>
+                        <tr>
+                            <td>MBA-BA-001</td>
+                            <td>MBA Business Administration</td>
+                            <td>Degree</td>
+                            <td>24 months</td>
+                        </tr>
+                        <tr>
+                            <td>MCA-001</td>
+                            <td>Master of Computer Applications</td>
+                            <td>Degree</td>
+                            <td>24 months</td>
+                        </tr>
+                        <tr>
+                            <td>BCOM-001</td>
+                            <td>B.Com Commerce</td>
+                            <td>Degree</td>
+                            <td>36 months</td>
+                        </tr>
+                        <tr>
+                            <td>CERT-AI-001</td>
+                            <td>Artificial Intelligence Basics</td>
+                            <td>CPD</td>
+                            <td>8 months</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <!-- Section 7: Notifications -->
+            <section id="section-7">
+                <h2>7. Notifications System</h2>
+
+                <h3>Sending Notifications</h3>
+                <ol class="steps">
+                    <li>Navigate to <strong>"Notifications"</strong> section</li>
+                    <li>Click <strong>"Send Notification"</strong></li>
+                    <li>Fill in:
+                        <ul>
+                            <li><strong>Recipients</strong> - Select users or groups</li>
+                            <li><strong>Title</strong> - Notification subject</li>
+                            <li><strong>Message</strong> - Notification body</li>
+                            <li><strong>Type</strong> - Info / Warning / Success</li>
+                        </ul>
+                    </li>
+                    <li>Click <strong>"Send"</strong></li>
+                </ol>
+
+                <h3>Viewing Notifications</h3>
+                <ul>
+                    <li>Bell icon in top navigation shows unread count</li>
+                    <li>Click to view all notifications</li>
+                    <li>Mark as read/unread</li>
+                </ul>
+
+                <h3>Automated Notifications</h3>
+                <div class="info-box">
+                    <strong>System automatically sends notifications for:</strong>
+                    <ul class="checklist">
+                        <li>Application approval/rejection</li>
+                        <li>Document verification</li>
+                        <li>Course enrollment</li>
+                        <li>Welcome emails with credentials</li>
+                        <li>Password resets</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- Section 8: Reports & Analytics -->
+            <section id="section-8">
+                <h2>8. Reports & Analytics</h2>
+
+                <h3>Dashboard Analytics</h3>
+                <ul>
+                    <li>Application trends over time</li>
+                    <li>Acceptance/rejection rates</li>
+                    <li>Course popularity</li>
+                    <li>Student enrollment statistics</li>
+                </ul>
+
+                <h3>Generating Reports</h3>
+                <ol class="steps">
+                    <li>Go to <strong>"Reports"</strong> section</li>
+                    <li>Select report type:
+                        <ul>
+                            <li>Applications Report</li>
+                            <li>Enrollment Report</li>
+                            <li>Course Performance</li>
+                        </ul>
+                    </li>
+                    <li>Choose date range</li>
+                    <li>Export as PDF or Excel</li>
+                </ol>
+
+                <h3>Export Data</h3>
+                <div class="success-box">
+                    <strong>Available Export Formats:</strong>
+                    <ul>
+                        <li>CSV - For spreadsheet analysis</li>
+                        <li>PDF - For printing and sharing</li>
+                        <li>Excel - For advanced data manipulation</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- Section 9: Troubleshooting -->
+            <section id="section-9" id="troubleshooting">
+                <h2>9. Troubleshooting</h2>
+
+                <h3>Common Issues</h3>
+
+                <h4>Cannot Login</h4>
+                <div class="warning-box">
+                    <strong>Solution:</strong>
+                    <ul>
+                        <li>Verify credentials</li>
+                        <li>Default admin: <code>admin@sclsandbox.xyz</code> / <code>password123</code></li>
+                        <li>Contact system administrator if forgotten</li>
+                    </ul>
+                </div>
+
+                <h4>Application Not Loading</h4>
+                <div class="warning-box">
+                    <strong>Solution:</strong>
+                    <ul>
+                        <li>Refresh the page</li>
+                        <li>Clear browser cache</li>
+                        <li>Check internet connection</li>
+                    </ul>
+                </div>
+
+                <h4>Cannot Submit Review</h4>
+                <div class="warning-box">
+                    <strong>Solution:</strong>
+                    <ul>
+                        <li>Ensure all required fields (*) are filled</li>
+                        <li>Check "Reviewer Name" and "Decision" are completed</li>
+                        <li>If "Refusal", must select "Reason for Refusal"</li>
+                    </ul>
+                </div>
+
+                <h4>Student Credentials Not Generated</h4>
+                <div class="warning-box">
+                    <strong>Solution:</strong>
+                    <ul>
+                        <li>Only "Offer" decision generates credentials</li>
+                        <li>Credentials appear after successful review submission</li>
+                        <li>Copy credentials immediately (shown only once)</li>
+                    </ul>
+                </div>
+
+                <h4>Page Loading Slowly</h4>
+                <div class="info-box">
+                    <strong>Solution:</strong>
+                    <ul>
+                        <li>System loads all data on startup</li>
+                        <li>First page load may take 5-10 seconds</li>
+                        <li>Subsequent navigation is faster</li>
+                    </ul>
+                </div>
+
+                <h4>Moodle Enrollment Failed</h4>
+                <div class="warning-box">
+                    <strong>Solution:</strong>
+                    <ul>
+                        <li>Check Moodle is running: <code>http://sclsandbox.xyz:8080</code></li>
+                        <li>Verify course code matches Moodle course</li>
+                        <li>Check backend logs for errors</li>
+                        <li>Retry manual enrollment if automatic fails</li>
+                    </ul>
+                </div>
+
+                <h3>Getting Help</h3>
+                <div class="admin-box">
+                    <strong>Technical Support:</strong>
+                    <ul>
+                        <li>Email: support@sclsandbox.xyz</li>
+                        <li>Phone: +44 (0) 20 xxxx xxxx</li>
+                    </ul>
+                    <strong>System Administrator:</strong>
+                    <ul>
+                        <li>Email: admin@sclsandbox.xyz</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- Quick Reference -->
+            <section>
+                <h2>Quick Reference Commands</h2>
+
+                <h3>Keyboard Shortcuts</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Shortcut</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>Ctrl + S</code></td>
+                            <td>Save (where applicable)</td>
+                        </tr>
+                        <tr>
+                            <td><code>Esc</code></td>
+                            <td>Close modals</td>
+                        </tr>
+                        <tr>
+                            <td><code>Tab</code></td>
+                            <td>Navigate between fields</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3>Important URLs</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Resource</th>
+                            <th>URL</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Admin Portal</td>
+                            <td>http://system.sclsandbox.xyz</td>
+                        </tr>
+                        <tr>
+                            <td>Public Website</td>
+                            <td>http://sclsandbox.xyz</td>
+                        </tr>
+                        <tr>
+                            <td>Moodle LMS</td>
+                            <td>http://sclsandbox.xyz:8080</td>
+                        </tr>
+                        <tr>
+                            <td>API Endpoint</td>
+                            <td>http://system.sclsandbox.xyz/api</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3>Status Codes</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Code</th>
+                            <th>Meaning</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>200</td>
+                            <td>Success</td>
+                        </tr>
+                        <tr>
+                            <td>401</td>
+                            <td>Unauthorized (login required)</td>
+                        </tr>
+                        <tr>
+                            <td>404</td>
+                            <td>Not Found</td>
+                        </tr>
+                        <tr>
+                            <td>500</td>
+                            <td>Server Error</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <!-- Appendix -->
+            <section>
+                <h2>Appendix</h2>
+
+                <h3>User Roles & Permissions</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Role</th>
+                            <th>Permissions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Super Admin</strong></td>
+                            <td>Full system access</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Admin</strong></td>
+                            <td>Manage applications, students, courses</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Teacher</strong></td>
+                            <td>View students, manage course content</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Student</strong></td>
+                            <td>View own profile, submit applications</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3>Data Backup</h3>
+                <div class="success-box">
+                    <ul class="checklist">
+                        <li>System automatically backs up daily</li>
+                        <li>Database snapshots stored securely</li>
+                        <li>Restore available through administrator</li>
+                    </ul>
+                </div>
+
+                <h3>Security Best Practices</h3>
+                <div class="warning-box">
+                    <ul class="checklist">
+                        <li>Change default passwords immediately</li>
+                        <li>Use strong passwords (min. 8 characters)</li>
+                        <li>Log out after each session</li>
+                        <li>Don't share login credentials</li>
+                        <li>Report suspicious activity immediately</li>
+                    </ul>
+                </div>
+            </section>
+        </main>
+
+        <footer>
+            <p><strong>SCL Institute Administration System</strong></p>
+            <p>Document Version: 1.0 | Last Updated: February 13, 2026</p>
+            <p>System Version: Production v1.0</p>
+            <p style="margin-top: 1rem; opacity: 0.8;">For updates to this manual, visit: http://system.sclsandbox.xyz/help</p>
+        </footer>
+    </div>
+</body>
+</html>

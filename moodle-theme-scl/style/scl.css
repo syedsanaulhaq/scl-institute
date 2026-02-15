@@ -1,0 +1,823 @@
+/* ===================================================
+   SCL Institute Theme - Main Stylesheet
+   Purple & Professional Design System
+   ================================================== */
+
+:root {
+    /* Primary Colors */
+    --scl-primary: #7c3aed;           /* Purple */
+    --scl-primary-dark: #6d28d9;      /* Dark Purple */
+    --scl-primary-light: #a78bfa;     /* Light Purple */
+    
+    /* Secondary Colors */
+    --scl-secondary: #0ea5e9;         /* Sky Blue */
+    --scl-secondary-dark: #0284c7;    /* Dark Sky Blue */
+    
+    /* Accent Colors */
+    --scl-accent: #10b981;            /* Emerald Green */
+    --scl-accent-light: #d1fae5;      /* Light Emerald */
+    
+    /* Neutrals */
+    --scl-dark: #1e1b4b;              /* Dark Slate */
+    --scl-light: #f3e8ff;             /* Light Purple Tint */
+    --scl-gray: #6b7280;              /* Neutral Gray */
+    --scl-gray-light: #f3f4f6;        /* Light Gray */
+    
+    /* Status Colors */
+    --scl-success: #10b981;
+    --scl-warning: #f59e0b;
+    --scl-danger: #ef4444;
+    --scl-info: #3b82f6;
+    
+    /* Text Colors */
+    --scl-text: #1f2937;
+    --scl-text-light: #6b7280;
+    --scl-text-white: #ffffff;
+}
+
+/* ===================================================
+   Global Styles
+   ================================================== */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    color: var(--scl-text);
+    background-color: #ffffff;
+    line-height: 1.6;
+}
+
+/* ===================================================
+   Header & Navigation
+   ================================================== */
+
+.navbar,
+.navbar-default {
+    background: linear-gradient(135deg, var(--scl-primary) 0%, var(--scl-primary-dark) 100%);
+    border-bottom: none;
+    box-shadow: 0 2px 12px rgba(124, 58, 237, 0.15);
+}
+
+.navbar-brand {
+    color: var(--scl-text-white) !important;
+    font-weight: 700;
+    font-size: 1.25rem !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px;
+}
+
+.navbar-brand:hover {
+    opacity: 0.9;
+}
+
+.navbar-nav > li > a {
+    color: rgba(255, 255, 255, 0.8) !important;
+    transition: all 0.3s ease;
+    padding: 8px 15px !important;
+}
+
+.navbar-nav > li > a:hover {
+    color: var(--scl-text-white) !important;
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+}
+
+.navbar-nav > li.active > a {
+    color: var(--scl-light) !important;
+    background-color: rgba(255, 255, 255, 0.1) !important;
+    border-radius: 4px;
+}
+
+/* ===================================================
+   Main Content & Layout
+   ================================================== */
+
+#page {
+    background-color: var(--scl-gray-light);
+}
+
+.container {
+    max-width: 1200px;
+}
+
+main {
+    background-color: var(--scl-text-white);
+    padding: 30px 20px;
+}
+
+/* ===================================================
+   Sidebar & Blocks - Admin Theme Style
+   ================================================== */
+
+/* Sidebar/Side menu region */
+#block-region-side-pre,
+.block-region {
+    background-color: #f9fafb;
+    border-left: 1px solid #e5e7eb;
+}
+
+/* Block containers */
+.block {
+    background: var(--scl-text-white);
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    margin-bottom: 24px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.block:hover {
+    box-shadow: 0 8px 16px rgba(124, 58, 237, 0.12);
+    border-color: var(--scl-primary-light);
+}
+
+.block-content {
+    padding: 16px;
+}
+
+/* Block headers with purple gradient */
+.block .header,
+.block .header .title h3,
+.block-title {
+    background: linear-gradient(135deg, var(--scl-primary) 0%, var(--scl-primary-dark) 100%);
+    color: var(--scl-text-white) !important;
+    padding: 14px 18px;
+    border-radius: 12px 12px 0 0;
+    margin: 0;
+    font-weight: 600;
+    font-size: 1.05rem;
+    text-transform: none;
+    border: none;
+}
+
+.block .header h2,
+.block .header h3,
+.block-title {
+    color: var(--scl-text-white) !important;
+    font-weight: 600;
+    font-size: 1rem;
+    margin: 0;
+    padding: 0;
+}
+
+/* Navigation block styling */
+.block_navigation,
+.block_settings {
+    border: 1px solid #e0e0e0;
+}
+
+/* Tree menu items */
+.block_tree .tree_item {
+    padding: 0;
+    margin: 4px 0;
+}
+
+.block_tree .tree_item a,
+.block_tree li a {
+    color: var(--scl-text);
+    text-decoration: none;
+    transition: all 0.2s ease;
+    padding: 10px 14px;
+    border-radius: 6px;
+    display: block;
+    font-size: 0.95rem;
+}
+
+.block_tree .tree_item a:hover,
+.block_tree li a:hover {
+    background: linear-gradient(135deg, var(--scl-primary) 0%, var(--scl-primary-dark) 100%);
+    color: var(--scl-text-white) !important;
+    transform: translateX(4px);
+    text-decoration: none;
+}
+
+.block_tree .tree_item.active a,
+.block_tree li.active a {
+    background: linear-gradient(135deg, var(--scl-primary) 0%, var(--scl-primary-dark) 100%);
+    color: var(--scl-text-white) !important;
+    font-weight: 600;
+    border-left: 4px solid var(--scl-accent);
+}
+
+/* Navigation list */
+.block_navigation .list,
+.block_settings .list {
+    list-style: none;
+    padding: 8px;
+    margin: 0;
+}
+
+.block_navigation .list li,
+.block_settings .list li {
+    margin: 2px 0;
+}
+
+/* Nested navigation items */
+.block_tree ul {
+    list-style: none;
+    padding-left: 16px;
+}
+
+.block_tree ul ul {
+    padding-left: 20px;
+    border-left: 2px solid var(--scl-light);
+}
+
+/* Calendar block */
+.block_calendar_month .calendar-controls {
+    background-color: var(--scl-light);
+    padding: 8px;
+    border-radius: 6px;
+    margin-bottom: 8px;
+}
+
+.block_calendar_month table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.block_calendar_month table th {
+    background-color: var(--scl-primary);
+    color: white;
+    padding: 8px 4px;
+    font-size: 0.85rem;
+}
+
+.block_calendar_month table td {
+    text-align: center;
+    padding: 6px 4px;
+    border: 1px solid #e5e7eb;
+}
+
+.block_calendar_month table td:hover {
+    background-color: var(--scl-light);
+    cursor: pointer;
+}
+
+/* Online users block */
+.block_online_users .listitem {
+    padding: 8px;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.block_online_users .listitem:last-child {
+    border-bottom: none;
+}
+
+/* Recent activity block */
+.block_recent_activity .activity-item {
+    padding: 10px;
+    border-left: 3px solid var(--scl-primary);
+    background-color: var(--scl-light);
+    margin-bottom: 8px;
+    border-radius: 4px;
+}
+
+/* Block footer actions */
+.block .footer,
+.block-footer {
+    background-color: #f9fafb;
+    padding: 10px 16px;
+    border-top: 1px solid #e5e7eb;
+    text-align: center;
+}
+
+.block .footer a,
+.block-footer a {
+    color: var(--scl-primary);
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.block .footer a:hover,
+.block-footer a:hover {
+    color: var(--scl-primary-dark);
+    text-decoration: underline;
+}
+
+/* Block icons */
+.block .header .commands,
+.block-controls {
+    float: right;
+}
+
+.block .header .commands a,
+.block-controls a {
+    color: rgba(255, 255, 255, 0.9);
+    padding: 0 4px;
+}
+
+.block .header .commands a:hover,
+.block-controls a:hover {
+    color: white;
+    text-decoration: none;
+}
+
+/* ===================================================
+   Courses & Cards
+   ================================================== */
+
+.course-card,
+.card {
+    background: var(--scl-text-white);
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.course-card:hover,
+.card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 25px rgba(124, 58, 237, 0.1);
+    border-color: var(--scl-primary);
+}
+
+.course-info {
+    padding: 20px;
+}
+
+.course-name,
+.course-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--scl-text);
+    margin-bottom: 8px;
+}
+
+.course-name a {
+    color: var(--scl-primary);
+    text-decoration: none;
+}
+
+.course-name a:hover {
+    color: var(--scl-primary-dark);
+}
+
+/* ===================================================
+   Buttons
+   ================================================== */
+
+.btn,
+button,
+input[type="button"],
+input[type="submit"] {
+    border-radius: 6px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    border: none;
+}
+
+.btn-primary,
+.btn-primary:hover {
+    background: linear-gradient(135deg, var(--scl-primary) 0%, var(--scl-primary-dark) 100%);
+    color: var(--scl-text-white);
+    border: none;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 16px rgba(124, 58, 237, 0.3);
+}
+
+.btn-primary:active,
+.btn-primary.active {
+    background: var(--scl-primary-dark);
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.btn-secondary {
+    background-color: var(--scl-secondary);
+    color: var(--scl-text-white);
+}
+
+.btn-secondary:hover {
+    background-color: var(--scl-secondary-dark);
+}
+
+.btn-success {
+    background-color: var(--scl-accent);
+    color: var(--scl-text-white);
+}
+
+.btn-success:hover {
+    background-color: #059669;
+}
+
+.btn-danger {
+    background-color: var(--scl-danger);
+    color: var(--scl-text-white);
+}
+
+.btn-outline-primary {
+    color: var(--scl-primary);
+    border: 2px solid var(--scl-primary);
+    background: transparent;
+}
+
+.btn-outline-primary:hover {
+    background-color: var(--scl-light);
+    color: var(--scl-primary-dark);
+}
+
+/* ===================================================
+   Forms & Inputs
+   ================================================== */
+
+.form-control,
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+textarea,
+select {
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    padding: 10px 12px;
+    font-size: 0.95rem;
+    transition: all 0.2s ease;
+    background-color: var(--scl-text-white);
+}
+
+.form-control:focus,
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus,
+input[type="number"]:focus,
+textarea:focus,
+select:focus {
+    border-color: var(--scl-primary);
+    box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
+    outline: none;
+}
+
+label {
+    font-weight: 600;
+    color: var(--scl-text);
+    margin-bottom: 8px;
+}
+
+/* ===================================================
+   Alerts & Messages
+   ================================================== */
+
+.alert {
+    border-radius: 6px;
+    border-left: 4px solid;
+}
+
+.alert-success {
+    background-color: rgb(240, 253, 244);
+    border-color: var(--scl-accent);
+    color: #065f46;
+}
+
+.alert-danger,
+.alert-error {
+    background-color: rgb(254, 242, 242);
+    border-color: var(--scl-danger);
+    color: #7f1d1d;
+}
+
+.alert-warning {
+    background-color: rgb(254, 252, 232);
+    border-color: var(--scl-warning);
+    color: #78350f;
+}
+
+.alert-info,
+.alert-blue {
+    background-color: rgb(239, 246, 255);
+    border-color: var(--scl-info);
+    color: #0c2340;
+}
+
+/* ===================================================
+   Tables
+   ================================================== */
+
+table,
+.table {
+    border-collapse: collapse;
+}
+
+.table thead th {
+    background: linear-gradient(135deg, var(--scl-primary) 0%, var(--scl-primary-dark) 100%);
+    color: var(--scl-text-white);
+    font-weight: 600;
+    padding: 12px 15px;
+    border: none;
+}
+
+.table tbody td {
+    padding: 12px 15px;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.table tbody tr:hover {
+    background-color: var(--scl-light);
+}
+
+.table-striped tbody tr:nth-of-type(odd) {
+    background-color: rgba(124, 58, 237, 0.02);
+}
+
+/* ===================================================
+   Activity/Content Areas
+   ================================================== */
+
+.section {
+    background: var(--scl-text-white);
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    overflow: hidden;
+}
+
+.section > h2 {
+    background: linear-gradient(135deg, var(--scl-primary) 0%, var(--scl-primary-dark) 100%);
+    color: var(--scl-text-white);
+    padding: 15px 20px;
+    margin: 0;
+    font-size: 1.2rem;
+}
+
+.section-content {
+    padding: 20px;
+}
+
+.activity {
+    padding: 15px;
+    border-radius: 6px;
+    background-color: var(--scl-gray-light);
+    margin-bottom: 10px;
+    border-left: 4px solid var(--scl-primary);
+    transition: all 0.2s ease;
+}
+
+.activity:hover {
+    background-color: var(--scl-light);
+    transform: translateX(4px);
+}
+
+.activity a {
+    color: var(--scl-primary);
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.activity a:hover {
+    color: var(--scl-primary-dark);
+}
+
+/* ===================================================
+   User Profile & Dashboard
+   ================================================== */
+
+.userprofile {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+}
+
+.userpicture {
+    border-radius: 50%;
+    border: 4px solid var(--scl-primary);
+    width: 100px;
+    height: 100px;
+}
+
+.profile-section {
+    background: var(--scl-text-white);
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 15px;
+}
+
+/* ===================================================
+   Footer
+   ================================================== */
+
+.footer,
+footer {
+    background: linear-gradient(135deg, var(--scl-dark) 0%, #2d2a5c 100%);
+    color: #e5e7eb;
+    padding: 40px 20px;
+    margin-top: 40px;
+}
+
+.footer a {
+    color: var(--scl-text-white);
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+.footer a:hover {
+    color: var(--scl-light);
+}
+
+/* ===================================================
+   Responsive Design
+   ================================================== */
+
+@media (max-width: 768px) {
+    .navbar-brand {
+        font-size: 1rem !important;
+    }
+    
+    .block {
+        margin-bottom: 15px;
+    }
+    
+    table {
+        font-size: 0.85rem;
+    }
+    
+    .course-info {
+        padding: 15px;
+    }
+}
+
+/* ===================================================
+   Accessibility
+   ================================================== */
+
+a:focus,
+button:focus,
+input:focus {
+    outline: 2px solid var(--scl-primary);
+    outline-offset: 2px;
+}
+
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+}
+
+/* ===================================================
+   Primary Navigation & Menu Hover Fixes
+   ================================================== */
+
+/* Primary navigation menu */
+.primary-navigation .navigation .nav-link {
+    color: rgba(255, 255, 255, 0.9) !important;
+    transition: all 0.2s ease;
+}
+
+.primary-navigation .navigation .nav-link:hover,
+.primary-navigation .navigation .nav-link:focus {
+    color: var(--scl-text-white) !important;
+    background-color: rgba(255, 255, 255, 0.15) !important;
+    text-decoration: none;
+}
+
+.primary-navigation .navigation .active .nav-link {
+    color: var(--scl-text-white) !important;
+    background-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+/* More menu (three dots menu) */
+.moremenu .nav-link {
+    color: rgba(255, 255, 255, 0.9) !important;
+}
+
+.moremenu .nav-link:hover,
+.moremenu .nav-link:focus {
+    color: var(--scl-text-white) !important;
+    background-color: rgba(255, 255, 255, 0.15) !important;
+}
+
+/* Dropdown menus */
+.dropdown-menu .dropdown-item {
+    color: var(--scl-text) !important;
+    transition: all 0.2s ease;
+}
+
+.dropdown-menu .dropdown-item:hover,
+.dropdown-menu .dropdown-item:focus {
+    color: var(--scl-text-white) !important;
+    background-color: var(--scl-primary) !important;
+}
+
+/* User menu dropdown */
+.usermenu .dropdown-menu .dropdown-item:hover {
+    color: var(--scl-text-white) !important;
+    background-color: var(--scl-primary) !important;
+}
+
+/* Action menu */
+.action-menu .dropdown-menu a:hover {
+    color: var(--scl-text-white) !important;
+    background-color: var(--scl-primary) !important;
+}
+
+/* Navigation tabs */
+.nav-tabs .nav-link {
+    color: var(--scl-text) !important;
+}
+
+.nav-tabs .nav-link:hover,
+.nav-tabs .nav-link:focus {
+    color: var(--scl-primary) !important;
+    background-color: var(--scl-light) !important;
+    border-color: var(--scl-primary) !important;
+}
+
+.nav-tabs .nav-link.active {
+    color: var(--scl-primary) !important;
+    background-color: var(--scl-text-white) !important;
+    border-color: var(--scl-primary) var(--scl-primary) transparent !important;
+}
+
+/* Custom menu items */
+.custom-menu .nav-link {
+    color: rgba(255, 255, 255, 0.9) !important;
+}
+
+.custom-menu .nav-link:hover,
+.custom-menu .nav-link:focus {
+    color: var(--scl-text-white) !important;
+    background-color: rgba(255, 255, 255, 0.15) !important;
+}
+
+/* Language menu */
+.langmenu .dropdown-menu a:hover {
+    color: var(--scl-text-white) !important;
+    background-color: var(--scl-primary) !important;
+}
+
+/* Ensure all navbar links have proper contrast */
+.navbar .nav-item .nav-link:hover {
+    color: var(--scl-text-white) !important;
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Activity navigation */
+.activity-navigation a:hover {
+    color: var(--scl-primary) !important;
+    background-color: var(--scl-light) !important;
+}
+
+/* Breadcrumb navigation */
+.breadcrumb-item a:hover {
+    color: var(--scl-primary-dark) !important;
+    text-decoration: underline;
+}
+
+/* ===================================================
+   Animation & Transitions
+   ================================================== */
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.fade-in {
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+/* ===================================================
+   Print Styles
+   ================================================== */
+
+@media print {
+    .navbar,
+    footer,
+    .block {
+        display: none;
+    }
+    
+    body {
+        background: white;
+    }
+    
+    a {
+        text-decoration: underline;
+    }
+}

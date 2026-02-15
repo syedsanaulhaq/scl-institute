@@ -1,0 +1,941 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SCL Institute - Student User Manual</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f5f7fa;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            min-height: 100vh;
+        }
+
+        /* Header */
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .header-info {
+            margin-top: 1rem;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 2rem;
+            font-size: 0.95rem;
+        }
+
+        .header-info strong {
+            color: #ffd700;
+        }
+
+        /* Navigation */
+        nav {
+            background: #2d3748;
+            color: white;
+            padding: 1rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        nav a {
+            color: white;
+            text-decoration: none;
+            padding: 0.5rem 1rem;
+            display: inline-block;
+            border-radius: 4px;
+            transition: background 0.3s;
+        }
+
+        nav a:hover {
+            background: #4a5568;
+        }
+
+        /* Main Content */
+        main {
+            padding: 2rem;
+        }
+
+        section {
+            margin-bottom: 3rem;
+            scroll-margin-top: 70px;
+        }
+
+        h2 {
+            color: #667eea;
+            font-size: 2rem;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 3px solid #667eea;
+        }
+
+        h3 {
+            color: #4a5568;
+            font-size: 1.5rem;
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        h4 {
+            color: #2d3748;
+            font-size: 1.2rem;
+            margin-top: 1.5rem;
+            margin-bottom: 0.75rem;
+        }
+
+        p {
+            margin-bottom: 1rem;
+        }
+
+        /* Table of Contents */
+        .toc {
+            background: #f7fafc;
+            border: 2px solid #667eea;
+            border-radius: 8px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .toc h2 {
+            border: none;
+            margin-bottom: 1.5rem;
+        }
+
+        .toc ol {
+            list-style-position: inside;
+            counter-reset: item;
+        }
+
+        .toc li {
+            margin-bottom: 0.75rem;
+            font-size: 1.05rem;
+        }
+
+        .toc a {
+            color: #667eea;
+            text-decoration: none;
+            padding-left: 0.5rem;
+        }
+
+        .toc a:hover {
+            text-decoration: underline;
+        }
+
+        /* Lists */
+        ul, ol {
+            margin-left: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        li {
+            margin-bottom: 0.5rem;
+        }
+
+        /* Info Boxes */
+        .info-box {
+            background: #ebf8ff;
+            border-left: 4px solid #4299e1;
+            padding: 1rem 1.5rem;
+            margin: 1.5rem 0;
+            border-radius: 4px;
+        }
+
+        .warning-box {
+            background: #fffbea;
+            border-left: 4px solid #f59e0b;
+            padding: 1rem 1.5rem;
+            margin: 1.5rem 0;
+            border-radius: 4px;
+        }
+
+        .success-box {
+            background: #f0fdf4;
+            border-left: 4px solid #10b981;
+            padding: 1rem 1.5rem;
+            margin: 1.5rem 0;
+            border-radius: 4px;
+        }
+
+        /* Code Blocks */
+        code {
+            background: #2d3748;
+            color: #f7fafc;
+            padding: 0.2rem 0.5rem;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+        }
+
+        /* Tables */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        th {
+            background: #667eea;
+            color: white;
+            padding: 1rem;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        td {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        tr:hover {
+            background: #f7fafc;
+        }
+
+        /* Checklist */
+        .checklist {
+            list-style: none;
+            margin-left: 0;
+        }
+
+        .checklist li:before {
+            content: "✅ ";
+            margin-right: 0.5rem;
+        }
+
+        /* Steps */
+        .steps {
+            counter-reset: step-counter;
+            list-style: none;
+            margin-left: 0;
+        }
+
+        .steps li {
+            counter-increment: step-counter;
+            margin-bottom: 1.5rem;
+            padding-left: 3rem;
+            position: relative;
+        }
+
+        .steps li:before {
+            content: counter(step-counter);
+            position: absolute;
+            left: 0;
+            top: 0;
+            background: #667eea;
+            color: white;
+            width: 2rem;
+            height: 2rem;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+
+        /* Footer */
+        footer {
+            background: #2d3748;
+            color: white;
+            padding: 2rem;
+            text-align: center;
+        }
+
+        footer p {
+            margin-bottom: 0.5rem;
+        }
+
+        /* Print Styles */
+        @media print {
+            nav {
+                display: none;
+            }
+            
+            section {
+                page-break-inside: avoid;
+            }
+            
+            h2, h3 {
+                page-break-after: avoid;
+            }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            header h1 {
+                font-size: 1.8rem;
+            }
+            
+            main {
+                padding: 1rem;
+            }
+            
+            h2 {
+                font-size: 1.5rem;
+            }
+            
+            .header-info {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📚 SCL Institute - Student User Manual</h1>
+            <p>Your Complete Guide to the Student Portal & Learning Management System</p>
+            <div class="header-info">
+                <span><strong>Student Portal:</strong> http://system.sclsandbox.xyz</span>
+                <span><strong>Moodle LMS:</strong> http://sclsandbox.xyz:8080</span>
+                <span><strong>Support:</strong> support@sclsandbox.xyz</span>
+            </div>
+        </header>
+
+        <nav>
+            <a href="#toc">📑 Contents</a>
+            <a href="#getting-started">🚀 Getting Started</a>
+            <a href="#dashboard">🎯 Dashboard</a>
+            <a href="#moodle">📖 Moodle</a>
+            <a href="#support">❓ Support</a>
+        </nav>
+
+        <main>
+            <!-- Table of Contents -->
+            <section id="toc" class="toc">
+                <h2>📑 Table of Contents</h2>
+                <ol>
+                    <li><a href="#section-1">Welcome to SCL Institute</a></li>
+                    <li><a href="#section-2">Getting Started</a></li>
+                    <li><a href="#section-3">Accessing Your Account</a></li>
+                    <li><a href="#section-4">Student Dashboard</a></li>
+                    <li><a href="#section-5">Accessing Course Materials (Moodle)</a></li>
+                    <li><a href="#section-6">Managing Your Profile</a></li>
+                    <li><a href="#section-7">Viewing Your Application Status</a></li>
+                    <li><a href="#section-8">Document Submission</a></li>
+                    <li><a href="#section-9">Getting Help & Support</a></li>
+                    <li><a href="#section-10">Frequently Asked Questions</a></li>
+                </ol>
+            </section>
+
+            <!-- Section 1: Welcome -->
+            <section id="section-1">
+                <h2>1. Welcome to SCL Institute</h2>
+                <p>Congratulations on your acceptance to SCL Institute! This guide will help you navigate your student portal and access all the resources you need for your studies.</p>
+                
+                <h3>What You Can Do in the Student Portal</h3>
+                <ul class="checklist">
+                    <li>View your application and acceptance details</li>
+                    <li>Access your course information</li>
+                    <li>Upload required documents</li>
+                    <li>Access learning materials via Moodle</li>
+                    <li>Track your academic progress</li>
+                    <li>Update your personal information</li>
+                    <li>View notifications and announcements</li>
+                </ul>
+            </section>
+
+            <!-- Section 2: Getting Started -->
+            <section id="section-2" id="getting-started">
+                <h2>2. Getting Started</h2>
+                
+                <h3>Your Welcome Email</h3>
+                <p>After your application is approved, you will receive a welcome email containing:</p>
+                <ul>
+                    <li>Your student login credentials</li>
+                    <li>Your unique student ID</li>
+                    <li>Course enrollment details</li>
+                    <li>Important dates and deadlines</li>
+                    <li>Links to access the system</li>
+                </ul>
+
+                <h3>System Requirements</h3>
+                <p>To access the student portal, you need:</p>
+                <ul>
+                    <li>A modern web browser (Chrome, Firefox, Safari, or Edge)</li>
+                    <li>Stable internet connection</li>
+                    <li>PDF reader for viewing documents</li>
+                </ul>
+            </section>
+
+            <!-- Section 3: Accessing Your Account -->
+            <section id="section-3">
+                <h2>3. Accessing Your Account</h2>
+                
+                <h3>First Time Login</h3>
+                <ol class="steps">
+                    <li>
+                        <strong>Navigate to the Student Portal</strong>
+                        <p>Open your browser and go to: <code>http://system.sclsandbox.xyz</code></p>
+                    </li>
+                    <li>
+                        <strong>Enter Your Credentials</strong>
+                        <p><strong>Email:</strong> The email address you used in your application</p>
+                        <p><strong>Password:</strong> Temporary password sent to your email</p>
+                        <div class="info-box">
+                            <strong>Important:</strong> You will be prompted to change your password on first login
+                        </div>
+                    </li>
+                    <li>
+                        <strong>Change Your Password</strong>
+                        <p>Choose a strong password with:</p>
+                        <ul>
+                            <li>At least 8 characters</li>
+                            <li>Mix of uppercase and lowercase letters</li>
+                            <li>At least one number</li>
+                            <li>At least one special character (!@#$%^&*)</li>
+                        </ul>
+                    </li>
+                    <li>
+                        <strong>Login Successfully</strong>
+                        <p>After changing your password, you'll be directed to your student dashboard</p>
+                    </li>
+                </ol>
+
+                <h3>Password Reset</h3>
+                <p>If you forget your password:</p>
+                <ol class="steps">
+                    <li>Click "Forgot Password" on the login page</li>
+                    <li>Enter your email address</li>
+                    <li>Check your email for reset instructions</li>
+                    <li>Follow the link to create a new password</li>
+                </ol>
+            </section>
+
+            <!-- Section 4: Student Dashboard -->
+            <section id="section-4" id="dashboard">
+                <h2>4. Student Dashboard</h2>
+                <p>After logging in, you'll see your personalized dashboard with:</p>
+
+                <h3>Dashboard Sections</h3>
+
+                <h4>Welcome Banner</h4>
+                <ul>
+                    <li>Your name and student ID</li>
+                    <li>Current enrollment status</li>
+                    <li>Quick links to frequently used features</li>
+                </ul>
+
+                <h4>My Courses</h4>
+                <ul>
+                    <li>List of courses you're enrolled in</li>
+                    <li>Course codes and titles</li>
+                    <li>Study mode (Full-time/Part-time/Online/Blended)</li>
+                    <li>Quick access to Moodle course pages</li>
+                </ul>
+
+                <h4>Application Status</h4>
+                <ul>
+                    <li>Current status of your application</li>
+                    <li>Acceptance date</li>
+                    <li>Offer conditions (if any)</li>
+                    <li>Outstanding document requirements</li>
+                </ul>
+
+                <h4>Notifications</h4>
+                <ul>
+                    <li>Recent announcements</li>
+                    <li>Important deadlines</li>
+                    <li>Messages from faculty or administrators</li>
+                </ul>
+
+                <h4>Quick Actions</h4>
+                <ul>
+                    <li>Upload documents</li>
+                    <li>Access Moodle</li>
+                    <li>Update profile</li>
+                    <li>View timetable</li>
+                    <li>Contact support</li>
+                </ul>
+            </section>
+
+            <!-- Section 5: Moodle -->
+            <section id="section-5" id="moodle">
+                <h2>5. Accessing Course Materials (Moodle)</h2>
+                <p>SCL Institute uses Moodle as the Learning Management System (LMS) for delivering course content.</p>
+
+                <h3>Accessing Moodle</h3>
+                
+                <h4>Option 1: Direct Access from Dashboard</h4>
+                <ol class="steps">
+                    <li>Login to the student portal</li>
+                    <li>Click on any course in "My Courses" section</li>
+                    <li>Click "Access Moodle" button</li>
+                    <li>You'll be automatically logged into Moodle</li>
+                </ol>
+
+                <h4>Option 2: Direct Moodle Login</h4>
+                <ol class="steps">
+                    <li>Go to: <code>http://sclsandbox.xyz:8080</code></li>
+                    <li>Click "Log in" in the top-right corner</li>
+                    <li>Enter your student credentials (same as portal login)</li>
+                    <li>Access your enrolled courses</li>
+                </ol>
+
+                <h3>Navigating Moodle</h3>
+
+                <h4>Dashboard (My Courses)</h4>
+                <ul>
+                    <li>Shows all your enrolled courses</li>
+                    <li>Click on any course to view its content</li>
+                </ul>
+
+                <h4>Course Page Structure</h4>
+                <p>Each course typically contains:</p>
+                
+                <div class="info-box">
+                    <strong>1. General Section</strong>
+                    <ul>
+                        <li>Course syllabus</li>
+                        <li>Instructor information</li>
+                        <li>Course announcements</li>
+                        <li>General resources</li>
+                    </ul>
+                </div>
+
+                <div class="info-box">
+                    <strong>2. Weekly/Topic Sections</strong>
+                    <ul>
+                        <li>Lecture materials</li>
+                        <li>Presentations and slides</li>
+                        <li>Reading materials</li>
+                        <li>Assignment instructions</li>
+                        <li>Quizzes and assessments</li>
+                    </ul>
+                </div>
+
+                <div class="info-box">
+                    <strong>3. Resources</strong>
+                    <ul>
+                        <li>Video lectures</li>
+                        <li>PDF documents</li>
+                        <li>Links to external resources</li>
+                        <li>Discussion forums</li>
+                    </ul>
+                </div>
+
+                <h3>Submitting Assignments</h3>
+                <ol class="steps">
+                    <li>Navigate to the assignment section</li>
+                    <li>Click on the assignment name</li>
+                    <li>Read the instructions carefully</li>
+                    <li>Click "Add submission"</li>
+                    <li>Upload your file or write your response</li>
+                    <li>Click "Save changes"</li>
+                    <li>Confirm your submission was successful</li>
+                </ol>
+
+                <div class="warning-box">
+                    <strong>Important Tips:</strong>
+                    <ul>
+                        <li>⏰ Check submission deadlines</li>
+                        <li>📁 Save files in the correct format (usually PDF or DOCX)</li>
+                        <li>💾 Keep a backup copy of your work</li>
+                        <li>✅ Confirm submission was successful</li>
+                    </ul>
+                </div>
+
+                <h3>Participating in Forums</h3>
+                <ol class="steps">
+                    <li>Navigate to the forum in your course</li>
+                    <li>Read existing discussions</li>
+                    <li>Click "Add a new discussion topic" to start a thread</li>
+                    <li>Or click "Reply" to respond to existing posts</li>
+                    <li>Be respectful and professional in all communications</li>
+                </ol>
+
+                <h3>Taking Quizzes</h3>
+                <ol class="steps">
+                    <li>Click on the quiz link</li>
+                    <li>Read the instructions and time limit</li>
+                    <li>Click "Attempt quiz now"</li>
+                    <li>Answer all questions</li>
+                    <li>Click "Finish attempt"</li>
+                    <li>Review your answers</li>
+                    <li>Click "Submit all and finish"</li>
+                </ol>
+            </section>
+
+            <!-- Section 6: Managing Profile -->
+            <section id="section-6">
+                <h2>6. Managing Your Profile</h2>
+
+                <h3>Updating Personal Information</h3>
+                <ol class="steps">
+                    <li>Click on your name/profile icon in the top-right corner</li>
+                    <li>Select "My Profile" or "Account Settings"</li>
+                    <li>Update the following information:
+                        <ul>
+                            <li>Contact number</li>
+                            <li>Address</li>
+                            <li>Emergency contact details</li>
+                            <li>Profile photo (optional)</li>
+                        </ul>
+                    </li>
+                    <li>Click "Save Changes"</li>
+                </ol>
+
+                <h3>Notification Preferences</h3>
+                <ol class="steps">
+                    <li>Go to Profile > Notification Settings</li>
+                    <li>Choose how you want to receive notifications:
+                        <ul>
+                            <li>Email notifications</li>
+                            <li>SMS notifications (if available)</li>
+                            <li>In-app notifications</li>
+                        </ul>
+                    </li>
+                    <li>Select notification types:
+                        <ul>
+                            <li>Course announcements</li>
+                            <li>Assignment deadlines</li>
+                            <li>Grade updates</li>
+                            <li>System updates</li>
+                        </ul>
+                    </li>
+                </ol>
+            </section>
+
+            <!-- Section 7: Application Status -->
+            <section id="section-7">
+                <h2>7. Viewing Your Application Status</h2>
+
+                <h3>Application Details</h3>
+                <p>To view your complete application:</p>
+                <ol class="steps">
+                    <li>Go to Dashboard</li>
+                    <li>Click "My Application" or "Application Status"</li>
+                    <li>View details:
+                        <ul>
+                            <li>Application reference number</li>
+                            <li>Submission date</li>
+                            <li>Course applied for</li>
+                            <li>Decision: ACCEPTED/CONDITIONAL ACCEPT</li>
+                            <li>Acceptance date</li>
+                            <li>Review comments (if available)</li>
+                        </ul>
+                    </li>
+                </ol>
+
+                <h3>Acceptance Conditions</h3>
+                <p>If you received a conditional acceptance:</p>
+                <ol class="steps">
+                    <li>View the conditions listed</li>
+                    <li>Check required documents or actions</li>
+                    <li>Upload required documents</li>
+                    <li>Track completion status</li>
+                    <li>Conditions must be met before course start</li>
+                </ol>
+            </section>
+
+            <!-- Section 8: Document Submission -->
+            <section id="section-8">
+                <h2>8. Document Submission</h2>
+
+                <h3>Required Documents</h3>
+                <p>After acceptance, you may need to submit:</p>
+                <ul>
+                    <li>Student contract (signed)</li>
+                    <li>Proof of identity (passport/ID)</li>
+                    <li>Proof of address</li>
+                    <li>Academic certificates</li>
+                    <li>English proficiency proof</li>
+                    <li>Visa/immigration documents (international students)</li>
+                    <li>BRP card (UK visa holders)</li>
+                    <li>Right to study verification</li>
+                </ul>
+
+                <h3>Uploading Documents</h3>
+                <ol class="steps">
+                    <li>Go to Dashboard > "Upload Documents" or "My Documents"</li>
+                    <li>Select document type from dropdown</li>
+                    <li>Click "Choose File" and select your document</li>
+                    <li>Ensure file is:
+                        <ul>
+                            <li>PDF format (preferred)</li>
+                            <li>Clear and readable</li>
+                            <li>Under 5MB in size</li>
+                            <li>Named appropriately (e.g., "JohnDoe_Passport.pdf")</li>
+                        </ul>
+                    </li>
+                    <li>Click "Upload"</li>
+                    <li>Wait for confirmation message</li>
+                    <li>Document status will change to "Pending Review"</li>
+                </ol>
+
+                <h3>Document Status</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Status</th>
+                            <th>Description</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Not Submitted</td>
+                            <td>Document required but not yet uploaded</td>
+                        </tr>
+                        <tr>
+                            <td>Pending Review</td>
+                            <td>Document uploaded, awaiting verification</td>
+                        </tr>
+                        <tr>
+                            <td>Approved</td>
+                            <td>Document verified and accepted</td>
+                        </tr>
+                        <tr>
+                            <td>Rejected</td>
+                            <td>Document needs resubmission (check comments)</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <!-- Section 9: Support -->
+            <section id="section-9" id="support">
+                <h2>9. Getting Help & Support</h2>
+
+                <h3>Technical Support</h3>
+                <div class="info-box">
+                    <strong>For technical issues:</strong>
+                    <ul>
+                        <li>Email: support@sclsandbox.xyz</li>
+                        <li>Response time: Within 24 hours (weekdays)</li>
+                    </ul>
+                    <strong>Common technical issues:</strong>
+                    <ul>
+                        <li>Login problems</li>
+                        <li>Password reset</li>
+                        <li>Access issues</li>
+                        <li>File upload errors</li>
+                        <li>Browser compatibility</li>
+                    </ul>
+                </div>
+
+                <h3>Academic Support</h3>
+                <div class="info-box">
+                    <strong>For course-related queries:</strong>
+                    <ol>
+                        <li>Contact your course instructor via Moodle messaging</li>
+                        <li>Post in the course forum</li>
+                        <li>Attend office hours (check Moodle for timings)</li>
+                    </ol>
+                    <strong>For administrative queries:</strong>
+                    <ul>
+                        <li>Admissions Office: admissions@scl.edu</li>
+                        <li>Student Services: studentservices@scl.edu</li>
+                    </ul>
+                </div>
+
+                <h3>Emergency Contact</h3>
+                <div class="warning-box">
+                    <strong>For urgent matters:</strong>
+                    <ul>
+                        <li>Call: +44 (0)20 XXXX XXXX (Office hours: Mon-Fri, 9am-5pm)</li>
+                        <li>Email: emergency@scl.edu</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- Section 10: FAQ -->
+            <section id="section-10">
+                <h2>10. Frequently Asked Questions</h2>
+
+                <h3>Account & Access</h3>
+                
+                <h4>Q: I can't log in. What should I do?</h4>
+                <ul>
+                    <li>Check you're using the correct email and password</li>
+                    <li>Ensure Caps Lock is off</li>
+                    <li>Try resetting your password</li>
+                    <li>Clear your browser cache and cookies</li>
+                    <li>Try a different browser</li>
+                    <li>Contact support if issue persists</li>
+                </ul>
+
+                <h4>Q: Can I access Moodle from my mobile phone?</h4>
+                <ul>
+                    <li>Yes! Moodle is mobile-friendly</li>
+                    <li>You can also download the Moodle Mobile app</li>
+                    <li>All features are available on mobile devices</li>
+                </ul>
+
+                <h4>Q: How do I change my email address?</h4>
+                <ul>
+                    <li>Contact student services at studentservices@scl.edu</li>
+                    <li>Email changes require verification</li>
+                    <li>You'll need to provide proof of identity</li>
+                </ul>
+
+                <h3>Courses & Learning</h3>
+
+                <h4>Q: I can't see my course in Moodle. Why?</h4>
+                <ul>
+                    <li>Course enrollment may take 24-48 hours after acceptance</li>
+                    <li>Check the start date - courses may not be visible until the start date</li>
+                    <li>Contact your course administrator if enrollment is missing</li>
+                </ul>
+
+                <h4>Q: When do courses start?</h4>
+                <ul>
+                    <li>Check your acceptance letter for intake start date</li>
+                    <li>Most courses start at the beginning of September, January, or April</li>
+                    <li>You'll receive a joining email 2 weeks before start date</li>
+                </ul>
+
+                <h4>Q: How do I withdraw from a course?</h4>
+                <ul>
+                    <li>Contact student services immediately</li>
+                    <li>Review the withdrawal policy in your student contract</li>
+                    <li>Refund eligibility depends on timing and circumstances</li>
+                </ul>
+
+                <h3>Assignments & Assessments</h3>
+
+                <h4>Q: I missed an assignment deadline. What should I do?</h4>
+                <ul>
+                    <li>Contact your course instructor immediately</li>
+                    <li>Explain the reason for late submission</li>
+                    <li>Provide supporting evidence if applicable</li>
+                    <li>Late submission penalties may apply as per course policy</li>
+                </ul>
+
+                <h4>Q: Where can I see my grades?</h4>
+                <ul>
+                    <li>Log into Moodle</li>
+                    <li>Go to your course page</li>
+                    <li>Click "Grades" in the navigation menu</li>
+                    <li>View all your assessment scores and feedback</li>
+                </ul>
+
+                <h3>Contact Directory</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Issue Type</th>
+                            <th>Contact</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Login/Technical</td>
+                            <td>support@sclsandbox.xyz</td>
+                        </tr>
+                        <tr>
+                            <td>Course Content</td>
+                            <td>Your instructor (via Moodle)</td>
+                        </tr>
+                        <tr>
+                            <td>Enrollment Issues</td>
+                            <td>admissions@scl.edu</td>
+                        </tr>
+                        <tr>
+                            <td>Document Verification</td>
+                            <td>admissions@scl.edu</td>
+                        </tr>
+                        <tr>
+                            <td>General Queries</td>
+                            <td>studentservices@scl.edu</td>
+                        </tr>
+                        <tr>
+                            <td>Finance/Fees</td>
+                            <td>finance@scl.edu</td>
+                        </tr>
+                        <tr>
+                            <td>Complaints</td>
+                            <td>complaints@scl.edu</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3>Tips for Success</h3>
+                
+                <div class="success-box">
+                    <strong>📚 Academic Success</strong>
+                    <ul class="checklist">
+                        <li>Check Moodle daily for announcements and updates</li>
+                        <li>Download course materials at the start of each week</li>
+                        <li>Submit assignments before the deadline</li>
+                        <li>Participate actively in forums and discussions</li>
+                        <li>Attend all live sessions and webinars</li>
+                        <li>Keep backup copies of all your work</li>
+                        <li>Ask questions when you don't understand something</li>
+                    </ul>
+                </div>
+
+                <div class="success-box">
+                    <strong>💻 Using the System Effectively</strong>
+                    <ul class="checklist">
+                        <li>Bookmark important pages</li>
+                        <li>Enable notifications for assignment deadlines</li>
+                        <li>Regularly check your student email</li>
+                        <li>Update your contact information promptly</li>
+                        <li>Keep your passwords secure</li>
+                        <li>Log out after each session on shared computers</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- Contact Information -->
+            <section>
+                <h2>Contact Information</h2>
+                
+                <div class="info-box">
+                    <h3>SCL Institute Main Office</h3>
+                    <p><strong>Phone:</strong> +44 (0)20 XXXX XXXX</p>
+                    <p><strong>Email:</strong> info@scl.edu</p>
+                    <p><strong>Office Hours:</strong> Monday-Friday, 9:00 AM - 5:00 PM</p>
+                </div>
+
+                <div class="info-box">
+                    <h3>Student Portal</h3>
+                    <p><strong>URL:</strong> http://system.sclsandbox.xyz</p>
+                    <p><strong>Technical Support:</strong> support@sclsandbox.xyz</p>
+                </div>
+
+                <div class="info-box">
+                    <h3>Moodle LMS</h3>
+                    <p><strong>URL:</strong> http://sclsandbox.xyz:8080</p>
+                    <p><strong>LMS Support:</strong> lms@scl.edu</p>
+                </div>
+            </section>
+        </main>
+
+        <footer>
+            <p><strong>Welcome to SCL Institute! We wish you success in your studies.</strong></p>
+            <p>Last Updated: February 13, 2026 | Version 1.0</p>
+            <p>For the latest updates and announcements, always check your student portal and Moodle dashboard</p>
+            <p style="margin-top: 1rem; opacity: 0.8;">If you have suggestions to improve this manual, please email: feedback@scl.edu</p>
+        </footer>
+    </div>
+</body>
+</html>

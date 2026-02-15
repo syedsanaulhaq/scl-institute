@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SCL Institute Moodle Theme - Installation Guide</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #1f2937;
+            background: linear-gradient(135deg, #f5f3ff 0%, #faf5ff 100%);
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(124, 58, 237, 0.1);
+            overflow: hidden;
+        }
+
+        header {
+            background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+            color: white;
+            padding: 40px 20px;
+            text-align: center;
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        main {
+            padding: 40px;
+        }
+
+        h2 {
+            color: #7c3aed;
+            font-size: 1.8rem;
+            margin-top: 40px;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #7c3aed;
+        }
+
+        h3 {
+            color: #4a5568;
+            font-size: 1.3rem;
+            margin-top: 25px;
+            margin-bottom: 15px;
+        }
+
+        .step {
+            background: #f3f4f6;
+            border-left: 4px solid #7c3aed;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 6px;
+        }
+
+        .step h4 {
+            color: #7c3aed;
+            margin-bottom: 10px;
+            font-size: 1.1rem;
+        }
+
+        .step ol, .step ul {
+            margin-left: 20px;
+            margin-top: 10px;
+        }
+
+        .step li {
+            margin-bottom: 8px;
+        }
+
+        .code-block {
+            background: #1e1b4b;
+            color: #a78bfa;
+            padding: 15px;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin: 15px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+        }
+
+        .highlight {
+            background: #fffbea;
+            border-left: 4px solid #f59e0b;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 4px;
+        }
+
+        .success {
+            background: #f0fdf4;
+            border-left: 4px solid #10b981;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 4px;
+            color: #065f46;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+
+        th {
+            background: #7c3aed;
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        tr:hover {
+            background: #f9fafb;
+        }
+
+        .btn {
+            display: inline-block;
+            background: #7c3aed;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-weight: 600;
+            margin: 10px 5px 10px 0;
+            transition: all 0.3s;
+        }
+
+        .btn:hover {
+            background: #6d28d9;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
+        }
+
+        .checklist {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .checklist li {
+            padding-left: 30px;
+            position: relative;
+            margin-bottom: 10px;
+        }
+
+        .checklist li:before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #10b981;
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+
+        footer {
+            background: #1e1b4b;
+            color: white;
+            padding: 30px 20px;
+            text-align: center;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+
+        .feature-card {
+            background: #f9fafb;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #e5e7eb;
+            border-left: 4px solid #7c3aed;
+        }
+
+        .feature-card h4 {
+            color: #7c3aed;
+            margin-bottom: 10px;
+        }
+
+        @media (max-width: 768px) {
+            main {
+                padding: 20px;
+            }
+            
+            header h1 {
+                font-size: 1.8rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎨 SCL Institute Moodle Theme</h1>
+            <p>Complete Installation & Setup Guide</p>
+        </header>
+
+        <main>
+            <!-- Overview -->
+            <section>
+                <h2>📋 Overview</h2>
+                <p>The SCL Institute Moodle Theme is a custom, professional theme designed to match the SCL Institute brand identity. It features a beautiful purple color scheme (#7c3aed), responsive design, and excellent accessibility support.</p>
+
+                <div class="features-grid">
+                    <div class="feature-card">
+                        <h4>🎨 Modern Design</h4>
+                        <p>Professional purple color scheme matching SCL branding</p>
+                    </div>
+                    <div class="feature-card">
+                        <h4>📱 Responsive</h4>
+                        <p>Works perfectly on desktop, tablet, and mobile devices</p>
+                    </div>
+                    <div class="feature-card">
+                        <h4>🔒 Secure</h4>
+                        <p>No external dependencies, built-in security features</p>
+                    </div>
+                    <div class="feature-card">
+                        <h4>⚡ Fast</h4>
+                        <p>Optimized CSS (~25KB), minimal performance impact</p>
+                    </div>
+                    <div class="feature-card">
+                        <h4>♿ Accessible</h4>
+                        <p>WCAG 2.1 compliant, proper contrast ratios</p>
+                    </div>
+                    <div class="feature-card">
+                        <h4>🌙 Dark Mode</h4>
+                        <p>Optional dark mode variant included</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Requirements -->
+            <section>
+                <h2>✅ Requirements</h2>
+                <h3>System Requirements</h3>
+                <ul>
+                    <li><strong>Moodle Version:</strong> 4.1 or higher</li>
+                    <li><strong>PHP Version:</strong> 7.4 or higher</li>
+                    <li><strong>Parent Theme:</strong> Boost (automatically installed with Moodle)</li>
+                    <li><strong>Disk Space:</strong> ~150KB for theme files</li>
+                </ul>
+
+                <h3>Browser Support</h3>
+                <table>
+                    <tr>
+                        <th>Browser</th>
+                        <th>Minimum Version</th>
+                        <th>Status</th>
+                    </tr>
+                    <tr>
+                        <td>Google Chrome</td>
+                        <td>90+</td>
+                        <td>✓ Supported</td>
+                    </tr>
+                    <tr>
+                        <td>Firefox</td>
+                        <td>88+</td>
+                        <td>✓ Supported</td>
+                    </tr>
+                    <tr>
+                        <td>Safari</td>
+                        <td>14+</td>
+                        <td>✓ Supported</td>
+                    </tr>
+                    <tr>
+                        <td>Edge</td>
+                        <td>90+</td>
+                        <td>✓ Supported</td>
+                    </tr>
+                    <tr>
+                        <td>Mobile Chrome</td>
+                        <td>Latest</td>
+                        <td>✓ Supported</td>
+                    </tr>
+                    <tr>
+                        <td>Mobile Safari</td>
+                        <td>Latest</td>
+                        <td>✓ Supported</td>
+                    </tr>
+                </table>
+            </section>
+
+            <!-- Installation Methods -->
+            <section>
+                <h2>🚀 Installation Methods</h2>
+
+                <h3>Method 1: Docker (Recommended for Development)</h3>
+                <div class="step">
+                    <h4>Quick Copy to Docker Container</h4>
+                    <ol>
+                        <li>Open terminal in the directory containing <code>moodle-theme-scl</code></li>
+                        <li>Run the copy command:
+                            <div class="code-block">docker cp moodle-theme-scl scli-moodle-dev:/bitnami/moodle/theme/scl</div>
+                        </li>
+                        <li>Verify installation:
+                            <div class="code-block">docker exec scli-moodle-dev ls -la /bitnami/moodle/theme/scl</div>
+                        </li>
+                        <li>Clear Moodle caches:
+                            <div class="code-block">docker exec scli-moodle-dev bash -c "cd /bitnami/moodle && php admin/cli/purge_caches.php"</div>
+                        </li>
+                    </ol>
+                </div>
+
+                <h3>Method 2: Manual File Upload (Production)</h3>
+                <div class="step">
+                    <h4>Upload via Web Interface</h4>
+                    <ol>
+                        <li>Package the theme:
+                            <div class="code-block">tar -czf scl-theme.tar.gz moodle-theme-scl/</div>
+                        </li>
+                        <li>Login to Moodle as Administrator</li>
+                        <li>Navigate to: <strong>Site Administration → Plugins → Install plugins</strong></li>
+                        <li>Choose plugin type: <strong>Theme</strong> (from dropdown)</li>
+                        <li>Upload <code>scl-theme.tar.gz</code> file</li>
+                        <li>Click "Install plugin"</li>
+                    </ol>
+                </div>
+
+                <h3>Method 3: SSH/SFTP Upload (Traditional)</h3>
+                <div class="step">
+                    <h4>Upload via SSH/SFTP to Linux Server</h4>
+                    <ol>
+                        <li>Connect via SFTP:
+                            <div class="code-block">sftp user@your-server.com</div>
+                        </li>
+                        <li>Navigate to Moodle theme directory:
+                            <div class="code-block">cd /path/to/moodle/theme</div>
+                        </li>
+                        <li>Upload the theme folder:
+                            <div class="code-block">put -r moodle-theme-scl scl</div>
+                        </li>
+                        <li>Set proper permissions (via SSH):
+                            <div class="code-block">chmod -R 755 /path/to/moodle/theme/scl</div>
+                        </li>
+                    </ol>
+                </div>
+            </section>
+
+            <!-- Activation -->
+            <section>
+                <h2>🎯 Activation in Moodle</h2>
+                <div class="step">
+                    <h4>Step 1: Login to Moodle</h4>
+                    <ol>
+                        <li>Open Moodle in your browser:
+                            <div class="code-block">http://localhost:9090  (development)</div>
+                            <div class="code-block">http://your-domain.com  (production)</div>
+                        </li>
+                        <li>Login with Administrator account:
+                            <ul>
+                                <li>Default username: <code>admin</code></li>
+                                <li>Password: Your configured password</li>
+                            </ul>
+                        </li>
+                    </ol>
+                </div>
+
+                <div class="step">
+                    <h4>Step 2: Access Theme Selector</h4>
+                    <ol>
+                        <li>Go to: <strong>Site Administration</strong> (top-left menu)</li>
+                        <li>Click on <strong>Appearance</strong></li>
+                        <li>Click on <strong>Themes</strong></li>
+                        <li>Click on <strong>Theme Selector</strong></li>
+                        <li>Or direct URL: <code>http://your-moodle/admin/settings.php?section=themeselector</code></li>
+                    </ol>
+                </div>
+
+                <div class="step">
+                    <h4>Step 3: Select SCL Theme</h4>
+                    <ol>
+                        <li>Under "Available themes", find <strong>"SCL Institute"</strong></li>
+                        <li>Click on the theme card</li>
+                        <li>Click the <strong>"Use theme"</strong> button</li>
+                        <li>Confirm by clicking <strong>"Save changes"</strong></li>
+                    </ol>
+                </div>
+
+                <div class="step">
+                    <h4>Step 4: Verify Installation</h4>
+                    <ol>
+                        <li>Logout from the admin panel</li>
+                        <li>Clear your browser cache (Ctrl+Shift+R or Cmd+Shift+R)</li>
+                        <li>Refresh the page or navigate to login page</li>
+                        <li>You should see:
+                            <ul>
+                                <li>Purple gradient navigation bar</li>
+                                <li>Purple buttons and links</li>
+                                <li>Professional styling throughout</li>
+                            </ul>
+                        </li>
+                    </ol>
+                </div>
+
+                <div class="success">
+                    ✅ <strong>Success!</strong> If you see the purple SCL color scheme, the theme is installed correctly.
+                </div>
+            </section>
+
+            <!-- Troubleshooting -->
+            <section>
+                <h2>🔧 Troubleshooting</h2>
+
+                <h3>Problem: Theme Not Showing in Theme Selector</h3>
+                <div class="step">
+                    <h4>Solution:</h4>
+                    <ol>
+                        <li>Verify files are in correct location:
+                            <div class="code-block">ls -la {MOODLE_ROOT}/theme/scl/</div>
+                        </li>
+                        <li>Check file permissions:
+                            <div class="code-block">chmod -R 755 {MOODLE_ROOT}/theme/scl/</div>
+                        </li>
+                        <li>Clear Moodle cache:
+                            <div class="code-block">php admin/cli/purge_caches.php</div>
+                        </li>
+                        <li>Restart web server and clear browser cache</li>
+                    </ol>
+                </div>
+
+                <h3>Problem: Styling Not Applied</h3>
+                <div class="step">
+                    <h4>Solution:</h4>
+                    <ol>
+                        <li>Hard refresh browser:
+                            <ul>
+                                <li>Windows: <code>Ctrl + Shift + R</code></li>
+                                <li>Mac: <code>Cmd + Shift + R</code></li>
+                            </ul>
+                        </li>
+                        <li>Try in Incognito/Private window (disables extensions)</li>
+                        <li>Clear Moodle cache via Site Administration</li>
+                        <li>Verify CSS file exists:
+                            <div class="code-block">test -f {MOODLE_ROOT}/theme/scl/style/scl.css && echo "File exists"</div>
+                        </li>
+                    </ol>
+                </div>
+
+                <h3>Problem: 404 - Theme Not Found</h3>
+                <div class="step">
+                    <h4>Solution (Docker):</h4>
+                    <ol>
+                        <li>Check files in container:
+                            <div class="code-block">docker exec scli-moodle-dev ls /bitnami/moodle/theme/scl</div>
+                        </li>
+                        <li>Restart container:
+                            <div class="code-block">docker restart scli-moodle-dev</div>
+                        </li>
+                        <li>View logs:
+                            <div class="code-block">docker logs scli-moodle-dev | tail -50</div>
+                        </li>
+                    </ol>
+                </div>
+            </section>
+
+            <!-- Customization -->
+            <section>
+                <h2>🎨 Customization</h2>
+                <h3>After Installation</h3>
+                <p>Once the theme is activated, you can customize it via:</p>
+                <p><strong>Site Administration → Appearance → Themes → SCL Theme Settings</strong></p>
+
+                <h3>Customizable Options</h3>
+                <ul>
+                    <li><strong>Brand Color:</strong> Change primary purple to your color</li>
+                    <li><strong>Logo:</strong> Upload your institution logo</li>
+                    <li><strong>Background Image:</strong> Set page background</li>
+                    <li><strong>Font Family:</strong> Choose between Sans Serif, Serif, Monospace</li>
+                    <li><strong>Font Size:</strong> Small (12px), Normal (14px), Large (16px)</li>
+                </ul>
+
+                <h3>Advanced CSS Customization</h3>
+                <p>For advanced users, edit CSS variables in <code>style/scl.css</code>:</p>
+                <div class="code-block">:root {
+    --scl-primary: #7c3aed;        /* Change primary color */
+    --scl-secondary: #0ea5e9;      /* Change secondary color */
+    --scl-accent: #10b981;         /* Change accent color */
+}</div>
+            </section>
+
+            <!-- Verification -->
+            <section>
+                <h2>✨ Verification Checklist</h2>
+                <ul class="checklist">
+                    <li>Theme files copied to correct location</li>
+                    <li>Files have proper permissions (755)</li>
+                    <li>Moodle caches cleared</li>
+                    <li>Theme appears in Theme Selector</li>
+                    <li>Theme activated without errors</li>
+                    <li>Purple color scheme displays on login</li>
+                    <li>Navigation bar shows gradient</li>
+                    <li>Buttons styled with purple</li>
+                    <li>Course cards display properly</li>
+                    <li>Responsive design works on mobile</li>
+                    <li>Footer displays correctly</li>
+                    <li>Forms styled properly</li>
+                    <li>Tables show proper styling</li>
+                    <li>Alerts display correct colors</li>
+                    <li>No console errors (F12 → Console)</li>
+                </ul>
+            </section>
+
+            <!-- Support -->
+            <section>
+                <h2>📞 Support & Resources</h2>
+                <h3>Documentation</h3>
+                <ul>
+                    <li><strong>Theme README:</strong> <code>moodle-theme-scl/README.md</code></li>
+                    <li><strong>Docker Setup:</strong> <code>moodle-theme-scl/SETUP_DOCKER.md</code></li>
+                    <li><strong>Installation Script:</strong> <code>moodle-theme-scl/INSTALL.sh</code></li>
+                    <li><strong>Changelog:</strong> <code>moodle-theme-scl/CHANGELOG.md</code></li>
+                </ul>
+
+                <h3>Contact Information</h3>
+                <ul>
+                    <li><strong>Email Support:</strong> admin@sclsandbox.xyz</li>
+                    <li><strong>General Email:</strong> support@sclsandbox.xyz</li>
+                    <li><strong>Documentation:</strong> http://system.sclsandbox.xyz/help</li>
+                    <li><strong>Feedback:</strong> feedback@scl.edu</li>
+                </ul>
+
+                <h3>Common URLs</h3>
+                <table>
+                    <tr>
+                        <th>Resource</th>
+                        <th>URL</th>
+                    </tr>
+                    <tr>
+                        <td>Moodle (Dev)</td>
+                        <td>http://localhost:9090</td>
+                    </tr>
+                    <tr>
+                        <td>SCL System</td>
+                        <td>http://system.sclsandbox.xyz</td>
+                    </tr>
+                    <tr>
+                        <td>Admin Panel</td>
+                        <td>/admin/index.php</td>
+                    </tr>
+                    <tr>
+                        <td>Theme Settings</td>
+                        <td>/admin/settings.php?section=theme_scl</td>
+                    </tr>
+                </table>
+            </section>
+
+            <!-- Next Steps -->
+            <section>
+                <h2>🎯 Next Steps</h2>
+                <div class="highlight">
+                    <h3>After Installation:</h3>
+                    <ol>
+                        <li>✅ <strong>Verify the theme is working</strong> - Check colors and styling</li>
+                        <li>🎨 <strong>Customize if needed</strong> - Update colors, logo, fonts</li>
+                        <li>👥 <strong>Add users and courses</strong> - Build your Moodle site</li>
+                        <li>📝 <strong>Test on mobile</strong> - Verify responsive design</li>
+                        <li>⚙️ <strong>Configure settings</strong> - Set up site features</li>
+                        <li>🚀 <strong>Launch to production</strong> - When ready</li>
+                    </ol>
+                </div>
+            </section>
+
+            <!-- Quick Command Reference -->
+            <section>
+                <h2>⌨️ Quick Command Reference</h2>
+                <h3>Docker Commands</h3>
+                <table>
+                    <tr>
+                        <th>Command</th>
+                        <th>Description</th>
+                    </tr>
+                    <tr>
+                        <td><code>docker cp moodle-theme-scl scli-moodle-dev:/bitnami/moodle/theme/scl</code></td>
+                        <td>Copy theme to container</td>
+                    </tr>
+                    <tr>
+                        <td><code>docker logs scli-moodle-dev | tail -50</code></td>
+                        <td>View Moodle logs</td>
+                    </tr>
+                    <tr>
+                        <td><code>docker exec scli-moodle-dev bash -c "cd /bitnami/moodle && php admin/cli/purge_caches.php"</code></td>
+                        <td>Clear Moodle caches</td>
+                    </tr>
+                    <tr>
+                        <td><code>docker restart scli-moodle-dev</code></td>
+                        <td>Restart Moodle container</td>
+                    </tr>
+                </table>
+            </section>
+        </main>
+
+        <footer>
+            <p><strong>SCL Institute Moodle Theme v1.0</strong></p>
+            <p>Installation & Setup Guide | February 13, 2026</p>
+            <p style="margin-top: 15px; opacity: 0.8;">Made with 💜 by SCL Institute</p>
+            <p style="opacity: 0.8;"><em>Empowering the next generation through innovation in education</em></p>
+        </footer>
+    </div>
+</body>
+</html>
