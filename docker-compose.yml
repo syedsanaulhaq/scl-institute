@@ -30,9 +30,14 @@ services:
       - moodle_db_data:/var/lib/mysql
     networks:
       - scl-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-pmoodleroot"]
+      timeout: 10s
+      retries: 5
+      start_period: 30s
 
   scli-moodle:
-    image: bitnamilegacy/moodle:latest
+    image: bitnamilegacy/moodle:4.3
     container_name: scli-moodle
     ports:
       - "9090:8080"
@@ -47,12 +52,13 @@ services:
       - MOODLE_SITE_NAME=SCL Institute LMS
       - MOODLE_REVERSEPROXY=yes
       - BITNAMI_DEBUG=true
-    restart: on-failure
+    restart: always
     volumes:
       - moodle_data:/bitnami/moodle
       - ./moodle-scripts/local/sclsso:/bitnami/moodle/local/sclsso
     depends_on:
-      - scli-moodle-db
+      scli-moodle-db:
+        condition: service_healthy
     networks:
       - scl-network
 
