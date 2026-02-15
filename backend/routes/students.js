@@ -2318,23 +2318,12 @@ router.get('/timetable/:id', async (req, res) => {
 
         const courseCode = appRows[0].course_code;
 
-        // Get connection from Moodle database pool
-        const moodlePool = mysql.createPool({
-            host: process.env.MOODLE_DB_HOST || 'scli-moodle-db',
-            user: process.env.MOODLE_DB_USER || 'root',
-            password: process.env.MOODLE_DB_PASSWORD || 'moodleroot',
-            database: process.env.MOODLE_DB_NAME || 'bitnami_moodle',
-            waitForConnections: true,
-            connectionLimit: 2,
-            queueLimit: 0
-        });
-
         try {
-            // Get course ID - try multiple ways to find the course
+            // Get course ID - try multiple ways to find the course using shared pool
             let courseId = null;
             
             // First try exact match by idnumber or shortname
-            const [courseRows] = await moodlePool.execute(
+            const [courseRows] = await moodleDbPool.execute(
                 `SELECT id FROM mdl_course WHERE idnumber = ? OR shortname = ? LIMIT 1`,
                 [courseCode, courseCode]
             );
@@ -2343,7 +2332,7 @@ router.get('/timetable/:id', async (req, res) => {
                 courseId = courseRows[0].id;
             } else {
                 // Try by idnumber starting with the code (e.g., "DEG-001 B.Sc Computer Science" contains "DEG-001")
-                const [idnumberRows] = await moodlePool.execute(
+                const [idnumberRows] = await moodleDbPool.execute(
                     `SELECT id FROM mdl_course WHERE idnumber LIKE ? OR fullname LIKE ? OR shortname LIKE ? LIMIT 1`,
                     [`${courseCode}%`, `%${courseCode}%`, `%${courseCode}%`]
                 );
@@ -2366,7 +2355,7 @@ router.get('/timetable/:id', async (req, res) => {
 
             // Get events from mdl_event table for this course
             // Join with course modules to get activity links
-            const [eventRows] = await moodlePool.execute(
+            const [eventRows] = await moodleDbPool.execute(
                 `
                 SELECT 
                     e.id, e.name, e.eventtype, e.modulename, e.timestart, e.timeduration, e.description,
@@ -2392,7 +2381,7 @@ router.get('/timetable/:id', async (req, res) => {
             );
 
             // Get assignments with due dates
-            const [assignmentRows] = await moodlePool.execute(
+            const [assignmentRows] = await moodleDbPool.execute(
                 `
                 SELECT a.id, a.name, a.duedate, cm.id as cm_id
                 FROM mdl_assign a
@@ -2533,25 +2522,13 @@ router.get('/assessments/:id', async (req, res) => {
 
         const courseCode = appRows[0].course_code;
         
-        // Get Moodle course ID
-        const moodlePool = mysql.createPool({
-            host: process.env.MOODLE_DB_HOST || 'scli-moodle-db-dev',
-            port: 3306,
-            user: 'root',
-            password: 'moodleroot',
-            database: 'bitnami_moodle',
-            waitForConnections: true,
-            connectionLimit: 5,
-            queueLimit: 0
-        });
-
-        const [courseRows] = await moodlePool.query(
+        // Get Moodle course ID using shared connection pool
+        const [courseRows] = await moodleDbPool.query(
             `SELECT id FROM mdl_course WHERE idnumber LIKE ? OR fullname LIKE ? OR shortname LIKE ? LIMIT 1`,
             [`${courseCode}%`, `%${courseCode}%`, `%${courseCode}%`]
         );
 
         if (courseRows.length === 0) {
-            moodlePool.end();
             return res.json({
                 success: true,
                 data: []
@@ -2561,7 +2538,7 @@ router.get('/assessments/:id', async (req, res) => {
         const courseId = courseRows[0].id;
 
         // Get assignments with due dates
-        const [assignments] = await moodlePool.query(
+        const [assignments] = await moodleDbPool.query(
             `
             SELECT a.id, a.name, a.duedate, cm.id as cm_id, 'assign' as type
             FROM mdl_assign a
@@ -2589,8 +2566,6 @@ router.get('/assessments/:id', async (req, res) => {
             submitted: false,
             moodle_url: assign.cm_id ? `/mod/${assign.type}/view.php?id=${assign.cm_id}` : null
         }));
-
-        moodlePool.end();
 
         return res.json({
             success: true,
@@ -2628,26 +2603,13 @@ router.get('/grades/:id', async (req, res) => {
         const userEmail = appRows[0].email;
         const courseCode = appRows[0].course_code;
 
-        // Connect to Moodle database
-        const moodlePool = mysql.createPool({
-            host: process.env.MOODLE_DB_HOST || 'scli-moodle-db-dev',
-            port: 3306,
-            user: 'root',
-            password: 'moodleroot',
-            database: 'bitnami_moodle',
-            waitForConnections: true,
-            connectionLimit: 5,
-            queueLimit: 0
-        });
-
-        // Get Moodle user ID by email
-        const [moodleUsers] = await moodlePool.query(
+        // Get Moodle user ID by email using shared pool
+        const [moodleUsers] = await moodleDbPool.query(
             `SELECT id FROM mdl_user WHERE email = ?`,
             [userEmail]
         );
 
         if (moodleUsers.length === 0) {
-            moodlePool.end();
             return res.json({
                 success: true,
                 data: []
@@ -2657,13 +2619,12 @@ router.get('/grades/:id', async (req, res) => {
         const moodleUserId = moodleUsers[0].id;
 
         // Get course ID
-        const [courseRows] = await moodlePool.query(
+        const [courseRows] = await moodleDbPool.query(
             `SELECT id FROM mdl_course WHERE idnumber LIKE ? OR fullname LIKE ? OR shortname LIKE ? LIMIT 1`,
             [`${courseCode}%`, `%${courseCode}%`, `%${courseCode}%`]
         );
 
         if (courseRows.length === 0) {
-            moodlePool.end();
             return res.json({
                 success: true,
                 data: []
@@ -2673,7 +2634,7 @@ router.get('/grades/:id', async (req, res) => {
         const courseId = courseRows[0].id;
 
         // Get grades from gradebook
-        const [grades] = await moodlePool.query(
+        const [grades] = await moodleDbPool.query(
             `
             SELECT 
                 gi.itemname,
@@ -2691,7 +2652,7 @@ router.get('/grades/:id', async (req, res) => {
             [moodleUserId, courseId]
         );
 
-        const [courseTotals] = await moodlePool.query(
+        const [courseTotals] = await moodleDbPool.query(
             `
             SELECT 
                 gg.finalgrade,
@@ -2717,8 +2678,6 @@ router.get('/grades/:id', async (req, res) => {
             feedback: 'See Moodle for detailed feedback',
             moodle_url: grade.cm_id ? `/mod/${grade.itemmodule}/view.php?id=${grade.cm_id}` : null
         }));
-
-        moodlePool.end();
 
         const courseSummary = courseTotals.length > 0 ? {
             finalGrade: courseTotals[0].finalgrade ? parseFloat(courseTotals[0].finalgrade).toFixed(2) : null,
