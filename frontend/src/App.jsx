@@ -32,46 +32,25 @@ import StudentSupport from './components/student/StudentSupport';
 import StudentNotifications from './pages/StudentNotifications';
 
 function App() {
-    const [user, setUser] = useState(null);
-    const [isInitialized, setIsInitialized] = useState(false);
-
-    useEffect(() => {
-        const storedUser = sessionStorage.getItem('user');
-        const accessToken = sessionStorage.getItem('accessToken');
-        
-        if (storedUser && accessToken) {
-            try {
+    const [user, setUser] = useState(() => {
+        // Initialize user from sessionStorage on first load
+        try {
+            const storedUser = sessionStorage.getItem('user');
+            const accessToken = sessionStorage.getItem('accessToken');
+            
+            if (storedUser && accessToken) {
                 const userData = JSON.parse(storedUser);
-                // Restore user from sessionStorage without re-verifying token
-                // SessionStorage persists during the same browser session
-                setUser(userData);
-            } catch (e) {
-                // If parse fails, clear storage
-                sessionStorage.removeItem('user');
-                sessionStorage.removeItem('accessToken');
+                console.log('[AUTH] User initialized from storage:', { email: userData.email, role: userData.role });
+                return userData;
             }
+        } catch (e) {
+            console.error('[AUTH] Failed to parse stored user:', e.message);
+            sessionStorage.removeItem('user');
+            sessionStorage.removeItem('accessToken');
         }
-        setIsInitialized(true);
-
-        // Initialize Tawk.to Live Chat
-        window.Tawk_API = window.Tawk_API || {};
-        window.Tawk_LoadStart = new Date();
-        
-        const s1 = document.createElement('script');
-        s1.async = true;
-        s1.src = 'https://embed.tawk.to/682c5ab050cef5191119569f/1jgrot35s';
-        s1.charset = 'UTF-8';
-        s1.setAttribute('crossorigin', '*');
-        document.head.appendChild(s1);
-
-        return () => {
-            // Cleanup if component unmounts
-            const existingScript = document.querySelector(`script[src*="embed.tawk.to"]`);
-            if (existingScript) {
-                existingScript.remove();
-            }
-        };
-    }, []);
+        return null;
+    });
+    const [isInitialized, setIsInitialized] = useState(true);
 
     const handleLoginSuccess = (userData) => {
         setUser(userData);
@@ -88,6 +67,9 @@ function App() {
         return null;
     }
 
+    // Helper function to check if user is a student
+    const isStudent = user && user?.role?.toLowerCase() === 'student';
+    
     return (
         <Router>
             <Routes>
@@ -118,7 +100,7 @@ function App() {
                     )
                 } />
                 <Route path="/student/profile" element={
-                    user && user.role === 'student' ? (
+                    user && user?.role?.toLowerCase() === 'student' ? (
                         <Layout user={user} onLogout={handleLogout}>
                             <StudentProfile user={user} />
                         </Layout>
@@ -127,7 +109,7 @@ function App() {
                     )
                 } />
                 <Route path="/student/admissions" element={
-                    user && user.role === 'student' ? (
+                    user && user?.role?.toLowerCase() === 'student' ? (
                         <Layout user={user} onLogout={handleLogout}>
                             <StudentAdmissions user={user} />
                         </Layout>
@@ -136,7 +118,7 @@ function App() {
                     )
                 } />
                 <Route path="/student/induction" element={
-                    user && user.role === 'student' ? (
+                    user && user?.role?.toLowerCase() === 'student' ? (
                         <Layout user={user} onLogout={handleLogout}>
                             <StudentAdmissions user={user} initialTab="induction" />
                         </Layout>
@@ -145,7 +127,7 @@ function App() {
                     )
                 } />
                 <Route path="/student/contract" element={
-                    user && user.role === 'student' ? (
+                    user && user?.role?.toLowerCase() === 'student' ? (
                         <Layout user={user} onLogout={handleLogout}>
                             <StudentContract user={user} />
                         </Layout>
@@ -154,7 +136,7 @@ function App() {
                     )
                 } />
                 <Route path="/student/course-changes" element={
-                    user && user.role === 'student' ? (
+                    user && user?.role?.toLowerCase() === 'student' ? (
                         <Layout user={user} onLogout={handleLogout}>
                             <StudentCourseChanges user={user} />
                         </Layout>
@@ -163,7 +145,7 @@ function App() {
                     )
                 } />
                 <Route path="/student/documents" element={
-                    user && user.role === 'student' ? (
+                    user && user?.role?.toLowerCase() === 'student' ? (
                         <Layout user={user} onLogout={handleLogout}>
                             <StudentDocumentsCentre user={user} />
                         </Layout>
@@ -172,7 +154,7 @@ function App() {
                     )
                 } />
                 <Route path="/student/materials" element={
-                    user && user.role === 'student' ? (
+                    user && user?.role?.toLowerCase() === 'student' ? (
                         <Layout user={user} onLogout={handleLogout}>
                             <StudentMaterials user={user} />
                         </Layout>
@@ -181,7 +163,7 @@ function App() {
                     )
                 } />
                 <Route path="/student/right-to-study" element={
-                    user && user.role === 'student' ? (
+                    user && user?.role?.toLowerCase() === 'student' ? (
                         <Layout user={user} onLogout={handleLogout}>
                             <StudentRightToStudy user={user} />
                         </Layout>
@@ -190,7 +172,7 @@ function App() {
                     )
                 } />
                 <Route path="/student/programme" element={
-                    user && user.role === 'student' ? (
+                    user && user?.role?.toLowerCase() === 'student' ? (
                         <Layout user={user} onLogout={handleLogout}>
                             <StudentProgramme user={user} />
                         </Layout>
@@ -199,7 +181,7 @@ function App() {
                     )
                 } />
                 <Route path="/student/timetable" element={
-                    user && user.role === 'student' ? (
+                    user && user?.role?.toLowerCase() === 'student' ? (
                         <Layout user={user} onLogout={handleLogout}>
                             <StudentTimetable user={user} />
                         </Layout>
@@ -208,7 +190,7 @@ function App() {
                     )
                 } />
                 <Route path="/student/assessments" element={
-                    user && user.role === 'student' ? (
+                    user && user?.role?.toLowerCase() === 'student' ? (
                         <Layout user={user} onLogout={handleLogout}>
                             <StudentAssessments user={user} />
                         </Layout>
@@ -217,7 +199,7 @@ function App() {
                     )
                 } />
                 <Route path="/student/grades" element={
-                    user && user.role === 'student' ? (
+                    user && user?.role?.toLowerCase() === 'student' ? (
                         <Layout user={user} onLogout={handleLogout}>
                             <StudentGrades user={user} />
                         </Layout>
@@ -226,7 +208,7 @@ function App() {
                     )
                 } />
                 <Route path="/student/support" element={
-                    user && user.role === 'student' ? (
+                    user && user?.role?.toLowerCase() === 'student' ? (
                         <Layout user={user} onLogout={handleLogout}>
                             <StudentSupportHub user={user} />
                         </Layout>
@@ -235,7 +217,7 @@ function App() {
                     )
                 } />
                 <Route path="/student/messages" element={
-                    user && user.role === 'student' ? (
+                    user && user?.role?.toLowerCase() === 'student' ? (
                         <Layout user={user} onLogout={handleLogout}>
                             <StudentSupportHub user={user} />
                         </Layout>
@@ -244,7 +226,7 @@ function App() {
                     )
                 } />
                 <Route path="/student/fees" element={
-                    user && user.role === 'student' ? (
+                    user && user?.role?.toLowerCase() === 'student' ? (
                         <Layout user={user} onLogout={handleLogout}>
                             <StudentFees user={user} />
                         </Layout>
@@ -253,7 +235,7 @@ function App() {
                     )
                 } />
                 <Route path="/student/support" element={
-                    user && user.role === 'student' ? (
+                    user && user?.role?.toLowerCase() === 'student' ? (
                         <Layout user={user} onLogout={handleLogout}>
                             <StudentSupport user={user} />
                         </Layout>
@@ -262,7 +244,7 @@ function App() {
                     )
                 } />
                 <Route path="/student/notifications" element={
-                    user && user.role === 'student' ? (
+                    user && user?.role?.toLowerCase() === 'student' ? (
                         <Layout user={user} onLogout={handleLogout}>
                             <StudentNotifications user={user} />
                         </Layout>

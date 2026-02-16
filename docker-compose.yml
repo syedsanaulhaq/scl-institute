@@ -82,8 +82,10 @@ services:
   scli-frontend:
     build: ./frontend
     container_name: scli-frontend
+    ports:
+      - "3000:3000"
     environment:
-      - VITE_API_URL=http://backend.sclsandbox.xyz/api
+      - VITE_API_URL=http://scli-backend:4000/api
     depends_on:
       - scli-backend
     networks:
