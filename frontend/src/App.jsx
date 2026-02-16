@@ -54,25 +54,6 @@ function App() {
             }
         }
         setIsInitialized(true);
-
-        // Initialize Tawk.to Live Chat
-        window.Tawk_API = window.Tawk_API || {};
-        window.Tawk_LoadStart = new Date();
-        
-        const s1 = document.createElement('script');
-        s1.async = true;
-        s1.src = 'https://embed.tawk.to/682c5ab050cef5191119569f/1jgrot35s';
-        s1.charset = 'UTF-8';
-        s1.setAttribute('crossorigin', '*');
-        document.head.appendChild(s1);
-
-        return () => {
-            // Cleanup if component unmounts
-            const existingScript = document.querySelector(`script[src*="embed.tawk.to"]`);
-            if (existingScript) {
-                existingScript.remove();
-            }
-        };
     }, []);
 
     const handleLoginSuccess = (userData) => {
