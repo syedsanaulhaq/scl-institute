@@ -563,128 +563,53 @@ router.get('/applications', async (req, res) => {
     try {
         const { status, course_code, page = 1, limit = 50 } = req.query;
         
-        let whereClause = 'WHERE 1=1';
-        const params = [];
+        const pageInt = Math.max(1, parseInt(page) || 1);
+        const limitInt = Math.max(1, Math.min(100, parseInt(limit) || 50));
+        const offset = (pageInt - 1) * limitInt;
+        
+        // Build WHERE clause
+        let whereClause = '';
+        const filterParams = [];
         
         if (status) {
-            whereClause += ' AND sa.application_status = ?';
-            params.push(status);
+            whereClause = ' WHERE sa.application_status = ?';
+            filterParams.push(status);
         }
         
         if (course_code) {
-            whereClause += ' AND sa.course_code = ?';
-            params.push(course_code);
+            whereClause = (whereClause ? whereClause + ' AND' : ' WHERE') + ' sa.course_code = ?';
+            filterParams.push(course_code);
         }
         
-        const offset = (page - 1) * parseInt(limit);
-        
-        // Try the full query first, fall back to simple query if it fails
+        // Query with proper fields that exist in our schema
         let applications = [];
         try {
-            const [result] = await db.execute(`
+            // Use direct values instead of placeholders for LIMIT/OFFSET
+            const query = `
                 SELECT 
                     sa.id,
-                    sa.application_reference,
-                    sa.first_name,
-                    sa.middle_names,
-                    sa.last_name,
                     sa.email,
-                    sa.contact_number,
-                    sa.course_title,
                     sa.course_code,
-                    sa.course_type,
-                    sa.mode_of_study,
+                    sa.course_title,
                     sa.application_status,
-                    sa.offer_accepted,
-                    sa.submitted_at,
-                    sa.created_at,
-                    sa.updated_at,
-                    sa.intake_start_date,
-                    sa.entry_route,
-                    sa.address_line1,
-                    sa.address_line2,
-                    sa.town_city,
-                    sa.postcode,
-                    sa.country_of_residence,
-                    sa.date_of_birth,
-                    sa.gender,
-                    sa.nationality,
-                    sa.highest_qualification,
-                    sa.institution_name,
-                    sa.year_completed,
-                    sa.english_proficiency,
-                    sa.english_score,
-                    sa.relevant_work_experience,
-                    sa.passport_id_document,
-                    sa.academic_certificates,
-                    sa.academic_transcripts,
-                    sa.english_certificate,
-                    sa.cv_resume,
-                    sa.work_reference,
-                    sa.proof_of_address,
-                    sa.visa_immigration_document,
-                    sa.student_contract,
-                    sa.brp_card,
-                    sa.residency_proof
+                    sa.statement_of_purpose,
+                    sa.submitted_date,
+                    sa.application_date,
+                    sa.updated_at
                 FROM student_applications sa
                 ${whereClause}
-                ORDER BY sa.submitted_at DESC
-                LIMIT ? OFFSET ?
-            `, [...params, parseInt(limit), parseInt(offset)]);
+                ORDER BY sa.application_date DESC
+                LIMIT ${limitInt} OFFSET ${offset}
+            `;
             
-            applications = result;
+            console.log('[APPLICATIONS] Executing query');
+            const [result] = await db.execute(query, filterParams);
+            
+            applications = result || [];
+            console.log('[APPLICATIONS] Found', applications.length, 'applications');
         } catch (error) {
-            console.error('Complex query failed, trying simple query:', error.message);
-            // Fallback to simple query without LIMIT/OFFSET
-            try {
-                const [result] = await db.execute(`
-                    SELECT 
-                        sa.id,
-                        sa.application_reference,
-                        sa.first_name,
-                        sa.last_name,
-                        sa.email,
-                        sa.course_title,
-                        sa.course_code,
-                        sa.course_type,
-                        sa.mode_of_study,
-                        sa.application_status,
-                        sa.offer_accepted,
-                        sa.submitted_at,
-                        sa.created_at,
-                        sa.updated_at,
-                        sa.intake_start_date,
-                        sa.entry_route,
-                        sa.contact_number,
-                        sa.address_line1,
-                        sa.address_line2,
-                        sa.town_city,
-                        sa.postcode,
-                        sa.country_of_residence,
-                        sa.date_of_birth,
-                        sa.gender,
-                        sa.nationality,
-                        sa.passport_id_document,
-                        sa.academic_certificates,
-                        sa.academic_transcripts,
-                        sa.english_certificate,
-                        sa.cv_resume,
-                        sa.work_reference,
-                        sa.proof_of_address,
-                        sa.visa_immigration_document,
-                        sa.student_contract,
-                        sa.brp_card,
-                        sa.residency_proof
-                    FROM student_applications sa
-                    ${whereClause}
-                    ORDER BY sa.id DESC
-                `, params);
-                
-                applications = result;
-            } catch (fallbackError) {
-                console.error('Simple query also failed:', fallbackError.message);
-                applications = [];
-            }
+            console.error('[APPLICATIONS] Query error:', error.message);
+            applications = [];
         }
 
         // If no applications found, return empty array (not mock data)
@@ -693,16 +618,16 @@ router.get('/applications', async (req, res) => {
         }
 
         // Get total count from database
-        let total = applications.length;
+        let total = 0;
         try {
             const [countResult] = await db.execute(`
                 SELECT COUNT(*) as total
                 FROM student_applications sa
                 ${whereClause}
-            `, params);
-            total = countResult[0].total;
+            `, filterParams);
+            total = countResult[0]?.total || 0;
         } catch (countError) {
-            console.error('Count query failed:', countError.message);
+            console.error('[APPLICATIONS] Count query error:', countError.message);
             total = applications.length;
         }
 
@@ -718,13 +643,15 @@ router.get('/applications', async (req, res) => {
                 }
             }
         });
-
     } catch (error) {
-        console.error('Error fetching applications:', error);
+        console.error('[APPLICATIONS LIST] Error:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to fetch applications',
-            error: error.message
+            data: {
+                applications: [],
+                pagination: { current_page: 1, per_page: 50, total: 0, total_pages: 0 }
+            }
         });
     }
 });
