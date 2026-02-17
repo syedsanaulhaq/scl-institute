@@ -40,7 +40,11 @@ yarn-debug.log*
 
 # Database backups and dumps
 backups/
-*.sql
+*_backup_*.sql
+*_prod.sql
+*_production*.sql
+users_*.sql
+profiles_*.sql
 moodle_files.tar.gz
 *.backup
 production-*.json
