@@ -280,7 +280,7 @@ const Home = ({ onApplyNow }) => {
                             </a>
                             <a href="#programs" className="px-3 py-2 text-gray-600 hover:text-teal-600 hover:bg-teal-50 rounded transition">Courses</a>
                             <a href="#contact" className="px-3 py-2 text-gray-600 hover:text-teal-600 hover:bg-teal-50 rounded transition">Contacts</a>
-                            <a href="http://system.sclsandbox.xyz" target="_blank" rel="noopener noreferrer" className="ml-2 px-4 py-2 bg-gradient-to-r from-yellow-400 to-amber-500 text-gray-900 font-semibold rounded hover:from-yellow-500 hover:to-amber-600 transition shadow-md hover:shadow-lg transform hover:scale-105">
+                            <a href="http://localhost:3000" target="_blank" rel="noopener noreferrer" className="ml-2 px-4 py-2 bg-gradient-to-r from-yellow-400 to-amber-500 text-gray-900 font-semibold rounded hover:from-yellow-500 hover:to-amber-600 transition shadow-md hover:shadow-lg transform hover:scale-105">
                                 SCL System
                             </a>
                             <button className="ml-4 p-2 text-gray-600 hover:text-teal-600 hover:bg-teal-50 rounded-full transition">

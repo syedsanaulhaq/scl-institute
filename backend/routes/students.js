@@ -11,9 +11,16 @@ const fs = require('fs').promises;
 const mysql = require('mysql2/promise');
 const crypto = require('crypto');
 const PDFDocument = require('pdfkit');
+const NodeCache = require('node-cache');
 const router = express.Router();
 const { sendStudentWelcomeEmail, sendConditionalApprovalEmail } = require('../utils/emailService');
 const { storeNotification } = require('./notifications');
+
+// Cache for programme data (TTL: 15 minutes)
+const programmeCache = new NodeCache({ stdTTL: 900, checkperiod: 120 });
+
+// Cache for attendance data (TTL: 10 minutes)
+const attendanceCache = new NodeCache({ stdTTL: 600, checkperiod: 120 });
 
 const generateTempPassword = () => crypto.randomBytes(6).toString('hex');
 
@@ -24,6 +31,18 @@ const db = mysql.createPool({
     user: process.env.DB_USER,
     password: process.env.DB_PASS,
     database: process.env.DB_NAME,
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0
+});
+
+// Moodle database connection pool (shared, not per-request)
+const moodleDbPool = mysql.createPool({
+    host: process.env.MOODLE_DATABASE_HOST || process.env.MOODLE_DB_HOST || 'scli-moodle-db-prod',
+    port: process.env.MOODLE_DATABASE_PORT || process.env.MOODLE_DB_PORT || 3306,
+    user: process.env.MOODLE_DATABASE_USER || process.env.MOODLE_DB_USER || 'bn_moodle',
+    password: process.env.MOODLE_DATABASE_PASSWORD || process.env.MOODLE_DB_PASS || 'bitnami_moodle_password',
+    database: process.env.MOODLE_DATABASE_NAME || process.env.MOODLE_DB_NAME || 'bitnami_moodle',
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0
@@ -64,19 +83,8 @@ router.get('/courses', async (req, res) => {
         // Try to fetch from Moodle database first
         let moodleCourses = [];
         try {
-            // Connect to Moodle database
-            const moodleDb = mysql.createPool({
-                host: 'scli-moodle-db-dev',
-                port: 3306,
-                user: 'bn_moodle',
-                password: 'bitnami_moodle_password',
-                database: 'bitnami_moodle',
-                waitForConnections: true,
-                connectionLimit: 5,
-                queueLimit: 0
-            });
-
-            const [moodleResult] = await moodleDb.execute(`
+            // Use shared connection pool configured for prod environment
+            const [moodleResult] = await moodleDbPool.execute(`
                 SELECT 
                     c.id,
                     c.idnumber as course_code,
@@ -563,53 +571,128 @@ router.get('/applications', async (req, res) => {
     try {
         const { status, course_code, page = 1, limit = 50 } = req.query;
         
-        const pageInt = Math.max(1, parseInt(page) || 1);
-        const limitInt = Math.max(1, Math.min(100, parseInt(limit) || 50));
-        const offset = (pageInt - 1) * limitInt;
-        
-        // Build WHERE clause
-        let whereClause = '';
-        const filterParams = [];
+        let whereClause = 'WHERE 1=1';
+        const params = [];
         
         if (status) {
-            whereClause = ' WHERE sa.application_status = ?';
-            filterParams.push(status);
+            whereClause += ' AND sa.application_status = ?';
+            params.push(status);
         }
         
         if (course_code) {
-            whereClause = (whereClause ? whereClause + ' AND' : ' WHERE') + ' sa.course_code = ?';
-            filterParams.push(course_code);
+            whereClause += ' AND sa.course_code = ?';
+            params.push(course_code);
         }
         
-        // Query with proper fields that exist in our schema
+        const offset = (page - 1) * parseInt(limit);
+        
+        // Try the full query first, fall back to simple query if it fails
         let applications = [];
         try {
-            // Use direct values instead of placeholders for LIMIT/OFFSET
-            const query = `
+            const [result] = await db.execute(`
                 SELECT 
                     sa.id,
+                    sa.application_reference,
+                    sa.first_name,
+                    sa.middle_names,
+                    sa.last_name,
                     sa.email,
-                    sa.course_code,
+                    sa.contact_number,
                     sa.course_title,
+                    sa.course_code,
+                    sa.course_type,
+                    sa.mode_of_study,
                     sa.application_status,
-                    sa.statement_of_purpose,
-                    sa.submitted_date,
-                    sa.application_date,
-                    sa.updated_at
+                    sa.offer_accepted,
+                    sa.submitted_at,
+                    sa.created_at,
+                    sa.updated_at,
+                    sa.intake_start_date,
+                    sa.entry_route,
+                    sa.address_line1,
+                    sa.address_line2,
+                    sa.town_city,
+                    sa.postcode,
+                    sa.country_of_residence,
+                    sa.date_of_birth,
+                    sa.gender,
+                    sa.nationality,
+                    sa.highest_qualification,
+                    sa.institution_name,
+                    sa.year_completed,
+                    sa.english_proficiency,
+                    sa.english_score,
+                    sa.relevant_work_experience,
+                    sa.passport_id_document,
+                    sa.academic_certificates,
+                    sa.academic_transcripts,
+                    sa.english_certificate,
+                    sa.cv_resume,
+                    sa.work_reference,
+                    sa.proof_of_address,
+                    sa.visa_immigration_document,
+                    sa.student_contract,
+                    sa.brp_card,
+                    sa.residency_proof
                 FROM student_applications sa
                 ${whereClause}
-                ORDER BY sa.application_date DESC
-                LIMIT ${limitInt} OFFSET ${offset}
-            `;
+                ORDER BY sa.submitted_at DESC
+                LIMIT ? OFFSET ?
+            `, [...params, parseInt(limit), parseInt(offset)]);
             
-            console.log('[APPLICATIONS] Executing query');
-            const [result] = await db.execute(query, filterParams);
-            
-            applications = result || [];
-            console.log('[APPLICATIONS] Found', applications.length, 'applications');
+            applications = result;
         } catch (error) {
-            console.error('[APPLICATIONS] Query error:', error.message);
-            applications = [];
+            console.error('Complex query failed, trying simple query:', error.message);
+            // Fallback to simple query without LIMIT/OFFSET
+            try {
+                const [result] = await db.execute(`
+                    SELECT 
+                        sa.id,
+                        sa.application_reference,
+                        sa.first_name,
+                        sa.last_name,
+                        sa.email,
+                        sa.course_title,
+                        sa.course_code,
+                        sa.course_type,
+                        sa.mode_of_study,
+                        sa.application_status,
+                        sa.offer_accepted,
+                        sa.submitted_at,
+                        sa.created_at,
+                        sa.updated_at,
+                        sa.intake_start_date,
+                        sa.entry_route,
+                        sa.contact_number,
+                        sa.address_line1,
+                        sa.address_line2,
+                        sa.town_city,
+                        sa.postcode,
+                        sa.country_of_residence,
+                        sa.date_of_birth,
+                        sa.gender,
+                        sa.nationality,
+                        sa.passport_id_document,
+                        sa.academic_certificates,
+                        sa.academic_transcripts,
+                        sa.english_certificate,
+                        sa.cv_resume,
+                        sa.work_reference,
+                        sa.proof_of_address,
+                        sa.visa_immigration_document,
+                        sa.student_contract,
+                        sa.brp_card,
+                        sa.residency_proof
+                    FROM student_applications sa
+                    ${whereClause}
+                    ORDER BY sa.id DESC
+                `, params);
+                
+                applications = result;
+            } catch (fallbackError) {
+                console.error('Simple query also failed:', fallbackError.message);
+                applications = [];
+            }
         }
 
         // If no applications found, return empty array (not mock data)
@@ -618,16 +701,16 @@ router.get('/applications', async (req, res) => {
         }
 
         // Get total count from database
-        let total = 0;
+        let total = applications.length;
         try {
             const [countResult] = await db.execute(`
                 SELECT COUNT(*) as total
                 FROM student_applications sa
                 ${whereClause}
-            `, filterParams);
-            total = countResult[0]?.total || 0;
+            `, params);
+            total = countResult[0].total;
         } catch (countError) {
-            console.error('[APPLICATIONS] Count query error:', countError.message);
+            console.error('Count query failed:', countError.message);
             total = applications.length;
         }
 
@@ -643,15 +726,13 @@ router.get('/applications', async (req, res) => {
                 }
             }
         });
+
     } catch (error) {
-        console.error('[APPLICATIONS LIST] Error:', error);
+        console.error('Error fetching applications:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to fetch applications',
-            data: {
-                applications: [],
-                pagination: { current_page: 1, per_page: 50, total: 0, total_pages: 0 }
-            }
+            error: error.message
         });
     }
 });
@@ -1802,10 +1883,67 @@ router.post('/bulk-reject', async (req, res) => {
     }
 });
 
+// Get applications for a specific student by email (optimized)
+router.get('/my-applications', async (req, res) => {
+    try {
+        const { email } = req.query;
+
+        if (!email) {
+            return res.status(400).json({
+                success: false,
+                message: 'Email parameter is required'
+            });
+        }
+
+        const [applications] = await db.execute(`
+            SELECT 
+                id,
+                application_reference,
+                first_name,
+                last_name,
+                email,
+                course_title,
+                course_code,
+                course_type,
+                mode_of_study,
+                application_status,
+                intake_start_date,
+                created_at
+            FROM student_applications
+            WHERE email = ? AND application_status = 'accepted'
+            ORDER BY created_at DESC
+        `, [email]);
+
+        res.json({
+            success: true,
+            data: {
+                applications: applications
+            }
+        });
+    } catch (error) {
+        console.error('Error fetching student applications:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch applications',
+            error: error.message
+        });
+    }
+});
+
 // Get student's programme/course details from Moodle
 router.get('/programme/:id', async (req, res) => {
     try {
         const { id } = req.params;
+
+        // Check cache first
+        const cacheKey = `programme_${id}`;
+        const cached = programmeCache.get(cacheKey);
+        if (cached) {
+            console.log(`[CACHE HIT] Programme data for ID ${id}`);
+            return res.json(cached);
+        }
+
+        console.log(`[CACHE MISS] Fetching programme data for ID ${id}`);
 
         // Get student application to find course info
         const [apps] = await db.execute(
@@ -1824,112 +1962,109 @@ router.get('/programme/:id', async (req, res) => {
         const courseCode = app.course_code || app.programme_code;
         const courseTitle = app.course_title || app.programme_title;
 
-        // Try Moodle DB first for accurate course data
+        // Try Moodle DB first for accurate course data (using shared connection pool)
         try {
-            const moodleDb = mysql.createPool({
-                host: 'scli-moodle-db-dev',
-                port: 3306,
-                user: 'bn_moodle',
-                password: 'bitnami_moodle_password',
-                database: 'bitnami_moodle',
-                waitForConnections: true,
-                connectionLimit: 5,
-                queueLimit: 0
-            });
-
-            const [courseRows] = await moodleDb.execute(
+            // First, try to find by idnumber or shortname (indexed, faster)
+            const [courseRows] = await moodleDbPool.execute(
                 `
                 SELECT id, idnumber, shortname, fullname, startdate, enddate, summary
                 FROM mdl_course
-                WHERE (idnumber = ? OR shortname = ? OR fullname LIKE ?)
-                ORDER BY id DESC
+                WHERE idnumber = ? OR shortname = ?
                 LIMIT 1
                 `,
-                [courseCode, courseCode, `%${courseTitle || courseCode}%`]
+                [courseCode, courseCode]
             );
 
-            if (courseRows.length > 0) {
-                const studentCourse = courseRows[0];
+            let studentCourse = courseRows[0];
+
+            // If not found by code, fallback to LIKE search (slower)
+            if (!studentCourse && courseTitle) {
+                const [likeRows] = await moodleDbPool.execute(
+                    `
+                    SELECT id, idnumber, shortname, fullname, startdate, enddate, summary
+                    FROM mdl_course
+                    WHERE fullname LIKE ?
+                    LIMIT 1
+                    `,
+                    [`%${courseTitle}%`]
+                );
+                studentCourse = likeRows[0];
+            }
+
+            if (studentCourse) {
+                // OPTIMIZED: Get course sections efficiently (no modules yet)
+                const [sectionRows] = await moodleDbPool.execute(
+                    `SELECT id, section, name 
+                    FROM mdl_course_sections 
+                    WHERE course = ? AND section > 0
+                    ORDER BY section ASC`,
+                    [studentCourse.id]
+                );
+
+                // OPTIMIZED: Get module metadata first (just IDs and types)
+                const [moduleMetadata] = await moodleDbPool.execute(
+                    `SELECT cm.id AS cmid, cm.section, cm.instance, m.name AS module_type
+                    FROM mdl_course_modules cm
+                    INNER JOIN mdl_modules m ON m.id = cm.module
+                    WHERE cm.course = ? AND cm.deletioninprogress = 0
+                    ORDER BY cm.section ASC, cm.id ASC`,
+                    [studentCourse.id]
+                );
+
+                // Group modules by type for batch queries
+                const modulesByType = {};
+                moduleMetadata.forEach(mod => {
+                    if (!modulesByType[mod.module_type]) {
+                        modulesByType[mod.module_type] = [];
+                    }
+                    modulesByType[mod.module_type].push(mod);
+                });
+
+                // Build activity name map efficiently with targeted queries
+                const activityNames = {};
                 
-                // Get course image - try to read from disk directly
-                const [sectionRows] = await moodleDb.execute(
-                    `
-                    SELECT cs.id, cs.section, cs.name, COUNT(cm.id) AS module_count
-                    FROM mdl_course_sections cs
-                    LEFT JOIN mdl_course_modules cm ON cm.section = cs.id AND cm.deletioninprogress = 0
-                    WHERE cs.course = ? AND cs.section > 0
-                    GROUP BY cs.id, cs.section, cs.name
-                    ORDER BY cs.section ASC
-                    `,
-                    [studentCourse.id]
-                );
+                // Query only the tables we actually need
+                for (const [moduleType, modules] of Object.entries(modulesByType)) {
+                    const instanceIds = modules.map(m => m.instance).filter(id => id != null);
+                    if (instanceIds.length === 0) continue;
 
-                const [activityRows] = await moodleDb.execute(
-                    `
-                    SELECT cs.id AS section_id,
-                           cm.id AS cmid,
-                           m.name AS module_type,
-                           CASE m.name
-                               WHEN 'assign' THEN a.name
-                               WHEN 'quiz' THEN q.name
-                               WHEN 'resource' THEN r.name
-                               WHEN 'page' THEN p.name
-                               WHEN 'forum' THEN f.name
-                               WHEN 'url' THEN u.name
-                               WHEN 'book' THEN b.name
-                               WHEN 'data' THEN d.name
-                               WHEN 'lesson' THEN l.name
-                               WHEN 'scorm' THEN s.name
-                               WHEN 'wiki' THEN w.name
-                               WHEN 'choice' THEN c.name
-                               WHEN 'feedback' THEN fb.name
-                               WHEN 'glossary' THEN g.name
-                               WHEN 'label' THEN lb.name
-                               ELSE NULL
-                           END AS activity_name
-                    FROM mdl_course_sections cs
-                    LEFT JOIN mdl_course_modules cm ON cm.section = cs.id AND cm.deletioninprogress = 0
-                    LEFT JOIN mdl_modules m ON m.id = cm.module
-                    LEFT JOIN mdl_assign a ON a.id = cm.instance
-                    LEFT JOIN mdl_quiz q ON q.id = cm.instance
-                    LEFT JOIN mdl_resource r ON r.id = cm.instance
-                    LEFT JOIN mdl_page p ON p.id = cm.instance
-                    LEFT JOIN mdl_forum f ON f.id = cm.instance
-                    LEFT JOIN mdl_url u ON u.id = cm.instance
-                    LEFT JOIN mdl_book b ON b.id = cm.instance
-                    LEFT JOIN mdl_data d ON d.id = cm.instance
-                    LEFT JOIN mdl_lesson l ON l.id = cm.instance
-                    LEFT JOIN mdl_scorm s ON s.id = cm.instance
-                    LEFT JOIN mdl_wiki w ON w.id = cm.instance
-                    LEFT JOIN mdl_choice c ON c.id = cm.instance
-                    LEFT JOIN mdl_feedback fb ON fb.id = cm.instance
-                    LEFT JOIN mdl_glossary g ON g.id = cm.instance
-                    LEFT JOIN mdl_label lb ON lb.id = cm.instance
-                    WHERE cs.course = ? AND cs.section > 0
-                    ORDER BY cs.section ASC, cm.id ASC
-                    `,
-                    [studentCourse.id]
-                );
-
-                await moodleDb.end();
-
-                const activitiesBySection = (activityRows || []).reduce((acc, row) => {
-                    if (!row.section_id || !row.cmid) {
-                        return acc;
+                    try {
+                        const tableName = `mdl_${moduleType}`;
+                        const placeholders = instanceIds.map(() => '?').join(',');
+                        
+                        // Use query() instead of execute() for dynamic table names
+                        const [rows] = await moodleDbPool.query(
+                            `SELECT id, name FROM ${tableName} WHERE id IN (${placeholders})`,
+                            instanceIds
+                        );
+                        
+                        rows.forEach(row => {
+                            const mod = modules.find(m => m.instance === row.id);
+                            if (mod) {
+                                activityNames[mod.cmid] = row.name || moduleType;
+                            }
+                        });
+                    } catch (err) {
+                        // Table might not exist or query failed, use module type as name
+                        console.log(`Could not fetch ${moduleType} names:`, err.message);
+                        modules.forEach(mod => {
+                            activityNames[mod.cmid] = moduleType;
+                        });
                     }
+                }
 
-                    if (!acc[row.section_id]) {
-                        acc[row.section_id] = [];
+                // Build activities by section
+                const activitiesBySection = {};
+                moduleMetadata.forEach(mod => {
+                    if (!activitiesBySection[mod.section]) {
+                        activitiesBySection[mod.section] = [];
                     }
-
-                    acc[row.section_id].push({
-                        id: row.cmid,
-                        type: row.module_type || 'activity',
-                        title: row.activity_name || row.module_type || 'Activity'
+                    activitiesBySection[mod.section].push({
+                        id: mod.cmid,
+                        type: mod.module_type || 'activity',
+                        title: activityNames[mod.cmid] || mod.module_type || 'Activity'
                     });
-
-                    return acc;
-                }, {});
+                });
 
                 const modules = (sectionRows || []).map((section, idx) => ({
                     code: `SEC${String(section.section).padStart(2, '0')}`,
@@ -1939,7 +2074,7 @@ router.get('/programme/:id', async (req, res) => {
                     modules: activitiesBySection[section.id] || []
                 }));
 
-                return res.json({
+                const response = {
                     success: true,
                     data: {
                         programme: {
@@ -1963,10 +2098,11 @@ router.get('/programme/:id', async (req, res) => {
                         ],
                         source: 'moodle-db'
                     }
-                });
+                };
+                // Cache the response
+                programmeCache.set(cacheKey, response);
+                return res.json(response);
             }
-
-            await moodleDb.end();
         } catch (moodleDbError) {
             console.log('Moodle DB error, falling back to API/default:', moodleDbError.message);
         }
@@ -2023,7 +2159,7 @@ router.get('/programme/:id', async (req, res) => {
                 }
             }
 
-            return res.json({
+            const response = {
                 success: true,
                 data: {
                     programme: {
@@ -2046,12 +2182,15 @@ router.get('/programme/:id', async (req, res) => {
                     ],
                     source: 'moodle-api'
                 }
-            });
+            };
+            // Cache the response
+            programmeCache.set(cacheKey, response);
+            return res.json(response);
 
         } catch (moodleError) {
             console.log('Moodle API error, returning default programme data:', moodleError.message);
             
-            return res.json({
+            const response = {
                 success: true,
                 data: {
                     programme: {
@@ -2070,7 +2209,10 @@ router.get('/programme/:id', async (req, res) => {
                     ],
                     source: 'default'
                 }
-            });
+            };
+            // Cache the response
+            programmeCache.set(cacheKey, response);
+            return res.json(response);
         }
 
     } catch (error) {
@@ -2168,23 +2310,12 @@ router.get('/timetable/:id', async (req, res) => {
 
         const courseCode = appRows[0].course_code;
 
-        // Get connection from Moodle database pool
-        const moodlePool = mysql.createPool({
-            host: process.env.MOODLE_DB_HOST || 'scli-moodle-db',
-            user: process.env.MOODLE_DB_USER || 'root',
-            password: process.env.MOODLE_DB_PASSWORD || 'moodleroot',
-            database: process.env.MOODLE_DB_NAME || 'bitnami_moodle',
-            waitForConnections: true,
-            connectionLimit: 2,
-            queueLimit: 0
-        });
-
         try {
-            // Get course ID - try multiple ways to find the course
+            // Get course ID - try multiple ways to find the course using shared pool
             let courseId = null;
             
             // First try exact match by idnumber or shortname
-            const [courseRows] = await moodlePool.execute(
+            const [courseRows] = await moodleDbPool.execute(
                 `SELECT id FROM mdl_course WHERE idnumber = ? OR shortname = ? LIMIT 1`,
                 [courseCode, courseCode]
             );
@@ -2193,7 +2324,7 @@ router.get('/timetable/:id', async (req, res) => {
                 courseId = courseRows[0].id;
             } else {
                 // Try by idnumber starting with the code (e.g., "DEG-001 B.Sc Computer Science" contains "DEG-001")
-                const [idnumberRows] = await moodlePool.execute(
+                const [idnumberRows] = await moodleDbPool.execute(
                     `SELECT id FROM mdl_course WHERE idnumber LIKE ? OR fullname LIKE ? OR shortname LIKE ? LIMIT 1`,
                     [`${courseCode}%`, `%${courseCode}%`, `%${courseCode}%`]
                 );
@@ -2216,7 +2347,7 @@ router.get('/timetable/:id', async (req, res) => {
 
             // Get events from mdl_event table for this course
             // Join with course modules to get activity links
-            const [eventRows] = await moodlePool.execute(
+            const [eventRows] = await moodleDbPool.execute(
                 `
                 SELECT 
                     e.id, e.name, e.eventtype, e.modulename, e.timestart, e.timeduration, e.description,
@@ -2242,7 +2373,7 @@ router.get('/timetable/:id', async (req, res) => {
             );
 
             // Get assignments with due dates
-            const [assignmentRows] = await moodlePool.execute(
+            const [assignmentRows] = await moodleDbPool.execute(
                 `
                 SELECT a.id, a.name, a.duedate, cm.id as cm_id
                 FROM mdl_assign a
@@ -2383,25 +2514,13 @@ router.get('/assessments/:id', async (req, res) => {
 
         const courseCode = appRows[0].course_code;
         
-        // Get Moodle course ID
-        const moodlePool = mysql.createPool({
-            host: process.env.MOODLE_DB_HOST || 'scli-moodle-db-dev',
-            port: 3306,
-            user: 'root',
-            password: 'moodleroot',
-            database: 'bitnami_moodle',
-            waitForConnections: true,
-            connectionLimit: 5,
-            queueLimit: 0
-        });
-
-        const [courseRows] = await moodlePool.query(
+        // Get Moodle course ID using shared connection pool
+        const [courseRows] = await moodleDbPool.query(
             `SELECT id FROM mdl_course WHERE idnumber LIKE ? OR fullname LIKE ? OR shortname LIKE ? LIMIT 1`,
             [`${courseCode}%`, `%${courseCode}%`, `%${courseCode}%`]
         );
 
         if (courseRows.length === 0) {
-            moodlePool.end();
             return res.json({
                 success: true,
                 data: []
@@ -2411,7 +2530,7 @@ router.get('/assessments/:id', async (req, res) => {
         const courseId = courseRows[0].id;
 
         // Get assignments with due dates
-        const [assignments] = await moodlePool.query(
+        const [assignments] = await moodleDbPool.query(
             `
             SELECT a.id, a.name, a.duedate, cm.id as cm_id, 'assign' as type
             FROM mdl_assign a
@@ -2440,8 +2559,6 @@ router.get('/assessments/:id', async (req, res) => {
             moodle_url: assign.cm_id ? `/mod/${assign.type}/view.php?id=${assign.cm_id}` : null
         }));
 
-        moodlePool.end();
-
         return res.json({
             success: true,
             data: assessments
@@ -2452,6 +2569,379 @@ router.get('/assessments/:id', async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Failed to fetch assessments',
+            error: error.message
+        });
+    }
+});
+
+// Get student attendance from Moodle
+router.get('/attendance/:id', async (req, res) => {
+    try {
+        const studentId = req.params.id;
+        
+        // Check cache first
+        const cacheKey = `attendance_${studentId}`;
+        const cachedData = attendanceCache.get(cacheKey);
+        
+        if (cachedData) {
+            console.log(`[CACHE HIT] Attendance for student ${studentId}`);
+            return res.json(cachedData);
+        }
+        
+        console.log(`[CACHE MISS] Fetching attendance for student ${studentId}`);
+        
+        // Get student's email
+        const [appRows] = await db.query(
+            `SELECT email FROM student_applications WHERE id = ?`,
+            [studentId]
+        );
+
+        if (appRows.length === 0) {
+            const emptyResponse = {
+                success: true,
+                data: { courseGroups: [], summary: null }
+            };
+            attendanceCache.set(cacheKey, emptyResponse);
+            return res.json(emptyResponse);
+        }
+
+        const userEmail = appRows[0].email;
+
+        try {
+            // Get Moodle user ID
+            const [moodleUsers] = await moodleDbPool.query(
+                `SELECT id FROM mdl_user WHERE email = ?`,
+                [userEmail]
+            );
+
+            if (moodleUsers.length === 0) {
+                return res.json({
+                    success: true,
+                    data: { courseGroups: [], summary: null }
+                });
+            }
+
+            const moodleUserId = moodleUsers[0].id;
+
+            // Get all courses the student is enrolled in
+            const [enrolledCourses] = await moodleDbPool.query(
+                `SELECT DISTINCT c.id, c.fullname, c.shortname
+                FROM mdl_course c
+                JOIN mdl_enrol e ON e.courseid = c.id
+                JOIN mdl_user_enrolments ue ON ue.enrolid = e.id
+                WHERE ue.userid = ? AND c.id != 1
+                ORDER BY c.fullname`,
+                [moodleUserId]
+            );
+
+            if (enrolledCourses.length === 0) {
+                return res.json({
+                    success: true,
+                    data: { courseGroups: [], summary: null }
+                });
+            }
+
+            // Map status codes to readable status
+            const statusMap = {
+                'P': 'present',
+                'A': 'absent',
+                'L': 'late',
+                'E': 'excused'
+            };
+
+            let allRecords = [];
+            const courseGroups = [];
+            
+            const courseIds = enrolledCourses.map(c => c.id);
+            const placeholders = courseIds.map(() => '?').join(',');
+
+            // Get all attendance modules for all enrolled courses in one query
+            const [attendanceModules] = await moodleDbPool.query(
+                `SELECT a.id as attendance_id, a.name, a.course as course_id, c.fullname, c.shortname
+                FROM mdl_attendance a
+                JOIN mdl_course_modules cm ON cm.instance = a.id 
+                JOIN mdl_modules m ON m.id = cm.module AND m.name = 'attendance'
+                JOIN mdl_course c ON c.id = a.course
+                WHERE a.course IN (${placeholders})`,
+                courseIds
+            );
+
+            if (attendanceModules.length > 0) {
+                const attendanceIds = attendanceModules.map(a => a.attendance_id);
+                const attPlaceholders = attendanceIds.map(() => '?').join(',');
+
+                // Get all attendance records for all modules in one query
+                const [allAttendanceRecords] = await moodleDbPool.query(
+                    `SELECT 
+                        sess.attendanceid,
+                        sess.sessdate as date,
+                        sess.description as session,
+                        stat.acronym as status_code,
+                        stat.description as status_name,
+                        log.remarks as notes
+                    FROM mdl_attendance_sessions sess
+                    LEFT JOIN mdl_attendance_log log ON log.sessionid = sess.id AND log.studentid = ?
+                    LEFT JOIN mdl_attendance_statuses stat ON stat.id = log.statusid
+                    WHERE sess.attendanceid IN (${attPlaceholders})
+                    ORDER BY sess.sessdate DESC
+                    LIMIT 500`,
+                    [moodleUserId, ...attendanceIds]
+                );
+
+                // Group records by course
+                const recordsByCourse = {};
+                attendanceModules.forEach(module => {
+                    recordsByCourse[module.course_id] = {
+                        courseId: module.course_id,
+                        courseName: module.fullname,
+                        courseCode: module.shortname,
+                        records: []
+                    };
+                });
+
+                allAttendanceRecords.forEach(record => {
+                    const module = attendanceModules.find(m => m.attendance_id === record.attendanceid);
+                    if (module && recordsByCourse[module.course_id]) {
+                        recordsByCourse[module.course_id].records.push({
+                            date: new Date(record.date * 1000).toISOString(),
+                            session: record.session || 'Class Session',
+                            courseId: module.course_id,
+                            courseName: module.fullname,
+                            courseCode: module.shortname,
+                            status: statusMap[record.status_code] || 'present',
+                            notes: record.notes || ''
+                        });
+                    }
+                });
+
+                // Calculate summary for each course
+                Object.values(recordsByCourse).forEach(courseData => {
+                    if (courseData.records.length > 0) {
+                        const presentCount = courseData.records.filter(r => r.status === 'present').length;
+                        const absentCount = courseData.records.filter(r => r.status === 'absent').length;
+                        const lateCount = courseData.records.filter(r => r.status === 'late').length;
+                        const excusedCount = courseData.records.filter(r => r.status === 'excused').length;
+                        const attendanceRate = courseData.records.length > 0 
+                            ? Math.round((presentCount / courseData.records.length) * 100) 
+                            : 0;
+
+                        courseGroups.push({
+                            courseId: courseData.courseId,
+                            courseName: courseData.courseName,
+                            courseCode: courseData.courseCode,
+                            records: courseData.records,
+                            summary: {
+                                total: courseData.records.length,
+                                present: presentCount,
+                                absent: absentCount,
+                                late: lateCount,
+                                excused: excusedCount,
+                                rate: attendanceRate
+                            }
+                        });
+
+                        allRecords = allRecords.concat(courseData.records);
+                    }
+                });
+            }
+
+            // Calculate overall summary
+            const totalSessions = allRecords.length;
+            const presentCount = allRecords.filter(r => r.status === 'present').length;
+            const absentCount = allRecords.filter(r => r.status === 'absent').length;
+            const lateCount = allRecords.filter(r => r.status === 'late').length;
+            const excusedCount = allRecords.filter(r => r.status === 'excused').length;
+            
+            const attendanceRate = totalSessions > 0 
+                ? Math.round((presentCount / totalSessions) * 100) 
+                : 0;
+
+            const summary = {
+                total: totalSessions,
+                present: presentCount,
+                absent: absentCount,
+                late: lateCount,
+                excused: excusedCount,
+                rate: attendanceRate
+            };
+
+            const responseData = {
+                success: true,
+                data: { courseGroups, summary }
+            };
+            
+            // Cache the response
+            attendanceCache.set(cacheKey, responseData);
+            
+            return res.json(responseData);
+
+        } catch (moodleError) {
+            console.log('Moodle attendance module error:', moodleError.message);
+            const emptyResponse = {
+                success: true,
+                data: { courseGroups: [], summary: null }
+            };
+            attendanceCache.set(cacheKey, emptyResponse);
+            return res.json(emptyResponse);
+        }
+
+    } catch (error) {
+        console.error('Error fetching attendance:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch attendance',
+            error: error.message
+        });
+    }
+});
+
+// Get library resources from student's enrolled courses
+router.get('/library/:id', async (req, res) => {
+    try {
+        const studentId = req.params.id;
+        
+        // Get student's email
+        const [appRows] = await db.query(
+            `SELECT email, course_code FROM student_applications WHERE id = ?`,
+            [studentId]
+        );
+
+        if (appRows.length === 0) {
+            return res.json({
+                success: true,
+                data: []
+            });
+        }
+
+        const userEmail = appRows[0].email;
+
+        try {
+            // Get Moodle user ID
+            const [moodleUsers] = await moodleDbPool.query(
+                `SELECT id FROM mdl_user WHERE email = ?`,
+                [userEmail]
+            );
+
+            if (moodleUsers.length === 0) {
+                return res.json({
+                    success: true,
+                    data: []
+                });
+            }
+
+            const moodleUserId = moodleUsers[0].id;
+
+            // Get all courses the student is enrolled in
+            const [enrolledCourses] = await moodleDbPool.query(
+                `SELECT DISTINCT c.id, c.fullname, c.shortname
+                FROM mdl_course c
+                JOIN mdl_enrol e ON e.courseid = c.id
+                JOIN mdl_user_enrolments ue ON ue.enrolid = e.id
+                WHERE ue.userid = ? AND c.id != 1
+                ORDER BY c.fullname`,
+                [moodleUserId]
+            );
+
+            if (enrolledCourses.length === 0) {
+                return res.json({
+                    success: true,
+                    data: []
+                });
+            }
+
+            const courseIds = enrolledCourses.map(c => c.id);
+            const placeholders = courseIds.map(() => '?').join(',');
+
+            // Get resources (files, PDFs, documents) from enrolled courses
+            const [resources] = await moodleDbPool.query(
+                `SELECT 
+                    r.id,
+                    r.course,
+                    r.name as title,
+                    c.fullname as course_name,
+                    c.shortname as course_code,
+                    cm.id as cmid,
+                    'resource' as type,
+                    'PDF' as format
+                FROM mdl_resource r
+                JOIN mdl_course_modules cm ON cm.instance = r.id
+                JOIN mdl_modules m ON m.id = cm.module AND m.name = 'resource'
+                JOIN mdl_course c ON c.id = r.course
+                WHERE r.course IN (${placeholders}) AND cm.deletioninprogress = 0
+                ORDER BY c.fullname, r.name
+                LIMIT 50`,
+                courseIds
+            );
+
+            // Get URLs (external links, videos, etc.) from enrolled courses
+            const [urls] = await moodleDbPool.query(
+                `SELECT 
+                    u.id,
+                    u.course,
+                    u.name as title,
+                    c.fullname as course_name,
+                    c.shortname as course_code,
+                    cm.id as cmid,
+                    'url' as type,
+                    'Link' as format
+                FROM mdl_url u
+                JOIN mdl_course_modules cm ON cm.instance = u.id
+                JOIN mdl_modules m ON m.id = cm.module AND m.name = 'url'
+                JOIN mdl_course c ON c.id = u.course
+                WHERE u.course IN (${placeholders}) AND cm.deletioninprogress = 0
+                ORDER BY c.fullname, u.name
+                LIMIT 50`,
+                courseIds
+            );
+
+            // Combine and format resources
+            const allResources = [
+                ...resources.map(r => ({
+                    id: `resource-${r.id}`,
+                    title: r.title,
+                    type: 'ebooks',
+                    category: r.course_name,
+                    course_code: r.course_code,
+                    author: 'Course Material',
+                    description: `Resource from ${r.course_name}`,
+                    format: r.format,
+                    available: true,
+                    cmid: r.cmid,
+                    moodleUrl: `/mod/resource/view.php?id=${r.cmid}`
+                })),
+                ...urls.map(u => ({
+                    id: `url-${u.id}`,
+                    title: u.title,
+                    type: 'articles',
+                    category: u.course_name,
+                    course_code: u.course_code,
+                    author: 'External Resource',
+                    description: `Link from ${u.course_name}`,
+                    format: u.format,
+                    available: true,
+                    cmid: u.cmid,
+                    moodleUrl: `/mod/url/view.php?id=${u.cmid}`
+                }))
+            ];
+
+            return res.json({
+                success: true,
+                data: allResources
+            });
+
+        } catch (moodleError) {
+            console.log('Moodle library fetch error:', moodleError.message);
+            return res.json({
+                success: true,
+                data: []
+            });
+        }
+
+    } catch (error) {
+        console.error('Error fetching library resources:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch library resources',
             error: error.message
         });
     }
@@ -2478,26 +2968,13 @@ router.get('/grades/:id', async (req, res) => {
         const userEmail = appRows[0].email;
         const courseCode = appRows[0].course_code;
 
-        // Connect to Moodle database
-        const moodlePool = mysql.createPool({
-            host: process.env.MOODLE_DB_HOST || 'scli-moodle-db-dev',
-            port: 3306,
-            user: 'root',
-            password: 'moodleroot',
-            database: 'bitnami_moodle',
-            waitForConnections: true,
-            connectionLimit: 5,
-            queueLimit: 0
-        });
-
-        // Get Moodle user ID by email
-        const [moodleUsers] = await moodlePool.query(
+        // Get Moodle user ID by email using shared pool
+        const [moodleUsers] = await moodleDbPool.query(
             `SELECT id FROM mdl_user WHERE email = ?`,
             [userEmail]
         );
 
         if (moodleUsers.length === 0) {
-            moodlePool.end();
             return res.json({
                 success: true,
                 data: []
@@ -2507,13 +2984,12 @@ router.get('/grades/:id', async (req, res) => {
         const moodleUserId = moodleUsers[0].id;
 
         // Get course ID
-        const [courseRows] = await moodlePool.query(
+        const [courseRows] = await moodleDbPool.query(
             `SELECT id FROM mdl_course WHERE idnumber LIKE ? OR fullname LIKE ? OR shortname LIKE ? LIMIT 1`,
             [`${courseCode}%`, `%${courseCode}%`, `%${courseCode}%`]
         );
 
         if (courseRows.length === 0) {
-            moodlePool.end();
             return res.json({
                 success: true,
                 data: []
@@ -2523,7 +2999,7 @@ router.get('/grades/:id', async (req, res) => {
         const courseId = courseRows[0].id;
 
         // Get grades from gradebook
-        const [grades] = await moodlePool.query(
+        const [grades] = await moodleDbPool.query(
             `
             SELECT 
                 gi.itemname,
@@ -2541,7 +3017,7 @@ router.get('/grades/:id', async (req, res) => {
             [moodleUserId, courseId]
         );
 
-        const [courseTotals] = await moodlePool.query(
+        const [courseTotals] = await moodleDbPool.query(
             `
             SELECT 
                 gg.finalgrade,
@@ -2567,8 +3043,6 @@ router.get('/grades/:id', async (req, res) => {
             feedback: 'See Moodle for detailed feedback',
             moodle_url: grade.cm_id ? `/mod/${grade.itemmodule}/view.php?id=${grade.cm_id}` : null
         }));
-
-        moodlePool.end();
 
         const courseSummary = courseTotals.length > 0 ? {
             finalGrade: courseTotals[0].finalgrade ? parseFloat(courseTotals[0].finalgrade).toFixed(2) : null,
