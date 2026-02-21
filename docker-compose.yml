@@ -32,29 +32,52 @@ services:
       - scl-network
 
   scli-moodle:
-    image: bitnamilegacy/moodle:latest
+    image: php:8.1-apache
     container_name: scli-moodle
     ports:
-      - "9090:8080"
+      - "9090:80"
     environment:
       - MOODLE_DATABASE_HOST=scli-moodle-db
-      - MOODLE_DATABASE_PORT_NUMBER=3306
+      - MOODLE_DATABASE_NAME=bitnami_moodle
       - MOODLE_DATABASE_USER=bn_moodle
       - MOODLE_DATABASE_PASSWORD=bitnami_moodle_password
-      - MOODLE_DATABASE_NAME=bitnami_moodle
-      - MOODLE_USERNAME=admin
-      - MOODLE_PASSWORD=SCLInst!2026
-      - MOODLE_SITE_NAME=SCL Institute LMS
-      - MOODLE_REVERSEPROXY=yes
-      - BITNAMI_DEBUG=false
     restart: unless-stopped
     volumes:
-      - moodle_data:/bitnami/moodle
-      # - ./moodle-scripts/local/sclsso:/bitnami/moodle/local/sclsso
+      - moodle_data:/var/www/moodledata
+      - ./moodle-config.php:/var/www/html/config.php
+      - ./moodle-scripts/local/sclsso:/var/www/html/local/sclsso
+    working_dir: /var/www/html
+    entrypoint: >
+      bash -c "
+      apt-get update -qq &&
+      apt-get install -y -qq mariadb-client libxml2-dev zlib1g-dev libpng-dev libjpeg-dev libfreetype6-dev libzip-dev curl unzip &&
+      docker-php-ext-configure gd --with-freetype --with-jpeg &&
+      docker-php-ext-install -j\$$(nproc) mysqli pdo_mysql gd xml zip >/dev/null 2>&1 &&
+      a2enmod rewrite headers >/dev/null 2>&1 &&
+      if [ ! -f /var/www/html/version.php ]; then
+        echo 'Downloading Moodle 4.3...' &&
+        curl -sSL https://moodle.org/downloads/download.php/direct/stable403/moodle-4.3.zip -o /tmp/moodle.zip &&
+        unzip -q /tmp/moodle.zip -d /tmp &&
+        mv /tmp/moodle/* /var/www/html/ &&
+        rmdir /tmp/moodle &&
+        rm /tmp/moodle.zip
+      fi &&
+      mkdir -p /var/www/moodledata &&
+      chmod 777 /var/www/moodledata &&
+      chown -R www-data:www-data /var/www &&
+      echo 'Moodle setup complete' &&
+      apache2-foreground
+      "
     depends_on:
       - scli-moodle-db
     networks:
       - scl-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/login/index.php"]
+      interval: 30s
+      timeout: 10s
+      retries: 8
+      start_period: 120s
 
   scli-backend:
     build: ./backend

@@ -3,21 +3,22 @@ unset($CFG);
 global $CFG;
 $CFG = new stdClass();
 
-$CFG->dbtype    = 'mariadb';
+$CFG->dbtype    = 'mysqli';
 $CFG->dblibrary = 'native';
-$CFG->dbhost    = 'scli-mysql';
+$CFG->dbhost    = 'scli-moodle-db';
 $CFG->dbname    = 'bitnami_moodle';
-$CFG->dbuser    = 'scl_user';
-$CFG->dbpass    = 'scl_password';
+$CFG->dbuser    = 'bn_moodle';
+$CFG->dbpass    = 'bitnami_moodle_password';
 $CFG->prefix    = 'mdl_';
 $CFG->dboptions = array(
     'dbpersist' => false,
     'dbport'    => 3306,
     'dbsocket'  => '',
+    'dbcollation' => 'utf8mb4_unicode_ci',
 );
 
 $CFG->wwwroot   = 'http://localhost:9090';
-$CFG->dataroot  = '/bitnami/moodledata';
+$CFG->dataroot  = '/var/www/moodledata';
 $CFG->admin     = 'admin';
 
 $CFG->directorypermissions = 0777;

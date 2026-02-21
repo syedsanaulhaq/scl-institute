@@ -1,0 +1,28 @@
+FROM php:8.1-apache
+
+RUN apt-get update && apt-get install -y \
+    mariadb-client \
+    libxml2-dev \
+    zlib1g-dev \
+    libpng-dev \
+    libjpeg-dev \
+    libfreetype6-dev \
+    libzip-dev \
+    curl \
+    wget \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install mysqli pdo_mysql gd xml zip intl \
+    && a2enmod rewrite headers \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /var/www/html
+
+RUN wget -q https://download.moodle.org/download.php/direct/stable403/moodle-4.3.tar.gz && \
+    tar -xzf moodle-4.3.tar.gz && \
+    mv moodle/* . && rmdir moodle && rm moodle-4.3.tar.gz
+
+RUN mkdir -p /var/www/moodledata && chmod 777 /var/www/moodledata && chmod 755 /var/www/html
+
+EXPOSE 80
+CMD ["apache2-foreground"]
+
