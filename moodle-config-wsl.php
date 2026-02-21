@@ -20,8 +20,10 @@ $CFG->dboptions = array(
     'dbcollation' => 'utf8mb4_unicode_ci',
 );
 
-// Site configuration
-$CFG->wwwroot   = 'http://localhost';
+// Site configuration - Auto-detect protocol and host
+$protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] != 'off') ? 'https://' : 'http://';
+$host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+$CFG->wwwroot   = $protocol . $host;
 $CFG->dataroot  = '/var/moodledata';
 $CFG->admin     = 'admin';
 
