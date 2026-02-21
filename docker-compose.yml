@@ -50,7 +50,7 @@ services:
     restart: unless-stopped
     volumes:
       - moodle_data:/bitnami/moodle
-      - ./moodle-scripts/local/sclsso:/bitnami/moodle/local/sclsso
+      # - ./moodle-scripts/local/sclsso:/bitnami/moodle/local/sclsso
     depends_on:
       - scli-moodle-db
     networks:
