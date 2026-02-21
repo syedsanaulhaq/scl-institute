@@ -1,0 +1,25 @@
+FROM php:7.4-apache
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    wget curl git mariadb-client libxml2-dev zlib1g-dev libpng-dev \
+    libjpeg-dev libfreetype6-dev && \
+    docker-php-ext-configure gd --with-jpeg --with-freetype && \
+    docker-php-ext-install -j2 gd mysql mysqli pdo_mysql soap intl && \
+    a2enmod rewrite headers && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /var/www/html
+
+RUN mkdir -p /var/www/moodledata && chmod 777 /var/www/moodledata && \
+    cd /tmp && \
+    wget -q -O moodle.tar.gz https://moodlecdn.moodle.org/download.php/direct/stable403/moodle-4.3.tar.gz && \
+    tar -xzf moodle.tar.gz && \
+    cp -r moodle/* /var/www/html/ && \
+    rm -rf moodle moodle. tar.gz && \
+    chown -R www-data:www-data /var/www/html && \
+    chmod -R 755 /var/www/html
+
+EXPOSE 80
+
+CMD ["apache2-foreground"]
