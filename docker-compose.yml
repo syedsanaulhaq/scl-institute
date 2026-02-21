@@ -37,22 +37,22 @@ services:
     ports:
       - "9090:8080"
     environment:
-      - MOODLE_DATABASE_HOST=scli-mysql
+      - MOODLE_DATABASE_HOST=scli-moodle-db
       - MOODLE_DATABASE_PORT_NUMBER=3306
-      - MOODLE_DATABASE_USER=scl_user
-      - MOODLE_DATABASE_PASSWORD=scl_password
+      - MOODLE_DATABASE_USER=bn_moodle
+      - MOODLE_DATABASE_PASSWORD=bitnami_moodle_password
       - MOODLE_DATABASE_NAME=bitnami_moodle
       - MOODLE_USERNAME=admin
       - MOODLE_PASSWORD=SCLInst!2026
       - MOODLE_SITE_NAME=SCL Institute LMS
       - MOODLE_REVERSEPROXY=yes
-      - BITNAMI_DEBUG=true
-    restart: on-failure
+      - BITNAMI_DEBUG=false
+    restart: unless-stopped
     volumes:
       - moodle_data:/bitnami/moodle
       - ./moodle-scripts/local/sclsso:/bitnami/moodle/local/sclsso
     depends_on:
-      - scli-mysql
+      - scli-moodle-db
     networks:
       - scl-network
 
