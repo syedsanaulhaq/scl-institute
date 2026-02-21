@@ -81,7 +81,7 @@ if (empty($token)) {
 
 // Verify token via SCL backend API
 // Use environment variable or fallback to backend service name
-$backendHost = getenv('SCL_BACKEND_HOST') ?: 'scli-backend-prod';
+$backendHost = getenv('SCL_BACKEND_HOST') ?: 'scli-backend';
 $backendPort = getenv('SCL_BACKEND_PORT') ?: '4000';
 $backendUrl = 'http://' . $backendHost . ':' . $backendPort . '/api/sso/verify';
 $ssoSecret = getenv('SSO_SECRET') ?: 'supersecretkey';

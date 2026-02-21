@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { User, Lock, Loader2, Eye, EyeOff, ShieldCheck } from 'lucide-react';
+import { User, Lock, Loader2, Eye, EyeOff } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
 
@@ -54,11 +54,9 @@ const LoginPage = ({ onLoginSuccess }) => {
                     className="absolute inset-0 h-full w-full object-cover scale-105"
                 />
 
-                <div className="relative z-20 flex items-center text-2xl font-bold tracking-tight">
-                    <div className="bg-white/10 backdrop-blur-md p-2 rounded-xl mr-3 border border-white/20">
-                        <ShieldCheck className="h-8 w-8 text-white" />
-                    </div>
-                    SCL Institute
+                <div className="relative z-20 flex items-center text-2xl font-bold tracking-tight gap-3">
+                    <img src="/assets/scl_logo.png" alt="Stratford College London" className="h-12 w-12 object-contain" />
+                    STRATFORD COLLEGE LONDON
                 </div>
 
                 <div className="relative z-20 mt-auto max-w-lg">
@@ -78,10 +76,10 @@ const LoginPage = ({ onLoginSuccess }) => {
             <div className="flex-1 flex flex-col justify-center px-6 sm:px-12 lg:px-24 py-12 bg-gray-50/50">
                 <div className="mx-auto w-full max-w-[400px]">
                     <div className="flex flex-col space-y-3 text-center mb-10">
-                        <div className="lg:hidden mx-auto bg-scl-purple text-white p-3 rounded-2xl mb-4 shadow-xl">
-                            <ShieldCheck className="h-8 w-8" />
+                        <div className="lg:hidden mx-auto mb-4">
+                            <img src="/assets/scl_logo.png" alt="Stratford College London" className="h-12 w-12 object-contain mx-auto" />
                         </div>
-                        <h1 className="text-3xl font-black text-gray-900 tracking-tight">Login to SCL</h1>
+                        <h1 className="uppercase text-3xl font-black text-gray-900 tracking-widest">STRATFORD COLLEGE LONDON</h1>
                         <p className="text-sm text-gray-500 font-medium">
                             Enter your credentials below to access the management portal
                         </p>

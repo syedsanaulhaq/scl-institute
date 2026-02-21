@@ -68,12 +68,14 @@ const studentRoutes = require('./routes/students');
 const moodleRoutes = require('./routes/moodle');
 const { router: notificationsRouter } = require('./routes/notifications');
 const supportRoutes = require('./routes/support');
+const inductionRoutes = require('./routes/inductions');
 
 // Use routes
 app.use('/api/students', studentRoutes);
 app.use('/api/moodle', moodleRoutes);
 app.use('/api/notifications', notificationsRouter);
 app.use('/api/support', supportRoutes);
+app.use('/api/inductions', inductionRoutes);
 
 // Routes
 app.get('/api/health', (req, res) => {

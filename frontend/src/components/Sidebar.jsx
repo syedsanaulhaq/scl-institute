@@ -6,7 +6,6 @@ import {
     GraduationCap,
     Users,
     Settings,
-    ChevronLeft,
     Menu,
     ShieldCheck,
     LogOut,
@@ -68,6 +67,7 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
                 { name: 'Reports', icon: FileText, path: '/applications-report' }
             ]
         },
+        { name: 'Course Inductions', icon: ClipboardList, path: '/course-inductions' },
         { name: 'Access LMS', icon: GraduationCap, isSSO: true },
         { name: 'Settings', icon: Settings, path: '/settings' },
     ];
@@ -190,22 +190,24 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
             className={`fixed inset-y-0 left-0 z-50 bg-scl-dark text-white transition-all duration-300 ease-in-out shadow-2xl ${isOpen ? 'w-56' : 'w-16'
                 }`}
         >
-            <div className="flex flex-col h-full">
+            <div className="flex flex-col h-full relative">
                 {/* Logo Area */}
-                <div className="h-14 flex items-center justify-between px-3 border-b border-white/10">
-                    <div className={`flex items-center space-x-2 overflow-hidden transition-all duration-300 ${isOpen ? 'opacity-100 w-auto' : 'opacity-0 w-0'}`}>
-                        <div className="bg-white/10 backdrop-blur-md p-1.5 rounded-lg border border-white/20">
-                            <ShieldCheck className="w-5 h-5 text-white" />
-                        </div>
-                        <span className="font-bold text-base tracking-tight whitespace-nowrap text-white">SCL Institute</span>
+                <div className={`h-[5.5rem] flex items-center px-3 border-b border-white/10 ${isOpen ? 'justify-between' : 'justify-center'}`}>
+                    <div className="flex items-center space-x-2 rounded-lg bg-white/15 px-2 py-1">
+                        <img src="/assets/scl_logo.png" alt="Stratford College Lond." className="h-9 w-9 object-contain flex-shrink-0" />
+                        {isOpen && (
+                            <span className="font-bold text-sm tracking-tight whitespace-nowrap text-white">Stratford College Lond.</span>
+                        )}
                     </div>
-                    <button
-                        onClick={toggle}
-                        className={`p-2 rounded-xl hover:bg-white/10 transition-colors ${!isOpen ? 'mx-auto' : ''}`}
-                    >
-                        {isOpen ? <ChevronLeft className="w-5 h-5" /> : <Menu className="w-6 h-6" />}
-                    </button>
                 </div>
+
+                <button
+                    onClick={toggle}
+                    className="absolute top-3 -right-6 z-10 text-scl-purple hover:text-scl-purple transition-colors rounded-lg"
+                    aria-label={isOpen ? 'Collapse sidebar' : 'Expand sidebar'}
+                >
+                    <Menu className="h-[3.5rem] w-[1.5em]" />
+                </button>
 
                 {/* Navigation Items */}
                 <nav className="flex-1 px-2 py-4 space-y-1 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent hover:scrollbar-thumb-white/40">

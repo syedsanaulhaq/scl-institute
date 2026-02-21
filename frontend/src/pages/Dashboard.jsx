@@ -17,7 +17,8 @@ import {
     UserCircle,
     UserSquare2,
     Settings2,
-    Lock
+    Lock,
+    ClipboardList
 } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
@@ -92,6 +93,15 @@ const Dashboard = ({ user, onLogout }) => {
             icon: ShieldCheck,
             roles: ['Super Admin', 'Compliance Officer'],
             color: 'indigo'
+        },
+        {
+            id: 'course-inductions',
+            title: 'Course Induction Compliance',
+            description: 'Track course approval requirements, risks, conditions, and sign-offs.',
+            icon: ClipboardList,
+            roles: ['Super Admin'],
+            color: 'blue',
+            path: '/course-inductions'
         },
         {
             id: 'programs',

@@ -5,8 +5,11 @@ import Notifications from './Notifications';
 const Navbar = ({ user, onLogout }) => {
     return (
         <header className="h-20 bg-white/70 backdrop-blur-md border-b border-gray-100 sticky top-0 z-40 px-8 flex items-center justify-between">
-            <div className="flex-1 max-w-xl">
-                <div className="relative group">
+            <div className="flex-1 max-w-xl flex items-center gap-4">
+                <div className="hidden sm:flex items-center gap-3">
+                    <span className="uppercase text-lg font-bold text-scl-dark tracking-widest">Stratford College London</span>
+                </div>
+                <div className="relative group flex-1">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-scl-purple transition-colors" />
                     <input
                         type="text"

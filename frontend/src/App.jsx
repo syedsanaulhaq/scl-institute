@@ -30,6 +30,7 @@ import StudentSupportHub from './components/student/StudentSupportHub';
 import StudentFees from './components/student/StudentFees';
 import StudentSupport from './components/student/StudentSupport';
 import StudentNotifications from './pages/StudentNotifications';
+import CourseInductions from './pages/CourseInductions';
 
 function App() {
     const [user, setUser] = useState(() => {
@@ -202,6 +203,15 @@ function App() {
                     user && user?.role?.toLowerCase() === 'student' ? (
                         <Layout user={user} onLogout={handleLogout}>
                             <StudentGrades user={user} />
+                        </Layout>
+                    ) : (
+                        <LoginPage onLoginSuccess={handleLoginSuccess} />
+                    )
+                } />
+                <Route path="/course-inductions" element={
+                    user && user?.role?.toLowerCase() !== 'student' ? (
+                        <Layout user={user} onLogout={handleLogout}>
+                            <CourseInductions user={user} />
                         </Layout>
                     ) : (
                         <LoginPage onLoginSuccess={handleLoginSuccess} />
