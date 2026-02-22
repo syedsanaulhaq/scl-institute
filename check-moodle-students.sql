@@ -1,0 +1,1 @@
+SELECT id, username, email, firstname, lastname FROM mdl_user WHERE email IN ('ahmed.hassan.app@example.com', 'mohammed.khan.app@example.com', 'mohammed.hassan@example.com', 'mohammed.khalid@example.com');
