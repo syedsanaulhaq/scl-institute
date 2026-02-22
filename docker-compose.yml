@@ -1,6 +1,7 @@
 version: '3.8'
 
 services:
+  # MySQL Database for SCL Application
   scli-mysql:
     image: mysql:8.0
     container_name: scli-mysql
@@ -15,29 +16,13 @@ services:
       - mysql_data:/var/lib/mysql
     networks:
       - scl-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
-  scli-moodle-db:
-    image: bitnami/mariadb:latest
-    container_name: scli-moodle-db
-    environment:
-      - MARIADB_ROOT_PASSWORD=moodleroot
-      - MARIADB_DATABASE=bitnami_moodle
-      - MARIADB_USER=bn_moodle
-      - MARIADB_PASSWORD=bitnami_moodle_password
-      - MARIADB_CHARACTER_SET=utf8mb4
-      - MARIADB_COLLATE=utf8mb4_unicode_ci
-    volumes:
-      - moodle_db_data:/var/lib/mysql
-    networks:
-      - scl-network
-
-  scli-moodle-placeholder:
-    image: alpine:latest
-    container_name: scli-moodle-placeholder
-    command: echo "Moodle is running on WSL2 Ubuntu at http://172.20.246.159:80"
-    networks:
-      - scl-network
-
+  # Backend API Service
   scli-backend:
     build: ./backend
     container_name: scli-backend
@@ -50,11 +35,11 @@ services:
       - DB_USER=scl_user
       - DB_PASS=scl_password
       - DB_NAME=scl_institute
-      - MOODLE_URL=http://172.20.246.159/
+      - MOODLE_URL=http://localhost:9090/
       - SSO_SECRET=supersecretkey
     depends_on:
-      - scli-mysql
-      - scli-moodle-db
+      scli-mysql:
+        condition: service_healthy
     networks:
       - scl-network
     volumes:
@@ -62,6 +47,7 @@ services:
       - /app/node_modules
     command: npm start
 
+  # Frontend Application
   scli-frontend:
     build: ./frontend
     container_name: scli-frontend
@@ -78,37 +64,9 @@ services:
       - ./frontend:/app
       - /app/node_modules
 
-  scli-public-portal:
-    build: ./public-portal
-    container_name: scli-public-portal
-    ports:
-      - "7777:7777"
-    networks:
-      - scl-network
-    command: npm run dev
-    volumes:
-      - ./public-portal:/app
-      - /app/node_modules
-
-  scli-nginx:
-    image: nginx:alpine
-    container_name: scli-nginx
-    ports:
-      - "80:80"
-    volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-    depends_on:
-      - scli-frontend
-      - scli-backend
-      - scli-public-portal
-    networks:
-      - scl-network
-
 networks:
   scl-network:
     driver: bridge
 
 volumes:
   mysql_data:
-  moodle_db_data:
-  moodle_data:
