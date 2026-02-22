@@ -1,1 +1,0 @@
-wsl -u root -d Ubuntu-22.04 -- bash -c "sed -i 's/;max_input_vars = 1000/max_input_vars = 5000/g' /etc/php/8.1/apache2/php.ini && echo 'PHP 8.1 Apache2 updated' && systemctl restart apache2 && echo 'Apache restarted'"
