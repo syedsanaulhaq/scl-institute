@@ -10,7 +10,7 @@ services:
       MYSQL_USER: scl_user
       MYSQL_PASSWORD: scl_password
     ports:
-      - "33061:3306"
+      - "33062:3306"
     volumes:
       - mysql_data:/var/lib/mysql
     networks:

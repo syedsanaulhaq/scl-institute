@@ -162,19 +162,34 @@ app.post('/api/v1/auth/login', async (req, res) => {
 app.post('/api/sso/generate', async (req, res) => {
     const { email, redirect_to } = req.body;
     console.log(`[SSO] Generating token for ${email}...`);
+    console.log(`[SSO] Request body:`, req.body);
+    console.log(`[SSO] Pool available:`, !!pool);
+    
+    // Validate email first
+    if (!email) {
+        console.error('[SSO] Email not provided in request');
+        return res.status(400).json({ success: false, message: 'Email is required' });
+    }
     
     // Get real user data from database instead of hardcoded array
     let user;
     try {
-        const [rows] = await pool.query('SELECT id, email, first_name, last_name, role FROM users WHERE email = ?', [email]);
+        console.log(`[SSO] Attempting pool.query with email: ${email}`);
+        const query = 'SELECT id, email, first_name, last_name, role FROM users WHERE email = ?';
+        console.log(`[SSO] Query: ${query}, params: [${email}]`);
+        const [rows] = await pool.query(query, [email]);
+        console.log(`[SSO] Query result count:`, rows.length);
+        console.log(`[SSO] Query result:`, rows);
         if (rows.length === 0) {
+            console.log(`[SSO] User not found for email: ${email}`);
             return res.status(404).json({ success: false, message: 'User not found in database' });
         }
         user = rows[0];
         console.log(`[SSO] Found user in database:`, { email: user.email, name: `${user.first_name} ${user.last_name}`, role: user.role });
     } catch (dbErr) {
         console.error('[SSO] Database error while fetching user:', dbErr.message);
-        return res.status(500).json({ success: false, message: 'Database error while fetching user' });
+        console.error('[SSO] Error stack:', dbErr.stack);
+        return res.status(500).json({ success: false, message: 'Database error while fetching user', error: dbErr.message });
     }
 
     const token = uuidv4();
@@ -188,7 +203,7 @@ app.post('/api/sso/generate', async (req, res) => {
             [token, user.email, firstname, lastname, user.role, redirect_to || null]
         );
         const moodleUrl = process.env.MOODLE_URL || 'http://localhost:9090';
-        let redirectUrl = `${moodleUrl}/local/sclsso/login.php?token=${token}`;
+        let redirectUrl = `${moodleUrl}/sso.php?token=${token}`;
         
         // Log the redirect if provided
         if (redirect_to) {

@@ -57,8 +57,8 @@ services:
     ports:
       - "9090:8080"
     volumes:
-      - moodle_data_dev:/bitnami/moodle
-      - moodledata_dev:/bitnami/moodledata
+      - /opt/scl-docker-moodle:/bitnami/moodle
+      - /opt/scl-docker-moodledata:/bitnami/moodledata
     depends_on:
       scli-moodle-db:
         condition: service_healthy

@@ -1,0 +1,295 @@
+// SCL Professional Theme - Purple Color Scheme
+// Main color variables
+$scl-primary: #6B46C1;      // Main purple
+$scl-dark: #553399;         // Dark purple
+$scl-light: #8B5CF6;        // Light purple
+$scl-lighter: #E9D5FF;      // Very light purple
+$scl-bg: #F7F9FC;           // Professional light background
+$scl-text: #1F2937;         // Dark text
+$scl-white: #FFFFFF;
+
+// Bootstrap color customization
+$primary: $scl-primary;
+$secondary: $scl-dark;
+$info: $scl-light;
+
+// Navigation and header styling
+.navbar {
+    background: linear-gradient(135deg, $scl-dark 0%, $scl-primary 100%);
+    border-bottom: 3px solid $scl-primary;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.navbar-dark .navbar-brand {
+    color: $scl-white !important;
+    font-weight: 600;
+    font-size: 1.3rem;
+}
+
+.navbar-dark .nav-link {
+    color: rgba(255,255,255,0.9) !important;
+    transition: all 0.3s ease;
+    
+    &:hover {
+        color: $scl-lighter !important;
+        text-shadow: 0 0 20px rgba(139, 92, 246, 0.3);
+    }
+}
+
+// Sidebar styling
+.sidebar {
+    background: $scl-white;
+    border-right: 3px solid $scl-primary;
+    box-shadow: 2px 0 8px rgba(0,0,0,0.08);
+}
+
+.nav-sidebar .nav-link.active {
+    background-color: $scl-lighter;
+    color: $scl-dark;
+    border-left: 4px solid $scl-primary;
+    font-weight: 600;
+}
+
+.nav-sidebar .nav-link {
+    color: $scl-text;
+    border-left: 4px solid transparent;
+    transition: all 0.3s ease;
+    
+    &:hover {
+        background-color: $scl-lighter;
+        color: $scl-primary;
+        border-left-color: $scl-primary;
+    }
+}
+
+// Button styling
+.btn-primary {
+    background: linear-gradient(135deg, $scl-primary 0%, $scl-dark 100%);
+    border: none;
+    font-weight: 600;
+    border-radius: 6px;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(107, 70, 193, 0.2);
+    
+    &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 16px rgba(107, 70, 193, 0.4);
+    }
+    
+    &:active {
+        transform: translateY(0);
+    }
+}
+
+.btn-outline-primary {
+    color: $scl-primary;
+    border-color: $scl-primary;
+    
+    &:hover {
+        background-color: $scl-primary;
+        border-color: $scl-primary;
+    }
+}
+
+// Card styling
+.card {
+    border: 1px solid rgba(107, 70, 193, 0.1);
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    transition: all 0.3s ease;
+    
+    &:hover {
+        box-shadow: 0 4px 16px rgba(107, 70, 193, 0.15);
+        border-color: $scl-primary;
+    }
+}
+
+.card-header {
+    background: linear-gradient(135deg, $scl-lighter 0%, $scl-bg 100%);
+    border-bottom: 2px solid $scl-primary;
+    color: $scl-dark;
+    font-weight: 600;
+}
+
+// Alert styling
+.alert-info {
+    background-color: $scl-lighter;
+    color: $scl-dark;
+    border-left: 4px solid $scl-primary;
+}
+
+.alert-primary {
+    background-color: $scl-lighter;
+    color: $scl-dark;
+    border-left: 4px solid $scl-primary;
+}
+
+// Badge styling
+.badge-primary {
+    background-color: $scl-primary;
+}
+
+// Table styling
+.table {
+    border-color: rgba(107, 70, 193, 0.1);
+}
+
+.table thead th {
+    background: $scl-lighter;
+    color: $scl-dark;
+    border-color: $scl-primary;
+    font-weight: 600;
+}
+
+.table tbody tr:hover {
+    background-color: rgba(107, 70, 193, 0.05);
+}
+
+// Form elements
+.form-control:focus,
+.form-select:focus {
+    border-color: $scl-primary;
+    box-shadow: 0 0 0 0.2rem rgba(107, 70, 193, 0.25);
+}
+
+// Breadcrumb styling
+.breadcrumb {
+    background-color: $scl-bg;
+}
+
+.breadcrumb .breadcrumb-item.active {
+    color: $scl-primary;
+    font-weight: 600;
+}
+
+// Footer styling
+.footer {
+    background-color: $scl-dark;
+    color: $scl-white;
+    border-top: 3px solid $scl-primary;
+}
+
+// Overall background
+body {
+    background-color: $scl-bg;
+    color: $scl-text;
+}
+
+// Main content area
+.page-content {
+    background-color: $scl-white;
+}
+
+// Link styling
+a {
+    color: $scl-primary;
+    
+    &:hover {
+        color: $scl-dark;
+        text-decoration: none;
+    }
+}
+
+// Headings
+h1, h2, h3, h4, h5, h6 {
+    color: $scl-dark;
+    font-weight: 600;
+}
+
+// Professional spacing and rounded elements
+.rounded {
+    border-radius: 8px;
+}
+
+.rounded-lg {
+    border-radius: 10px;
+}
+
+// Box shadows for depth
+.shadow-sm {
+    box-shadow: 0 2px 4px rgba(85,51,153,0.1) !important;
+}
+
+.shadow {
+    box-shadow: 0 4px 12px rgba(85,51,153,0.15) !important;
+}
+
+.shadow-lg {
+    box-shadow: 0 8px 24px rgba(85,51,153,0.2) !important;
+}
+
+// Menu and dropdown styling
+.dropdown-menu {
+    border-radius: 8px;
+    border: 1px solid rgba(107, 70, 193, 0.1);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+}
+
+.dropdown-item:hover,
+.dropdown-item:focus {
+    background-color: $scl-lighter;
+    color: $scl-dark;
+}
+
+.dropdown-item.active,
+.dropdown-item:active {
+    background-color: $scl-primary;
+}
+
+// Block styling
+.block {
+    border: 1px solid rgba(107, 70, 193, 0.1);
+    border-radius: 8px;
+}
+
+.block-header {
+    background: linear-gradient(135deg, $scl-lighter 0%, $scl-bg 100%);
+    border-bottom: 2px solid $scl-primary;
+    color: $scl-dark;
+}
+
+// Pagination styling
+.pagination .page-link {
+    color: $scl-primary;
+    border-color: rgba(107, 70, 193, 0.3);
+}
+
+.pagination .page-item.active .page-link {
+    background-color: $scl-primary;
+    border-color: $scl-primary;
+}
+
+.pagination .page-link:hover {
+    color: $scl-dark;
+    background-color: $scl-lighter;
+    border-color: $scl-primary;
+}
+
+// Loading and progress indicators
+.progress {
+    background-color: rgba(107, 70, 193, 0.1);
+    border-radius: 10px;
+}
+
+.progress-bar {
+    background: linear-gradient(90deg, $scl-light 0%, $scl-primary 100%);
+}
+
+// Modal styling
+.modal-header {
+    background: linear-gradient(135deg, $scl-primary 0%, $scl-dark 100%);
+    color: $scl-white;
+    border-bottom: 2px solid $scl-dark;
+}
+
+.modal-header .btn-close {
+    filter: invert(1);
+}
+
+// Additional professional touches
+.main-content {
+    background-color: $scl-white;
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin: 1.5rem 0;
+}

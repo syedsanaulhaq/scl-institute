@@ -1,0 +1,9 @@
+version: '3.8'
+
+services:
+  scli-moodle-db:
+    ports:
+      - "33063:3306"
+
+  scli-public-portal:
+    command: sh -c "npm install && npm run dev"
