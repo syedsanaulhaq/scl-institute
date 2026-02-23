@@ -7,46 +7,49 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../db');
 const PDFDocument = require('pdfkit');
-const axios = require('axios');
+const mysql = require('mysql2/promise');
 
-// Moodle API Configuration
-const MOODLE_API_URL = process.env.MOODLE_API_URL || 'http://localhost:9090';
-const MOODLE_TOKEN = process.env.MOODLE_TOKEN;
+// Moodle database connection pool - query Moodle directly like other endpoints
+const moodleDbPool = mysql.createPool({
+    host: process.env.MOODLE_DATABASE_HOST || process.env.MOODLE_DB_HOST || 'localhost',
+    port: process.env.MOODLE_DATABASE_PORT || process.env.MOODLE_DB_PORT || 3306,
+    user: process.env.MOODLE_DATABASE_USER || process.env.MOODLE_DB_USER || 'root',
+    password: process.env.MOODLE_DATABASE_PASSWORD || process.env.MOODLE_DB_PASS || 'root',
+    database: process.env.MOODLE_DATABASE_NAME || process.env.MOODLE_DB_NAME || 'moodle',
+    waitForConnections: true,
+    connectionLimit: 5,
+    queueLimit: 0
+});
 
 /**
- * Fetch courses from Moodle API
+ * Fetch courses directly from Moodle database
  */
 async function getMoodleCourses() {
     try {
-        if (!MOODLE_TOKEN) {
-            console.warn('⚠️ MOODLE_TOKEN not configured - returning empty from Moodle');
-            return [];
-        }
+        const [courses] = await moodleDbPool.execute(`
+            SELECT 
+                c.id,
+                c.idnumber as course_code,
+                c.shortname,
+                c.fullname,
+                cc.name as categoryname,
+                c.summary
+            FROM mdl_course c
+            LEFT JOIN mdl_course_categories cc ON c.category = cc.id
+            WHERE c.id > 1
+            ORDER BY c.fullname
+        `);
 
-        const response = await axios.post(`${MOODLE_API_URL}/webservice/rest/server.php`, null, {
-            params: {
-                wstoken: MOODLE_TOKEN,
-                wsfunction: 'core_course_get_courses',
-                moodlewsrestformat: 'json'
-            },
-            timeout: 5000
-        });
-
-        if (response.data && Array.isArray(response.data)) {
-            return response.data
-                .filter(course => course.id !== 1) // Exclude site course
-                .map(course => ({
-                    id: course.id,
-                    shortname: course.shortname,
-                    fullname: course.fullname,
-                    idnumber: course.idnumber || '',
-                    summary: course.summary || '',
-                    categoryname: course.categoryname || 'General'
-                }));
-        }
-        return [];
+        return courses.map(course => ({
+            id: course.id,
+            shortname: course.shortname,
+            fullname: course.fullname,
+            idnumber: course.course_code || '',
+            summary: course.summary || '',
+            categoryname: course.categoryname || 'General'
+        }));
     } catch (error) {
-        console.error('Error fetching from Moodle API:', error.message);
+        console.error('Error fetching courses from Moodle database:', error.message);
         return [];
     }
 }
@@ -919,15 +922,15 @@ router.get('/:id/export/pdf', async (req, res) => {
 // ===============================================
 router.post('/sync-moodle', async (req, res) => {
     try {
-        console.log('🔄 Starting Moodle to Inductions sync...');
+        console.log('🔄 Fetching latest courses from Moodle database...');
 
-        // Fetch latest courses from Moodle
+        // Fetch latest courses from Moodle database
         const moodleCourses = await getMoodleCourses();
 
         if (moodleCourses.length === 0) {
             return res.status(400).json({
                 success: false,
-                message: 'No courses found in Moodle or MOODLE_TOKEN not configured'
+                message: 'No courses found in Moodle database. Please create courses in Moodle first.'
             });
         }
 
@@ -986,12 +989,12 @@ router.post('/sync-moodle', async (req, res) => {
 
         res.json({
             success: true,
-            message: `Synced ${synced} courses from Moodle`,
+            message: `Synced ${synced} courses from Moodle database`,
             summary: {
                 total_moodle_courses: moodleCourses.length,
                 synced,
                 skipped,
-                moodle_source: `${MOODLE_API_URL}/webservice/rest/server.php`
+                database_source: `${process.env.MOODLE_DATABASE_HOST || 'localhost'}:${process.env.MOODLE_DATABASE_PORT || 3306} (Moodle DB)`
             },
             results: results.slice(0, 20) // Return first 20 for display
         });
