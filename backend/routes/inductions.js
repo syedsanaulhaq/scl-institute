@@ -51,6 +51,7 @@ async function getMoodleCourses() {
         }));
     } catch (error) {
         console.error('Error fetching courses from Moodle database:', error.message);
+        console.error('Moodle DB config - Host:', process.env.MOODLE_DATABASE_HOST, 'Port:', process.env.MOODLE_DATABASE_PORT);
         return [];
     }
 }

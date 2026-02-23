@@ -35,6 +35,11 @@ services:
       - DB_USER=scl_user
       - DB_PASS=scl_password
       - DB_NAME=scl_institute
+      - MOODLE_DATABASE_HOST=wsl-host
+      - MOODLE_DATABASE_PORT=3306
+      - MOODLE_DATABASE_USER=moodleuser
+      - MOODLE_DATABASE_PASSWORD=moodlepass
+      - MOODLE_DATABASE_NAME=moodle
       - MOODLE_URL=http://localhost:9090/
       - SSO_SECRET=supersecretkey
     depends_on:
@@ -42,6 +47,8 @@ services:
         condition: service_healthy
     networks:
       - scl-network
+    extra_hosts:
+      - "wsl-host:host-gateway"
     volumes:
       - ./backend:/app
       - /app/node_modules
