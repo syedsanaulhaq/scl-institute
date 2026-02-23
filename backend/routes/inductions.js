@@ -10,12 +10,13 @@ const PDFDocument = require('pdfkit');
 const mysql = require('mysql2/promise');
 
 // Moodle database connection pool - query Moodle directly like other endpoints
+// LAMP Moodle credentials from /var/www/moodle-9090/config.php
 const moodleDbPool = mysql.createPool({
-    host: process.env.MOODLE_DATABASE_HOST || process.env.MOODLE_DB_HOST || 'localhost',
-    port: process.env.MOODLE_DATABASE_PORT || process.env.MOODLE_DB_PORT || 3306,
-    user: process.env.MOODLE_DATABASE_USER || process.env.MOODLE_DB_USER || 'root',
-    password: process.env.MOODLE_DATABASE_PASSWORD || process.env.MOODLE_DB_PASS || 'root',
-    database: process.env.MOODLE_DATABASE_NAME || process.env.MOODLE_DB_NAME || 'moodle',
+    host: process.env.MOODLE_DATABASE_HOST || '127.0.0.1',
+    port: process.env.MOODLE_DATABASE_PORT || 3306,
+    user: process.env.MOODLE_DATABASE_USER || 'moodleuser',
+    password: process.env.MOODLE_DATABASE_PASSWORD || 'moodlepass',
+    database: process.env.MOODLE_DATABASE_NAME || 'moodle',
     waitForConnections: true,
     connectionLimit: 5,
     queueLimit: 0
