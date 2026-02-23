@@ -7,6 +7,49 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../db');
 const PDFDocument = require('pdfkit');
+const axios = require('axios');
+
+// Moodle API Configuration
+const MOODLE_API_URL = process.env.MOODLE_API_URL || 'http://localhost:9090';
+const MOODLE_TOKEN = process.env.MOODLE_TOKEN;
+
+/**
+ * Fetch courses from Moodle API
+ */
+async function getMoodleCourses() {
+    try {
+        if (!MOODLE_TOKEN) {
+            console.warn('⚠️ MOODLE_TOKEN not configured - returning empty from Moodle');
+            return [];
+        }
+
+        const response = await axios.post(`${MOODLE_API_URL}/webservice/rest/server.php`, null, {
+            params: {
+                wstoken: MOODLE_TOKEN,
+                wsfunction: 'core_course_get_courses',
+                moodlewsrestformat: 'json'
+            },
+            timeout: 5000
+        });
+
+        if (response.data && Array.isArray(response.data)) {
+            return response.data
+                .filter(course => course.id !== 1) // Exclude site course
+                .map(course => ({
+                    id: course.id,
+                    shortname: course.shortname,
+                    fullname: course.fullname,
+                    idnumber: course.idnumber || '',
+                    summary: course.summary || '',
+                    categoryname: course.categoryname || 'General'
+                }));
+        }
+        return [];
+    } catch (error) {
+        console.error('Error fetching from Moodle API:', error.message);
+        return [];
+    }
+}
 
 async function recalcInductionProgress(inductionId) {
     const [rows] = await pool.query(
@@ -79,11 +122,54 @@ async function getInductionBundle(inductionId) {
 
 // ===============================================
 // ROUTE 1: GET /api/inductions
-// List all inductions (optional filter by course_id or status)
+// List all inductions - enhanced to fetch latest from Moodle
 // ===============================================
 router.get('/', async (req, res) => {
     try {
-        const { course_id, status } = req.query;
+        const { course_id, status, from_moodle } = req.query;
+        
+        // If explicitly requested to get from Moodle, fetch live courses
+        if (from_moodle === 'true' || from_moodle === '1') {
+            const moodleCourses = await getMoodleCourses();
+            
+            // Enrich with induction data
+            const enrichedCourses = await Promise.all(moodleCourses.map(async (mCourse) => {
+                try {
+                    // Try to find matching induction
+                    const [inductions] = await pool.query(
+                        `SELECT ci.* FROM course_inductions ci 
+                         WHERE ci.moodle_course_id = ? 
+                         ORDER BY ci.created_at DESC LIMIT 1`,
+                        [mCourse.id]
+                    );
+                    
+                    return {
+                        ...mCourse,
+                        source: 'moodle',
+                        induction: inductions[0] || null,
+                        has_induction: inductions.length > 0
+                    };
+                } catch (err) {
+                    console.error(`Error enriching course ${mCourse.id}:`, err.message);
+                    return {
+                        ...mCourse,
+                        source: 'moodle',
+                        induction: null,
+                        has_induction: false,
+                        error: err.message
+                    };
+                }
+            }));
+            
+            return res.json({ 
+                success: true, 
+                source: 'moodle',
+                total: enrichedCourses.length,
+                data: enrichedCourses 
+            });
+        }
+
+        // Default: Get from inductions table (SCL database)
         const conditions = [];
         const params = [];
 
@@ -105,13 +191,18 @@ router.get('/', async (req, res) => {
                 c.course_title AS scl_course_title, 
                 c.course_code AS scl_course_code
              FROM course_inductions ci
-             JOIN courses c ON c.id = ci.course_id
+             LEFT JOIN courses c ON c.id = ci.course_id
              ${whereClause}
              ORDER BY ci.updated_at DESC`,
             params
         );
 
-        res.json({ success: true, data: rows });
+        res.json({ 
+            success: true, 
+            source: 'scl_database',
+            total: rows.length,
+            data: rows 
+        });
     } catch (error) {
         console.error('Error listing inductions:', error.message);
         res.status(500).json({ success: false, message: 'Failed to fetch inductions', error: error.message });
@@ -819,6 +910,98 @@ router.get('/:id/export/pdf', async (req, res) => {
     } catch (error) {
         console.error('Error exporting induction PDF:', error.message);
         res.status(500).json({ success: false, message: 'Failed to export PDF', error: error.message });
+    }
+});
+
+// ===============================================
+// ROUTE: POST /api/inductions/sync-moodle
+// Sync latest Moodle courses to inductions table
+// ===============================================
+router.post('/sync-moodle', async (req, res) => {
+    try {
+        console.log('🔄 Starting Moodle to Inductions sync...');
+
+        // Fetch latest courses from Moodle
+        const moodleCourses = await getMoodleCourses();
+
+        if (moodleCourses.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'No courses found in Moodle or MOODLE_TOKEN not configured'
+            });
+        }
+
+        let synced = 0;
+        let skipped = 0;
+        const results = [];
+
+        // Sync each Moodle course
+        for (const mCourse of moodleCourses) {
+            try {
+                // Check if induction already exists for this Moodle course
+                const [existing] = await pool.query(
+                    'SELECT id FROM course_inductions WHERE moodle_course_id = ?',
+                    [mCourse.id]
+                );
+
+                if (existing.length > 0) {
+                    // Update existing
+                    await pool.query(
+                        `UPDATE course_inductions 
+                         SET course_code = ?, course_title = ?, updated_at = NOW()
+                         WHERE moodle_course_id = ?`,
+                        [mCourse.shortname, mCourse.fullname, mCourse.id]
+                    );
+                    synced++;
+                    results.push({
+                        course: mCourse.fullname,
+                        action: 'updated',
+                        id: existing[0].id
+                    });
+                } else {
+                    // Create new
+                    const [result] = await pool.query(
+                        `INSERT INTO course_inductions 
+                         (moodle_course_id, course_code, course_title, overall_status, created_at, updated_at)
+                         VALUES (?, ?, ?, ?, NOW(), NOW())`,
+                        [mCourse.id, mCourse.shortname, mCourse.fullname, 'Draft']
+                    );
+                    synced++;
+                    results.push({
+                        course: mCourse.fullname,
+                        action: 'created',
+                        id: result.insertId
+                    });
+                }
+            } catch (err) {
+                console.error(`Error syncing course ${mCourse.fullname}:`, err.message);
+                skipped++;
+                results.push({
+                    course: mCourse.fullname,
+                    action: 'error',
+                    error: err.message
+                });
+            }
+        }
+
+        res.json({
+            success: true,
+            message: `Synced ${synced} courses from Moodle`,
+            summary: {
+                total_moodle_courses: moodleCourses.length,
+                synced,
+                skipped,
+                moodle_source: `${MOODLE_API_URL}/webservice/rest/server.php`
+            },
+            results: results.slice(0, 20) // Return first 20 for display
+        });
+    } catch (error) {
+        console.error('Error syncing Moodle courses:', error.message);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to sync Moodle courses',
+            error: error.message
+        });
     }
 });
 

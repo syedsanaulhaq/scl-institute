@@ -23,6 +23,8 @@ const CourseInductions = ({ user }) => {
     const [loadingDetails, setLoadingDetails] = useState(false);
     const [error, setError] = useState('');
     const [saving, setSaving] = useState(false);
+    const [syncing, setSyncing] = useState(false);
+    const [dataSource, setDataSource] = useState('scl'); // 'scl' or 'moodle'
     const [statusEdits, setStatusEdits] = useState({});
     const [notesEdits, setNotesEdits] = useState({});
     const [conditionForm, setConditionForm] = useState({
@@ -41,7 +43,7 @@ const CourseInductions = ({ user }) => {
     const [signoffComments, setSignoffComments] = useState({});
 
     useEffect(() => {
-        fetchInductions();
+        fetchInductions('scl');
     }, []);
 
     useEffect(() => {
@@ -56,16 +58,39 @@ const CourseInductions = ({ user }) => {
         }
     }, [selectedInductionId]);
 
-    const fetchInductions = async () => {
+    const fetchInductions = async (source = 'scl') => {
         try {
             setLoading(true);
-            const response = await axios.get(`${API_URL}/inductions`);
+            setError('');
+            const params = source === 'moodle' ? '?from_moodle=true' : '';
+            const response = await axios.get(`${API_URL}/inductions${params}`);
             setInductions(response.data?.data || []);
+            setDataSource(source);
         } catch (err) {
             console.error('Failed to fetch inductions:', err);
-            setError('Failed to load inductions');
+            setError(`Failed to load inductions from ${source === 'moodle' ? 'Moodle' : 'SCL database'}`);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const syncMoodleCourses = async () => {
+        try {
+            setSyncing(true);
+            setError('');
+            const response = await axios.post(`${API_URL}/inductions/sync-moodle`);
+            
+            if (response.data.success) {
+                setError('');
+                alert(`✅ Sync complete!\nSynced: ${response.data.summary.synced} courses\nSkipped: ${response.data.summary.skipped} courses`);
+                // Refresh the list
+                await fetchInductions(dataSource);
+            }
+        } catch (err) {
+            console.error('Failed to sync Moodle courses:', err);
+            setError(`Sync failed: ${err.response?.data?.message || err.message}`);
+        } finally {
+            setSyncing(false);
         }
     };
 
@@ -192,6 +217,44 @@ const CourseInductions = ({ user }) => {
                     <p className="text-sm text-gray-500">Track course approval requirements, risks, conditions, and sign-offs.</p>
                 </div>
                 <div className="flex flex-wrap gap-2">
+                    <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
+                        <button
+                            onClick={() => fetchInductions('scl')}
+                            className={`px-3 py-1 text-xs font-semibold rounded ${
+                                dataSource === 'scl' 
+                                    ? 'bg-white text-scl-purple border border-scl-purple' 
+                                    : 'text-gray-600 hover:text-gray-900'
+                            }`}
+                        >
+                            SCL Database
+                        </button>
+                        <button
+                            onClick={() => fetchInductions('moodle')}
+                            className={`px-3 py-1 text-xs font-semibold rounded ${
+                                dataSource === 'moodle' 
+                                    ? 'bg-white text-scl-purple border border-scl-purple' 
+                                    : 'text-gray-600 hover:text-gray-900'
+                            }`}
+                        >
+                            Moodle Live
+                        </button>
+                    </div>
+                    <button
+                        onClick={syncMoodleCourses}
+                        disabled={syncing}
+                        className="px-3 py-2 text-sm font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
+                        title="Sync latest Moodle courses to inductions table"
+                    >
+                        <RefreshCw className={`w-4 h-4 inline mr-2 ${syncing ? 'animate-spin' : ''}`} />
+                        {syncing ? 'Syncing...' : 'Sync Moodle'}
+                    </button>
+                    <button
+                        onClick={() => fetchInductions(dataSource)}
+                        className="px-3 py-2 text-sm font-semibold rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    >
+                        <RefreshCw className="w-4 h-4 inline mr-2" />
+                        Refresh
+                    </button>
                     <button
                         onClick={() => handleExport('csv')}
                         className="px-3 py-2 text-sm font-semibold rounded-lg bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"
@@ -205,13 +268,6 @@ const CourseInductions = ({ user }) => {
                     >
                         <FileText className="w-4 h-4 inline mr-2" />
                         Export PDF
-                    </button>
-                    <button
-                        onClick={fetchInductions}
-                        className="px-3 py-2 text-sm font-semibold rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200"
-                    >
-                        <RefreshCw className="w-4 h-4 inline mr-2" />
-                        Refresh
                     </button>
                 </div>
             </div>
