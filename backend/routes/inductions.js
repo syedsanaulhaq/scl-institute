@@ -149,16 +149,32 @@ router.get('/', async (req, res) => {
                     );
                     
                     return {
-                        ...mCourse,
+                        id: mCourse.id,
+                        course_code: mCourse.shortname,
+                        course_title: mCourse.fullname,
+                        idnumber: mCourse.idnumber,
+                        summary: mCourse.summary,
+                        categoryname: mCourse.categoryname,
                         source: 'moodle',
+                        moodle_course_id: mCourse.id,
+                        overall_status: 'Not Started',
+                        completion_percentage: 0,
                         induction: inductions[0] || null,
                         has_induction: inductions.length > 0
                     };
                 } catch (err) {
                     console.error(`Error enriching course ${mCourse.id}:`, err.message);
                     return {
-                        ...mCourse,
+                        id: mCourse.id,
+                        course_code: mCourse.shortname,
+                        course_title: mCourse.fullname,
+                        idnumber: mCourse.idnumber,
+                        summary: mCourse.summary,
+                        categoryname: mCourse.categoryname,
                         source: 'moodle',
+                        moodle_course_id: mCourse.id,
+                        overall_status: 'Not Started',
+                        completion_percentage: 0,
                         induction: null,
                         has_induction: false,
                         error: err.message
