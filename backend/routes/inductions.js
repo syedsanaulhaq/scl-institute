@@ -959,40 +959,61 @@ router.post('/sync-moodle', async (req, res) => {
         // Sync each Moodle course
         for (const mCourse of moodleCourses) {
             try {
-                // Check if induction already exists for this Moodle course
-                const [existing] = await pool.query(
-                    'SELECT id FROM course_inductions WHERE moodle_course_id = ?',
+                // First, check if course exists in SCL courses table by moodle_course_id
+                const [existingScl] = await pool.query(
+                    `SELECT id FROM courses WHERE moodle_course_id = ?`,
                     [mCourse.id]
                 );
 
-                if (existing.length > 0) {
-                    // Update existing
+                let courseId;
+                if (existingScl.length > 0) {
+                    courseId = existingScl[0].id;
+                } else {
+                    // Create new course in SCL courses table
+                    const [courseResult] = await pool.query(
+                        `INSERT INTO courses (course_code, course_title, moodle_course_id, created_at, updated_at)
+                         VALUES (?, ?, ?, NOW(), NOW())`,
+                        [mCourse.shortname, mCourse.fullname, mCourse.id]
+                    );
+                    courseId = courseResult.insertId;
+                    console.log(`Created new course record: ${mCourse.fullname} (ID: ${courseId})`);
+                }
+
+                // Now check if induction exists for this course
+                const [existingInduction] = await pool.query(
+                    'SELECT id FROM course_inductions WHERE course_id = ? AND moodle_course_id = ?',
+                    [courseId, mCourse.id]
+                );
+
+                if (existingInduction.length > 0) {
+                    // Update existing induction
                     await pool.query(
                         `UPDATE course_inductions 
                          SET course_code = ?, course_title = ?, updated_at = NOW()
-                         WHERE moodle_course_id = ?`,
-                        [mCourse.shortname, mCourse.fullname, mCourse.id]
+                         WHERE course_id = ? AND moodle_course_id = ?`,
+                        [mCourse.shortname, mCourse.fullname, courseId, mCourse.id]
                     );
                     synced++;
                     results.push({
                         course: mCourse.fullname,
                         action: 'updated',
-                        id: existing[0].id
+                        id: existingInduction[0].id
                     });
                 } else {
-                    // Create new
-                    const [result] = await pool.query(
+                    // Create new induction
+                    const [inductionResult] = await pool.query(
                         `INSERT INTO course_inductions 
-                         (moodle_course_id, course_code, course_title, overall_status, created_at, updated_at)
-                         VALUES (?, ?, ?, ?, NOW(), NOW())`,
-                        [mCourse.id, mCourse.shortname, mCourse.fullname, 'Draft']
+                         (course_id, moodle_course_id, course_code, course_title, overall_status, created_at, updated_at)
+                         VALUES (?, ?, ?, ?, ?, NOW(), NOW())`,
+                        [courseId, mCourse.id, mCourse.shortname, mCourse.fullname, 'Draft']
                     );
                     synced++;
                     results.push({
                         course: mCourse.fullname,
                         action: 'created',
-                        id: result.insertId
+                        id: inductionResult.insertId
                     });
+                    console.log(`✅ Synced course: ${mCourse.fullname} (Induction ID: ${inductionResult.insertId})`);
                 }
             } catch (err) {
                 console.error(`Error syncing course ${mCourse.fullname}:`, err.message);
