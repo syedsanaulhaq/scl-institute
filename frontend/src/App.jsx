@@ -26,6 +26,7 @@ import StudentProgramme from './components/student/StudentProgramme';
 import StudentTimetable from './components/student/StudentTimetable';
 import StudentAssessments from './components/student/StudentAssessments';
 import StudentGrades from './components/student/StudentGrades';
+import StudentAttendance from './components/student/StudentAttendance';
 import StudentSupportHub from './components/student/StudentSupportHub';
 import StudentFees from './components/student/StudentFees';
 import StudentSupport from './components/student/StudentSupport';
@@ -203,6 +204,15 @@ function App() {
                     user && user?.role?.toLowerCase() === 'student' ? (
                         <Layout user={user} onLogout={handleLogout}>
                             <StudentGrades user={user} />
+                        </Layout>
+                    ) : (
+                        <LoginPage onLoginSuccess={handleLoginSuccess} />
+                    )
+                } />
+                <Route path="/student/attendance" element={
+                    user && user?.role?.toLowerCase() === 'student' ? (
+                        <Layout user={user} onLogout={handleLogout}>
+                            <StudentAttendance user={user} />
                         </Layout>
                     ) : (
                         <LoginPage onLoginSuccess={handleLoginSuccess} />
