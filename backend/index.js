@@ -129,15 +129,22 @@ app.post('/api/login', async (req, res) => {
 
 app.post('/api/v1/auth/login', async (req, res) => {
     const { email, password } = req.body;
+    
+    console.log(`[LOGIN] Received email: "${email}", password: "${password}"`);
+    console.log(`[LOGIN] Body keys:`, Object.keys(req.body));
 
     try {
+        console.log(`[LOGIN] Querying database with email="${email}" password="${password}"`);
         const [rows] = await pool.query(
             'SELECT id, email, first_name, last_name, role FROM users WHERE email = ? AND password = ?',
             [email, password]
         );
+        
+        console.log(`[LOGIN] Query returned ${rows.length} rows`);
 
         if (rows.length > 0) {
             const user = rows[0];
+            console.log(`[LOGIN] User authenticated: ${user.email} (ID: ${user.id})`);
             const accessToken = `mock_access_token_${Date.now()}`;
             const refreshToken = `mock_refresh_token_${Date.now()}`;
 
@@ -151,10 +158,12 @@ app.post('/api/v1/auth/login', async (req, res) => {
                 tokens: { accessToken, refreshToken }
             });
         } else {
+            console.log(`[LOGIN] No user found for email="${email}" with password="${password}"`);
             res.status(401).json({ message: 'Invalid credentials' });
         }
     } catch (dbErr) {
         console.error('[LOGIN V1] Database error:', dbErr.message);
+        console.error('[LOGIN V1] Stack:', dbErr.stack);
         res.status(500).json({ message: 'Database error during authentication' });
     }
 });
