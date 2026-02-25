@@ -96,18 +96,23 @@ services:
       dockerfile: Dockerfile
     container_name: scli-backend-prod
     restart: always
-    env_file: .env
+    env_file: .env.production
     environment:
-      - NODE_ENV=${NODE_ENV}
-      - PORT=${PORT}
+      - NODE_ENV=production
+      - PORT=4000
       - DB_HOST=scli-mysql-prod
-      - DB_PORT=${DB_PORT}
-      - DB_USER=${DB_USER}
-      - DB_PASS=${DB_PASS}
-      - DB_NAME=${DB_NAME}
-      - MOODLE_URL=${MOODLE_URL}
-      - SSO_SECRET=${SSO_SECRET}
-      - VITE_API_URL=${VITE_API_URL}
+      - DB_PORT=3306
+      - DB_USER=scl_user
+      - DB_PASS=SclSecurePass2024!
+      - DB_NAME=scl_institute
+      - MOODLE_URL=http://185.211.6.60:8888/moodle-prod
+      - MOODLE_DATABASE_HOST=185.211.6.60
+      - MOODLE_DATABASE_PORT=3306
+      - MOODLE_DATABASE_USER=moodleuser
+      - MOODLE_DATABASE_PASSWORD=moodlepass
+      - MOODLE_DATABASE_NAME=moodle
+      - SSO_SECRET=supersecretkey
+      - VITE_API_URL=http://system.sclsandbox.xyz/api
     depends_on:
       scli-mysql:
         condition: service_healthy
