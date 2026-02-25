@@ -21,27 +21,25 @@ echo "[$(date)] Creating backup directory..."
 # 1. Backup Docker Containers State
 echo "[$(date)] Backing up Docker state..."
 docker ps -a > "$BACKUP_DIR/docker-containers-state.txt"
-docker volumes ls > "$BACKUP_DIR/docker-volumes-state.txt"
-docker images ls > "$BACKUP_DIR/docker-images-state.txt"
+docker volume ls > "$BACKUP_DIR/docker-volumes-state.txt"
+docker images > "$BACKUP_DIR/docker-images-state.txt"
 
 # 2. Backup SCL MySQL Database (Docker)
 echo "[$(date)] Backing up SCL database..."
 docker exec scli-mysql-prod mysqldump \
-  -u scl_user -pscl_password \
+  -u root -pRootSecurePass2024! \
   --all-databases \
   --single-transaction \
-  --quick \
-  --lock-tables=false \
+  --no-tablespaces \
   > "$BACKUP_DIR/scl_institute_full_backup_$BACKUP_TIME.sql"
 
 # 3. Backup Moodle MySQL Database (Docker)
 echo "[$(date)] Backing up Moodle database..."
 docker exec scli-moodle-db-prod mysqldump \
-  -u bn_moodle -pbitnami_moodle_password \
+  -u root -pmoodleroot \
   --all-databases \
   --single-transaction \
-  --quick \
-  --lock-tables=false \
+  --no-tablespaces \
   > "$BACKUP_DIR/bitnami_moodle_full_backup_$BACKUP_TIME.sql"
 
 # 4. Backup Docker Volumes
@@ -75,9 +73,10 @@ docker run --rm \
   -C /data .
 
 # 5. Backup Docker Compose Configuration
-echo "[$(date)] Backing up configuration files..."
-cp docker-compose.prod.yml "$BACKUP_DIR/docker-compose.prod.yml.backup"
-cp .env "$BACKUP_DIR/.env.backup" 2>/dev/null || echo "  - .env not found (may be in different location)"
+echo "[$(date)] Backing up configuration..."
+# Configuration files are in the project repo, backing up container environment instead
+docker inspect scli-mysql-prod > "$BACKUP_DIR/scli-mysql-prod-config.json" 2>/dev/null || true
+docker inspect scli-moodle-db-prod > "$BACKUP_DIR/scli-moodle-db-prod-config.json" 2>/dev/null || true
 
 # 6. Create Backup Manifest
 echo "[$(date)] Creating backup manifest..."

@@ -14,7 +14,7 @@ DB_USER="moodleuser"
 DB_PASS="moodlepass"
 ADMIN_USER="admin"
 ADMIN_PASS="${1:-changeme}"  # Pass as argument or set manually
-APACHE_PORT="8080"
+APACHE_PORT="8888"
 
 echo "=========================================="
 echo "LAMP + Moodle 4.5 Installation"
@@ -43,6 +43,9 @@ apt install -y apache2
 a2enmod rewrite
 a2enmod proxy
 a2enmod proxy_http
+
+# Configure Apache to listen on custom port
+echo "Listen $APACHE_PORT" > /etc/apache2/ports.conf
 systemctl start apache2
 systemctl enable apache2
 
