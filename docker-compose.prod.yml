@@ -131,7 +131,7 @@ services:
     image: scl-institute-scli-frontend:latest
     container_name: scli-frontend-prod
     restart: always
-    env_file: .env
+    env_file: .env.production
     environment:
       - VITE_API_URL=${VITE_API_URL}
       - VITE_ENV=${VITE_ENV}
