@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
 import {
     LayoutDashboard,
     GraduationCap,
@@ -20,8 +19,7 @@ import {
     Lock,
     ClipboardList
 } from 'lucide-react';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
+import { openMoodleSSO } from '../utils/ssoService';
 
 const Dashboard = ({ user, onLogout }) => {
     const navigate = useNavigate();
@@ -29,23 +27,15 @@ const Dashboard = ({ user, onLogout }) => {
     const [error, setError] = useState('');
 
     const handleAccessLMS = async () => {
-        try {
-            setLoading(true);
-            setError('');
-            const response = await axios.post(`${API_URL}/sso/generate`, {
-                email: user.email
-            });
-
-            if (response.data.success) {
-                window.open(response.data.redirectUrl, '_blank', 'noopener,noreferrer');
-            } else {
-                setError('Failed to generate SSO token');
-            }
-        } catch (err) {
-            setError(err.response?.data?.message || 'Failed to access LMS');
-        } finally {
-            setLoading(false);
-        }
+        setLoading(true);
+        setError('');
+        
+        const success = await openMoodleSSO(user.email, {
+            onError: (errorMsg) => setError(errorMsg),
+            onSuccess: () => setError('')
+        });
+        
+        setLoading(false);
     };
 
     const handleModuleClick = (module) => {
