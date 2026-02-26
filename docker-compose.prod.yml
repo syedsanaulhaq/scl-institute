@@ -37,7 +37,7 @@ services:
       - DB_USER=scl_user
       - DB_PASS=SclSecurePass2024!
       - DB_NAME=scl_institute
-      - MOODLE_URL=https://lms.sclsandbox.xyz
+      - MOODLE_URL=http://185.211.6.60:8888
       - MOODLE_DATABASE_HOST=127.0.0.1
       - MOODLE_DATABASE_PORT=3306
       - MOODLE_DATABASE_USER=moodleuser
