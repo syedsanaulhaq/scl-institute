@@ -111,6 +111,9 @@ services:
       - MOODLE_DATABASE_NAME=moodle
       - SSO_SECRET=supersecretkey
       - VITE_API_URL=http://system.sclsandbox.xyz/api
+    volumes:
+      - ./backend:/app:cached
+      - /app/node_modules
     depends_on:
       scli-mysql:
         condition: service_healthy
@@ -135,6 +138,9 @@ services:
     environment:
       - VITE_API_URL=${VITE_API_URL}
       - VITE_ENV=${VITE_ENV}
+    volumes:
+      - ./frontend:/app:cached
+      - /app/node_modules
     networks:
       - scl-network-prod
     healthcheck:
