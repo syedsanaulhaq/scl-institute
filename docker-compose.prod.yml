@@ -1,70 +1,4 @@
 services:
-  scli-moodle-db:
-    image: bitnami/mariadb:latest
-    container_name: scli-moodle-db-prod
-    restart: always
-    environment:
-      - MARIADB_ROOT_PASSWORD=moodleroot
-      - MARIADB_DATABASE=bitnami_moodle
-      - MARIADB_USER=bn_moodle
-      - MARIADB_PASSWORD=bitnami_moodle_password
-      - MARIADB_CHARACTER_SET=utf8mb4
-      - MARIADB_COLLATE=utf8mb4_unicode_ci
-    volumes:
-      - moodle_db_data_prod:/var/lib/mysql
-    networks:
-      - scl-network-prod
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-pmoodleroot"]
-      timeout: 10s
-      retries: 5
-      start_period: 30s
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-
-  scli-moodle:
-    image: bitnamilegacy/moodle:4.3
-    container_name: scli-moodle-prod
-    restart: always
-    ports:
-      - "8080:8080"
-    env_file: .env
-    environment:
-      - MOODLE_DATABASE_HOST=scli-moodle-db
-      - MOODLE_DATABASE_PORT_NUMBER=3306
-      - MOODLE_DATABASE_USER=bn_moodle
-      - MOODLE_DATABASE_PASSWORD=bitnami_moodle_password
-      - MOODLE_DATABASE_NAME=bitnami_moodle
-      - MOODLE_USERNAME=admin
-      - MOODLE_PASSWORD=SCLInst!2026
-      - MOODLE_SITE_NAME=SCL Institute LMS
-      - MOODLE_REVERSEPROXY=no
-      - BITNAMI_DEBUG=true
-      - SCL_BACKEND_HOST=scli-backend-prod
-      - SCL_BACKEND_PORT=4000
-      - SSO_SECRET=supersecretkey
-    volumes:
-      - moodle_data_prod:/bitnami/moodle
-      - ./moodle-scripts/local/sclsso:/bitnami/moodle/local/sclsso
-    networks:
-      - scl-network-prod
-    depends_on:
-      scli-moodle-db:
-        condition: service_healthy
-    healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost/moodle/login/index.php" ]
-      timeout: 10s
-      retries: 5
-      start_period: 60s
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-
   scli-mysql:
     image: mysql:8.0
     container_name: scli-mysql-prod
@@ -103,11 +37,11 @@ services:
       - DB_USER=scl_user
       - DB_PASS=SclSecurePass2024!
       - DB_NAME=scl_institute
-      - MOODLE_URL=http://185.211.6.60:8888/moodle-prod
-      - MOODLE_DATABASE_HOST=185.211.6.60
+      - MOODLE_URL=http://lms.sclsandbox.xyz
+      - MOODLE_DATABASE_HOST=localhost
       - MOODLE_DATABASE_PORT=3306
-      - MOODLE_DATABASE_USER=moodleuser
-      - MOODLE_DATABASE_PASSWORD=moodlepass
+      - MOODLE_DATABASE_USER=root
+      - MOODLE_DATABASE_PASSWORD=root
       - MOODLE_DATABASE_NAME=moodle
       - SSO_SECRET=supersecretkey
       - VITE_API_URL=http://system.sclsandbox.xyz/api
@@ -167,7 +101,6 @@ services:
     depends_on:
       - scli-frontend
       - scli-backend
-      - scli-moodle
     networks:
       - scl-network-prod
     healthcheck:
@@ -187,8 +120,4 @@ networks:
 
 volumes:
   mysql_data_prod:
-    driver: local
-  moodle_db_data_prod:
-    driver: local
-  moodle_data_prod:
     driver: local
