@@ -146,8 +146,11 @@ const Dashboard = ({ user, onLogout }) => {
         }
     ];
 
-    // Filter modules based on user role
-    const visibleModules = modules.filter(mod => mod.roles.includes(user.role));
+    // Filter modules based on user role (case-insensitive comparison)
+    const normalizedUserRole = user.role 
+        ? user.role.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')
+        : '';
+    const visibleModules = modules.filter(mod => mod.roles.includes(normalizedUserRole));
 
     const stats = [
         { label: 'Active Sessions', value: '12', icon: Activity, color: 'blue' },
@@ -166,7 +169,7 @@ const Dashboard = ({ user, onLogout }) => {
                 </div>
                 <div className="hidden sm:flex space-x-2">
                     <span className="px-3 py-1 bg-scl-purple/10 text-scl-purple rounded-full text-xs font-bold uppercase tracking-wider border border-scl-purple/20">
-                        {user.role} Access
+                        {normalizedUserRole || user.role} Access
                     </span>
                 </div>
             </div>
@@ -218,7 +221,7 @@ const Dashboard = ({ user, onLogout }) => {
 
                                     <div className="mt-2 pt-2 border-t border-white/10 flex items-center justify-between">
                                         <span className="text-[8px] uppercase font-black tracking-widest text-white/60">
-                                            {user.role === 'admin' ? 'Full' : 'Std'}
+                                            {normalizedUserRole && normalizedUserRole.includes('Super') ? 'Full' : 'Std'}
                                         </span>
                                         {module.isSSO ? (
                                             <button
