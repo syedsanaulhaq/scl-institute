@@ -212,7 +212,7 @@ app.post('/api/sso/generate', async (req, res) => {
             [token, user.email, firstname, lastname, user.role, redirect_to || null]
         );
         const moodleUrl = process.env.MOODLE_URL || 'http://localhost:9090';
-        let redirectUrl = `${moodleUrl}/sso.php?token=${token}`;
+        let redirectUrl = `${moodleUrl}/local/sclsso/login.php?token=${token}`;
         
         // Log the redirect if provided
         if (redirect_to) {
