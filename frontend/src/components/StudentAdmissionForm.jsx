@@ -806,17 +806,31 @@ const StudentAdmissionForm = ({ onSubmitSuccess }) => {
       formDataWithFiles.append('digital_signature', formData.digitalSignature);
       formDataWithFiles.append('declaration_date', formData.declarationDate || new Date().toISOString().split('T')[0]);
 
-      // Add file uploads
+      // Map document types to backend field names
+      const documentFieldMap = {
+        'Passport / ID': 'passport_id',
+        'Academic Certificates': 'academic_certificates',
+        'Academic Transcripts': 'academic_transcripts',
+        'English Language Certificate': 'english_certificate',
+        'CV / Resume': 'cv_resume',
+        'Work Reference': 'work_reference',
+        'Proof of Address': 'proof_of_address',
+        'Visa / Immigration Document': 'visa_immigration'
+      };
+
+      // Add file uploads with correct field names
       if (formData.uploadedDocuments) {
         Object.keys(formData.uploadedDocuments).forEach(docType => {
           const file = formData.uploadedDocuments[docType];
           if (file) {
-            formDataWithFiles.append('documents', file, `${docType.replace(/\s+/g, '_')}_${file.name}`);
-            formDataWithFiles.append(`document_type_${file.name}`, docType);
+            const fieldName = documentFieldMap[docType] || docType;
+            formDataWithFiles.append(fieldName, file, file.name);
+            console.log(`📎 Adding file: ${fieldName} = ${file.name}`);
           }
         });
       }
 
+      console.log('📤 Submitting application with FormData...');
       const response = await axios.post(`${API_URL}/students/applications`, formDataWithFiles, {
         headers: {
           'Content-Type': 'multipart/form-data'
