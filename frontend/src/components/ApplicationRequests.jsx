@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
     Search,
     Filter,
@@ -35,6 +35,7 @@ const formatDate = (dateValue) => {
 
 const ApplicationRequests = () => {
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
     const [applications, setApplications] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
@@ -42,10 +43,22 @@ const ApplicationRequests = () => {
     const [selectedApp, setSelectedApp] = useState(null);
     const [error, setError] = useState('');
     const [reviewStatus, setReviewStatus] = useState({});
+    const [highlightedRef, setHighlightedRef] = useState(searchParams.get('highlight'));
+    const [showSuccessMsg, setShowSuccessMsg] = useState(!!highlightedRef);
 
     useEffect(() => {
         fetchApplications();
     }, [statusFilter]);
+
+    // Auto-dismiss success message after 5 seconds
+    useEffect(() => {
+        if (showSuccessMsg) {
+            const timer = setTimeout(() => {
+                setShowSuccessMsg(false);
+            }, 5000);
+            return () => clearTimeout(timer);
+        }
+    }, [showSuccessMsg]);
 
     const checkReviewStatus = async (appId) => {
         try {
@@ -140,6 +153,25 @@ const ApplicationRequests = () => {
                 <h1 className="text-3xl font-bold text-gray-900">Student Applications</h1>
                 <p className="text-gray-600 mt-2">Manage incoming student admission requests</p>
             </div>
+
+            {/* Success Message */}
+            {showSuccessMsg && (
+                <div className="mb-6 bg-green-50 border-l-4 border-green-500 p-4 rounded-lg flex items-start justify-between">
+                    <div className="flex items-start">
+                        <CheckCircle2 className="w-5 h-5 text-green-600 mr-3 mt-0.5 flex-shrink-0" />
+                        <div>
+                            <p className="text-green-800 font-semibold">Application Submitted Successfully!</p>
+                            <p className="text-green-700 text-sm mt-1">Your new application has been added to the list below and is highlighted for your reference. Our admissions team will review it shortly.</p>
+                        </div>
+                    </div>
+                    <button
+                        onClick={() => setShowSuccessMsg(false)}
+                        className="text-green-600 hover:text-green-800 font-bold ml-4"
+                    >
+                        ✕
+                    </button>
+                </div>
+            )}
 
             {/* Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
@@ -248,17 +280,26 @@ const ApplicationRequests = () => {
                             <tbody>
                                 {filteredApplications.map((app) => (
                                     <tr key={app.id} className={`border-b border-gray-200 transition-colors ${
-                                        app.application_status === 'accepted' 
+                                        highlightedRef && (app.application_reference === highlightedRef || app.id === parseInt(highlightedRef))
+                                            ? 'bg-amber-100 hover:bg-amber-200 shadow-md'
+                                            : app.application_status === 'accepted' 
                                             ? 'bg-green-50 hover:bg-green-100' 
                                             : 'hover:bg-gray-50'
                                     }`}>
                                         <td className="px-6 py-4">
-                                            <button 
-                                                onClick={() => setSelectedApp(app)}
-                                                className="text-sm font-mono font-semibold text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
-                                            >
-                                                {app.application_reference}
-                                            </button>
+                                            <div className="flex items-center gap-2">
+                                                <button 
+                                                    onClick={() => setSelectedApp(app)}
+                                                    className="text-sm font-mono font-semibold text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+                                                >
+                                                    {app.application_reference}
+                                                </button>
+                                                {highlightedRef && (app.application_reference === highlightedRef || app.id === parseInt(highlightedRef)) && (
+                                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-green-200 text-green-800 animate-pulse">
+                                                        ✨ NEW
+                                                    </span>
+                                                )}
+                                            </div>
                                         </td>
                                         <td className="px-6 py-4">
                                             <div>

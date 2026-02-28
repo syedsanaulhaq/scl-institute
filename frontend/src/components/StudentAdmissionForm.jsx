@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 import { Upload, Calendar, User, GraduationCap, FileText, Shield, CheckCircle, AlertCircle, Download, X, FileUp, ChevronDown, ChevronRight } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
 
 const StudentAdmissionForm = ({ onSubmitSuccess }) => {
+  const navigate = useNavigate();
   const [activeSection, setActiveSection] = useState(1);
   const [csvModalOpen, setCsvModalOpen] = useState(false);
   const [csvFile, setCsvFile] = useState(null);
@@ -839,13 +841,19 @@ const StudentAdmissionForm = ({ onSubmitSuccess }) => {
 
       if (response.data?.success) {
         const reference = response.data?.data?.application_reference || response.data?.application_reference || 'N/A';
+        const appId = response.data?.data?.application_id;
+        console.log(`✅ Application submitted successfully: Reference=${reference}, ID=${appId}`);
         setSubmitStatus({
           type: 'success',
-          message: `Application submitted successfully. Reference: ${reference}`
+          message: `Application submitted successfully. Redirecting...`
         });
         if (onSubmitSuccess) {
           onSubmitSuccess(reference);
         }
+        // Redirect to applications list with the new application reference/ID
+        setTimeout(() => {
+          navigate(`/applications?highlight=${reference || appId}`);
+        }, 1000);
       } else {
         setSubmitStatus({
           type: 'error',
