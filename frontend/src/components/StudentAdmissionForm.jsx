@@ -121,12 +121,13 @@ const StudentAdmissionForm = ({ onSubmitSuccess, isEditMode = false }) => {
           console.log('✅ Application loaded:', app);
           
           // Populate form with existing data
+          // Format dates from ISO format to yyyy-MM-dd for input fields
           setFormData(prev => ({
             ...prev,
             firstName: app.first_name || '',
             middleNames: app.middle_names || '',
             lastName: app.last_name || '',
-            dateOfBirth: app.date_of_birth || '',
+            dateOfBirth: formatDateForInput(app.date_of_birth),
             gender: app.gender || '',
             nationality: app.nationality || '',
             email: app.email || '',
@@ -140,7 +141,7 @@ const StudentAdmissionForm = ({ onSubmitSuccess, isEditMode = false }) => {
             courseCode: app.course_code || '',
             courseType: app.course_type || '',
             modeOfStudy: app.mode_of_study || '',
-            intakeStartDate: app.intake_start_date || '',
+            intakeStartDate: formatDateForInput(app.intake_start_date),
             entryRoute: app.entry_route || '',
             highestQualification: app.highest_qualification || '',
             institutionName: app.institution_name || '',
@@ -155,7 +156,7 @@ const StudentAdmissionForm = ({ onSubmitSuccess, isEditMode = false }) => {
             consentMarketing: app.consent_marketing || false,
             declarationTruth: app.declaration_truth || false,
             digitalSignature: app.digital_signature || '',
-            declarationDate: app.declaration_date || ''
+            declarationDate: formatDateForInput(app.declaration_date)
           }));
         } else {
           setSubmitStatus({ type: 'error', message: 'Failed to load application data' });
