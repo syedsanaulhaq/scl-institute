@@ -116,8 +116,8 @@ const StudentAdmissionForm = ({ onSubmitSuccess, isEditMode = false }) => {
         console.log('📥 Loading application data for ID:', applicationId);
         const response = await axios.get(`${API_URL}/students/applications/${applicationId}`);
         
-        if (response.data?.success && response.data?.data) {
-          const app = response.data.data;
+        if (response.data?.success && response.data?.data?.application) {
+          const app = response.data.data.application;
           console.log('✅ Application loaded:', app);
           
           // Populate form with existing data
