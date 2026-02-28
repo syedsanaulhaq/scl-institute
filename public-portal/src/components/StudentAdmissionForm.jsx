@@ -750,55 +750,60 @@ const StudentAdmissionForm = ({ onSubmitSuccess, isEditMode = false }) => {
       setIsSubmitting(true);
       setSubmitStatus({ type: 'loading', message: isEditMode ? 'Updating application...' : 'Submitting application...' });
 
-      const applicationData = {
-        // Personal Information
-        first_name: formData.firstName,
-        middle_names: formData.middleNames,
-        last_name: formData.lastName,
-        date_of_birth: formData.dateOfBirth,
-        gender: formData.gender,
-        nationality: formData.nationality,
-        email: formData.email,
-        contact_number: formData.contactNumber,
-        address_line1: formData.addressLine1,
-        address_line2: formData.addressLine2,
-        town_city: formData.townCity,
-        postcode: formData.postcode,
-        country_of_residence: formData.countryOfResidence,
+      // Create FormData for file uploads (supports both create and update)
+      const formDataWithFiles = new FormData();
+      
+      // Add all form fields
+      formDataWithFiles.append('first_name', formData.firstName);
+      formDataWithFiles.append('middle_names', formData.middleNames);
+      formDataWithFiles.append('last_name', formData.lastName);
+      formDataWithFiles.append('date_of_birth', formData.dateOfBirth);
+      formDataWithFiles.append('gender', formData.gender);
+      formDataWithFiles.append('nationality', formData.nationality);
+      formDataWithFiles.append('email', formData.email);
+      formDataWithFiles.append('contact_number', formData.contactNumber);
+      formDataWithFiles.append('address_line1', formData.addressLine1);
+      formDataWithFiles.append('address_line2', formData.addressLine2);
+      formDataWithFiles.append('town_city', formData.townCity);
+      formDataWithFiles.append('postcode', formData.postcode);
+      formDataWithFiles.append('country_of_residence', formData.countryOfResidence);
 
-        // Course Selection
-        course_title: formData.courseTitle,
-        course_code: formData.courseCode,
-        course_type: normalizeCourseType(formData.courseType),
-        mode_of_study: formData.modeOfStudy,
-        intake_start_date: formData.intakeStartDate,
-        entry_route: formData.entryRoute,
+      // Course Selection
+      formDataWithFiles.append('course_title', formData.courseTitle);
+      formDataWithFiles.append('course_code', formData.courseCode);
+      formDataWithFiles.append('course_type', normalizeCourseType(formData.courseType));
+      formDataWithFiles.append('mode_of_study', formData.modeOfStudy);
+      formDataWithFiles.append('intake_start_date', formData.intakeStartDate);
+      formDataWithFiles.append('entry_route', formData.entryRoute);
 
-        // Academic Background
-        highest_qualification: formData.highestQualification,
-        institution_name: formData.institutionName,
-        year_completed: formData.yearCompleted,
-        relevant_work_experience: formData.workExperience,
-        english_proficiency: formData.englishProficiency,
-        english_score: formData.englishScore,
+      // Academic Background
+      formDataWithFiles.append('highest_qualification', formData.highestQualification);
+      formDataWithFiles.append('institution_name', formData.institutionName);
+      formDataWithFiles.append('year_completed', formData.yearCompleted);
+      formDataWithFiles.append('relevant_work_experience', formData.workExperience);
+      formDataWithFiles.append('english_proficiency', formData.englishProficiency);
+      formDataWithFiles.append('english_score', formData.englishScore);
 
-        // Support Requirements
-        has_disabilities_support_needs: formData.hasDisabilities === 'yes',
-        disability_support_details: formData.disabilityDetails,
+      // Support Requirements
+      formDataWithFiles.append('has_disabilities_support_needs', formData.hasDisabilities === 'yes');
+      formDataWithFiles.append('disability_support_details', formData.disabilityDetails);
 
-        // Consents & Declaration
-        consent_gdpr: formData.consentGdpr,
-        consent_data_sharing: formData.consentDataSharing,
-        consent_marketing: formData.consentMarketing,
-        declaration_truth: formData.declarationTruth,
-        digital_signature: formData.digitalSignature,
-        declaration_date: formData.declarationDate || new Date().toISOString().split('T')[0]
-      };
+      // Consents & Declaration
+      formDataWithFiles.append('consent_gdpr', formData.consentGdpr);
+      formDataWithFiles.append('consent_data_sharing', formData.consentDataSharing);
+      formDataWithFiles.append('consent_marketing', formData.consentMarketing);
+      formDataWithFiles.append('declaration_truth', formData.declarationTruth);
+      formDataWithFiles.append('digital_signature', formData.digitalSignature);
+      formDataWithFiles.append('declaration_date', formData.declarationDate || new Date().toISOString().split('T')[0]);
 
       // Use PUT for edit mode, POST for create
       const response = isEditMode 
-        ? await axios.put(`${API_URL}/students/applications/${applicationId}`, applicationData)
-        : await axios.post(`${API_URL}/students/applications`, applicationData);
+        ? await axios.put(`${API_URL}/students/applications/${applicationId}`, formDataWithFiles, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+          })
+        : await axios.post(`${API_URL}/students/applications`, formDataWithFiles, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+          });
 
       if (response.data?.success) {
         const reference = response.data?.data?.application_reference || response.data?.application_reference || 'N/A';
