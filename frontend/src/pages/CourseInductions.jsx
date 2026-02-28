@@ -330,6 +330,50 @@ const CourseInductions = ({ user }) => {
                                 </div>
                             </div>
 
+                            <div className="bg-gradient-to-r from-scl-purple/5 to-transparent border border-scl-purple/20 rounded-xl p-6 shadow-sm">
+                                <h3 className="text-sm font-bold text-gray-800 mb-4 uppercase tracking-wide">Document Control</h3>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                    <div className="bg-white rounded-lg p-3 border border-gray-100">
+                                        <p className="text-xs font-semibold text-gray-600 uppercase mb-1">Course Title</p>
+                                        <p className="text-sm font-medium text-gray-900">{details.induction.course_title || 'N/A'}</p>
+                                    </div>
+                                    <div className="bg-white rounded-lg p-3 border border-gray-100">
+                                        <p className="text-xs font-semibold text-gray-600 uppercase mb-1">Awarding Body / University</p>
+                                        <p className="text-sm font-medium text-gray-900">{details.induction.awarding_body || 'N/A'}</p>
+                                    </div>
+                                    <div className="bg-white rounded-lg p-3 border border-gray-100">
+                                        <p className="text-xs font-semibold text-gray-600 uppercase mb-1">Qualification Level & Framework</p>
+                                        <p className="text-sm font-medium text-gray-900">{details.induction.qualification_level || 'N/A'}</p>
+                                    </div>
+                                    <div className="bg-white rounded-lg p-3 border border-gray-100">
+                                        <p className="text-xs font-semibold text-gray-600 uppercase mb-1">Approval Date</p>
+                                        <p className="text-sm font-medium text-gray-900">
+                                            {details.induction.approval_date 
+                                                ? new Date(details.induction.approval_date).toLocaleDateString('en-GB', { year: 'numeric', month: 'long', day: 'numeric' })
+                                                : 'N/A'
+                                            }
+                                        </p>
+                                    </div>
+                                    <div className="bg-white rounded-lg p-3 border border-gray-100">
+                                        <p className="text-xs font-semibold text-gray-600 uppercase mb-1">Review Date</p>
+                                        <p className="text-sm font-medium text-gray-900">
+                                            {details.induction.review_date 
+                                                ? new Date(details.induction.review_date).toLocaleDateString('en-GB', { year: 'numeric', month: 'long', day: 'numeric' })
+                                                : 'N/A'
+                                            }
+                                        </p>
+                                    </div>
+                                    <div className="bg-white rounded-lg p-3 border border-gray-100">
+                                        <p className="text-xs font-semibold text-gray-600 uppercase mb-1">Version</p>
+                                        <p className="text-sm font-medium text-gray-900">{details.induction.version || '1.0'}</p>
+                                    </div>
+                                    <div className="bg-white rounded-lg p-3 border border-gray-100 md:col-span-2 lg:col-span-3">
+                                        <p className="text-xs font-semibold text-gray-600 uppercase mb-1">Document Owner (Department/Role)</p>
+                                        <p className="text-sm font-medium text-gray-900">{details.induction.document_owner || 'N/A'}</p>
+                                    </div>
+                                </div>
+                            </div>
+
                             <div className="bg-white border border-gray-100 rounded-xl p-4 shadow-sm space-y-4">
                                 <h3 className="text-sm font-semibold text-gray-700">Requirements Checklist</h3>
                                 {groupedRequirements.map((group) => (
