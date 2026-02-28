@@ -117,7 +117,7 @@ router.get('/courses', async (req, res) => {
             await moodleDb.end();
 
             if (moodleCourses.length > 0) {
-                console.log(`✓ Fetched ${moodleCourses.length} courses from Moodle database`);
+                console.log(`Γ£ô Fetched ${moodleCourses.length} courses from Moodle database`);
                 return res.json({
                     success: true,
                     message: `Fetched ${moodleCourses.length} courses from Moodle database`,
@@ -172,14 +172,14 @@ router.get('/courses', async (req, res) => {
 // Submit new student application (matches admission form exactly)
 // ===============================================
 router.post('/applications', upload.fields([
-    { name: 'passport_id', maxCount: 1 },
-    { name: 'academic_certificates', maxCount: 1 },
-    { name: 'academic_transcripts', maxCount: 1 },
-    { name: 'english_certificate', maxCount: 1 },
-    { name: 'cv_resume', maxCount: 1 },
-    { name: 'work_reference', maxCount: 1 },
-    { name: 'proof_of_address', maxCount: 1 },
-    { name: 'visa_immigration', maxCount: 1 }
+    { name: 'passport_id', maxCount: 5 },
+    { name: 'academic_certificates', maxCount: 5 },
+    { name: 'academic_transcripts', maxCount: 5 },
+    { name: 'english_certificate', maxCount: 5 },
+    { name: 'cv_resume', maxCount: 5 },
+    { name: 'work_reference', maxCount: 5 },
+    { name: 'proof_of_address', maxCount: 5 },
+    { name: 'visa_immigration', maxCount: 5 }
 ]), async (req, res) => {
     const connection = await db.getConnection();
     
@@ -1036,8 +1036,8 @@ Welcome to SCL Institute!
 
 Your student account has been created. Here are your login credentials:
 
-📧 Email/Username: ${email}
-🔐 Temporary Password: ${tempPassword}
+≡ƒôº Email/Username: ${email}
+≡ƒöÉ Temporary Password: ${tempPassword}
 
 Course: ${course_title}
 
@@ -1085,14 +1085,14 @@ Dear ${first_name} ${last_name},
 
 Congratulations! You have received a conditional offer for:
 
-📚 Course: ${course_title}
+≡ƒôÜ Course: ${course_title}
 
 Conditions:
 ${detailed_comments || 'Please refer to your admissions portal for specific conditions.'}
 
 Your temporary account credentials have been created:
-📧 Email/Username: ${email}
-🔐 Temporary Password: ${tempPassword}
+≡ƒôº Email/Username: ${email}
+≡ƒöÉ Temporary Password: ${tempPassword}
 
 Please login to your portal at: http://localhost:3000/student/login
 
@@ -1736,8 +1736,8 @@ Welcome to SCL Institute!
 
 Your student account has been created. Here are your login credentials:
 
-📧 Email/Username: ${app.email}
-🔐 Temporary Password: ${tempPassword}
+≡ƒôº Email/Username: ${app.email}
+≡ƒöÉ Temporary Password: ${tempPassword}
 
 Course: ${app.course_title}
 
