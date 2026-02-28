@@ -407,6 +407,210 @@ router.post('/applications', upload.fields([
     }
 });
 
+// ROUTE 2: PUT /api/students/applications/:id - Update existing application
+router.put('/applications/:id', upload.fields([
+    { name: 'passport_id', maxCount: 5 },
+    { name: 'academic_certificates', maxCount: 5 },
+    { name: 'academic_transcripts', maxCount: 5 },
+    { name: 'english_certificate', maxCount: 5 },
+    { name: 'cv_resume', maxCount: 5 },
+    { name: 'work_reference', maxCount: 5 },
+    { name: 'proof_of_address', maxCount: 5 },
+    { name: 'visa_immigration', maxCount: 5 }
+]), async (req, res) => {
+    const connection = await db.getConnection();
+    
+    try {
+        await connection.beginTransaction();
+        
+        const { id } = req.params;
+
+        // Extract form data
+        const {
+            // Personal Information
+            first_name,
+            middle_names,
+            last_name,
+            date_of_birth,
+            gender,
+            nationality,
+            email,
+            contact_number,
+            address_line1,
+            address_line2,
+            town_city,
+            postcode,
+            country_of_residence,
+            
+            // Course Selection
+            course_title,
+            course_code,
+            course_type,
+            mode_of_study,
+            intake_start_date,
+            entry_route,
+            
+            // Academic Background
+            highest_qualification,
+            institution_name,
+            year_completed,
+            relevant_work_experience,
+            english_proficiency,
+            english_score,
+            
+            // Support Requirements
+            has_disabilities_support_needs,
+            disability_support_details,
+            
+            // Consents & Declaration
+            consent_gdpr,
+            consent_data_sharing,
+            consent_marketing,
+            declaration_truth,
+            digital_signature,
+            declaration_date
+        } = req.body;
+
+        // Validate application exists
+        const [existingApp] = await connection.execute(
+            'SELECT id, application_reference FROM student_applications WHERE id = ?',
+            [id]
+        );
+
+        if (existingApp.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Application not found'
+            });
+        }
+
+        // Helper to convert empty strings to null
+        const toNullIfEmpty = (val) => (val === '' || val === undefined) ? null : val;
+        
+        // Helper to convert to boolean
+        const toBool = (val) => val === true || val === 'true';
+
+        // Update main application
+        await connection.execute(`
+            UPDATE student_applications SET
+                first_name = ?, middle_names = ?, last_name = ?, date_of_birth = ?, gender = ?, nationality = ?,
+                email = ?, contact_number = ?, address_line1 = ?, address_line2 = ?, town_city = ?, postcode = ?, country_of_residence = ?,
+                course_title = ?, course_code = ?, course_type = ?, mode_of_study = ?, intake_start_date = ?, entry_route = ?,
+                highest_qualification = ?, institution_name = ?, year_completed = ?, relevant_work_experience = ?, 
+                english_proficiency = ?, english_score = ?,
+                has_disabilities_support_needs = ?, disability_support_details = ?,
+                consent_gdpr = ?, consent_data_sharing = ?, consent_marketing = ?, declaration_truth = ?, digital_signature = ?,
+                declaration_date = ?
+            WHERE id = ?
+        `, [
+            first_name, 
+            toNullIfEmpty(middle_names), 
+            last_name, 
+            date_of_birth, 
+            gender, 
+            nationality,
+            email, 
+            contact_number, 
+            address_line1, 
+            toNullIfEmpty(address_line2), 
+            town_city, 
+            postcode, 
+            country_of_residence,
+            course_title, 
+            course_code, 
+            course_type, 
+            mode_of_study, 
+            intake_start_date, 
+            entry_route,
+            highest_qualification, 
+            institution_name, 
+            year_completed, 
+            toNullIfEmpty(relevant_work_experience),
+            english_proficiency, 
+            toNullIfEmpty(english_score),
+            toBool(has_disabilities_support_needs),
+            toNullIfEmpty(disability_support_details),
+            toBool(consent_gdpr),
+            toBool(consent_data_sharing),
+            toBool(consent_marketing),
+            toBool(declaration_truth),
+            digital_signature,
+            declaration_date || new Date().toISOString().split('T')[0],
+            id
+        ]);
+
+        // Store new document records if files were uploaded
+        if (req.files && Object.keys(req.files).length > 0) {
+            for (const [fieldName, files] of Object.entries(req.files)) {
+                if (files && files.length > 0) {
+                    for (const file of files) {
+                        await connection.execute(`
+                            INSERT INTO application_documents (
+                                application_id, document_type, original_filename, stored_filename,
+                                file_path, file_size, mime_type, uploaded_by_ip
+                            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                        `, [
+                            id,
+                            fieldName,
+                            file.originalname,
+                            file.filename,
+                            file.path,
+                            file.size,
+                            file.mimetype,
+                            req.ip
+                        ]);
+                    }
+                }
+            }
+        }
+
+        await connection.commit();
+
+        // Get the updated application
+        const [updatedApp] = await connection.execute(
+            'SELECT id, application_reference, email, first_name, last_name FROM student_applications WHERE id = ?',
+            [id]
+        );
+
+        res.status(200).json({
+            success: true,
+            message: 'Application updated successfully',
+            data: {
+                application_id: updatedApp[0].id,
+                application_reference: updatedApp[0].application_reference,
+                email: updatedApp[0].email,
+                name: `${updatedApp[0].first_name} ${updatedApp[0].last_name}`,
+                status: 'submitted'
+            }
+        });
+
+    } catch (error) {
+        await connection.rollback();
+        console.error('Error updating application:', error);
+        
+        // Clean up uploaded files if database update failed
+        if (req.files) {
+            for (const files of Object.values(req.files)) {
+                for (const file of files) {
+                    try {
+                        await fs.unlink(file.path);
+                    } catch (cleanupError) {
+                        console.error('Error cleaning up file:', cleanupError);
+                    }
+                }
+            }
+        }
+
+        res.status(500).json({
+            success: false,
+            message: 'Failed to update application',
+            error: error.message
+        });
+    } finally {
+        connection.release();
+    }
+});
+
 // ===============================================
 // ROUTE 3: GET /api/students/applications/:id
 // Get single application details
