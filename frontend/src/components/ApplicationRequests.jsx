@@ -92,13 +92,20 @@ const ApplicationRequests = () => {
                 console.log('[FETCH APPS] Got', sortedApps.length, 'applications');
                 setApplications(sortedApps);
                 
-                // Check review status for each application
+                // Check review status for ALL applications IN PARALLEL (not sequential)
+                console.log('[CHECKING REVIEWS] Starting parallel review checks for', sortedApps.length, 'apps');
+                const reviewPromises = sortedApps.map(app => 
+                    checkReviewStatus(app.id)
+                        .then(hasReview => ({ appId: app.id, hasReview }))
+                        .catch(() => ({ appId: app.id, hasReview: false }))
+                );
+                
+                const reviewResults = await Promise.all(reviewPromises);
                 const reviewStatuses = {};
-                for (const app of sortedApps) {
-                    console.log(`[CHECKING REVIEW] App ID ${app.id}`);
-                    reviewStatuses[app.id] = await checkReviewStatus(app.id);
-                }
-                console.log('[FINAL REVIEW STATUS]', reviewStatuses);
+                reviewResults.forEach(result => {
+                    reviewStatuses[result.appId] = result.hasReview;
+                });
+                console.log('[REVIEWS COMPLETE] All review statuses loaded:', reviewStatuses);
                 setReviewStatus(reviewStatuses);
             } else {
                 setError('Failed to load applications');
