@@ -9,9 +9,17 @@ async function runMigration() {
         console.log('[MIGRATION] Starting accreditation tables migration...');
         connection = await pool.getConnection();
         
-        // Read the SQL file
-        const sqlPath = path.join(__dirname, '..', 'create-accreditation-tables.sql');
-        const sqlContent = fs.readFileSync(sqlPath, 'utf-8');
+        // Read the SQL file - try multiple possible locations
+        let sqlPath = path.join(__dirname, '..', 'create-accreditation-tables.sql');
+        let sqlContent;
+        
+        try {
+            sqlContent = fs.readFileSync(sqlPath, 'utf-8');
+        } catch (err) {
+            // Try alternative path (in case running from container)
+            sqlPath = path.join('/app_root', 'create-accreditation-tables.sql');
+            sqlContent = fs.readFileSync(sqlPath, 'utf-8');
+        }
         
         // Split by semicolon and execute each statement
         const statements = sqlContent.split(';').filter(stmt => stmt.trim());
