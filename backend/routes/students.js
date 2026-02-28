@@ -424,6 +424,9 @@ router.put('/applications/:id', upload.fields([
         await connection.beginTransaction();
         
         const { id } = req.params;
+        
+        console.log(`[PUT /applications/:id] Updating application ID: ${id}`);
+        console.log('[PUT] Request body keys:', Object.keys(req.body));
 
         // Extract form data
         const {
