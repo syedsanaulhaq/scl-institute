@@ -217,8 +217,9 @@ app.get('/api/admin/applications', requireAuth, async (req, res) => {
     try {
         const query = `
             SELECT a.*, p.name as program_name, p.code as program_code
-            FROM applications a
+            FROM student_applications a
             LEFT JOIN programs p ON a.program_id = p.id
+            WHERE a.is_deleted = FALSE
             ORDER BY a.created_at DESC
         `;
         
@@ -260,17 +261,78 @@ app.delete('/api/admin/applications/:id', requireAuth, async (req, res) => {
     try {
         const { id } = req.params;
         
-        const query = 'DELETE FROM applications WHERE id = ?';
-        const [result] = await db.execute(query, [id]);
-        
-        if (result.affectedRows === 0) {
-            return res.status(404).json({ error: 'Application not found' });
+        // Check if application exists and is not already deleted
+        const [applications] = await db.execute(
+            'SELECT id, is_deleted FROM student_applications WHERE id = ?',
+            [id]
+        );
+
+        if (applications.length === 0) {
+            return res.status(404).json({ 
+                success: false,
+                error: 'Application not found' 
+            });
         }
+
+        if (applications[0].is_deleted) {
+            return res.status(400).json({ 
+                success: false,
+                error: 'Application is already deleted' 
+            });
+        }
+
+        // Soft delete the application with cascade
+        const connection = await db.getConnection();
         
-        res.json({ message: 'Application deleted successfully' });
+        try {
+            await connection.beginTransaction();
+
+            // Mark application as deleted
+            await connection.execute(
+                'UPDATE student_applications SET is_deleted = TRUE, deleted_at = NOW() WHERE id = ?',
+                [id]
+            );
+
+            // Cascade: mark associated documents as deleted
+            await connection.execute(
+                'UPDATE application_documents SET is_deleted = TRUE, deleted_at = NOW() WHERE application_id = ?',
+                [id]
+            );
+
+            // Cascade: mark associated reviews as deleted
+            await connection.execute(
+                'UPDATE application_reviews SET is_deleted = TRUE, deleted_at = NOW() WHERE application_id = ?',
+                [id]
+            );
+
+            // Cascade: mark associated decisions as deleted
+            await connection.execute(
+                'UPDATE admissions_decisions SET is_deleted = TRUE, deleted_at = NOW() WHERE application_id = ?',
+                [id]
+            );
+
+            await connection.commit();
+
+            res.json({
+                success: true,
+                message: 'Application deleted successfully',
+                data: {
+                    id,
+                    deleted_at: new Date().toISOString()
+                }
+            });
+        } catch (transactionError) {
+            await connection.rollback();
+            throw transactionError;
+        } finally {
+            connection.release();
+        }
     } catch (error) {
         console.error('Error deleting application:', error);
-        res.status(500).json({ error: 'Failed to delete application' });
+        res.status(500).json({ 
+            success: false,
+            error: 'Failed to delete application' 
+        });
     }
 });
 

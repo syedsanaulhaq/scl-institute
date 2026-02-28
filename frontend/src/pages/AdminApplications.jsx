@@ -106,7 +106,7 @@ const AdminApplications = () => {
     };
 
     const handleDeleteApplication = async (applicationId) => {
-        if (!window.confirm('Are you sure you want to delete this application? This action cannot be undone.')) {
+        if (!window.confirm('Are you sure you want to delete this application? It will be marked as deleted and can be restored later.')) {
             return;
         }
 
@@ -120,6 +120,7 @@ const AdminApplications = () => {
             setSelectedApplication(null);
         } catch (error) {
             console.error('Error deleting application:', error);
+            alert('Failed to delete application: ' + (error.response?.data?.error || error.message));
         }
     };
 

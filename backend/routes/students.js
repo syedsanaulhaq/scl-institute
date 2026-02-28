@@ -670,7 +670,7 @@ router.get('/applications/:id', async (req, res) => {
             SELECT sa.*, c.department, c.awarding_body, c.duration_months
             FROM student_applications sa
             LEFT JOIN courses c ON sa.course_code = c.course_code
-            WHERE sa.id = ?
+            WHERE sa.id = ? AND sa.is_deleted = FALSE
         `, [id]);
 
         if (applications.length === 0) {
@@ -680,9 +680,9 @@ router.get('/applications/:id', async (req, res) => {
             });
         }
 
-        // Get associated documents
+        // Get associated documents (exclude deleted documents)
         const [documents] = await db.execute(
-            'SELECT document_type, original_filename, upload_date FROM application_documents WHERE application_id = ?',
+            'SELECT document_type, original_filename, upload_date FROM application_documents WHERE application_id = ? AND is_deleted = FALSE',
             [id]
         );
 
@@ -740,6 +740,174 @@ router.put('/applications/:id/accept-offer', async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Failed to accept offer',
+            error: error.message
+        });
+    }
+});
+
+// ===============================================
+// ROUTE 3B2: DELETE /api/students/applications/:id
+// Soft delete an application (mark as deleted)
+// ===============================================
+router.delete('/applications/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        // Check if application exists and is not already deleted
+        const [applications] = await db.execute(
+            'SELECT id, is_deleted FROM student_applications WHERE id = ?',
+            [id]
+        );
+
+        if (applications.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Application not found'
+            });
+        }
+
+        if (applications[0].is_deleted) {
+            return res.status(400).json({
+                success: false,
+                message: 'Application is already deleted'
+            });
+        }
+
+        // Soft delete the application
+        const connection = await db.getConnection();
+        
+        try {
+            await connection.beginTransaction();
+
+            // Mark application as deleted
+            await connection.execute(
+                'UPDATE student_applications SET is_deleted = TRUE, deleted_at = NOW() WHERE id = ?',
+                [id]
+            );
+
+            // Optionally cascade: mark associated documents as deleted
+            await connection.execute(
+                'UPDATE application_documents SET is_deleted = TRUE, deleted_at = NOW() WHERE application_id = ?',
+                [id]
+            );
+
+            // Optionally cascade: mark associated reviews as deleted
+            await connection.execute(
+                'UPDATE application_reviews SET is_deleted = TRUE, deleted_at = NOW() WHERE application_id = ?',
+                [id]
+            );
+
+            // Optionally cascade: mark associated decisions as deleted
+            await connection.execute(
+                'UPDATE admissions_decisions SET is_deleted = TRUE, deleted_at = NOW() WHERE application_id = ?',
+                [id]
+            );
+
+            await connection.commit();
+
+            res.json({
+                success: true,
+                message: 'Application deleted successfully',
+                data: {
+                    id,
+                    deleted_at: new Date().toISOString()
+                }
+            });
+        } catch (transactionError) {
+            await connection.rollback();
+            throw transactionError;
+        } finally {
+            connection.release();
+        }
+    } catch (error) {
+        console.error('Error deleting application:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to delete application',
+            error: error.message
+        });
+    }
+});
+
+// ===============================================
+// ROUTE 3B3: POST /api/students/applications/:id/restore
+// Restore a soft-deleted application
+// ===============================================
+router.post('/applications/:id/restore', async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        // Check if application exists and is deleted
+        const [applications] = await db.execute(
+            'SELECT id, is_deleted FROM student_applications WHERE id = ?',
+            [id]
+        );
+
+        if (applications.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Application not found'
+            });
+        }
+
+        if (!applications[0].is_deleted) {
+            return res.status(400).json({
+                success: false,
+                message: 'Application is not deleted'
+            });
+        }
+
+        // Restore the application
+        const connection = await db.getConnection();
+        
+        try {
+            await connection.beginTransaction();
+
+            // Restore application
+            await connection.execute(
+                'UPDATE student_applications SET is_deleted = FALSE, deleted_at = NULL WHERE id = ?',
+                [id]
+            );
+
+            // Optionally cascade: restore associated documents
+            await connection.execute(
+                'UPDATE application_documents SET is_deleted = FALSE, deleted_at = NULL WHERE application_id = ?',
+                [id]
+            );
+
+            // Optionally cascade: restore associated reviews
+            await connection.execute(
+                'UPDATE application_reviews SET is_deleted = FALSE, deleted_at = NULL WHERE application_id = ?',
+                [id]
+            );
+
+            // Optionally cascade: restore associated decisions
+            await connection.execute(
+                'UPDATE admissions_decisions SET is_deleted = FALSE, deleted_at = NULL WHERE application_id = ?',
+                [id]
+            );
+
+            await connection.commit();
+
+            res.json({
+                success: true,
+                message: 'Application restored successfully',
+                data: {
+                    id,
+                    restored_at: new Date().toISOString()
+                }
+            });
+        } catch (transactionError) {
+            await connection.rollback();
+            throw transactionError;
+        } finally {
+            connection.release();
+        }
+    } catch (error) {
+        console.error('Error restoring application:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to restore application',
             error: error.message
         });
     }
@@ -829,7 +997,7 @@ router.get('/applications', async (req, res) => {
     try {
         const { status, course_code, page = 1, limit = 50 } = req.query;
         
-        let whereClause = 'WHERE 1=1';
+        let whereClause = 'WHERE sa.is_deleted = FALSE';
         const params = [];
         
         if (status) {
@@ -2116,7 +2284,7 @@ router.get('/my-applications', async (req, res) => {
                 intake_start_date,
                 created_at
             FROM student_applications
-            WHERE email = ? AND application_status = 'accepted'
+            WHERE email = ? AND application_status = 'accepted' AND is_deleted = FALSE
             ORDER BY created_at DESC
         `, [email]);
 
