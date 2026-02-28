@@ -268,6 +268,28 @@ router.post('/applications', upload.fields([
         
         // Helper to convert to boolean
         const toBool = (val) => val === true || val === 'true';
+        
+        // Helper to convert ISO date to YYYY-MM-DD format
+        const formatDateForDB = (dateValue) => {
+            if (!dateValue) return null;
+            if (typeof dateValue === 'string') {
+                // If it's already YYYY-MM-DD format, return as-is
+                if (dateValue.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                    return dateValue;
+                }
+                // If it's ISO format with time, extract just the date
+                if (dateValue.includes('T')) {
+                    return dateValue.split('T')[0];
+                }
+            }
+            return null;
+        };
+
+        // Format all dates before saving
+        const formattedDOB = formatDateForDB(date_of_birth);
+        const formattedIntakeDate = formatDateForDB(intake_start_date);
+        const formattedYearCompleted = formatDateForDB(year_completed);
+        const formattedDeclarationDate = formatDateForDB(declaration_date) || new Date().toISOString().split('T')[0];
 
         // Generate application reference to avoid duplicate trigger values
         const [refRows] = await connection.execute(
@@ -293,7 +315,7 @@ router.post('/applications', upload.fields([
             first_name, 
             toNullIfEmpty(middle_names), 
             last_name, 
-            date_of_birth, 
+            formattedDOB, 
             gender, 
             nationality,
             email, 
@@ -307,11 +329,11 @@ router.post('/applications', upload.fields([
             course_code, 
             course_type, 
             mode_of_study, 
-            intake_start_date, 
+            formattedIntakeDate, 
             entry_route,
             highest_qualification, 
             institution_name, 
-            year_completed, 
+            formattedYearCompleted, 
             toNullIfEmpty(relevant_work_experience),
             english_proficiency, 
             toNullIfEmpty(english_score),
@@ -330,7 +352,7 @@ router.post('/applications', upload.fields([
             toBool(consent_marketing),
             toBool(declaration_truth),
             digital_signature,
-            declaration_date || new Date().toISOString().split('T')[0],
+            formattedDeclarationDate,
             applicationReference
         ]);
 
@@ -492,6 +514,28 @@ router.put('/applications/:id', upload.fields([
         
         // Helper to convert to boolean
         const toBool = (val) => val === true || val === 'true';
+        
+        // Helper to convert ISO date to YYYY-MM-DD format
+        const formatDateForDB = (dateValue) => {
+            if (!dateValue) return null;
+            if (typeof dateValue === 'string') {
+                // If it's already YYYY-MM-DD format, return as-is
+                if (dateValue.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                    return dateValue;
+                }
+                // If it's ISO format with time, extract just the date
+                if (dateValue.includes('T')) {
+                    return dateValue.split('T')[0];
+                }
+            }
+            return null;
+        };
+
+        // Format all dates before saving
+        const formattedDOB = formatDateForDB(date_of_birth);
+        const formattedIntakeDate = formatDateForDB(intake_start_date);
+        const formattedYearCompleted = formatDateForDB(year_completed);
+        const formattedDeclarationDate = formatDateForDB(declaration_date) || new Date().toISOString().split('T')[0];
 
         // Update main application
         await connection.execute(`
@@ -509,7 +553,7 @@ router.put('/applications/:id', upload.fields([
             first_name, 
             toNullIfEmpty(middle_names), 
             last_name, 
-            date_of_birth, 
+            formattedDOB, 
             gender, 
             nationality,
             email, 
@@ -523,11 +567,11 @@ router.put('/applications/:id', upload.fields([
             course_code, 
             course_type, 
             mode_of_study, 
-            intake_start_date, 
+            formattedIntakeDate, 
             entry_route,
             highest_qualification, 
             institution_name, 
-            year_completed, 
+            formattedYearCompleted, 
             toNullIfEmpty(relevant_work_experience),
             english_proficiency, 
             toNullIfEmpty(english_score),
@@ -538,7 +582,7 @@ router.put('/applications/:id', upload.fields([
             toBool(consent_marketing),
             toBool(declaration_truth),
             digital_signature,
-            declaration_date || new Date().toISOString().split('T')[0],
+            formattedDeclarationDate,
             id
         ]);
 
@@ -642,10 +686,17 @@ router.get('/applications/:id', async (req, res) => {
             [id]
         );
 
+        const application = applications[0];
+        
+        // Generate application reference if missing
+        if (!application.application_reference) {
+            application.application_reference = `SCL2026${String(application.id).padStart(6, '0')}`;
+        }
+
         res.json({
             success: true,
             data: {
-                application: applications[0],
+                application,
                 documents
             }
         });
@@ -793,7 +844,7 @@ router.get('/applications', async (req, res) => {
         
         const offset = (page - 1) * parseInt(limit);
         
-        // Try the full query first, fall back to simple query if it fails
+        // Query with correct columns from new schema
         let applications = [];
         try {
             const [result] = await db.execute(`
@@ -810,7 +861,6 @@ router.get('/applications', async (req, res) => {
                     sa.course_type,
                     sa.mode_of_study,
                     sa.application_status,
-                    sa.offer_accepted,
                     sa.submitted_at,
                     sa.created_at,
                     sa.updated_at,
@@ -830,76 +880,30 @@ router.get('/applications', async (req, res) => {
                     sa.english_proficiency,
                     sa.english_score,
                     sa.relevant_work_experience,
-                    sa.passport_id_document,
-                    sa.academic_certificates,
-                    sa.academic_transcripts,
-                    sa.english_certificate,
-                    sa.cv_resume,
-                    sa.work_reference,
-                    sa.proof_of_address,
-                    sa.visa_immigration_document,
-                    sa.student_contract,
-                    sa.brp_card,
-                    sa.residency_proof
+                    sa.has_disabilities_support_needs,
+                    sa.disability_support_details,
+                    sa.consent_gdpr,
+                    sa.consent_data_sharing,
+                    sa.consent_marketing,
+                    sa.declaration_truth
                 FROM student_applications sa
                 ${whereClause}
-                ORDER BY sa.submitted_at DESC
-                LIMIT ? OFFSET ?
-            `, [...params, parseInt(limit), parseInt(offset)]);
+                ORDER BY sa.id DESC
+            `, params);
             
             applications = result;
+            console.log(`✅ Query successful: Found ${applications.length} applications`);
+            
+            // Generate application references for records that don't have them
+            applications = applications.map(app => {
+                if (!app.application_reference) {
+                    app.application_reference = `SCL2026${String(app.id).padStart(6, '0')}`;
+                }
+                return app;
+            });
         } catch (error) {
-            console.error('Complex query failed, trying simple query:', error.message);
-            // Fallback to simple query without LIMIT/OFFSET
-            try {
-                const [result] = await db.execute(`
-                    SELECT 
-                        sa.id,
-                        sa.application_reference,
-                        sa.first_name,
-                        sa.last_name,
-                        sa.email,
-                        sa.course_title,
-                        sa.course_code,
-                        sa.course_type,
-                        sa.mode_of_study,
-                        sa.application_status,
-                        sa.offer_accepted,
-                        sa.submitted_at,
-                        sa.created_at,
-                        sa.updated_at,
-                        sa.intake_start_date,
-                        sa.entry_route,
-                        sa.contact_number,
-                        sa.address_line1,
-                        sa.address_line2,
-                        sa.town_city,
-                        sa.postcode,
-                        sa.country_of_residence,
-                        sa.date_of_birth,
-                        sa.gender,
-                        sa.nationality,
-                        sa.passport_id_document,
-                        sa.academic_certificates,
-                        sa.academic_transcripts,
-                        sa.english_certificate,
-                        sa.cv_resume,
-                        sa.work_reference,
-                        sa.proof_of_address,
-                        sa.visa_immigration_document,
-                        sa.student_contract,
-                        sa.brp_card,
-                        sa.residency_proof
-                    FROM student_applications sa
-                    ${whereClause}
-                    ORDER BY sa.id DESC
-                `, params);
-                
-                applications = result;
-            } catch (fallbackError) {
-                console.error('Simple query also failed:', fallbackError.message);
-                applications = [];
-            }
+            console.error('❌ Query failed:', error.message);
+            applications = [];
         }
 
         // If no applications found, return empty array (not mock data)
@@ -907,24 +911,19 @@ router.get('/applications', async (req, res) => {
             console.log('No applications found in database');
         }
 
-        // Get total count from database
-        let total = applications.length;
-        try {
-            const [countResult] = await db.execute(`
-                SELECT COUNT(*) as total
-                FROM student_applications sa
-                ${whereClause}
-            `, params);
-            total = countResult[0].total;
-        } catch (countError) {
-            console.error('Count query failed:', countError.message);
-            total = applications.length;
-        }
+        // Get total count
+        const total = applications.length;
+
+        // Apply pagination to the results
+        const paginatedApplications = applications.slice(
+            (page - 1) * limit,
+            page * limit
+        );
 
         res.json({
             success: true,
             data: {
-                applications,
+                applications: paginatedApplications,
                 pagination: {
                     current_page: parseInt(page),
                     per_page: parseInt(limit),

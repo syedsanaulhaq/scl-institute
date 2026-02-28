@@ -75,6 +75,18 @@ const StudentAdmissionForm = ({ onSubmitSuccess, isEditMode = false }) => {
 
   const countries = ['United Kingdom', 'United States', 'Canada', 'Australia', 'Germany', 'France', 'Spain', 'Italy', 'Netherlands', 'Nigeria', 'Ghana', 'Kenya', 'South Africa', 'India', 'Pakistan', 'Bangladesh', 'China', 'Japan'];
 
+  // Format ISO date to yyyy-MM-dd for date input fields
+  const formatDateForInput = (dateValue) => {
+    if (!dateValue) return '';
+    try {
+      const date = new Date(dateValue);
+      if (isNaN(date.getTime())) return '';
+      return date.toISOString().split('T')[0];
+    } catch (e) {
+      return '';
+    }
+  };
+
   // Fetch courses from API
   useEffect(() => {
     const fetchCourses = async () => {
