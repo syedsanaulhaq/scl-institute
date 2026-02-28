@@ -328,6 +328,9 @@ router.put('/:id', async (req, res) => {
             'induction_owner',
             'start_date',
             'review_date',
+            'approval_date',
+            'qualification_level',
+            'document_owner',
             'overall_status',
             'completion_percentage',
             'updated_by'

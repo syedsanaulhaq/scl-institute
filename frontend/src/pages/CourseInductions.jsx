@@ -41,6 +41,7 @@ const CourseInductions = ({ user }) => {
     });
     const [signoffEdits, setSignoffEdits] = useState({});
     const [signoffComments, setSignoffComments] = useState({});
+    const [documentControlEdits, setDocumentControlEdits] = useState({});
 
     useEffect(() => {
         fetchInductions('scl');
@@ -103,6 +104,7 @@ const CourseInductions = ({ user }) => {
             setNotesEdits({});
             setSignoffEdits({});
             setSignoffComments({});
+            setDocumentControlEdits({});
         } catch (err) {
             console.error('Failed to fetch induction details:', err);
             setError('Failed to load induction details');
@@ -188,6 +190,29 @@ const CourseInductions = ({ user }) => {
         } catch (err) {
             console.error('Failed to update sign-off:', err);
             setError('Failed to update sign-off');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const handleDocumentControlSave = async (inductionId) => {
+        try {
+            setSaving(true);
+            const payload = {
+                course_title: documentControlEdits.course_title !== undefined ? documentControlEdits.course_title : details.induction.course_title,
+                awarding_body: documentControlEdits.awarding_body !== undefined ? documentControlEdits.awarding_body : details.induction.awarding_body,
+                qualification_level: documentControlEdits.qualification_level !== undefined ? documentControlEdits.qualification_level : details.induction.qualification_level,
+                approval_date: documentControlEdits.approval_date !== undefined ? documentControlEdits.approval_date : details.induction.approval_date,
+                review_date: documentControlEdits.review_date !== undefined ? documentControlEdits.review_date : details.induction.review_date,
+                version: documentControlEdits.version !== undefined ? documentControlEdits.version : details.induction.version,
+                document_owner: documentControlEdits.document_owner !== undefined ? documentControlEdits.document_owner : details.induction.document_owner
+            };
+            await axios.put(`${API_URL}/inductions/${inductionId}`, payload);
+            setDocumentControlEdits({});
+            await fetchInductionDetails(inductionId);
+        } catch (err) {
+            console.error('Failed to update document control:', err);
+            setError('Failed to update document control: ' + (err.response?.data?.message || err.message));
         } finally {
             setSaving(false);
         }
@@ -331,45 +356,79 @@ const CourseInductions = ({ user }) => {
                             </div>
 
                             <div className="bg-gradient-to-r from-scl-purple/5 to-transparent border border-scl-purple/20 rounded-xl p-6 shadow-sm">
-                                <h3 className="text-sm font-bold text-gray-800 mb-4 uppercase tracking-wide">Document Control</h3>
+                                <div className="flex items-center justify-between mb-4">
+                                    <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wide">Document Control</h3>
+                                    <button
+                                        onClick={() => handleDocumentControlSave(details.induction.id)}
+                                        disabled={saving || Object.keys(documentControlEdits).length === 0}
+                                        className="px-3 py-1 text-xs rounded-md bg-scl-purple text-white hover:bg-scl-purple/90 disabled:opacity-50"
+                                    >
+                                        {saving ? 'Saving...' : 'Save Changes'}
+                                    </button>
+                                </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                     <div className="bg-white rounded-lg p-3 border border-gray-100">
-                                        <p className="text-xs font-semibold text-gray-600 uppercase mb-1">Course Title</p>
-                                        <p className="text-sm font-medium text-gray-900">{details.induction.course_title || 'N/A'}</p>
+                                        <p className="text-xs font-semibold text-gray-600 uppercase mb-2">Course Title</p>
+                                        <input
+                                            type="text"
+                                            className="w-full border border-gray-200 rounded-md px-2 py-1 text-sm focus:ring-scl-purple focus:border-scl-purple"
+                                            value={documentControlEdits.course_title !== undefined ? documentControlEdits.course_title : (details.induction.course_title || '')}
+                                            onChange={(e) => setDocumentControlEdits(prev => ({ ...prev, course_title: e.target.value }))}
+                                        />
                                     </div>
                                     <div className="bg-white rounded-lg p-3 border border-gray-100">
-                                        <p className="text-xs font-semibold text-gray-600 uppercase mb-1">Awarding Body / University</p>
-                                        <p className="text-sm font-medium text-gray-900">{details.induction.awarding_body || 'N/A'}</p>
+                                        <p className="text-xs font-semibold text-gray-600 uppercase mb-2">Awarding Body / University</p>
+                                        <input
+                                            type="text"
+                                            className="w-full border border-gray-200 rounded-md px-2 py-1 text-sm focus:ring-scl-purple focus:border-scl-purple"
+                                            value={documentControlEdits.awarding_body !== undefined ? documentControlEdits.awarding_body : (details.induction.awarding_body || '')}
+                                            onChange={(e) => setDocumentControlEdits(prev => ({ ...prev, awarding_body: e.target.value }))}
+                                        />
                                     </div>
                                     <div className="bg-white rounded-lg p-3 border border-gray-100">
-                                        <p className="text-xs font-semibold text-gray-600 uppercase mb-1">Qualification Level & Framework</p>
-                                        <p className="text-sm font-medium text-gray-900">{details.induction.qualification_level || 'N/A'}</p>
+                                        <p className="text-xs font-semibold text-gray-600 uppercase mb-2">Qualification Level & Framework</p>
+                                        <input
+                                            type="text"
+                                            className="w-full border border-gray-200 rounded-md px-2 py-1 text-sm focus:ring-scl-purple focus:border-scl-purple"
+                                            value={documentControlEdits.qualification_level !== undefined ? documentControlEdits.qualification_level : (details.induction.qualification_level || '')}
+                                            onChange={(e) => setDocumentControlEdits(prev => ({ ...prev, qualification_level: e.target.value }))}
+                                        />
                                     </div>
                                     <div className="bg-white rounded-lg p-3 border border-gray-100">
-                                        <p className="text-xs font-semibold text-gray-600 uppercase mb-1">Approval Date</p>
-                                        <p className="text-sm font-medium text-gray-900">
-                                            {details.induction.approval_date 
-                                                ? new Date(details.induction.approval_date).toLocaleDateString('en-GB', { year: 'numeric', month: 'long', day: 'numeric' })
-                                                : 'N/A'
-                                            }
-                                        </p>
+                                        <p className="text-xs font-semibold text-gray-600 uppercase mb-2">Approval Date</p>
+                                        <input
+                                            type="date"
+                                            className="w-full border border-gray-200 rounded-md px-2 py-1 text-sm focus:ring-scl-purple focus:border-scl-purple"
+                                            value={documentControlEdits.approval_date !== undefined ? documentControlEdits.approval_date : (details.induction.approval_date ? details.induction.approval_date.split('T')[0] : '')}
+                                            onChange={(e) => setDocumentControlEdits(prev => ({ ...prev, approval_date: e.target.value }))}
+                                        />
                                     </div>
                                     <div className="bg-white rounded-lg p-3 border border-gray-100">
-                                        <p className="text-xs font-semibold text-gray-600 uppercase mb-1">Review Date</p>
-                                        <p className="text-sm font-medium text-gray-900">
-                                            {details.induction.review_date 
-                                                ? new Date(details.induction.review_date).toLocaleDateString('en-GB', { year: 'numeric', month: 'long', day: 'numeric' })
-                                                : 'N/A'
-                                            }
-                                        </p>
+                                        <p className="text-xs font-semibold text-gray-600 uppercase mb-2">Review Date</p>
+                                        <input
+                                            type="date"
+                                            className="w-full border border-gray-200 rounded-md px-2 py-1 text-sm focus:ring-scl-purple focus:border-scl-purple"
+                                            value={documentControlEdits.review_date !== undefined ? documentControlEdits.review_date : (details.induction.review_date ? details.induction.review_date.split('T')[0] : '')}
+                                            onChange={(e) => setDocumentControlEdits(prev => ({ ...prev, review_date: e.target.value }))}
+                                        />
                                     </div>
                                     <div className="bg-white rounded-lg p-3 border border-gray-100">
-                                        <p className="text-xs font-semibold text-gray-600 uppercase mb-1">Version</p>
-                                        <p className="text-sm font-medium text-gray-900">{details.induction.version || '1.0'}</p>
+                                        <p className="text-xs font-semibold text-gray-600 uppercase mb-2">Version</p>
+                                        <input
+                                            type="text"
+                                            className="w-full border border-gray-200 rounded-md px-2 py-1 text-sm focus:ring-scl-purple focus:border-scl-purple"
+                                            value={documentControlEdits.version !== undefined ? documentControlEdits.version : (details.induction.version || '1.0')}
+                                            onChange={(e) => setDocumentControlEdits(prev => ({ ...prev, version: e.target.value }))}
+                                        />
                                     </div>
                                     <div className="bg-white rounded-lg p-3 border border-gray-100 md:col-span-2 lg:col-span-3">
-                                        <p className="text-xs font-semibold text-gray-600 uppercase mb-1">Document Owner (Department/Role)</p>
-                                        <p className="text-sm font-medium text-gray-900">{details.induction.document_owner || 'N/A'}</p>
+                                        <p className="text-xs font-semibold text-gray-600 uppercase mb-2">Document Owner (Department/Role)</p>
+                                        <input
+                                            type="text"
+                                            className="w-full border border-gray-200 rounded-md px-2 py-1 text-sm focus:ring-scl-purple focus:border-scl-purple"
+                                            value={documentControlEdits.document_owner !== undefined ? documentControlEdits.document_owner : (details.induction.document_owner || '')}
+                                            onChange={(e) => setDocumentControlEdits(prev => ({ ...prev, document_owner: e.target.value }))}
+                                        />
                                     </div>
                                 </div>
                             </div>
