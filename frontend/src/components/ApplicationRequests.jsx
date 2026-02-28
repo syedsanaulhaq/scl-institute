@@ -14,7 +14,8 @@ import {
     ChevronRight,
     AlertCircle,
     Download,
-    Edit
+    Edit,
+    Trash2
 } from 'lucide-react';
 import axios from 'axios';
 
@@ -143,6 +144,24 @@ const ApplicationRequests = () => {
                 return <AlertCircle className="w-4 h-4" />;
             default:
                 return <FileText className="w-4 h-4" />;
+        }
+    };
+
+    const handleDeleteApplication = async (appId) => {
+        if (!window.confirm('Are you sure you want to delete this application? It will be marked as deleted and can be restored later.')) {
+            return;
+        }
+
+        try {
+            await axios.delete(`${API_URL}/students/applications/${appId}`, {
+                withCredentials: true
+            });
+            
+            setApplications(prev => prev.filter(app => app.id !== appId));
+            setSelectedApp(null);
+        } catch (error) {
+            console.error('Error deleting application:', error);
+            alert('Failed to delete application: ' + (error.response?.data?.error || error.message));
         }
     };
 
@@ -349,6 +368,13 @@ const ApplicationRequests = () => {
                                                     title={reviewStatus[app.id] ? 'Edit Review' : 'Add Review'}
                                                 >
                                                     <CheckCircle2 className="w-4 h-4" />
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDeleteApplication(app.id)}
+                                                    className="p-1.5 rounded-full bg-red-600 hover:bg-red-700 text-white transition-colors"
+                                                    title="Delete Application"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
                                                 </button>
                                             </div>
                                         </td>
