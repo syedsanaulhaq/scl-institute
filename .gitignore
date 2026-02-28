@@ -48,3 +48,8 @@ profiles_*.sql
 moodle_files.tar.gz
 *.backup
 production-*.json
+
+# User uploaded files - never commit student documents
+backend/uploads/
+frontend/uploads/
+uploads/
