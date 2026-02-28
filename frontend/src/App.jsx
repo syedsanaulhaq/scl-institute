@@ -363,6 +363,15 @@ function App() {
                         <LoginPage onLoginSuccess={handleLoginSuccess} />
                     )
                 } />
+                <Route path="/applications/:id/edit" element={
+                    user ? (
+                        <Layout user={user} onLogout={handleLogout}>
+                            <StudentAdmissionForm isEditMode={true} />
+                        </Layout>
+                    ) : (
+                        <LoginPage onLoginSuccess={handleLoginSuccess} />
+                    )
+                } />
                 <Route path="/students/report" element={
                     user ? (
                         <Layout user={user} onLogout={handleLogout}>

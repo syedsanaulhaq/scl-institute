@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { useNavigate, useParams } from 'react-router-dom';
 import { Upload, Calendar, User, GraduationCap, FileText, Shield, CheckCircle, AlertCircle, Download, X, FileUp, ChevronDown, ChevronRight } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
 
-const StudentAdmissionForm = ({ onSubmitSuccess }) => {
+const StudentAdmissionForm = ({ onSubmitSuccess, isEditMode = false }) => {
+  const navigate = useNavigate();
+  const { id: applicationId } = useParams();
   const [activeSection, setActiveSection] = useState(1);
   const [csvModalOpen, setCsvModalOpen] = useState(false);
   const [csvFile, setCsvFile] = useState(null);
@@ -12,6 +15,7 @@ const StudentAdmissionForm = ({ onSubmitSuccess }) => {
   const [importStatus, setImportStatus] = useState({ type: '', message: '' });
   const [submitStatus, setSubmitStatus] = useState({ type: '', message: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoadingApplication, setIsLoadingApplication] = useState(isEditMode);
   const [courses, setCourses] = useState([]);
   const [loadingCourses, setLoadingCourses] = useState(true);
   const [formData, setFormData] = useState({
@@ -98,6 +102,74 @@ const StudentAdmissionForm = ({ onSubmitSuccess }) => {
 
     fetchCourses();
   }, []);
+
+  // Load existing application data when in edit mode
+  useEffect(() => {
+    if (!isEditMode || !applicationId) {
+      setIsLoadingApplication(false);
+      return;
+    }
+
+    const loadApplicationData = async () => {
+      try {
+        setIsLoadingApplication(true);
+        console.log('📥 Loading application data for ID:', applicationId);
+        const response = await axios.get(`${API_URL}/students/applications/${applicationId}`);
+        
+        if (response.data?.success && response.data?.data) {
+          const app = response.data.data;
+          console.log('✅ Application loaded:', app);
+          
+          // Populate form with existing data
+          setFormData(prev => ({
+            ...prev,
+            firstName: app.first_name || '',
+            middleNames: app.middle_names || '',
+            lastName: app.last_name || '',
+            dateOfBirth: app.date_of_birth || '',
+            gender: app.gender || '',
+            nationality: app.nationality || '',
+            email: app.email || '',
+            contactNumber: app.contact_number || '',
+            addressLine1: app.address_line1 || '',
+            addressLine2: app.address_line2 || '',
+            townCity: app.town_city || '',
+            postcode: app.postcode || '',
+            countryOfResidence: app.country_of_residence || '',
+            courseTitle: app.course_title || '',
+            courseCode: app.course_code || '',
+            courseType: app.course_type || '',
+            modeOfStudy: app.mode_of_study || '',
+            intakeStartDate: app.intake_start_date || '',
+            entryRoute: app.entry_route || '',
+            highestQualification: app.highest_qualification || '',
+            institutionName: app.institution_name || '',
+            yearCompleted: app.year_completed || '',
+            workExperience: app.relevant_work_experience || '',
+            englishProficiency: app.english_proficiency || '',
+            englishScore: app.english_score || '',
+            hasDisabilities: app.has_disabilities_support_needs ? 'yes' : 'no',
+            disabilityDetails: app.disability_support_details || '',
+            consentGdpr: app.consent_gdpr || false,
+            consentDataSharing: app.consent_data_sharing || false,
+            consentMarketing: app.consent_marketing || false,
+            declarationTruth: app.declaration_truth || false,
+            digitalSignature: app.digital_signature || '',
+            declarationDate: app.declaration_date || ''
+          }));
+        } else {
+          setSubmitStatus({ type: 'error', message: 'Failed to load application data' });
+        }
+      } catch (error) {
+        console.error('❌ Error loading application:', error);
+        setSubmitStatus({ type: 'error', message: 'Error loading application data' });
+      } finally {
+        setIsLoadingApplication(false);
+      }
+    };
+
+    loadApplicationData();
+  }, [isEditMode, applicationId]);
 
   const documentTypes = [
     'Passport / ID',
@@ -664,9 +736,9 @@ const StudentAdmissionForm = ({ onSubmitSuccess }) => {
 
     try {
       setIsSubmitting(true);
-      setSubmitStatus({ type: 'loading', message: 'Submitting application...' });
+      setSubmitStatus({ type: 'loading', message: isEditMode ? 'Updating application...' : 'Submitting application...' });
 
-      const response = await axios.post(`${API_URL}/students/applications`, {
+      const applicationData = {
         // Personal Information
         first_name: formData.firstName,
         middle_names: formData.middleNames,
@@ -709,16 +781,29 @@ const StudentAdmissionForm = ({ onSubmitSuccess }) => {
         declaration_truth: formData.declarationTruth,
         digital_signature: formData.digitalSignature,
         declaration_date: formData.declarationDate || new Date().toISOString().split('T')[0]
-      });
+      };
+
+      // Use PUT for edit mode, POST for create
+      const response = isEditMode 
+        ? await axios.put(`${API_URL}/students/applications/${applicationId}`, applicationData)
+        : await axios.post(`${API_URL}/students/applications`, applicationData);
 
       if (response.data?.success) {
         const reference = response.data?.data?.application_reference || response.data?.application_reference || 'N/A';
+        const appId = response.data?.data?.application_id || applicationId;
+        const successMsg = isEditMode ? 'Application updated successfully' : 'Application submitted successfully';
         setSubmitStatus({
           type: 'success',
-          message: `Application submitted successfully. Reference: ${reference}`
+          message: `${successMsg}. Reference: ${reference}`
         });
         if (onSubmitSuccess) {
           onSubmitSuccess(reference);
+        }
+        // If in admin mode, redirect to applications list
+        if (isEditMode && navigate) {
+          setTimeout(() => {
+            navigate(`/applications?highlight=${reference || appId}`);
+          }, 1000);
         }
       } else {
         setSubmitStatus({
@@ -1000,10 +1085,15 @@ const StudentAdmissionForm = ({ onSubmitSuccess }) => {
             </button>
             <button
               onClick={handleSubmitApplication}
-              disabled={!canProceed() || isSubmitting}
+              disabled={!canProceed() || isSubmitting || isLoadingApplication}
               className="px-8 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed font-semibold transition-colors"
             >
-              {isSubmitting ? 'Submitting...' : 'Submit Application'}
+              {isLoadingApplication 
+                ? 'Loading...' 
+                : isSubmitting 
+                  ? (isEditMode ? 'Updating...' : 'Submitting...') 
+                  : (isEditMode ? 'Update Application' : 'Submit Application')
+              }
             </button>
           </div>
         </div>

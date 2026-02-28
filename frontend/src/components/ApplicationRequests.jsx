@@ -13,7 +13,8 @@ import {
     FileText,
     ChevronRight,
     AlertCircle,
-    Download
+    Download,
+    Edit
 } from 'lucide-react';
 import axios from 'axios';
 
@@ -330,17 +331,26 @@ const ApplicationRequests = () => {
                                             </div>
                                         </td>
                                         <td className="px-6 py-4">
-                                            <button
-                                                onClick={() => navigate(`/applications/${app.id}/review`)}
-                                                className={`p-1.5 rounded-full transition-colors ${
-                                                    reviewStatus[app.id] 
-                                                        ? 'bg-blue-600 hover:bg-blue-700 text-white' 
-                                                        : 'bg-green-600 hover:bg-green-700 text-white'
-                                                }`}
-                                                title={reviewStatus[app.id] ? 'Edit Review' : 'Add Review'}
-                                            >
-                                                <CheckCircle2 className="w-4 h-4" />
-                                            </button>
+                                            <div className="flex items-center gap-2">
+                                                <button
+                                                    onClick={() => navigate(`/applications/${app.id}/edit`)}
+                                                    className="p-1.5 rounded-full bg-gray-600 hover:bg-gray-700 text-white transition-colors"
+                                                    title="Edit Application"
+                                                >
+                                                    <Edit className="w-4 h-4" />
+                                                </button>
+                                                <button
+                                                    onClick={() => navigate(`/applications/${app.id}/review`)}
+                                                    className={`p-1.5 rounded-full transition-colors ${
+                                                        reviewStatus[app.id] 
+                                                            ? 'bg-blue-600 hover:bg-blue-700 text-white' 
+                                                            : 'bg-green-600 hover:bg-green-700 text-white'
+                                                    }`}
+                                                    title={reviewStatus[app.id] ? 'Edit Review' : 'Add Review'}
+                                                >
+                                                    <CheckCircle2 className="w-4 h-4" />
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 ))}
