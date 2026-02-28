@@ -110,6 +110,59 @@ const StudentAdmissionForm = ({ onSubmitSuccess }) => {
     'Visa / Immigration Document'
   ];
 
+  // Create refs for file inputs
+  const fileInputRefs = React.useRef({});
+
+  // Check if file exists for document type
+  const hasDocument = (docType) => {
+    return formData.uploadedDocuments && formData.uploadedDocuments[docType];
+  };
+
+  // Handle file selection
+  const handleFileSelect = async (docType) => {
+    const input = fileInputRefs.current[docType];
+    if (!input) return;
+
+    const file = input.files?.[0];
+    if (!file) return;
+
+    // Validate file size (10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      setSubmitStatus({ type: 'error', message: 'File size exceeds 10MB limit' });
+      return;
+    }
+
+    // Validate file type
+    const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png'];
+    if (!allowedTypes.includes(file.type)) {
+      setSubmitStatus({ type: 'error', message: 'Only PDF, JPG, PNG files are allowed' });
+      return;
+    }
+
+    // Store file in state
+    setFormData(prev => ({
+      ...prev,
+      uploadedDocuments: {
+        ...prev.uploadedDocuments,
+        [docType]: file
+      }
+    }));
+
+    setSubmitStatus({ type: 'success', message: `${docType} uploaded successfully` });
+    setTimeout(() => setSubmitStatus({ type: '', message: '' }), 3000);
+  };
+
+  // Remove uploaded document
+  const handleRemoveDocument = (docType) => {
+    setFormData(prev => ({
+      ...prev,
+      uploadedDocuments: {
+        ...prev.uploadedDocuments,
+        [docType]: null
+      }
+    }));
+  };
+
   const handleInputChange = (field, value) => {
     setFormData(prev => ({
       ...prev,
@@ -464,21 +517,62 @@ const StudentAdmissionForm = ({ onSubmitSuccess }) => {
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {documentTypes.map((docType, index) => (
-          <div key={index} className="border-2 border-dashed border-gray-300 rounded-lg p-6 hover:border-orange-400 transition-colors">
+          <div key={index} className={`border-2 ${hasDocument(docType) ? 'border-green-300 bg-green-50' : 'border-dashed border-gray-300'} rounded-lg p-6 hover:border-orange-400 transition-colors`}>
             <div className="text-center">
-              <Upload className="mx-auto h-12 w-12 text-gray-400 mb-3" />
-              <h3 className="text-sm font-medium text-gray-900 mb-2">{docType}</h3>
-              <p className="text-xs text-gray-600 mb-4">PDF, JPG, PNG up to 10MB</p>
-              <button 
-                type="button"
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-orange-600 hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-500"
-              >
-                Choose File
-              </button>
+              {hasDocument(docType) ? (
+                <>
+                  <CheckCircle className="mx-auto h-12 w-12 text-green-600 mb-3" />
+                  <h3 className="text-sm font-medium text-gray-900 mb-2">{docType}</h3>
+                  <p className="text-xs text-green-700 mb-2 font-medium">✓ {formData.uploadedDocuments[docType]?.name}</p>
+                  <button 
+                    type="button"
+                    onClick={() => handleRemoveDocument(docType)}
+                    className="inline-flex items-center px-3 py-1 text-xs font-medium rounded-md text-white bg-red-600 hover:bg-red-700"
+                  >
+                    <X className="h-3 w-3 mr-1" /> Remove
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Upload className="mx-auto h-12 w-12 text-gray-400 mb-3" />
+                  <h3 className="text-sm font-medium text-gray-900 mb-2">{docType}</h3>
+                  <p className="text-xs text-gray-600 mb-4">PDF, JPG, PNG up to 10MB</p>
+                  <button 
+                    type="button"
+                    onClick={() => fileInputRefs.current[docType]?.click()}
+                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-orange-600 hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  >
+                    <Upload className="h-4 w-4 mr-2" /> Choose File
+                  </button>
+                  <input 
+                    ref={(el) => fileInputRefs.current[docType] = el}
+                    type="file" 
+                    hidden 
+                    accept=".pdf,.jpg,.jpeg,.png"
+                    onChange={() => handleFileSelect(docType)}
+                  />
+                </>
+              )}
             </div>
           </div>
         ))}
       </div>
+
+      {Object.keys(formData.uploadedDocuments || {}).filter(k => formData.uploadedDocuments[k]).length > 0 && (
+        <div className="p-4 bg-green-50 rounded-lg border border-green-200">
+          <div className="flex items-start">
+            <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 mr-3" />
+            <div>
+              <h4 className="text-sm font-medium text-green-800 mb-2">Documents Uploaded</h4>
+              <ul className="text-sm text-green-700 space-y-1">
+                {Object.keys(formData.uploadedDocuments || {}).filter(k => formData.uploadedDocuments[k]).map(docType => (
+                  <li key={docType}>✓ {docType} - {(formData.uploadedDocuments[docType]?.size / 1024).toFixed(1)} KB</li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="mt-8 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
         <div className="flex items-start">
@@ -666,49 +760,67 @@ const StudentAdmissionForm = ({ onSubmitSuccess }) => {
       setIsSubmitting(true);
       setSubmitStatus({ type: 'loading', message: 'Submitting application...' });
 
-      const response = await axios.post(`${API_URL}/students/applications`, {
-        // Personal Information
-        first_name: formData.firstName,
-        middle_names: formData.middleNames,
-        last_name: formData.lastName,
-        date_of_birth: formData.dateOfBirth,
-        gender: formData.gender,
-        nationality: formData.nationality,
-        email: formData.email,
-        contact_number: formData.contactNumber,
-        address_line1: formData.addressLine1,
-        address_line2: formData.addressLine2,
-        town_city: formData.townCity,
-        postcode: formData.postcode,
-        country_of_residence: formData.countryOfResidence,
+      // Create FormData for file uploads
+      const formDataWithFiles = new FormData();
+      
+      // Add all form fields
+      formDataWithFiles.append('first_name', formData.firstName);
+      formDataWithFiles.append('middle_names', formData.middleNames);
+      formDataWithFiles.append('last_name', formData.lastName);
+      formDataWithFiles.append('date_of_birth', formData.dateOfBirth);
+      formDataWithFiles.append('gender', formData.gender);
+      formDataWithFiles.append('nationality', formData.nationality);
+      formDataWithFiles.append('email', formData.email);
+      formDataWithFiles.append('contact_number', formData.contactNumber);
+      formDataWithFiles.append('address_line1', formData.addressLine1);
+      formDataWithFiles.append('address_line2', formData.addressLine2);
+      formDataWithFiles.append('town_city', formData.townCity);
+      formDataWithFiles.append('postcode', formData.postcode);
+      formDataWithFiles.append('country_of_residence', formData.countryOfResidence);
 
-        // Course Selection
-        course_title: formData.courseTitle,
-        course_code: formData.courseCode,
-        course_type: normalizeCourseType(formData.courseType),
-        mode_of_study: formData.modeOfStudy,
-        intake_start_date: formData.intakeStartDate,
-        entry_route: formData.entryRoute,
+      // Course Selection
+      formDataWithFiles.append('course_title', formData.courseTitle);
+      formDataWithFiles.append('course_code', formData.courseCode);
+      formDataWithFiles.append('course_type', normalizeCourseType(formData.courseType));
+      formDataWithFiles.append('mode_of_study', formData.modeOfStudy);
+      formDataWithFiles.append('intake_start_date', formData.intakeStartDate);
+      formDataWithFiles.append('entry_route', formData.entryRoute);
 
-        // Academic Background
-        highest_qualification: formData.highestQualification,
-        institution_name: formData.institutionName,
-        year_completed: formData.yearCompleted,
-        relevant_work_experience: formData.workExperience,
-        english_proficiency: formData.englishProficiency,
-        english_score: formData.englishScore,
+      // Academic Background
+      formDataWithFiles.append('highest_qualification', formData.highestQualification);
+      formDataWithFiles.append('institution_name', formData.institutionName);
+      formDataWithFiles.append('year_completed', formData.yearCompleted);
+      formDataWithFiles.append('relevant_work_experience', formData.workExperience);
+      formDataWithFiles.append('english_proficiency', formData.englishProficiency);
+      formDataWithFiles.append('english_score', formData.englishScore);
 
-        // Support Requirements
-        has_disabilities_support_needs: formData.hasDisabilities === 'yes',
-        disability_support_details: formData.disabilityDetails,
+      // Support Requirements
+      formDataWithFiles.append('has_disabilities_support_needs', formData.hasDisabilities === 'yes');
+      formDataWithFiles.append('disability_support_details', formData.disabilityDetails);
 
-        // Consents & Declaration
-        consent_gdpr: formData.consentGdpr,
-        consent_data_sharing: formData.consentDataSharing,
-        consent_marketing: formData.consentMarketing,
-        declaration_truth: formData.declarationTruth,
-        digital_signature: formData.digitalSignature,
-        declaration_date: formData.declarationDate || new Date().toISOString().split('T')[0]
+      // Consents & Declaration
+      formDataWithFiles.append('consent_gdpr', formData.consentGdpr);
+      formDataWithFiles.append('consent_data_sharing', formData.consentDataSharing);
+      formDataWithFiles.append('consent_marketing', formData.consentMarketing);
+      formDataWithFiles.append('declaration_truth', formData.declarationTruth);
+      formDataWithFiles.append('digital_signature', formData.digitalSignature);
+      formDataWithFiles.append('declaration_date', formData.declarationDate || new Date().toISOString().split('T')[0]);
+
+      // Add file uploads
+      if (formData.uploadedDocuments) {
+        Object.keys(formData.uploadedDocuments).forEach(docType => {
+          const file = formData.uploadedDocuments[docType];
+          if (file) {
+            formDataWithFiles.append('documents', file, `${docType.replace(/\s+/g, '_')}_${file.name}`);
+            formDataWithFiles.append(`document_type_${file.name}`, docType);
+          }
+        });
+      }
+
+      const response = await axios.post(`${API_URL}/students/applications`, formDataWithFiles, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
       });
 
       if (response.data?.success) {
