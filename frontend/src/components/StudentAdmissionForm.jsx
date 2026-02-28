@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 import { Upload, Calendar, User, GraduationCap, FileText, Shield, CheckCircle, AlertCircle, Download, X, FileUp, ChevronDown, ChevronRight } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
 
 const StudentAdmissionForm = ({ onSubmitSuccess }) => {
+  const navigate = useNavigate();
   const [activeSection, setActiveSection] = useState(1);
   const [csvModalOpen, setCsvModalOpen] = useState(false);
   const [csvFile, setCsvFile] = useState(null);
@@ -115,7 +117,8 @@ const StudentAdmissionForm = ({ onSubmitSuccess }) => {
 
   // Check if file exists for document type
   const hasDocument = (docType) => {
-    return formData.uploadedDocuments && formData.uploadedDocuments[docType];
+    const docs = formData.uploadedDocuments?.[docType];
+    return Array.isArray(docs) && docs.length > 0;
   };
 
   // Handle file selection
@@ -123,42 +126,50 @@ const StudentAdmissionForm = ({ onSubmitSuccess }) => {
     const input = fileInputRefs.current[docType];
     if (!input) return;
 
-    const file = input.files?.[0];
-    if (!file) return;
+    // Get all selected files (supports multiple selection)
+    const selectedFiles = Array.from(input.files || []);
+    if (selectedFiles.length === 0) return;
 
-    // Validate file size (10MB)
-    if (file.size > 10 * 1024 * 1024) {
-      setSubmitStatus({ type: 'error', message: 'File size exceeds 10MB limit' });
-      return;
+    // Validate each file
+    for (const file of selectedFiles) {
+      // Validate file size (10MB)
+      if (file.size > 10 * 1024 * 1024) {
+        setSubmitStatus({ type: 'error', message: `${file.name} exceeds 10MB limit` });
+        return;
+      }
+
+      // Validate file type
+      const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png'];
+      if (!allowedTypes.includes(file.type)) {
+        setSubmitStatus({ type: 'error', message: `${file.name} - Only PDF, JPG, PNG files are allowed` });
+        return;
+      }
     }
 
-    // Validate file type
-    const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png'];
-    if (!allowedTypes.includes(file.type)) {
-      setSubmitStatus({ type: 'error', message: 'Only PDF, JPG, PNG files are allowed' });
-      return;
-    }
-
-    // Store file in state
+    // Add files to existing array for this document type
     setFormData(prev => ({
       ...prev,
       uploadedDocuments: {
         ...prev.uploadedDocuments,
-        [docType]: file
+        [docType]: [
+          ...(prev.uploadedDocuments[docType] || []),
+          ...selectedFiles
+        ]
       }
     }));
 
-    setSubmitStatus({ type: 'success', message: `${docType} uploaded successfully` });
+    const fileCount = selectedFiles.length;
+    setSubmitStatus({ type: 'success', message: `${fileCount} file(s) added to ${docType}` });
     setTimeout(() => setSubmitStatus({ type: '', message: '' }), 3000);
   };
 
-  // Remove uploaded document
-  const handleRemoveDocument = (docType) => {
+  // Remove specific document file
+  const handleRemoveDocument = (docType, fileIndex) => {
     setFormData(prev => ({
       ...prev,
       uploadedDocuments: {
         ...prev.uploadedDocuments,
-        [docType]: null
+        [docType]: prev.uploadedDocuments[docType]?.filter((_, idx) => idx !== fileIndex) || []
       }
     }));
   };
@@ -516,57 +527,79 @@ const StudentAdmissionForm = ({ onSubmitSuccess }) => {
   const renderDocumentUpload = () => (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {documentTypes.map((docType, index) => (
-          <div key={index} className={`border-2 ${hasDocument(docType) ? 'border-green-300 bg-green-50' : 'border-dashed border-gray-300'} rounded-lg p-6 hover:border-orange-400 transition-colors`}>
-            <div className="text-center">
-              {hasDocument(docType) ? (
-                <>
-                  <CheckCircle className="mx-auto h-12 w-12 text-green-600 mb-3" />
-                  <h3 className="text-sm font-medium text-gray-900 mb-2">{docType}</h3>
-                  <p className="text-xs text-green-700 mb-2 font-medium">✓ {formData.uploadedDocuments[docType]?.name}</p>
-                  <button 
-                    type="button"
-                    onClick={() => handleRemoveDocument(docType)}
-                    className="inline-flex items-center px-3 py-1 text-xs font-medium rounded-md text-white bg-red-600 hover:bg-red-700"
-                  >
-                    <X className="h-3 w-3 mr-1" /> Remove
-                  </button>
-                </>
-              ) : (
-                <>
-                  <Upload className="mx-auto h-12 w-12 text-gray-400 mb-3" />
-                  <h3 className="text-sm font-medium text-gray-900 mb-2">{docType}</h3>
-                  <p className="text-xs text-gray-600 mb-4">PDF, JPG, PNG up to 10MB</p>
-                  <button 
-                    type="button"
-                    onClick={() => fileInputRefs.current[docType]?.click()}
-                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-orange-600 hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-500"
-                  >
-                    <Upload className="h-4 w-4 mr-2" /> Choose File
-                  </button>
-                  <input 
-                    ref={(el) => fileInputRefs.current[docType] = el}
-                    type="file" 
-                    hidden 
-                    accept=".pdf,.jpg,.jpeg,.png"
-                    onChange={() => handleFileSelect(docType)}
-                  />
-                </>
-              )}
+        {documentTypes.map((docType, index) => {
+          const uploadedFiles = formData.uploadedDocuments?.[docType] || [];
+          const hasFiles = uploadedFiles.length > 0;
+          
+          return (
+            <div key={index} className={`border-2 ${hasFiles ? 'border-green-300 bg-green-50' : 'border-dashed border-gray-300'} rounded-lg p-6 hover:border-orange-400 transition-colors`}>
+              <div>
+                <h3 className="text-sm font-medium text-gray-900 mb-3">{docType}</h3>
+                
+                {hasFiles ? (
+                  <div className="space-y-2 mb-4">
+                    {uploadedFiles.map((file, fileIdx) => (
+                      <div key={fileIdx} className="flex items-center justify-between bg-white p-2 rounded border border-green-200">
+                        <div className="flex items-center flex-1 min-w-0">
+                          <CheckCircle className="h-4 w-4 text-green-600 mr-2 flex-shrink-0" />
+                          <div className="min-w-0">
+                            <p className="text-xs font-medium text-gray-900 truncate">{file.name}</p>
+                            <p className="text-xs text-gray-500">{(file.size / 1024).toFixed(1)} KB</p>
+                          </div>
+                        </div>
+                        <button 
+                          type="button"
+                          onClick={() => handleRemoveDocument(docType, fileIdx)}
+                          className="ml-2 inline-flex items-center px-2 py-1 text-xs font-medium rounded text-white bg-red-600 hover:bg-red-700 flex-shrink-0"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <Upload className="mx-auto h-8 w-8 text-gray-400 mb-2" />
+                )}
+                
+                <p className="text-xs text-gray-600 mb-3">PDF, JPG, PNG up to 10MB each</p>
+                <button 
+                  type="button"
+                  onClick={() => {
+                    const input = fileInputRefs.current[docType];
+                    if (input) input.click();
+                  }}
+                  className={`w-full inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white transition-colors ${
+                    hasFiles 
+                      ? 'bg-blue-600 hover:bg-blue-700' 
+                      : 'bg-orange-600 hover:bg-orange-700'
+                  }`}
+                >
+                  <Upload className="h-4 w-4 mr-2" /> 
+                  {hasFiles ? 'Add More' : 'Choose File'}
+                </button>
+                <input 
+                  ref={(el) => fileInputRefs.current[docType] = el}
+                  type="file" 
+                  hidden 
+                  multiple
+                  accept=".pdf,.jpg,.jpeg,.png"
+                  onChange={() => handleFileSelect(docType)}
+                />
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
-      {Object.keys(formData.uploadedDocuments || {}).filter(k => formData.uploadedDocuments[k]).length > 0 && (
+      {Object.keys(formData.uploadedDocuments || {}).filter(k => Array.isArray(formData.uploadedDocuments[k]) && formData.uploadedDocuments[k].length > 0).length > 0 && (
         <div className="p-4 bg-green-50 rounded-lg border border-green-200">
           <div className="flex items-start">
-            <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 mr-3" />
-            <div>
-              <h4 className="text-sm font-medium text-green-800 mb-2">Documents Uploaded</h4>
+            <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 mr-3 flex-shrink-0" />
+            <div className="flex-1">
+              <h4 className="text-sm font-medium text-green-800 mb-2">Documents Uploaded ({Object.values(formData.uploadedDocuments || {}).flat().filter(f => f).length} total)</h4>
               <ul className="text-sm text-green-700 space-y-1">
-                {Object.keys(formData.uploadedDocuments || {}).filter(k => formData.uploadedDocuments[k]).map(docType => (
-                  <li key={docType}>✓ {docType} - {(formData.uploadedDocuments[docType]?.size / 1024).toFixed(1)} KB</li>
+                {Object.keys(formData.uploadedDocuments || {}).filter(k => Array.isArray(formData.uploadedDocuments[k]) && formData.uploadedDocuments[k].length > 0).map(docType => (
+                  <li key={docType}>✓ {docType} ({formData.uploadedDocuments[docType].length} file{formData.uploadedDocuments[docType].length !== 1 ? 's' : ''})</li>
                 ))}
               </ul>
             </div>
@@ -576,10 +609,11 @@ const StudentAdmissionForm = ({ onSubmitSuccess }) => {
 
       <div className="mt-8 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
         <div className="flex items-start">
-          <AlertCircle className="h-5 w-5 text-yellow-600 mt-0.5 mr-3" />
+          <AlertCircle className="h-5 w-5 text-yellow-600 mt-0.5 mr-3 flex-shrink-0" />
           <div>
             <h4 className="text-sm font-medium text-yellow-800 mb-1">Document Upload Requirements</h4>
             <ul className="text-sm text-yellow-700 space-y-1">
+              <li>• Upload multiple documents for each category if needed (e.g., 2 transcripts)</li>
               <li>• All documents must be clear and readable</li>
               <li>• Academic certificates should be official or certified copies</li>
               <li>• File formats: PDF, JPG, PNG only</li>
@@ -806,17 +840,34 @@ const StudentAdmissionForm = ({ onSubmitSuccess }) => {
       formDataWithFiles.append('digital_signature', formData.digitalSignature);
       formDataWithFiles.append('declaration_date', formData.declarationDate || new Date().toISOString().split('T')[0]);
 
-      // Add file uploads
+      // Map document types to backend field names
+      const documentFieldMap = {
+        'Passport / ID': 'passport_id',
+        'Academic Certificates': 'academic_certificates',
+        'Academic Transcripts': 'academic_transcripts',
+        'English Language Certificate': 'english_certificate',
+        'CV / Resume': 'cv_resume',
+        'Work Reference': 'work_reference',
+        'Proof of Address': 'proof_of_address',
+        'Visa / Immigration Document': 'visa_immigration'
+      };
+
+      // Add file uploads with correct field names (supports multiple files per field)
       if (formData.uploadedDocuments) {
         Object.keys(formData.uploadedDocuments).forEach(docType => {
-          const file = formData.uploadedDocuments[docType];
-          if (file) {
-            formDataWithFiles.append('documents', file, `${docType.replace(/\s+/g, '_')}_${file.name}`);
-            formDataWithFiles.append(`document_type_${file.name}`, docType);
+          const files = formData.uploadedDocuments[docType];
+          if (Array.isArray(files) && files.length > 0) {
+            const fieldName = documentFieldMap[docType] || docType;
+            // Append all files for this document type
+            files.forEach((file, idx) => {
+              formDataWithFiles.append(fieldName, file, file.name);
+              console.log(`📎 Adding file: ${fieldName} (${idx + 1}/${files.length}) = ${file.name}`);
+            });
           }
         });
       }
 
+      console.log('📤 Submitting application with FormData...');
       const response = await axios.post(`${API_URL}/students/applications`, formDataWithFiles, {
         headers: {
           'Content-Type': 'multipart/form-data'
@@ -825,13 +876,19 @@ const StudentAdmissionForm = ({ onSubmitSuccess }) => {
 
       if (response.data?.success) {
         const reference = response.data?.data?.application_reference || response.data?.application_reference || 'N/A';
+        const appId = response.data?.data?.application_id;
+        console.log(`✅ Application submitted successfully: Reference=${reference}, ID=${appId}`);
         setSubmitStatus({
           type: 'success',
-          message: `Application submitted successfully. Reference: ${reference}`
+          message: `Application submitted successfully. Redirecting...`
         });
         if (onSubmitSuccess) {
           onSubmitSuccess(reference);
         }
+        // Redirect to applications list with the new application reference/ID
+        setTimeout(() => {
+          navigate(`/applications?highlight=${reference || appId}`);
+        }, 1000);
       } else {
         setSubmitStatus({
           type: 'error',
