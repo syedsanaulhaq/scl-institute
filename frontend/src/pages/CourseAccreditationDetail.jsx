@@ -90,11 +90,10 @@ const CourseAccreditationDetail = () => {
     const [currentForm, setCurrentForm] = useState({
         area: '',
         description: '',
-        evidence_required: '',
-        source_reference: '',
+        source: '',
+        evidence: '',
         responsible: '',
-        due_date: '',
-        status: 'Not Started',
+        status: false,
         notes: ''
     });
     const [formData, setFormData] = useState({
@@ -147,14 +146,13 @@ const CourseAccreditationDetail = () => {
                 const sectionNum = task.section_number || 1;
                 if (sectionsByNum[sectionNum]) {
                     sectionsByNum[sectionNum].push({
-                        id: task.id,
+                        id: task.id,  // Track the database ID for update/delete
                         area: task.task_name || '',
                         description: task.description || '',
-                        evidence_required: task.evidence_required || '',
-                        source_reference: task.source_reference || '',
+                        source: task.evidence_links?.split('|')[0] || '',
+                        evidence: task.evidence_links?.split('|')[1] || '',
                         responsible: task.responsible_person || '',
-                        due_date: task.due_date || '',
-                        status: task.status || 'Not Started',
+                        status: task.status === 'Completed',
                         notes: task.notes || ''
                     });
                 }
@@ -199,36 +197,37 @@ const CourseAccreditationDetail = () => {
                 // Deduplicate tasks before saving
                 const seen = new Set();
                 tasks = tasks.filter(task => {
-                    if (!task.area) return false;
+                    if (!task.area) return false; // Skip empty tasks
                     const key = `${task.area}|${task.responsible}|${task.description}`;
                     if (seen.has(key)) {
                         console.warn('Duplicate task detected and skipped:', key);
-                        return false;
+                        return false; // Skip duplicates
                     }
                     seen.add(key);
                     return true;
                 });
                 
                 for (const task of tasks) {
+                    // Prepare task data
                     const taskData = {
                         section_number: sectionNum,
                         section_title: SECTION_CONFIG[sectionNum].title,
                         task_name: task.area,
                         description: task.description,
-                        evidence_required: task.evidence_required,
-                        source_reference: task.source_reference,
                         responsible_person: task.responsible,
-                        due_date: task.due_date,
-                        status: task.status,
-                        notes: task.notes
+                        status: task.status ? 'Completed' : 'Not Started',
+                        notes: task.notes,
+                        evidence_links: task.source && task.evidence ? `${task.source}|${task.evidence}` : ''
                     };
 
+                    // If task has an ID, it's an existing one - update it
                     if (task.id) {
                         await axios.put(
                             `${API_URL}/accreditations/${accreditationId}/tasks/${task.id}`,
                             taskData
                         );
                     } else {
+                        // New task - create it
                         await axios.post(
                             `${API_URL}/accreditations/${accreditationId}/tasks`,
                             taskData
@@ -260,6 +259,20 @@ const CourseAccreditationDetail = () => {
         }));
     };
 
+    const updateTask = (sectionNum, rowIdx, field, value) => {
+        setFormData(prev => {
+            const newData = { ...prev };
+            if (!newData.sections[sectionNum]) {
+                newData.sections[sectionNum] = [];
+            }
+            newData.sections[sectionNum][rowIdx] = {
+                ...newData.sections[sectionNum][rowIdx],
+                [field]: value
+            };
+            return newData;
+        });
+    };
+
     const handleAddTask = (sectionNum) => {
         if (!currentForm.area) {
             alert('Please select a task area');
@@ -273,24 +286,27 @@ const CourseAccreditationDetail = () => {
             }
             
             if (editingRowIdx !== null && editingSection === sectionNum) {
+                // Update existing - keep the ID if it exists
                 const existingId = newData.sections[sectionNum][editingRowIdx]?.id;
                 newData.sections[sectionNum][editingRowIdx] = { 
                     ...currentForm,
-                    id: existingId
+                    id: existingId // Preserve ID for existing records
                 };
             } else {
+                // Check if task already exists in this section (prevent duplicates)
                 const alreadyExists = newData.sections[sectionNum].some(
                     task => task.area === currentForm.area && task.responsible === currentForm.responsible
                 );
                 
                 if (alreadyExists) {
                     alert('This task already exists in this section');
-                    return newData;
+                    return newData; // Don't add duplicate
                 }
                 
+                // Add new - generate temporary ID if not from database
                 const newTask = { 
                     ...currentForm,
-                    tempId: `temp_${Date.now()}_${Math.random()}`
+                    tempId: `temp_${Date.now()}_${Math.random()}`  // Temporary unique ID
                 };
                 newData.sections[sectionNum].push(newTask);
             }
@@ -311,6 +327,7 @@ const CourseAccreditationDetail = () => {
             const newData = { ...prev };
             const deletedTask = newData.sections[sectionNum][rowIdx];
             
+            // If task has an ID, delete it from the database immediately
             if (deletedTask.id && !isNew) {
                 axios.delete(`${API_URL}/accreditations/${id}/tasks/${deletedTask.id}`)
                     .catch(err => console.error('Failed to delete task from database:', err));
@@ -325,13 +342,13 @@ const CourseAccreditationDetail = () => {
         setCurrentForm({
             area: '',
             description: '',
-            evidence_required: '',
-            source_reference: '',
+            source: '',
+            evidence: '',
             responsible: '',
-            due_date: '',
-            status: 'Not Started',
+            status: false,
             notes: ''
         });
+        // Clear file input elements
         if (sourceInputRef.current) sourceInputRef.current.value = '';
         if (evidenceInputRef.current) evidenceInputRef.current.value = '';
         setEditingRowIdx(null);
@@ -495,14 +512,14 @@ const CourseAccreditationDetail = () => {
                                         </select>
                                     </div>
 
-                                    {/* Row 2: Description & Responsible Person & Due Date */}
+                                    {/* Row 2: Description & Responsible Person */}
                                     <div className="grid grid-cols-3 gap-2 mb-2">
-                                        <div>
+                                        <div className="col-span-2">
                                             <label className="block text-xs font-semibold text-gray-700 mb-0.5">Description</label>
                                             <textarea
                                                 value={currentForm.description}
                                                 onChange={(e) => setCurrentForm(prev => ({ ...prev, description: e.target.value }))}
-                                                placeholder="Description..."
+                                                placeholder={SECTION_CONFIG[sectionNum].tasks.find(t => t.area === currentForm.area)?.description || 'Type description here...'}
                                                 className="w-full px-2 py-1 border border-gray-300 rounded text-xs"
                                                 rows="2"
                                             />
@@ -517,60 +534,32 @@ const CourseAccreditationDetail = () => {
                                                 className="w-full px-2 py-1 border border-gray-300 rounded text-xs"
                                             />
                                         </div>
-                                        <div>
-                                            <label className="block text-xs font-semibold text-gray-700 mb-0.5">Due Date</label>
-                                            <input
-                                                type="date"
-                                                value={currentForm.due_date}
-                                                onChange={(e) => setCurrentForm(prev => ({ ...prev, due_date: e.target.value }))}
-                                                className="w-full px-2 py-1 border border-gray-300 rounded text-xs"
-                                            />
-                                        </div>
                                     </div>
 
-                                    {/* Row 3: Evidence Required & Source Reference */}
-                                    <div className="grid grid-cols-2 gap-2 mb-2">
+                                    {/* Row 3: Source & Evidence File Uploads */}
+                                    <div className="grid grid-cols-3 gap-2 mb-2">
                                         <div>
-                                            <label className="block text-xs font-semibold text-gray-700 mb-0.5">Evidence Required</label>
-                                            <input
-                                                ref={evidenceInputRef}
-                                                type="text"
-                                                value={currentForm.evidence_required}
-                                                onChange={(e) => setCurrentForm(prev => ({ ...prev, evidence_required: e.target.value }))}
-                                                placeholder="e.g., Document, Report, Certificate"
-                                                className="w-full px-2 py-1 border border-gray-300 rounded text-xs"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs font-semibold text-gray-700 mb-0.5">Source / Reference</label>
+                                            <label className="block text-xs font-semibold text-gray-700 mb-0.5">Source (File)</label>
                                             <input
                                                 ref={sourceInputRef}
-                                                type="text"
-                                                value={currentForm.source_reference}
-                                                onChange={(e) => setCurrentForm(prev => ({ ...prev, source_reference: e.target.value }))}
-                                                placeholder="e.g., File name, Location"
-                                                className="w-full px-2 py-1 border border-gray-300 rounded text-xs"
+                                                type="file"
+                                                onChange={(e) => setCurrentForm(prev => ({ ...prev, source: e.target.files ? e.target.files[0].name : '' }))}
+                                                className="w-full text-xs"
                                             />
-                                        </div>
-                                    </div>
-
-                                    {/* Row 4: Status & Notes */}
-                                    <div className="grid grid-cols-2 gap-2 mb-2">
-                                        <div>
-                                            <label className="block text-xs font-semibold text-gray-700 mb-0.5">Status</label>
-                                            <select
-                                                value={currentForm.status}
-                                                onChange={(e) => setCurrentForm(prev => ({ ...prev, status: e.target.value }))}
-                                                className="w-full px-2 py-1 border border-gray-300 rounded text-xs"
-                                            >
-                                                <option value="Not Started">Not Started</option>
-                                                <option value="In Progress">In Progress</option>
-                                                <option value="Completed">Completed</option>
-                                                <option value="Not Applicable">Not Applicable</option>
-                                            </select>
+                                            {currentForm.source && <p className="text-xs text-gray-600 mt-0.5">✓ {currentForm.source.substring(0, 20)}</p>}
                                         </div>
                                         <div>
-                                            <label className="block text-xs font-semibold text-gray-700 mb-0.5">Notes</label>
+                                            <label className="block text-xs font-semibold text-gray-700 mb-0.5">Evidence (File)</label>
+                                            <input
+                                                ref={evidenceInputRef}
+                                                type="file"
+                                                onChange={(e) => setCurrentForm(prev => ({ ...prev, evidence: e.target.files ? e.target.files[0].name : '' }))}
+                                                className="w-full text-xs"
+                                            />
+                                            {currentForm.evidence && <p className="text-xs text-gray-600 mt-0.5">✓ {currentForm.evidence.substring(0, 20)}</p>}
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-semibold text-gray-700 mb-0.5">Review Notes</label>
                                             <textarea
                                                 value={currentForm.notes}
                                                 onChange={(e) => setCurrentForm(prev => ({ ...prev, notes: e.target.value }))}
@@ -580,49 +569,63 @@ const CourseAccreditationDetail = () => {
                                             />
                                         </div>
                                     </div>
+
+                                    {/* Row 4: Status Checkbox & Buttons */}
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <input
+                                                type="checkbox"
+                                                checked={currentForm.status}
+                                                onChange={(e) => setCurrentForm(prev => ({ ...prev, status: e.target.checked }))}
+                                                className="w-4 h-4"
+                                            />
+                                            <label className="text-xs font-semibold text-gray-700">Complete</label>
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <button
+                                                onClick={() => handleAddTask(sectionNum)}
+                                                className="px-3 py-1 bg-scl-purple text-white rounded text-xs font-semibold hover:bg-scl-purple/90"
+                                            >
+                                                {editingRowIdx !== null && editingSection === sectionNum ? 'Update' : 'Add'}
+                                            </button>
+                                            {(editingRowIdx !== null || currentForm.area) && (
+                                                <button
+                                                    onClick={handleFormReset}
+                                                    className="px-3 py-1 border border-gray-300 rounded text-xs font-semibold text-gray-700 hover:bg-gray-100"
+                                                >
+                                                    Cancel
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
                                 </div>
 
                                 {/* Table at Bottom */}
                                 {(formData.sections[sectionNum] || []).length > 0 && (
                                     <div className="overflow-x-auto">
-                                        <table className="w-full text-xs border-collapse">
+                                        <table className="w-full text-sm border-collapse">
                                             <thead>
                                                 <tr className="bg-gray-100">
-                                                    <th className="border border-gray-300 px-2 py-2 text-left font-semibold">Task</th>
-                                                    <th className="border border-gray-300 px-2 py-2 text-left font-semibold">Description</th>
-                                                    <th className="border border-gray-300 px-2 py-2 text-left font-semibold">Evidence Required</th>
-                                                    <th className="border border-gray-300 px-2 py-2 text-left font-semibold">Source/Reference</th>
-                                                    <th className="border border-gray-300 px-2 py-2 text-left font-semibold">Responsible</th>
-                                                    <th className="border border-gray-300 px-2 py-2 text-left font-semibold">Due Date</th>
-                                                    <th className="border border-gray-300 px-2 py-2 text-center font-semibold">Status</th>
-                                                    <th className="border border-gray-300 px-2 py-2 text-left font-semibold">Notes</th>
-                                                    <th className="border border-gray-300 px-2 py-2 text-center font-semibold">Actions</th>
+                                                    <th className="border border-gray-300 px-3 py-2 text-left font-semibold">Task Area</th>
+                                                    <th className="border border-gray-300 px-3 py-2 text-left font-semibold">Description</th>
+                                                    <th className="border border-gray-300 px-3 py-2 text-left font-semibold">Responsible</th>
+                                                    <th className="border border-gray-300 px-3 py-2 text-center font-semibold">Status</th>
+                                                    <th className="border border-gray-300 px-3 py-2 text-center font-semibold">Actions</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
                                                 {(formData.sections[sectionNum] || []).map((task, idx) => (
                                                     <tr key={task.id || task.tempId || idx} className="hover:bg-blue-50">
-                                                        <td className="border border-gray-300 px-2 py-1 text-xs font-medium">{task.area}</td>
-                                                        <td className="border border-gray-300 px-2 py-1 text-xs">{task.description?.substring(0, 40)}...</td>
-                                                        <td className="border border-gray-300 px-2 py-1 text-xs">{task.evidence_required?.substring(0, 20)}</td>
-                                                        <td className="border border-gray-300 px-2 py-1 text-xs">{task.source_reference?.substring(0, 20)}</td>
-                                                        <td className="border border-gray-300 px-2 py-1 text-xs">{task.responsible}</td>
-                                                        <td className="border border-gray-300 px-2 py-1 text-xs">{task.due_date}</td>
-                                                        <td className="border border-gray-300 px-2 py-1 text-center text-xs">
-                                                            <span className={`px-2 py-0.5 rounded text-xs font-semibold ${
-                                                                task.status === 'Completed' ? 'bg-green-100 text-green-700' :
-                                                                task.status === 'In Progress' ? 'bg-yellow-100 text-yellow-700' :
-                                                                task.status === 'Not Applicable' ? 'bg-gray-100 text-gray-700' :
-                                                                'bg-red-100 text-red-700'
-                                                            }`}>
-                                                                {task.status}
-                                                            </span>
+                                                        <td className="border border-gray-300 px-3 py-2 text-sm font-medium">{task.area}</td>
+                                                        <td className="border border-gray-300 px-3 py-2 text-sm">{task.description.substring(0, 50)}...</td>
+                                                        <td className="border border-gray-300 px-3 py-2 text-sm">{task.responsible}</td>
+                                                        <td className="border border-gray-300 px-3 py-2 text-center">
+                                                            {task.status ? <span className="text-green-600 font-semibold">✓</span> : <span className="text-gray-400">○</span>}
                                                         </td>
-                                                        <td className="border border-gray-300 px-2 py-1 text-xs">{task.notes?.substring(0, 30)}</td>
-                                                        <td className="border border-gray-300 px-2 py-1 text-center">
+                                                        <td className="border border-gray-300 px-3 py-2 text-center">
                                                             <button
                                                                 onClick={() => handleEditTask(sectionNum, idx)}
-                                                                className="text-blue-500 hover:text-blue-700 font-semibold text-xs mr-1"
+                                                                className="text-blue-500 hover:text-blue-700 font-semibold text-sm mr-2"
                                                             >
                                                                 Edit
                                                             </button>
@@ -632,7 +635,7 @@ const CourseAccreditationDetail = () => {
                                                                         handleDeleteTask(sectionNum, idx);
                                                                     }
                                                                 }}
-                                                                className="text-red-500 hover:text-red-700 font-semibold text-xs"
+                                                                className="text-red-500 hover:text-red-700 font-semibold text-sm"
                                                             >
                                                                 Delete
                                                             </button>
