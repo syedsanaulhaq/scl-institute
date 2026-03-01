@@ -146,13 +146,14 @@ const CourseInductionsDetail = () => {
                 const sectionNum = req.section_number || 1;
                 if (sectionsByNum[sectionNum]) {
                     sectionsByNum[sectionNum].push({
+                        id: req.id,  // Track the database ID for update/delete
                         area: req.requirement_area || '',
-                        description: req.description || '',
-                        source: req.source_document || '',
-                        evidence: req.evidence_document || '',
-                        responsible: req.responsible_person || '',
+                        description: req.evidence_required || '',
+                        source: req.evidence_links?.split('|')[0] || '',
+                        evidence: req.evidence_links?.split('|')[1] || '',
+                        responsible: req.responsible_role || '',
                         status: req.status === 'Completed',
-                        notes: req.review_notes || ''
+                        notes: req.notes || ''
                     });
                 }
             });
@@ -179,11 +180,52 @@ const CourseInductionsDetail = () => {
     const handleSave = async () => {
         try {
             setSaving(true);
+            let inductionId = id;
+
+            // Step 1: Save/Update the induction header
             if (isNew) {
-                await axios.post(`${API_URL}/inductions`, formData);
+                const response = await axios.post(`${API_URL}/inductions`, formData);
+                inductionId = response.data.data.id;
             } else {
-                await axios.put(`${API_URL}/inductions/${id}`, formData);
+                await axios.put(`${API_URL}/inductions/${inductionId}`, formData);
             }
+
+            // Step 2: Save all requirements for each section
+            for (let sectionNum = 1; sectionNum <= 8; sectionNum++) {
+                const requirements = formData.sections[sectionNum] || [];
+                
+                for (const req of requirements) {
+                    // Only save requirements that have an area
+                    if (!req.area) continue;
+                    
+                    // Prepare requirement data
+                    const reqData = {
+                        section_number: sectionNum,
+                        section_title: SECTION_CONFIG[sectionNum].title,
+                        requirement_area: req.area,
+                        evidence_required: req.description,
+                        responsible_role: req.responsible,
+                        status: req.status ? 'Completed' : 'Not Started',
+                        notes: req.notes,
+                        evidence_links: req.source && req.evidence ? `${req.source}|${req.evidence}` : ''
+                    };
+
+                    // If requirement has an ID, it's an existing one - update it
+                    if (req.id) {
+                        await axios.put(
+                            `${API_URL}/inductions/${inductionId}/requirements/${req.id}`,
+                            reqData
+                        );
+                    } else {
+                        // New requirement - create it
+                        await axios.post(
+                            `${API_URL}/inductions/${inductionId}/requirements`,
+                            reqData
+                        );
+                    }
+                }
+            }
+
             navigate('/course-inductions');
         } catch (err) {
             console.error('Failed to save:', err);
@@ -255,6 +297,14 @@ const CourseInductionsDetail = () => {
     const handleDeleteRequirement = (sectionNum, rowIdx) => {
         setFormData(prev => {
             const newData = { ...prev };
+            const deletedReq = newData.sections[sectionNum][rowIdx];
+            
+            // If requirement has an ID, delete it from the database immediately
+            if (deletedReq.id && !isNew) {
+                axios.delete(`${API_URL}/inductions/${id}/requirements/${deletedReq.id}`)
+                    .catch(err => console.error('Failed to delete requirement from database:', err));
+            }
+            
             newData.sections[sectionNum].splice(rowIdx, 1);
             return newData;
         });
