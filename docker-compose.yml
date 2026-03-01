@@ -71,6 +71,28 @@ services:
       - ./frontend:/app
       - /app/node_modules
 
+  # NGINX Reverse Proxy
+  scli-nginx:
+    image: nginx:alpine
+    container_name: scli-nginx
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - scli-frontend
+      - scli-backend
+    networks:
+      - scl-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1/"]
+      timeout: 10s
+      retries: 5
+      start_period: 10s
+
 networks:
   scl-network:
     driver: bridge
