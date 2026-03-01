@@ -83,6 +83,7 @@ const moodleRoutes = require('./routes/moodle');
 const { router: notificationsRouter } = require('./routes/notifications');
 const supportRoutes = require('./routes/support');
 const inductionRoutes = require('./routes/inductions');
+const inductionRequirementsRoutes = require('./routes/induction-requirements');
 const accreditationRoutes = require('./routes/accreditations');
 
 // Use routes
@@ -91,6 +92,7 @@ app.use('/api/moodle', moodleRoutes);
 app.use('/api/notifications', notificationsRouter);
 app.use('/api/support', supportRoutes);
 app.use('/api/inductions', inductionRoutes);
+app.use('/api/inductions', inductionRequirementsRoutes);
 app.use('/api/accreditations', accreditationRoutes);
 
 // Routes
