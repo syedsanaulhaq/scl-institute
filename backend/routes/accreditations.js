@@ -126,14 +126,15 @@ router.put('/:id', async (req, res) => {
 router.post('/:id/tasks', async (req, res) => {
     try {
         const { id } = req.params;
-        const { section_number, section_title, task_name, description, evidence_required, source_reference, responsible_person, due_date } = req.body;
+        const { section_number, section_title, task_name, description, evidence_required, source_reference, responsible_person, due_date, status, notes } = req.body;
 
-        await pool.query(
-            'INSERT INTO accreditation_tasks (accreditation_id, section_number, section_title, task_name, description, evidence_required, source_reference, responsible_person, due_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            [id, section_number, section_title, task_name, description, evidence_required, source_reference, responsible_person, due_date]
+        const [result] = await pool.query(
+            'INSERT INTO accreditation_tasks (accreditation_id, section_number, section_title, task_name, description, evidence_required, source_reference, responsible_person, due_date, status, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [id, section_number, section_title, task_name, description, evidence_required, source_reference, responsible_person, due_date, status || 'Not Started', notes || null]
         );
 
-        res.json({ success: true, message: 'Task added successfully' });
+        const [rows] = await pool.query('SELECT * FROM accreditation_tasks WHERE id = ?', [result.insertId]);
+        res.status(201).json({ success: true, data: rows[0] });
     } catch (error) {
         console.error('Error adding task:', error.message);
         res.status(500).json({ success: false, message: 'Failed to add task', error: error.message });
@@ -142,37 +143,47 @@ router.post('/:id/tasks', async (req, res) => {
 
 // ===============================================
 // ROUTE 5: PUT /api/accreditations/:id/tasks/:taskId
-// Update task status and notes
+// Update task
 // ===============================================
 router.put('/:id/tasks/:taskId', async (req, res) => {
     try {
         const { id, taskId } = req.params;
-        const { status, notes } = req.body;
+        const allowedFields = [
+            'section_number',
+            'section_title',
+            'task_name',
+            'description',
+            'evidence_required',
+            'source_reference',
+            'responsible_person',
+            'due_date',
+            'status',
+            'notes'
+        ];
 
         const updates = [];
         const params = [];
 
-        if (status !== undefined) {
-            updates.push('status = ?');
-            params.push(status);
-        }
-        if (notes !== undefined) {
-            updates.push('notes = ?');
-            params.push(notes);
-        }
+        allowedFields.forEach(field => {
+            if (req.body[field] !== undefined) {
+                updates.push(`${field} = ?`);
+                params.push(req.body[field]);
+            }
+        });
 
         if (updates.length === 0) {
             return res.status(400).json({ success: false, message: 'No fields to update' });
         }
 
-        params.push(id, taskId);
+        params.push(taskId, id);
 
         await pool.query(
-            `UPDATE accreditation_tasks SET ${updates.join(', ')} WHERE accreditation_id = ? AND id = ?`,
+            `UPDATE accreditation_tasks SET ${updates.join(', ')} WHERE id = ? AND accreditation_id = ?`,
             params
         );
 
-        res.json({ success: true, message: 'Task updated successfully' });
+        const [rows] = await pool.query('SELECT * FROM accreditation_tasks WHERE id = ?', [taskId]);
+        res.json({ success: true, data: rows[0] });
     } catch (error) {
         console.error('Error updating task:', error.message);
         res.status(500).json({ success: false, message: 'Failed to update task', error: error.message });
@@ -180,7 +191,27 @@ router.put('/:id/tasks/:taskId', async (req, res) => {
 });
 
 // ===============================================
-// ROUTE 6: POST /api/accreditations/:id/risks
+// ROUTE 6: DELETE /api/accreditations/:id/tasks/:taskId
+// Delete task
+// ===============================================
+router.delete('/:id/tasks/:taskId', async (req, res) => {
+    try {
+        const { id, taskId } = req.params;
+
+        await pool.query(
+            'DELETE FROM accreditation_tasks WHERE id = ? AND accreditation_id = ?',
+            [taskId, id]
+        );
+
+        res.json({ success: true, message: 'Task deleted' });
+    } catch (error) {
+        console.error('Error deleting task:', error.message);
+        res.status(500).json({ success: false, message: 'Failed to delete task', error: error.message });
+    }
+});
+
+// ===============================================
+// ROUTE 7: POST /api/accreditations/:id/risks
 // Add risk/issue
 // ===============================================
 router.post('/:id/risks', async (req, res) => {

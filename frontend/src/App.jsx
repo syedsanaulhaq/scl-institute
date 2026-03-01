@@ -35,6 +35,7 @@ import StudentNotifications from './pages/StudentNotifications';
 import CourseInductions from './pages/CourseInductions';
 import CourseInductionsDetail from './pages/CourseInductionsDetail';
 import CourseAccreditations from './pages/CourseAccreditations';
+import CourseAccreditationDetail from './pages/CourseAccreditationDetail';
 
 function App() {
     const [user, setUser] = useState(() => {
@@ -261,6 +262,15 @@ function App() {
                     user && user?.role?.toLowerCase() !== 'student' ? (
                         <Layout user={user} onLogout={handleLogout}>
                             <CourseAccreditations user={user} />
+                        </Layout>
+                    ) : (
+                        <LoginPage onLoginSuccess={handleLoginSuccess} />
+                    )
+                } />
+                <Route path="/course-accreditations/:id" element={
+                    user && user?.role?.toLowerCase() !== 'student' ? (
+                        <Layout user={user} onLogout={handleLogout}>
+                            <CourseAccreditationDetail user={user} />
                         </Layout>
                     ) : (
                         <LoginPage onLoginSuccess={handleLoginSuccess} />
