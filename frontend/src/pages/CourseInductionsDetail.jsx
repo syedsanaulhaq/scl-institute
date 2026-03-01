@@ -192,12 +192,22 @@ const CourseInductionsDetail = () => {
 
             // Step 2: Save all requirements for each section
             for (let sectionNum = 1; sectionNum <= 8; sectionNum++) {
-                const requirements = formData.sections[sectionNum] || [];
+                let requirements = formData.sections[sectionNum] || [];
+                
+                // Deduplicate requirements before saving
+                const seen = new Set();
+                requirements = requirements.filter(req => {
+                    if (!req.area) return false; // Skip empty requirements
+                    const key = `${req.area}|${req.responsible}|${req.description}`;
+                    if (seen.has(key)) {
+                        console.warn('Duplicate requirement detected and skipped:', key);
+                        return false; // Skip duplicates
+                    }
+                    seen.add(key);
+                    return true;
+                });
                 
                 for (const req of requirements) {
-                    // Only save requirements that have an area
-                    if (!req.area) continue;
-                    
                     // Prepare requirement data
                     const reqData = {
                         section_number: sectionNum,
@@ -283,6 +293,16 @@ const CourseInductionsDetail = () => {
                     id: existingId // Preserve ID for existing records
                 };
             } else {
+                // Check if requirement already exists in this section (prevent duplicates)
+                const alreadyExists = newData.sections[sectionNum].some(
+                    req => req.area === currentForm.area && req.responsible === currentForm.responsible
+                );
+                
+                if (alreadyExists) {
+                    alert('This requirement already exists in this section');
+                    return newData; // Don't add duplicate
+                }
+                
                 // Add new - generate temporary ID if not from database
                 const newReq = { 
                     ...currentForm,
