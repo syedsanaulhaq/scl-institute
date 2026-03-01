@@ -231,7 +231,7 @@ function App() {
                     )
                 } />
                 <Route path="/course-inductions" element={
-                    user && user?.role?.toLowerCase() !== 'student' ? (
+                    user ? (
                         <Layout user={user} onLogout={handleLogout}>
                             <CourseInductions user={user} />
                         </Layout>
@@ -240,7 +240,7 @@ function App() {
                     )
                 } />
                 <Route path="/course-inductions/new" element={
-                    user && user?.role?.toLowerCase() !== 'student' ? (
+                    user ? (
                         <Layout user={user} onLogout={handleLogout}>
                             <CourseInductionsDetail user={user} />
                         </Layout>
@@ -249,7 +249,7 @@ function App() {
                     )
                 } />
                 <Route path="/course-inductions/:id/edit" element={
-                    user && user?.role?.toLowerCase() !== 'student' ? (
+                    user ? (
                         <Layout user={user} onLogout={handleLogout}>
                             <CourseInductionsDetail user={user} />
                         </Layout>
