@@ -135,20 +135,50 @@ const CourseInductionsDetail = () => {
     const fetchInduction = async () => {
         try {
             const response = await axios.get(`${API_URL}/inductions/${id}`);
-            const data = response.data?.data;
+            const bundle = response.data?.data;
+            
+            if (!bundle || !bundle.induction) {
+                throw new Error('Invalid data structure');
+            }
+            
+            const induction = bundle.induction;
+            const requirements = bundle.requirements || [];
+            
+            // Group requirements by section_number
+            const sectionsByNum = {};
+            for (let i = 1; i <= 8; i++) {
+                sectionsByNum[i] = [];
+            }
+            
+            requirements.forEach(req => {
+                const sectionNum = req.section_number || 1;
+                if (sectionsByNum[sectionNum]) {
+                    sectionsByNum[sectionNum].push({
+                        area: req.requirement_area || '',
+                        description: req.description || '',
+                        source: req.source_document || '',
+                        evidence: req.evidence_document || '',
+                        responsible: req.responsible_person || '',
+                        status: req.status === 'Completed',
+                        notes: req.review_notes || ''
+                    });
+                }
+            });
+            
             setFormData({
-                course_title: data.course_title || '',
-                course_code: data.course_code || '',
-                awarding_body: data.awarding_body || '',
-                application_type: data.application_type || '',
-                date_started: data.date_started || '',
-                expected_submission_date: data.expected_submission_date || '',
-                lead_coordinator: data.lead_coordinator || '',
-                version: data.version || '1.0',
-                sections: {} // Would load from API if available
+                course_title: induction.course_title || '',
+                course_code: induction.course_code || '',
+                awarding_body: induction.awarding_body || '',
+                application_type: induction.application_type || '',
+                date_started: induction.date_started || '',
+                expected_submission_date: induction.expected_submission_date || '',
+                lead_coordinator: induction.induction_owner || '',
+                version: induction.version || '1.0',
+                sections: sectionsByNum
             });
         } catch (err) {
             console.error('Failed to fetch induction:', err);
+            alert('Error loading induction data');
         } finally {
             setLoading(false);
         }
@@ -289,7 +319,8 @@ const CourseInductionsDetail = () => {
                                 type="text"
                                 value={formData.course_title}
                                 onChange={(e) => handleInputChange('course_title', e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-scl-purple focus:border-transparent"
+                                disabled={!isNew}
+                                className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-scl-purple focus:border-transparent ${!isNew ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                             />
                         </div>
                         <div>
@@ -298,7 +329,8 @@ const CourseInductionsDetail = () => {
                                 type="text"
                                 value={formData.course_code}
                                 onChange={(e) => handleInputChange('course_code', e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-scl-purple focus:border-transparent"
+                                disabled={!isNew}
+                                className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-scl-purple focus:border-transparent ${!isNew ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                             />
                         </div>
                         <div>
