@@ -276,11 +276,19 @@ const CourseInductionsDetail = () => {
             }
             
             if (editingRowIdx !== null && editingSection === sectionNum) {
-                // Update existing
-                newData.sections[sectionNum][editingRowIdx] = { ...currentForm };
+                // Update existing - keep the ID if it exists
+                const existingId = newData.sections[sectionNum][editingRowIdx]?.id;
+                newData.sections[sectionNum][editingRowIdx] = { 
+                    ...currentForm,
+                    id: existingId // Preserve ID for existing records
+                };
             } else {
-                // Add new
-                newData.sections[sectionNum].push({ ...currentForm });
+                // Add new - generate temporary ID if not from database
+                const newReq = { 
+                    ...currentForm,
+                    tempId: `temp_${Date.now()}_${Math.random()}`  // Temporary unique ID
+                };
+                newData.sections[sectionNum].push(newReq);
             }
             return newData;
         });
@@ -582,7 +590,7 @@ const CourseInductionsDetail = () => {
                                             </thead>
                                             <tbody>
                                                 {(formData.sections[sectionNum] || []).map((req, idx) => (
-                                                    <tr key={idx} className="hover:bg-blue-50">
+                                                    <tr key={req.id || req.tempId || idx} className="hover:bg-blue-50">
                                                         <td className="border border-gray-300 px-3 py-2 text-sm font-medium">{req.area}</td>
                                                         <td className="border border-gray-300 px-3 py-2 text-sm">{req.description.substring(0, 50)}...</td>
                                                         <td className="border border-gray-300 px-3 py-2 text-sm">{req.responsible}</td>
