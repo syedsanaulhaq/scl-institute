@@ -1,365 +1,227 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import {
-    FileText,
-    CheckCircle2,
-    AlertCircle,
-    Loader2,
-    RefreshCw,
-    ClipboardList,
     Plus,
-    Trash2,
+    Search,
     Edit2,
-    ChevronDown,
-    ChevronRight
+    Trash2,
+    X
 } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
 
 const CourseInductions = ({ user }) => {
+    const navigate = useNavigate();
     const [inductions, setInductions] = useState([]);
-    const [selectedInductionId, setSelectedInductionId] = useState(null);
-    const [requirements, setRequirements] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [loadingDetails, setLoadingDetails] = useState(false);
-    const [error, setError] = useState('');
-    const [saving, setSaving] = useState(false);
-    const [expandedSections, setExpandedSections] = useState({});
-    const [editingRequirement, setEditingRequirement] = useState(null);
-    const [edits, setEdits] = useState({});
+    const [searchTerm, setSearchTerm] = useState('');
+    const [showForm, setShowForm] = useState(false);
 
     useEffect(() => {
         fetchInductions();
     }, []);
 
-    useEffect(() => {
-        if (selectedInductionId) {
-            fetchRequirements(selectedInductionId);
-        }
-    }, [selectedInductionId]);
-
     const fetchInductions = async () => {
         try {
             setLoading(true);
-            setError('');
             const response = await axios.get(`${API_URL}/inductions`);
-            const data = response.data?.data || [];
-            setInductions(data);
-            if (data.length > 0) {
-                setSelectedInductionId(data[0].id);
-            }
+            setInductions(response.data?.data || []);
         } catch (err) {
             console.error('Failed to fetch inductions:', err);
-            setError('Failed to load inductions');
         } finally {
             setLoading(false);
         }
     };
 
-    const fetchRequirements = async (inductionId) => {
-        try {
-            setLoadingDetails(true);
-            const response = await axios.get(`${API_URL}/inductions/requirements/${inductionId}`);
-            const data = response.data?.data || [];
-            setRequirements(data);
-            
-            // Expand first section by default
-            if (data.length > 0) {
-                setExpandedSections({ [data[0].section_number]: true });
+    const handleAddNew = () => {
+        navigate('/course-inductions/new');
+    };
+
+    const handleEdit = (id) => {
+        navigate(`/course-inductions/${id}/edit`);
+    };
+
+    const handleDelete = async (id) => {
+        if (window.confirm('Are you sure?')) {
+            try {
+                await axios.delete(`${API_URL}/inductions/${id}`);
+                fetchInductions();
+            } catch (err) {
+                console.error('Failed to delete:', err);
             }
-        } catch (err) {
-            console.error('Failed to fetch requirements:', err);
-            setError('Failed to load requirements');
-        } finally {
-            setLoadingDetails(false);
         }
     };
 
-    const toggleSection = (sectionNumber) => {
-        setExpandedSections(prev => ({
-            ...prev,
-            [sectionNumber]: !prev[sectionNumber]
-        }));
-    };
-
-    const handleEditRequirement = (requirement) => {
-        setEditingRequirement(requirement.id);
-        setEdits({
-            requirement_area: requirement.requirement_area,
-            description: requirement.description,
-            source_reference: requirement.source_reference,
-            evidence_held: requirement.evidence_held,
-            responsible_person: requirement.responsible_person,
-            compliance_status: requirement.compliance_status,
-            review_notes: requirement.review_notes
-        });
-    };
-
-    const handleSaveRequirement = async () => {
-        try {
-            setSaving(true);
-            await axios.put(`${API_URL}/inductions/requirements/${editingRequirement}`, edits);
-            await fetchRequirements(selectedInductionId);
-            setEditingRequirement(null);
-            setEdits({});
-        } catch (err) {
-            console.error('Failed to save requirement:', err);
-            setError('Failed to save requirement');
-        } finally {
-            setSaving(false);
-        }
-    };
-
-    const handleDeleteRequirement = async (requirementId) => {
-        if (!confirm('Are you sure you want to delete this requirement?')) return;
-        
-        try {
-            setSaving(true);
-            await axios.delete(`${API_URL}/inductions/requirements/${requirementId}`);
-            await fetchRequirements(selectedInductionId);
-        } catch (err) {
-            console.error('Failed to delete requirement:', err);
-            setError('Failed to delete requirement');
-        } finally {
-            setSaving(false);
-        }
-    };
-
-    const groupedRequirements = useMemo(() => {
-        return requirements;
-    }, [requirements]);
-
-    if (loading) {
-        return (
-            <div className="flex items-center justify-center h-96">
-                <Loader2 className="w-6 h-6 animate-spin text-scl-purple" />
-            </div>
-        );
-    }
+    const filteredInductions = inductions.filter(ind =>
+        ind.course_title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        ind.course_code?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
 
     return (
-        <div className="space-y-6">
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                <div>
-                    <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-                        <ClipboardList className="w-6 h-6 text-scl-purple" />
-                        Course Inductions - Compliance Requirements
-                    </h1>
-                    <p className="text-sm text-gray-500">Track induction compliance requirements with evidence tracking and sign-offs.</p>
+        <div className="bg-gray-50 min-h-screen">
+            {/* Header */}
+            <div className="bg-white border-b border-gray-200">
+                <div className="max-w-7xl mx-auto px-6 py-6">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
+                                📋 Course Accreditation / Partnership Management
+                            </h1>
+                            <p className="text-gray-600 text-sm mt-1">Track and manage course accreditation applications</p>
+                        </div>
+                        <button
+                            onClick={handleAddNew}
+                            className="flex items-center gap-2 px-4 py-2 bg-scl-purple text-white rounded-lg hover:bg-scl-purple/90 font-semibold"
+                        >
+                            <Plus className="w-5 h-5" />
+                            Add New
+                        </button>
+                    </div>
                 </div>
-                <button
-                    onClick={() => fetchInductions()}
-                    className="px-3 py-2 text-sm font-semibold rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200"
-                >
-                    <RefreshCw className="w-4 h-4 inline mr-2" />
-                    Refresh
-                </button>
             </div>
 
-            {error && (
-                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-center gap-2">
-                    <AlertCircle className="w-4 h-4" />
-                    {error}
-                </div>
-            )}
-
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Inductions List */}
-                <div className="bg-white border border-gray-100 rounded-xl p-4 shadow-sm">
-                    <h2 className="text-sm font-semibold text-gray-700 mb-3">Inductions</h2>
-                    <div className="space-y-2 max-h-[70vh] overflow-y-auto">
-                        {inductions.map((induction) => (
-                            <button
-                                key={induction.id}
-                                onClick={() => setSelectedInductionId(induction.id)}
-                                className={`w-full text-left px-3 py-2 rounded-lg border transition ${
-                                    selectedInductionId === induction.id
-                                        ? 'border-scl-purple bg-scl-purple/10'
-                                        : 'border-gray-200 hover:bg-gray-50'
-                                }`}
-                            >
-                                <div className="text-sm font-semibold text-gray-900">{induction.course_title || 'Untitled'}</div>
-                                <div className="text-xs text-gray-500">{induction.course_code || 'No code'}</div>
-                                <div className="mt-2 text-xs text-gray-600">
-                                    <span className="px-2 py-0.5 rounded-full bg-gray-100">{induction.overall_status || 'Draft'}</span>
-                                </div>
-                            </button>
-                        ))}
+            {/* Main Content */}
+            <div className="max-w-7xl mx-auto px-6 py-8">
+                {/* Search */}
+                <div className="mb-6">
+                    <div className="relative">
+                        <Search className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
+                        <input
+                            type="text"
+                            placeholder="Search by course title or code..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-scl-purple focus:border-transparent"
+                        />
                     </div>
                 </div>
 
-                {/* Requirements Tables */}
-                <div className="lg:col-span-2 space-y-4">
-                    {loadingDetails && (
-                        <div className="flex items-center justify-center h-64">
-                            <Loader2 className="w-6 h-6 animate-spin text-scl-purple" />
-                        </div>
-                    )}
-
-                    {!loadingDetails && selectedInductionId && groupedRequirements.length > 0 && (
-                        <>
-                            {groupedRequirements.map((section, idx) => (
-                                <div key={idx} className="bg-white border border-gray-100 rounded-xl overflow-hidden shadow-sm">
-                                    {/* Section Header */}
-                                    <button
-                                        onClick={() => toggleSection(section.section_number)}
-                                        className="w-full px-4 py-3 bg-scl-purple/10 hover:bg-scl-purple/20 text-left font-semibold text-gray-900 flex items-center justify-between transition"
-                                    >
-                                        <span className="flex items-center gap-2">
-                                            {expandedSections[section.section_number] ? (
-                                                <ChevronDown className="w-4 h-4" />
-                                            ) : (
-                                                <ChevronRight className="w-4 h-4" />
-                                            )}
-                                            Section {section.section_number}: {section.section_title}
-                                        </span>
-                                        <span className="text-xs bg-scl-purple text-white px-2 py-1 rounded-full">
-                                            {section.requirements.length}
-                                        </span>
-                                    </button>
-
-                                    {/* Requirements Table */}
-                                    {expandedSections[section.section_number] && (
-                                        <div className="overflow-x-auto">
-                                            <table className="w-full text-sm">
-                                                <thead>
-                                                    <tr className="bg-gray-50 border-t border-gray-100">
-                                                        <th className="px-3 py-2 text-left font-semibold text-gray-700">Requirement Area</th>
-                                                        <th className="px-3 py-2 text-left font-semibold text-gray-700">Description</th>
-                                                        <th className="px-3 py-2 text-left font-semibold text-gray-700">Source/Reference</th>
-                                                        <th className="px-3 py-2 text-left font-semibold text-gray-700">Evidence Held</th>
-                                                        <th className="px-3 py-2 text-left font-semibold text-gray-700">Responsible Person</th>
-                                                        <th className="px-3 py-2 text-center font-semibold text-gray-700">Status</th>
-                                                        <th className="px-3 py-2 text-left font-semibold text-gray-700">Review Notes</th>
-                                                        <th className="px-3 py-2 text-center font-semibold text-gray-700">Actions</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {section.requirements.map((req) => (
-                                                        <tr key={req.id} className="border-t border-gray-100 hover:bg-gray-50">
-                                                            {editingRequirement === req.id ? (
-                                                                <>
-                                                                    <td className="px-3 py-2">
-                                                                        <input
-                                                                            type="text"
-                                                                            value={edits.requirement_area}
-                                                                            onChange={(e) => setEdits(prev => ({ ...prev, requirement_area: e.target.value }))}
-                                                                            className="w-full border border-gray-200 rounded px-2 py-1 text-xs"
-                                                                        />
-                                                                    </td>
-                                                                    <td className="px-3 py-2">
-                                                                        <textarea
-                                                                            value={edits.description}
-                                                                            onChange={(e) => setEdits(prev => ({ ...prev, description: e.target.value }))}
-                                                                            className="w-full border border-gray-200 rounded px-2 py-1 text-xs"
-                                                                            rows="2"
-                                                                        />
-                                                                    </td>
-                                                                    <td className="px-3 py-2">
-                                                                        <input
-                                                                            type="text"
-                                                                            value={edits.source_reference}
-                                                                            onChange={(e) => setEdits(prev => ({ ...prev, source_reference: e.target.value }))}
-                                                                            className="w-full border border-gray-200 rounded px-2 py-1 text-xs"
-                                                                        />
-                                                                    </td>
-                                                                    <td className="px-3 py-2">
-                                                                        <input
-                                                                            type="text"
-                                                                            value={edits.evidence_held}
-                                                                            onChange={(e) => setEdits(prev => ({ ...prev, evidence_held: e.target.value }))}
-                                                                            className="w-full border border-gray-200 rounded px-2 py-1 text-xs"
-                                                                        />
-                                                                    </td>
-                                                                    <td className="px-3 py-2">
-                                                                        <input
-                                                                            type="text"
-                                                                            value={edits.responsible_person}
-                                                                            onChange={(e) => setEdits(prev => ({ ...prev, responsible_person: e.target.value }))}
-                                                                            className="w-full border border-gray-200 rounded px-2 py-1 text-xs"
-                                                                        />
-                                                                    </td>
-                                                                    <td className="px-3 py-2 text-center">
-                                                                        <input
-                                                                            type="checkbox"
-                                                                            checked={edits.compliance_status}
-                                                                            onChange={(e) => setEdits(prev => ({ ...prev, compliance_status: e.target.checked }))}
-                                                                            className="w-4 h-4 rounded border-gray-300"
-                                                                        />
-                                                                    </td>
-                                                                    <td className="px-3 py-2">
-                                                                        <textarea
-                                                                            value={edits.review_notes}
-                                                                            onChange={(e) => setEdits(prev => ({ ...prev, review_notes: e.target.value }))}
-                                                                            className="w-full border border-gray-200 rounded px-2 py-1 text-xs"
-                                                                            rows="2"
-                                                                        />
-                                                                    </td>
-                                                                    <td className="px-3 py-2 text-center space-y-1">
-                                                                        <button
-                                                                            onClick={handleSaveRequirement}
-                                                                            disabled={saving}
-                                                                            className="w-full px-2 py-1 text-xs bg-scl-purple text-white rounded hover:bg-scl-purple/90"
-                                                                        >
-                                                                            {saving ? 'Saving...' : 'Save'}
-                                                                        </button>
-                                                                        <button
-                                                                            onClick={() => setEditingRequirement(null)}
-                                                                            className="w-full px-2 py-1 text-xs bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
-                                                                        >
-                                                                            Cancel
-                                                                        </button>
-                                                                    </td>
-                                                                </>
-                                                            ) : (
-                                                                <>
-                                                                    <td className="px-3 py-2 text-gray-900 font-medium">{req.requirement_area}</td>
-                                                                    <td className="px-3 py-2 text-gray-600 text-xs">{req.description}</td>
-                                                                    <td className="px-3 py-2 text-gray-600 text-xs">{req.source_reference}</td>
-                                                                    <td className="px-3 py-2 text-gray-600 text-xs">{req.evidence_held}</td>
-                                                                    <td className="px-3 py-2 text-gray-600 text-xs">{req.responsible_person}</td>
-                                                                    <td className="px-3 py-2 text-center">
-                                                                        {req.compliance_status ? (
-                                                                            <CheckCircle2 className="w-4 h-4 text-green-500 mx-auto" />
-                                                                        ) : (
-                                                                            <div className="w-4 h-4 border-2 border-gray-300 rounded-full mx-auto" />
-                                                                        )}
-                                                                    </td>
-                                                                    <td className="px-3 py-2 text-gray-600 text-xs">{req.review_notes}</td>
-                                                                    <td className="px-3 py-2 text-center space-y-1">
-                                                                        <button
-                                                                            onClick={() => handleEditRequirement(req)}
-                                                                            className="w-full px-2 py-1 text-xs text-scl-purple hover:bg-scl-purple/10 rounded"
-                                                                        >
-                                                                            <Edit2 className="w-3 h-3 inline" />
-                                                                        </button>
-                                                                        <button
-                                                                            onClick={() => handleDeleteRequirement(req.id)}
-                                                                            className="w-full px-2 py-1 text-xs text-red-500 hover:bg-red-50 rounded"
-                                                                        >
-                                                                            <Trash2 className="w-3 h-3 inline" />
-                                                                        </button>
-                                                                    </td>
-                                                                </>
-                                                            )}
-                                                        </tr>
-                                                    ))}
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    )}
-                                </div>
-                            ))}
-                        </>
-                    )}
-
-                    {!loadingDetails && selectedInductionId && groupedRequirements.length === 0 && (
-                        <div className="bg-white border border-gray-100 rounded-xl p-4 text-center text-gray-500">
-                            No compliance requirements found. Create requirements to get started.
-                        </div>
-                    )}
-                </div>
+                {/* Table */}
+                {loading ? (
+                    <div className="text-center py-12">
+                        <div className="inline-block animate-spin">⏳</div>
+                        <p className="text-gray-600 mt-2">Loading...</p>
+                    </div>
+                ) : (
+                    <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                        <table className="w-full">
+                            <thead>
+                                <tr className="bg-gray-50 border-b border-gray-200">
+                                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Course Title</th>
+                                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Code</th>
+                                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Awarding Body</th>
+                                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Status</th>
+                                    <th className="px-6 py-3 text-center text-sm font-semibold text-gray-900">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {filteredInductions.length === 0 ? (
+                                    <tr>
+                                        <td colSpan="5" className="px-6 py-8 text-center text-gray-500">
+                                            No inductions found. <button onClick={handleAddNew} className="text-scl-purple hover:underline">Create one</button>
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    filteredInductions.map(induction => (
+                                        <tr key={induction.id} className="border-b border-gray-100 hover:bg-gray-50">
+                                            <td className="px-6 py-4 text-sm text-gray-900 font-medium">{induction.course_title}</td>
+                                            <td className="px-6 py-4 text-sm text-gray-600">{induction.course_code}</td>
+                                            <td className="px-6 py-4 text-sm text-gray-600">{induction.awarding_body || '-'}</td>
+                                            <td className="px-6 py-4 text-sm">
+                                                <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                                                    induction.overall_status === 'Approved' 
+                                                        ? 'bg-green-100 text-green-800'
+                                                        : 'bg-yellow-100 text-yellow-800'
+                                                }`}>
+                                                    {induction.overall_status || 'Draft'}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4 text-center">
+                                                <button
+                                                    onClick={() => handleEdit(induction.id)}
+                                                    className="inline-block text-scl-purple hover:text-scl-purple/70 mr-4"
+                                                >
+                                                    <Edit2 className="w-4 h-4" />
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDelete(induction.id)}
+                                                    className="inline-block text-red-500 hover:text-red-700"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
             </div>
+
+            {/* Modal Form - Create New Only */}
+            {showForm && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                        {/* Form Header */}
+                        <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+                            <h2 className="text-xl font-bold text-gray-900">New Induction</h2>
+                            <button
+                                onClick={() => setShowForm(false)}
+                                className="text-gray-500 hover:text-gray-700"
+                            >
+                                <X className="w-6 h-6" />
+                            </button>
+                        </div>
+
+                        <div className="p-6 space-y-4">
+                            {/* General Info - Brief Version */}
+                            <div>
+                                <label className="block text-sm font-semibold text-gray-700 mb-1">Course Title *</label>
+                                <input
+                                    type="text"
+                                    placeholder="Enter course title"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-scl-purple focus:border-transparent"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-semibold text-gray-700 mb-1">Course Code</label>
+                                <input
+                                    type="text"
+                                    placeholder="Enter course code"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-scl-purple focus:border-transparent"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-semibold text-gray-700 mb-1">Awarding Body</label>
+                                <input
+                                    type="text"
+                                    placeholder="Enter awarding body"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-scl-purple focus:border-transparent"
+                                />
+                            </div>
+                            <p className="text-xs text-gray-500">You'll fill in all details on the next page</p>
+                        </div>
+
+                        {/* Form Footer */}
+                        <div className="sticky bottom-0 bg-gray-50 border-t border-gray-200 px-6 py-4 flex items-center justify-end gap-3">
+                            <button
+                                onClick={() => setShowForm(false)}
+                                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-semibold"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={() => setShowForm(false)}
+                                className="px-4 py-2 bg-scl-purple text-white rounded-lg hover:bg-scl-purple/90 font-semibold"
+                            >
+                                Next
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
