@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import {
     FileText,
@@ -8,7 +9,9 @@ import {
     Loader2,
     RefreshCw,
     ClipboardList,
-    AlertTriangle
+    AlertTriangle,
+    Plus,
+    Edit2
 } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
@@ -17,6 +20,7 @@ const statusOptions = ['Not Started', 'In Progress', 'Completed', 'Not Applicabl
 const signoffOptions = ['Pending', 'Signed', 'Not Required'];
 
 const CourseAccreditations = ({ user }) => {
+    const navigate = useNavigate();
     const [accreditations, setAccreditations] = useState([]);
     const [selectedAccreditationId, setSelectedAccreditationId] = useState(null);
     const [details, setDetails] = useState(null);
@@ -192,13 +196,31 @@ const CourseAccreditations = ({ user }) => {
                     </h1>
                     <p className="text-sm text-gray-500">Track course accreditation applications, partnerships, and progress.</p>
                 </div>
-                <button
-                    onClick={() => fetchAccreditations()}
-                    className="px-3 py-2 text-sm font-semibold rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200"
-                >
-                    <RefreshCw className="w-4 h-4 inline mr-2" />
-                    Refresh
-                </button>
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={() => fetchAccreditations()}
+                        className="px-3 py-2 text-sm font-semibold rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    >
+                        <RefreshCw className="w-4 h-4 inline mr-2" />
+                        Refresh
+                    </button>
+                    <button
+                        onClick={() => navigate('/course-accreditations/new')}
+                        className="px-3 py-2 text-sm font-semibold rounded-lg bg-scl-purple text-white hover:bg-scl-purple/90 flex items-center gap-2"
+                    >
+                        <Plus className="w-4 h-4" />
+                        New Accreditation
+                    </button>
+                    {selectedAccreditationId && (
+                        <button
+                            onClick={() => navigate(`/course-accreditations/${selectedAccreditationId}`)}
+                            className="px-3 py-2 text-sm font-semibold rounded-lg bg-blue-100 text-blue-700 hover:bg-blue-200 flex items-center gap-2"
+                        >
+                            <Edit2 className="w-4 h-4" />
+                            Edit
+                        </button>
+                    )}
+                </div>
             </div>
 
             {error && (
