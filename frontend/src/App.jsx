@@ -33,6 +33,8 @@ import StudentFees from './components/student/StudentFees';
 import StudentSupport from './components/student/StudentSupport';
 import StudentNotifications from './pages/StudentNotifications';
 import CourseInductions from './pages/CourseInductions';
+import CourseInductionsDetail from './pages/CourseInductionsDetail';
+import CourseAccreditations from './pages/CourseAccreditations';
 
 function App() {
     const [user, setUser] = useState(() => {
@@ -232,6 +234,33 @@ function App() {
                     user && user?.role?.toLowerCase() !== 'student' ? (
                         <Layout user={user} onLogout={handleLogout}>
                             <CourseInductions user={user} />
+                        </Layout>
+                    ) : (
+                        <LoginPage onLoginSuccess={handleLoginSuccess} />
+                    )
+                } />
+                <Route path="/course-inductions/new" element={
+                    user && user?.role?.toLowerCase() !== 'student' ? (
+                        <Layout user={user} onLogout={handleLogout}>
+                            <CourseInductionsDetail user={user} />
+                        </Layout>
+                    ) : (
+                        <LoginPage onLoginSuccess={handleLoginSuccess} />
+                    )
+                } />
+                <Route path="/course-inductions/:id/edit" element={
+                    user && user?.role?.toLowerCase() !== 'student' ? (
+                        <Layout user={user} onLogout={handleLogout}>
+                            <CourseInductionsDetail user={user} />
+                        </Layout>
+                    ) : (
+                        <LoginPage onLoginSuccess={handleLoginSuccess} />
+                    )
+                } />
+                <Route path="/course-accreditations" element={
+                    user && user?.role?.toLowerCase() !== 'student' ? (
+                        <Layout user={user} onLogout={handleLogout}>
+                            <CourseAccreditations user={user} />
                         </Layout>
                     ) : (
                         <LoginPage onLoginSuccess={handleLoginSuccess} />
