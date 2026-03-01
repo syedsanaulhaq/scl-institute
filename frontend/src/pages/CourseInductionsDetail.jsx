@@ -118,16 +118,8 @@ const CourseInductionsDetail = () => {
     const initializeNewForm = () => {
         const sections = {};
         for (let i = 1; i <= 8; i++) {
-            // Initialize with prefilled task requirements based on SECTION_CONFIG
-            sections[i] = SECTION_CONFIG[i].tasks.map(task => ({
-                area: task.area,
-                description: task.description,
-                source: '',
-                evidence: '',
-                responsible: '',
-                status: false,
-                notes: ''
-            }));
+            // Initialize with empty sections - only show data when user adds via form
+            sections[i] = [];
         }
         setFormData(prev => ({ ...prev, sections }));
     };
