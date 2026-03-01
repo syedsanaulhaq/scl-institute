@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { ChevronDown, ChevronUp, ArrowLeft } from 'lucide-react';
@@ -85,6 +85,8 @@ const CourseInductionsDetail = () => {
     const [expandedSections, setExpandedSections] = useState({ 1: true });
     const [editingRowIdx, setEditingRowIdx] = useState(null);
     const [editingSection, setEditingSection] = useState(null);
+    const sourceInputRef = useRef(null);
+    const evidenceInputRef = useRef(null);
     const [currentForm, setCurrentForm] = useState({
         area: '',
         description: '',
@@ -348,6 +350,9 @@ const CourseInductionsDetail = () => {
             status: false,
             notes: ''
         });
+        // Clear file input elements
+        if (sourceInputRef.current) sourceInputRef.current.value = '';
+        if (evidenceInputRef.current) evidenceInputRef.current.value = '';
         setEditingRowIdx(null);
         setEditingSection(null);
     };
@@ -538,6 +543,7 @@ const CourseInductionsDetail = () => {
                                         <div>
                                             <label className="block text-xs font-semibold text-gray-700 mb-0.5">Source (File)</label>
                                             <input
+                                                ref={sourceInputRef}
                                                 type="file"
                                                 onChange={(e) => setCurrentForm(prev => ({ ...prev, source: e.target.files ? e.target.files[0].name : '' }))}
                                                 className="w-full text-xs"
@@ -547,6 +553,7 @@ const CourseInductionsDetail = () => {
                                         <div>
                                             <label className="block text-xs font-semibold text-gray-700 mb-0.5">Evidence (File)</label>
                                             <input
+                                                ref={evidenceInputRef}
                                                 type="file"
                                                 onChange={(e) => setCurrentForm(prev => ({ ...prev, evidence: e.target.files ? e.target.files[0].name : '' }))}
                                                 className="w-full text-xs"
