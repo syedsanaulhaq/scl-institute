@@ -1,10 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import axios from 'axios';
 import { Plus, Search, Edit2, Trash2, ChevronDown, ChevronUp, Save, X } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
 
 const CourseAccreditations = ({ user }) => {
+    // Form ref for scrolling
+    const formRef = useRef(null);
+
     // Main state
     const [accreditations, setAccreditations] = useState([]);
     const [courses, setCourses] = useState([]);
@@ -105,6 +108,10 @@ const CourseAccreditations = ({ user }) => {
 
     const handleAddNew = () => {
         resetForm();
+        // Scroll to form after resetting
+        setTimeout(() => {
+            formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 0);
     };
 
     const handleCourseSelect = async (course) => {
@@ -195,6 +202,10 @@ const CourseAccreditations = ({ user }) => {
             alert('Failed to load accreditation details');
         } finally {
             setFormLoading(false);
+            // Scroll to form after loading
+            setTimeout(() => {
+                formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 100);
         }
     };
 
@@ -417,7 +428,7 @@ const CourseAccreditations = ({ user }) => {
             {/* Main Content */}
             <div className="max-w-7xl mx-auto px-6 py-8">
                 {/* Form Section */}
-                <div className="bg-white rounded-lg border border-gray-200 mb-8 p-6 shadow-sm">
+                <div ref={formRef} className="bg-white rounded-lg border border-gray-200 mb-8 p-6 shadow-sm">
                         <div className="flex items-center justify-between mb-6">
                             <h2 className="text-2xl font-bold text-gray-900">
                                 {isEditing ? 'Edit Accreditation' : 'Create New Accreditation'}
