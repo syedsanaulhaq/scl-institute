@@ -80,8 +80,13 @@ const CourseAccreditationsDetail = () => {
     const navigate = useNavigate();
     const isNew = id === 'new';
     
-    const [loading, setLoading] = useState(!isNew);
+    const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
+    const [courses, setCourses] = useState([]);
+    const [selectedCourseId, setSelectedCourseId] = useState(null);
+    const [courseLoading, setCourseLoading] = useState(true);
+    const [accreditationExists, setAccreditationExists] = useState(false);
+    const [existingAccreditationId, setExistingAccreditationId] = useState(null);
     const [expandedSections, setExpandedSections] = useState({ 1: true });
     const [editingRowIdx, setEditingRowIdx] = useState(null);
     const [editingSection, setEditingSection] = useState(null);
@@ -109,13 +114,108 @@ const CourseAccreditationsDetail = () => {
     });
 
     useEffect(() => {
+        fetchCourses();
         if (!isNew) {
             fetchAccreditation();
-        } else {
-            // Initialize new form with empty sections
-            initializeNewForm();
         }
     }, [id]);
+
+    const fetchCourses = async () => {
+        try {
+            setCourseLoading(true);
+            const response = await axios.get(`${API_URL}/students/courses`);
+            const coursesList = Array.isArray(response.data?.data) ? response.data.data : response.data;
+            setCourses(Array.isArray(coursesList) ? coursesList : []);
+        } catch (err) {
+            console.error('Failed to fetch courses:', err);
+            setCourses([]);
+        } finally {
+            setCourseLoading(false);
+        }
+    };
+
+    const handleCourseSelect = async (courseId) => {
+        setSelectedCourseId(courseId);
+        const course = courses.find(c => c.id === parseInt(courseId));
+        
+        if (course) {
+            // Set the course info
+            setFormData(prev => ({
+                ...prev,
+                course_title: course.fullname || course.course_title || '',
+                course_code: course.shortname || course.course_code || ''
+            }));
+
+            // Check if accreditation already exists for this course
+            try {
+                const response = await axios.get(`${API_URL}/accreditations`, { 
+                    params: { course_id: courseId } 
+                });
+                const existingAccreditation = response.data?.data?.find(acc => acc.course_id === courseId || acc.course_title === (course.fullname || course.course_title));
+                
+                if (existingAccreditation) {
+                    // Load existing accreditation data
+                    setAccreditationExists(true);
+                    setExistingAccreditationId(existingAccreditation.id);
+                    setLoading(true);
+                    try {
+                        const detailResponse = await axios.get(`${API_URL}/accreditations/${existingAccreditation.id}`);
+                        const accreditation = detailResponse.data?.data;
+                        
+                        if (accreditation) {
+                            const sectionsByNum = {};
+                            for (let i = 1; i <= 8; i++) {
+                                sectionsByNum[i] = [];
+                            }
+                            
+                            // If accreditation has tasks, populate them
+                            if (accreditation.tasks) {
+                                accreditation.tasks.forEach(task => {
+                                    const sectionNum = task.section_number || 1;
+                                    if (sectionsByNum[sectionNum]) {
+                                        sectionsByNum[sectionNum].push({
+                                            id: task.id,
+                                            area: task.area || '',
+                                            description: task.description || '',
+                                            source: task.source || '',
+                                            evidence: task.evidence || '',
+                                            responsible: task.responsible || '',
+                                            status: task.status === 'Completed',
+                                            notes: task.notes || ''
+                                        });
+                                    }
+                                });
+                            }
+                            
+                            setFormData({
+                                course_title: accreditation.course_title || '',
+                                course_code: accreditation.course_code || '',
+                                awarding_body: accreditation.awarding_body || '',
+                                application_type: accreditation.application_type || '',
+                                date_started: accreditation.date_started || '',
+                                expected_submission_date: accreditation.expected_submission_date || '',
+                                lead_coordinator: accreditation.lead_coordinator || '',
+                                version: accreditation.version || '1.0',
+                                sections: sectionsByNum
+                            });
+                        }
+                    } catch (err) {
+                        console.error('Failed to fetch accreditation details:', err);
+                    } finally {
+                        setLoading(false);
+                    }
+                } else {
+                    // New accreditation - initialize empty sections
+                    setAccreditationExists(false);
+                    initializeNewForm();
+                }
+            } catch (err) {
+                console.error('Failed to check accreditation:', err);
+                setAccreditationExists(false);
+                initializeNewForm();
+            }
+        }
+    };
 
     const initializeNewForm = () => {
         const sections = {};
@@ -181,62 +281,159 @@ const CourseAccreditationsDetail = () => {
     const handleSave = async () => {
         try {
             setSaving(true);
-            let accreditationId = id;
+            
+            // If coming from course selection on new page
+            if (isNew && selectedCourseId) {
+                if (accreditationExists && existingAccreditationId) {
+                    // Update existing accreditation for this course
+                    await axios.put(`${API_URL}/accreditations/${existingAccreditationId}`, formData);
+                    
+                    // Save all tasks
+                    for (let sectionNum = 1; sectionNum <= 8; sectionNum++) {
+                        let tasks = formData.sections[sectionNum] || [];
+                        
+                        const seen = new Set();
+                        tasks = tasks.filter(task => {
+                            if (!task.area) return false;
+                            const key = `${task.area}|${task.responsible}|${task.description}`;
+                            if (seen.has(key)) {
+                                console.warn('Duplicate task detected and skipped:', key);
+                                return false;
+                            }
+                            seen.add(key);
+                            return true;
+                        });
+                        
+                        for (const task of tasks) {
+                            const taskData = {
+                                section_number: sectionNum,
+                                area: task.area,
+                                description: task.description,
+                                responsible: task.responsible,
+                                status: task.status ? 'Completed' : 'Not Started',
+                                notes: task.notes,
+                                source: task.source,
+                                evidence: task.evidence
+                            };
 
-            // Step 1: Save/Update the accreditation header
-            if (isNew) {
-                const response = await axios.post(`${API_URL}/accreditations`, formData);
-                accreditationId = response.data.data.id;
-            } else {
-                await axios.put(`${API_URL}/accreditations/${accreditationId}`, formData);
-            }
-
-            // Step 2: Save all tasks for each section
-            for (let sectionNum = 1; sectionNum <= 8; sectionNum++) {
-                let tasks = formData.sections[sectionNum] || [];
-                
-                // Deduplicate tasks
-                const seen = new Set();
-                tasks = tasks.filter(task => {
-                    if (!task.area) return false;
-                    const key = `${task.area}|${task.responsible}|${task.description}`;
-                    if (seen.has(key)) {
-                        console.warn('Duplicate task detected and skipped:', key);
-                        return false;
+                            if (task.id) {
+                                await axios.put(
+                                    `${API_URL}/accreditations/${existingAccreditationId}/tasks/${task.id}`,
+                                    taskData
+                                );
+                            } else {
+                                await axios.post(
+                                    `${API_URL}/accreditations/${existingAccreditationId}/tasks`,
+                                    taskData
+                                );
+                            }
+                        }
                     }
-                    seen.add(key);
-                    return true;
-                });
-                
-                for (const task of tasks) {
-                    const taskData = {
-                        section_number: sectionNum,
-                        area: task.area,
-                        description: task.description,
-                        responsible: task.responsible,
-                        status: task.status ? 'Completed' : 'Not Started',
-                        notes: task.notes,
-                        source: task.source,
-                        evidence: task.evidence
-                    };
+                    
+                    navigate('/course-accreditations');
+                } else {
+                    // Create new accreditation
+                    const response = await axios.post(`${API_URL}/accreditations`, formData);
+                    const accreditationId = response.data.data.id;
+                    
+                    // Save all tasks
+                    for (let sectionNum = 1; sectionNum <= 8; sectionNum++) {
+                        let tasks = formData.sections[sectionNum] || [];
+                        
+                        const seen = new Set();
+                        tasks = tasks.filter(task => {
+                            if (!task.area) return false;
+                            const key = `${task.area}|${task.responsible}|${task.description}`;
+                            if (seen.has(key)) {
+                                console.warn('Duplicate task detected and skipped:', key);
+                                return false;
+                            }
+                            seen.add(key);
+                            return true;
+                        });
+                        
+                        for (const task of tasks) {
+                            const taskData = {
+                                section_number: sectionNum,
+                                area: task.area,
+                                description: task.description,
+                                responsible: task.responsible,
+                                status: task.status ? 'Completed' : 'Not Started',
+                                notes: task.notes,
+                                source: task.source,
+                                evidence: task.evidence
+                            };
 
-                    if (task.id) {
-                        // Update existing
-                        await axios.put(
-                            `${API_URL}/accreditations/${accreditationId}/tasks/${task.id}`,
-                            taskData
-                        );
-                    } else {
-                        // Create new
-                        await axios.post(
-                            `${API_URL}/accreditations/${accreditationId}/tasks`,
-                            taskData
-                        );
+                            if (task.id) {
+                                await axios.put(
+                                    `${API_URL}/accreditations/${accreditationId}/tasks/${task.id}`,
+                                    taskData
+                                );
+                            } else {
+                                await axios.post(
+                                    `${API_URL}/accreditations/${accreditationId}/tasks`,
+                                    taskData
+                                );
+                            }
+                        }
+                    }
+                    
+                    navigate('/course-accreditations');
+                }
+            } else {
+                // Old flow: URL-based id
+                let accreditationId = id;
+
+                if (isNew) {
+                    const response = await axios.post(`${API_URL}/accreditations`, formData);
+                    accreditationId = response.data.data.id;
+                } else {
+                    await axios.put(`${API_URL}/accreditations/${accreditationId}`, formData);
+                }
+
+                for (let sectionNum = 1; sectionNum <= 8; sectionNum++) {
+                    let tasks = formData.sections[sectionNum] || [];
+                    
+                    const seen = new Set();
+                    tasks = tasks.filter(task => {
+                        if (!task.area) return false;
+                        const key = `${task.area}|${task.responsible}|${task.description}`;
+                        if (seen.has(key)) {
+                            console.warn('Duplicate task detected and skipped:', key);
+                            return false;
+                        }
+                        seen.add(key);
+                        return true;
+                    });
+                    
+                    for (const task of tasks) {
+                        const taskData = {
+                            section_number: sectionNum,
+                            area: task.area,
+                            description: task.description,
+                            responsible: task.responsible,
+                            status: task.status ? 'Completed' : 'Not Started',
+                            notes: task.notes,
+                            source: task.source,
+                            evidence: task.evidence
+                        };
+
+                        if (task.id) {
+                            await axios.put(
+                                `${API_URL}/accreditations/${accreditationId}/tasks/${task.id}`,
+                                taskData
+                            );
+                        } else {
+                            await axios.post(
+                                `${API_URL}/accreditations/${accreditationId}/tasks`,
+                                taskData
+                            );
+                        }
                     }
                 }
-            }
 
-            navigate('/course-accreditations');
+                navigate('/course-accreditations');
+            }
         } catch (err) {
             console.error('Failed to save:', err);
             alert('Error saving accreditation');
@@ -381,6 +578,43 @@ const CourseAccreditationsDetail = () => {
             </div>
 
             <div className="max-w-7xl mx-auto px-6 py-8 space-y-6">
+                {/* Course Selection - Only on New */}
+                {isNew && (
+                    <div className="bg-white rounded-lg border border-gray-200 p-6">
+                        <h2 className="text-lg font-bold text-gray-900 mb-4">Select Course</h2>
+                        <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-2">Course *</label>
+                            {courseLoading ? (
+                                <div className="text-sm text-gray-600">Loading courses...</div>
+                            ) : (
+                                <>
+                                    <select
+                                        value={selectedCourseId || ''}
+                                        onChange={(e) => handleCourseSelect(e.target.value)}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-scl-purple focus:border-transparent"
+                                    >
+                                        <option value="">-- Select a Course --</option>
+                                        {courses.map(course => (
+                                            <option key={course.id} value={course.id}>
+                                                {course.fullname || course.course_title} ({course.shortname || course.course_code})
+                                            </option>
+                                        ))}
+                                    </select>
+                                    {selectedCourseId && (
+                                        <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded">
+                                            <p className="text-sm text-blue-800">
+                                                {accreditationExists 
+                                                    ? '✓ Accreditation record found - you can update it below' 
+                                                    : '✓ No accreditation record yet - create a new one below'}
+                                            </p>
+                                        </div>
+                                    )}
+                                </>
+                            )}
+                        </div>
+                    </div>
+                )}
+
                 {/* General Info */}
                 <div className="bg-white rounded-lg border border-gray-200 p-6">
                     <h2 className="text-lg font-bold text-gray-900 mb-4">Document Control - General Information</h2>
