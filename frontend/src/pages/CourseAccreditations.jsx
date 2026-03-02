@@ -11,7 +11,6 @@ const CourseAccreditations = ({ user }) => {
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
-    const [showForm, setShowForm] = useState(false);
     const [formLoading, setFormLoading] = useState(false);
 
     // Form state
@@ -106,8 +105,6 @@ const CourseAccreditations = ({ user }) => {
 
     const handleAddNew = () => {
         resetForm();
-        setShowForm(true);
-        setIsEditing(false);
     };
 
     const handleCourseSelect = async (course) => {
@@ -322,7 +319,6 @@ const CourseAccreditations = ({ user }) => {
                 alert('Accreditation created successfully');
             }
 
-            setShowForm(false);
             resetForm();
             fetchAccreditations();
         } catch (error) {
@@ -334,7 +330,6 @@ const CourseAccreditations = ({ user }) => {
     };
 
     const handleCancel = () => {
-        setShowForm(false);
         resetForm();
     };
 
@@ -387,7 +382,7 @@ const CourseAccreditations = ({ user }) => {
                             className="flex items-center gap-2 px-4 py-2 bg-scl-purple text-white rounded-lg hover:bg-scl-purple/90 font-semibold"
                         >
                             <Plus className="w-5 h-5" />
-                            Add New Accreditation
+                            New Accreditation
                         </button>
                     </div>
 
@@ -422,18 +417,11 @@ const CourseAccreditations = ({ user }) => {
             {/* Main Content */}
             <div className="max-w-7xl mx-auto px-6 py-8">
                 {/* Form Section */}
-                {showForm && (
-                    <div className="bg-white rounded-lg border border-gray-200 mb-8 p-6 shadow-sm">
+                <div className="bg-white rounded-lg border border-gray-200 mb-8 p-6 shadow-sm">
                         <div className="flex items-center justify-between mb-6">
                             <h2 className="text-2xl font-bold text-gray-900">
-                                {isEditing ? 'Edit Accreditation' : 'New Accreditation'}
+                                {isEditing ? 'Edit Accreditation' : 'Create New Accreditation'}
                             </h2>
-                            <button
-                                onClick={handleCancel}
-                                className="text-gray-400 hover:text-gray-600"
-                            >
-                                <X className="w-6 h-6" />
-                            </button>
                         </div>
 
                         {/* Course Selection */}
@@ -865,7 +853,7 @@ const CourseAccreditations = ({ user }) => {
                             </>
                         )}
                     </div>
-                )}
+                </div>
 
                 {/* Accreditations Table */}
                 {loading ? (
@@ -890,8 +878,7 @@ const CourseAccreditations = ({ user }) => {
                                 {filteredAccreditations.length === 0 ? (
                                     <tr>
                                         <td colSpan="6" className="px-6 py-8 text-center text-gray-500">
-                                            {showForm ? 'Fill the form above and save to see accreditations' : 'No accreditations found. '}
-                                            <button onClick={handleAddNew} className="text-scl-purple hover:underline font-semibold">Create one</button>
+                                            No accreditations found. Fill the form above and click "Save Accreditation"
                                         </td>
                                     </tr>
                                 ) : (
@@ -911,7 +898,6 @@ const CourseAccreditations = ({ user }) => {
                                                     <button
                                                         onClick={() => {
                                                             handleEditAccreditation(acc.id);
-                                                            setShowForm(true);
                                                         }}
                                                         className="text-scl-purple hover:text-scl-purple/70 transition"
                                                         title="Edit"
