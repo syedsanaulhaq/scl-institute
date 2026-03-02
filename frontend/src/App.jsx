@@ -32,8 +32,6 @@ import StudentSupportHub from './components/student/StudentSupportHub';
 import StudentFees from './components/student/StudentFees';
 import StudentSupport from './components/student/StudentSupport';
 import StudentNotifications from './pages/StudentNotifications';
-import CourseInductions from './pages/CourseInductions';
-import CourseInductionsDetail from './pages/CourseInductionsDetail';
 import CourseAccreditations from './pages/CourseAccreditations';
 import CourseAccreditationDetail from './pages/CourseAccreditationDetail';
 
@@ -231,37 +229,28 @@ function App() {
                         <LoginPage onLoginSuccess={handleLoginSuccess} />
                     )
                 } />
-                <Route path="/course-inductions" element={
-                    user ? (
-                        <Layout user={user} onLogout={handleLogout}>
-                            <CourseInductions user={user} />
-                        </Layout>
-                    ) : (
-                        <LoginPage onLoginSuccess={handleLoginSuccess} />
-                    )
-                } />
-                <Route path="/course-inductions/new" element={
-                    user ? (
-                        <Layout user={user} onLogout={handleLogout}>
-                            <CourseInductionsDetail user={user} />
-                        </Layout>
-                    ) : (
-                        <LoginPage onLoginSuccess={handleLoginSuccess} />
-                    )
-                } />
-                <Route path="/course-inductions/:id/edit" element={
-                    user ? (
-                        <Layout user={user} onLogout={handleLogout}>
-                            <CourseInductionsDetail user={user} />
-                        </Layout>
-                    ) : (
-                        <LoginPage onLoginSuccess={handleLoginSuccess} />
-                    )
-                } />
                 <Route path="/course-accreditations" element={
                     user && user?.role?.toLowerCase() !== 'student' ? (
                         <Layout user={user} onLogout={handleLogout}>
                             <CourseAccreditations user={user} />
+                        </Layout>
+                    ) : (
+                        <LoginPage onLoginSuccess={handleLoginSuccess} />
+                    )
+                } />
+                <Route path="/course-accreditations/new" element={
+                    user && user?.role?.toLowerCase() !== 'student' ? (
+                        <Layout user={user} onLogout={handleLogout}>
+                            <CourseAccreditationDetail user={user} />
+                        </Layout>
+                    ) : (
+                        <LoginPage onLoginSuccess={handleLoginSuccess} />
+                    )
+                } />
+                <Route path="/course-accreditations/:id/edit" element={
+                    user && user?.role?.toLowerCase() !== 'student' ? (
+                        <Layout user={user} onLogout={handleLogout}>
+                            <CourseAccreditationDetail user={user} />
                         </Layout>
                     ) : (
                         <LoginPage onLoginSuccess={handleLoginSuccess} />

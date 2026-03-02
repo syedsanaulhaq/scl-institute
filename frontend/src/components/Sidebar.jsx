@@ -67,7 +67,6 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
                 { name: 'Reports', icon: FileText, path: '/applications-report' }
             ]
         },
-        { name: 'Course Inductions', icon: ClipboardList, path: '/course-inductions' },
         { name: 'Course Accreditations', icon: FileText, path: '/course-accreditations' },
         { name: 'Access LMS', icon: GraduationCap, isSSO: true },
         { name: 'Settings', icon: Settings, path: '/settings' },

@@ -1,448 +1,270 @@
-import { useEffect, useState, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
-import { ChevronDown, ChevronUp, ArrowLeft } from 'lucide-react';
+import { ChevronDown, ChevronUp, Save, X, Plus, Trash2 } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
 
-const SECTION_CONFIG = {
-    1: {
-        title: 'Initial Planning & Approval',
-        tasks: [
-            { area: 'Strategic Fit Assessment', description: 'Confirm course/partnership aligns with college mission & market need' },
-            { area: 'Governing Body Approval in Principle', description: 'Formal approval to proceed' },
-            { area: 'Gap Analysis', description: 'Compare college capabilities vs. awarding body requirements' },
-            { area: 'Resource Plan', description: 'Staffing, facilities, budget needs' }
-        ]
-    },
-    2: {
-        title: 'Application Preparation',
-        tasks: [
-            { area: 'Identify Target Institution', description: 'Research and confirm most suitable awarding body' },
-            { area: 'Institutional Profile Document', description: 'History, governance, quality systems, financial stability' },
-            { area: 'Programme Specification', description: 'Approved content, LOs, mapping to framework' },
-            { area: 'Assessment Strategy', description: 'Weightings, moderation, external examiner' },
-            { area: 'Staff CVs & Qualifications', description: 'To meet awarding body standards' }
-        ]
-    },
-    3: {
-        title: 'Submission & Engagement',
-        tasks: [
-            { area: 'Pre-Application Contact', description: 'Initial discussion with awarding body' },
-            { area: 'Application Dossier Compilation', description: 'Assemble all documents in required format' },
-            { area: 'Formal Submission', description: 'Submit application and confirm receipt' },
-            { area: 'Partner Queries Response', description: 'Clarifications and additional requests' }
-        ]
-    },
-    4: {
-        title: 'Review, Visits & Validation',
-        tasks: [
-            { area: 'Institutional Approval Visit', description: 'Arrange and host awarding body visit' },
-            { area: 'Course Validation Event', description: 'Attend and present course proposal' },
-            { area: 'Response to Conditions', description: 'Implement and document required changes' }
-        ]
-    },
-    5: {
-        title: 'Agreement & Implementation',
-        tasks: [
-            { area: 'Contract Review', description: 'Legal review of agreement terms' },
-            { area: 'Marketing & Recruitment Plan', description: 'Joint plan with partner' },
-            { area: 'Staff Briefing & Training', description: 'Induction on partner processes' },
-            { area: 'Launch Readiness Check', description: 'All requirements met before first intake' }
-        ]
-    },
-    6: {
-        title: 'Post-Approval Monitoring',
-        tasks: [
-            { area: 'Annual Monitoring Report Submission', description: 'Required by partner' },
-            { area: 'Partnership Review Meetings', description: 'Periodic progress meetings' },
-            { area: 'Policy Alignment Updates', description: 'Ensure ongoing compliance' }
-        ]
-    },
-    7: {
-        title: 'Risk & Issue Log',
-        tasks: [
-            { area: 'Risk / Issue', description: 'Describe the risk or issue' }
-        ]
-    },
-    8: {
-        title: 'Sign-off',
-        tasks: [
-            { area: 'Lead Coordinator', description: 'Approval by Lead Coordinator' },
-            { area: 'QA Manager', description: 'Approval by QA Manager' },
-            { area: 'Principal / CEO', description: 'Approval by Principal / CEO' }
-        ]
-    }
-};
+const sections = [
+    { num: 1, title: 'Initial Planning & Approval' },
+    { num: 2, title: 'Application Preparation' },
+    { num: 3, title: 'Submission & Engagement' },
+    { num: 4, title: 'Institutional Visit & Validation' },
+    { num: 5, title: 'Agreement & Implementation' },
+    { num: 6, title: 'Post-Approval Monitoring' },
+    { num: 7, title: 'Risk & Issue Log' },
+    { num: 8, title: 'Sign-off' }
+];
 
-const CourseAccreditationDetail = () => {
-    const { id } = useParams();
+const CourseAccreditationDetail = ({ user }) => {
     const navigate = useNavigate();
-    const isNew = id === 'new';
-    
+    const { id } = useParams();
+    const isNew = !id || id === 'new';
+
     const [loading, setLoading] = useState(!isNew);
     const [saving, setSaving] = useState(false);
-    const [expandedSections, setExpandedSections] = useState({ 1: true });
-    const [editingRowIdx, setEditingRowIdx] = useState(null);
-    const [editingSection, setEditingSection] = useState(null);
-    const sourceInputRef = useRef(null);
-    const evidenceInputRef = useRef(null);
-    const [currentForm, setCurrentForm] = useState({
-        area: '',
-        description: '',
-        source: '',
-        evidence: '',
-        responsible: '',
-        status: false,
-        notes: ''
-    });
-    const [formData, setFormData] = useState({
+    const [expandedSections, setExpandedSections] = useState({});
+
+    // Document Control
+    const [documentControl, setDocumentControl] = useState({
         course_title: '',
-        course_code: '',
         awarding_body: '',
         application_type: '',
-        date_started: '',
         expected_submission_date: '',
         lead_coordinator: '',
         version: '1.0',
-        sections: {}
+        last_updated: new Date().toISOString().split('T')[0]
+    });
+
+    // Form data for each section
+    const [sectionData, setSectionData] = useState({});
+
+    // Risk & Issue Log (Section 7)
+    const [risks, setRisks] = useState([]);
+    const [newRisk, setNewRisk] = useState({
+        impact: '',
+        mitigation: '',
+        owner: '',
+        review_date: '',
+        status: 'Open'
+    });
+
+    // Sign-offs (Section 8)
+    const [signoffs, setSignoffs] = useState([]);
+    const [newSignoff, setNewSignoff] = useState({
+        name: '',
+        role: '',
+        sign_date: ''
     });
 
     useEffect(() => {
         if (!isNew) {
-            fetchAccreditation();
+            fetchAccreditationDetail();
         } else {
-            initializeNewForm();
+            // Initialize all sections as empty
+            sections.forEach(section => {
+                setSectionData(prev => ({
+                    ...prev,
+                    [section.num]: []
+                }));
+            });
         }
     }, [id]);
 
-    const initializeNewForm = () => {
-        const sections = {};
-        for (let i = 1; i <= 8; i++) {
-            sections[i] = [];
-        }
-        setFormData(prev => ({ ...prev, sections }));
-    };
-
-    const fetchAccreditation = async () => {
+    const fetchAccreditationDetail = async () => {
         try {
+            setLoading(true);
             const response = await axios.get(`${API_URL}/accreditations/${id}`);
-            const bundle = response.data?.data;
-            
-            if (!bundle || !bundle.accreditation) {
-                throw new Error('Invalid data structure');
+            const data = response.data?.data;
+
+            if (data) {
+                setDocumentControl(data.documentControl || {});
+                setSectionData(data.sections || {});
+                setRisks(data.risks || []);
+                setSignoffs(data.signoffs || []);
             }
-            
-            const accreditation = bundle.accreditation;
-            const tasks = bundle.tasks || [];
-            
-            // Group tasks by section_number
-            const sectionsByNum = {};
-            for (let i = 1; i <= 8; i++) {
-                sectionsByNum[i] = [];
-            }
-            
-            tasks.forEach(task => {
-                const sectionNum = task.section_number || 1;
-                if (sectionsByNum[sectionNum]) {
-                    sectionsByNum[sectionNum].push({
-                        id: task.id,  // Track the database ID for update/delete
-                        area: task.task_name || '',
-                        description: task.description || '',
-                        source: task.evidence_links?.split('|')[0] || '',
-                        evidence: task.evidence_links?.split('|')[1] || '',
-                        responsible: task.responsible_person || '',
-                        status: task.status === 'Completed',
-                        notes: task.notes || ''
-                    });
-                }
-            });
-            
-            setFormData({
-                course_title: accreditation.course_title || '',
-                course_code: accreditation.course_code || '',
-                awarding_body: accreditation.awarding_body || '',
-                application_type: accreditation.application_type || '',
-                date_started: accreditation.date_started || '',
-                expected_submission_date: accreditation.expected_submission_date || '',
-                lead_coordinator: accreditation.lead_coordinator || '',
-                version: accreditation.version || '1.0',
-                sections: sectionsByNum
-            });
         } catch (err) {
             console.error('Failed to fetch accreditation:', err);
-            alert('Error loading accreditation data');
         } finally {
             setLoading(false);
         }
     };
 
+    const toggleSection = (sectionNum) => {
+        setExpandedSections(prev => ({
+            ...prev,
+            [sectionNum]: !prev[sectionNum]
+        }));
+    };
+
+    const handleDocumentControlChange = (field, value) => {
+        setDocumentControl(prev => ({
+            ...prev,
+            [field]: value,
+            last_updated: new Date().toISOString().split('T')[0]
+        }));
+    };
+
+    const handleSectionTaskChange = (sectionNum, taskIndex, field, value) => {
+        setSectionData(prev => {
+            const updatedSection = [...(prev[sectionNum] || [])];
+            if (!updatedSection[taskIndex]) {
+                updatedSection[taskIndex] = {};
+            }
+            updatedSection[taskIndex][field] = value;
+            return {
+                ...prev,
+                [sectionNum]: updatedSection
+            };
+        });
+    };
+
+    const addTaskToSection = (sectionNum) => {
+        setSectionData(prev => ({
+            ...prev,
+            [sectionNum]: [
+                ...(prev[sectionNum] || []),
+                {
+                    description: '',
+                    evidence_required: '',
+                    source_reference: '',
+                    responsible_person: '',
+                    due_date: '',
+                    status: 'Not Started',
+                    notes: ''
+                }
+            ]
+        }));
+    };
+
+    const removeTaskFromSection = (sectionNum, taskIndex) => {
+        setSectionData(prev => {
+            const updatedSection = prev[sectionNum].filter((_, i) => i !== taskIndex);
+            return {
+                ...prev,
+                [sectionNum]: updatedSection
+            };
+        });
+    };
+
+    const addRisk = () => {
+        if (newRisk.impact && newRisk.mitigation && newRisk.owner) {
+            setRisks([...risks, { ...newRisk, id: Date.now() }]);
+            setNewRisk({ impact: '', mitigation: '', owner: '', review_date: '', status: 'Open' });
+        }
+    };
+
+    const removeRisk = (riskId) => {
+        setRisks(risks.filter(r => r.id !== riskId));
+    };
+
+    const addSignoff = () => {
+        if (newSignoff.name && newSignoff.role) {
+            setSignoffs([...signoffs, { ...newSignoff, id: Date.now() }]);
+            setNewSignoff({ name: '', role: '', sign_date: '' });
+        }
+    };
+
+    const removeSignoff = (signoffId) => {
+        setSignoffs(signoffs.filter(s => s.id !== signoffId));
+    };
+
     const handleSave = async () => {
         try {
             setSaving(true);
-            let accreditationId = id;
+            const payload = {
+                documentControl,
+                sections: sectionData,
+                risks,
+                signoffs
+            };
 
-            // Step 1: Save/Update the accreditation header
             if (isNew) {
-                const response = await axios.post(`${API_URL}/accreditations`, formData);
-                accreditationId = response.data.data.id;
+                await axios.post(`${API_URL}/accreditations`, payload);
             } else {
-                await axios.put(`${API_URL}/accreditations/${accreditationId}`, formData);
-            }
-
-            // Step 2: Save all tasks for each section
-            for (let sectionNum = 1; sectionNum <= 8; sectionNum++) {
-                let tasks = formData.sections[sectionNum] || [];
-                
-                // Deduplicate tasks before saving
-                const seen = new Set();
-                tasks = tasks.filter(task => {
-                    if (!task.area) return false; // Skip empty tasks
-                    const key = `${task.area}|${task.responsible}|${task.description}`;
-                    if (seen.has(key)) {
-                        console.warn('Duplicate task detected and skipped:', key);
-                        return false; // Skip duplicates
-                    }
-                    seen.add(key);
-                    return true;
-                });
-                
-                for (const task of tasks) {
-                    // Prepare task data
-                    const taskData = {
-                        section_number: sectionNum,
-                        section_title: SECTION_CONFIG[sectionNum].title,
-                        task_name: task.area,
-                        description: task.description,
-                        responsible_person: task.responsible,
-                        status: task.status ? 'Completed' : 'Not Started',
-                        notes: task.notes,
-                        evidence_links: task.source && task.evidence ? `${task.source}|${task.evidence}` : ''
-                    };
-
-                    // If task has an ID, it's an existing one - update it
-                    if (task.id) {
-                        await axios.put(
-                            `${API_URL}/accreditations/${accreditationId}/tasks/${task.id}`,
-                            taskData
-                        );
-                    } else {
-                        // New task - create it
-                        await axios.post(
-                            `${API_URL}/accreditations/${accreditationId}/tasks`,
-                            taskData
-                        );
-                    }
-                }
+                await axios.put(`${API_URL}/accreditations/${id}`, payload);
             }
 
             navigate('/course-accreditations');
         } catch (err) {
             console.error('Failed to save:', err);
-            alert('Error saving accreditation');
+            alert('Failed to save accreditation: ' + (err.response?.data?.message || err.message));
         } finally {
             setSaving(false);
         }
     };
 
-    const toggleSection = (num) => {
-        setExpandedSections(prev => ({
-            ...prev,
-            [num]: !prev[num]
-        }));
-    };
-
-    const handleInputChange = (field, value) => {
-        setFormData(prev => ({
-            ...prev,
-            [field]: value
-        }));
-    };
-
-    const updateTask = (sectionNum, rowIdx, field, value) => {
-        setFormData(prev => {
-            const newData = { ...prev };
-            if (!newData.sections[sectionNum]) {
-                newData.sections[sectionNum] = [];
-            }
-            newData.sections[sectionNum][rowIdx] = {
-                ...newData.sections[sectionNum][rowIdx],
-                [field]: value
-            };
-            return newData;
-        });
-    };
-
-    const handleAddTask = (sectionNum) => {
-        if (!currentForm.area) {
-            alert('Please select a task area');
-            return;
-        }
-        
-        setFormData(prev => {
-            const newData = { ...prev };
-            if (!newData.sections[sectionNum]) {
-                newData.sections[sectionNum] = [];
-            }
-            
-            if (editingRowIdx !== null && editingSection === sectionNum) {
-                // Update existing - keep the ID if it exists
-                const existingId = newData.sections[sectionNum][editingRowIdx]?.id;
-                newData.sections[sectionNum][editingRowIdx] = { 
-                    ...currentForm,
-                    id: existingId // Preserve ID for existing records
-                };
-            } else {
-                // Check if task already exists in this section (prevent duplicates)
-                const alreadyExists = newData.sections[sectionNum].some(
-                    task => task.area === currentForm.area && task.responsible === currentForm.responsible
-                );
-                
-                if (alreadyExists) {
-                    alert('This task already exists in this section');
-                    return newData; // Don't add duplicate
-                }
-                
-                // Add new - generate temporary ID if not from database
-                const newTask = { 
-                    ...currentForm,
-                    tempId: `temp_${Date.now()}_${Math.random()}`  // Temporary unique ID
-                };
-                newData.sections[sectionNum].push(newTask);
-            }
-            return newData;
-        });
-        
-        handleFormReset();
-    };
-
-    const handleEditTask = (sectionNum, rowIdx) => {
-        setCurrentForm(formData.sections[sectionNum][rowIdx]);
-        setEditingRowIdx(rowIdx);
-        setEditingSection(sectionNum);
-    };
-
-    const handleDeleteTask = (sectionNum, rowIdx) => {
-        setFormData(prev => {
-            const newData = { ...prev };
-            const deletedTask = newData.sections[sectionNum][rowIdx];
-            
-            // If task has an ID, delete it from the database immediately
-            if (deletedTask.id && !isNew) {
-                axios.delete(`${API_URL}/accreditations/${id}/tasks/${deletedTask.id}`)
-                    .catch(err => console.error('Failed to delete task from database:', err));
-            }
-            
-            newData.sections[sectionNum].splice(rowIdx, 1);
-            return newData;
-        });
-    };
-
-    const handleFormReset = () => {
-        setCurrentForm({
-            area: '',
-            description: '',
-            source: '',
-            evidence: '',
-            responsible: '',
-            status: false,
-            notes: ''
-        });
-        // Clear file input elements
-        if (sourceInputRef.current) sourceInputRef.current.value = '';
-        if (evidenceInputRef.current) evidenceInputRef.current.value = '';
-        setEditingRowIdx(null);
-        setEditingSection(null);
-    };
-
     if (loading) {
-        return <div className="flex items-center justify-center h-96">Loading...</div>;
+        return <div className="flex items-center justify-center h-96"><div className="animate-spin">⏳</div></div>;
     }
 
     return (
-        <div className="bg-gray-50 min-h-screen">
-            {/* Header */}
-            <div className="bg-white border-b border-gray-200 sticky top-0 z-40">
-                <div className="max-w-7xl mx-auto px-6 py-4">
-                    <div className="flex items-center gap-4">
+        <div className="bg-gray-50 min-h-screen py-8">
+            <div className="max-w-6xl mx-auto px-6">
+                {/* Header */}
+                <div className="flex items-center justify-between mb-6">
+                    <h1 className="text-3xl font-bold text-gray-900">
+                        {isNew ? 'New Course Accreditation' : 'Edit Accreditation'}
+                    </h1>
+                    <div className="flex gap-3">
                         <button
                             onClick={() => navigate('/course-accreditations')}
-                            className="p-2 hover:bg-gray-100 rounded-lg transition"
+                            className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-semibold"
                         >
-                            <ArrowLeft className="w-5 h-5" />
+                            <X className="w-4 h-4 inline mr-2" />
+                            Cancel
                         </button>
-                        <div>
-                            <h1 className="text-2xl font-bold text-gray-900">
-                                {isNew ? 'New Accreditation' : 'Edit Accreditation'}
-                            </h1>
-                            <p className="text-sm text-gray-600">Fill in all the accreditation requirements</p>
-                        </div>
+                        <button
+                            onClick={handleSave}
+                            disabled={saving}
+                            className="px-4 py-2 bg-scl-purple text-white rounded-lg hover:bg-scl-purple/90 font-semibold disabled:opacity-50"
+                        >
+                            <Save className="w-4 h-4 inline mr-2" />
+                            {saving ? 'Saving...' : 'Save'}
+                        </button>
                     </div>
                 </div>
-            </div>
 
-            <div className="max-w-7xl mx-auto px-6 py-8 space-y-6">
-                {/* General Info */}
-                <div className="bg-white rounded-lg border border-gray-200 p-6">
-                    <h2 className="text-lg font-bold text-gray-900 mb-4">Document Control - General Information</h2>
-                    <div className="grid grid-cols-2 gap-4">
+                {/* Document Control Section */}
+                <div className="bg-white rounded-lg border border-gray-200 p-6 mb-6 shadow-sm">
+                    <h2 className="text-lg font-bold text-gray-900 mb-4">📄 Document Control</h2>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label className="block text-sm font-semibold text-gray-700 mb-1">Course Title *</label>
                             <input
                                 type="text"
-                                value={formData.course_title}
-                                onChange={(e) => handleInputChange('course_title', e.target.value)}
-                                disabled={!isNew}
-                                className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-scl-purple focus:border-transparent ${!isNew ? 'bg-gray-100 cursor-not-allowed' : ''}`}
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-semibold text-gray-700 mb-1">Course Code</label>
-                            <input
-                                type="text"
-                                value={formData.course_code}
-                                onChange={(e) => handleInputChange('course_code', e.target.value)}
-                                disabled={!isNew}
-                                className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-scl-purple focus:border-transparent ${!isNew ? 'bg-gray-100 cursor-not-allowed' : ''}`}
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-semibold text-gray-700 mb-1">Awarding Body</label>
-                            <input
-                                type="text"
-                                value={formData.awarding_body}
-                                onChange={(e) => handleInputChange('awarding_body', e.target.value)}
+                                value={documentControl.course_title}
+                                onChange={(e) => handleDocumentControlChange('course_title', e.target.value)}
                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-scl-purple focus:border-transparent"
+                                placeholder="Enter course title"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-1">Awarding Body / University</label>
+                            <input
+                                type="text"
+                                value={documentControl.awarding_body}
+                                onChange={(e) => handleDocumentControlChange('awarding_body', e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-scl-purple focus:border-transparent"
+                                placeholder="e.g. University, Awarding Body"
                             />
                         </div>
                         <div>
                             <label className="block text-sm font-semibold text-gray-700 mb-1">Application Type</label>
-                            <select
-                                value={formData.application_type}
-                                onChange={(e) => handleInputChange('application_type', e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-scl-purple focus:border-transparent"
-                            >
-                                <option value="">Select...</option>
-                                <option value="New Course Accreditation">New Course Accreditation</option>
-                                <option value="Partnership Agreement">Partnership Agreement</option>
-                                <option value="Revalidation">Revalidation</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label className="block text-sm font-semibold text-gray-700 mb-1">Date Started</label>
                             <input
-                                type="date"
-                                value={formData.date_started}
-                                onChange={(e) => handleInputChange('date_started', e.target.value)}
+                                type="text"
+                                value={documentControl.application_type}
+                                onChange={(e) => handleDocumentControlChange('application_type', e.target.value)}
                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-scl-purple focus:border-transparent"
+                                placeholder="e.g. New, Reaccreditation, Partnership"
                             />
                         </div>
                         <div>
                             <label className="block text-sm font-semibold text-gray-700 mb-1">Expected Submission Date</label>
                             <input
                                 type="date"
-                                value={formData.expected_submission_date}
-                                onChange={(e) => handleInputChange('expected_submission_date', e.target.value)}
+                                value={documentControl.expected_submission_date}
+                                onChange={(e) => handleDocumentControlChange('expected_submission_date', e.target.value)}
                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-scl-purple focus:border-transparent"
                             />
                         </div>
@@ -450,221 +272,335 @@ const CourseAccreditationDetail = () => {
                             <label className="block text-sm font-semibold text-gray-700 mb-1">Lead Coordinator</label>
                             <input
                                 type="text"
-                                value={formData.lead_coordinator}
-                                onChange={(e) => handleInputChange('lead_coordinator', e.target.value)}
+                                value={documentControl.lead_coordinator}
+                                onChange={(e) => handleDocumentControlChange('lead_coordinator', e.target.value)}
                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-scl-purple focus:border-transparent"
+                                placeholder="Name"
                             />
                         </div>
                         <div>
                             <label className="block text-sm font-semibold text-gray-700 mb-1">Version</label>
                             <input
                                 type="text"
-                                value={formData.version}
-                                onChange={(e) => handleInputChange('version', e.target.value)}
+                                value={documentControl.version}
+                                onChange={(e) => handleDocumentControlChange('version', e.target.value)}
                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-scl-purple focus:border-transparent"
                             />
                         </div>
                     </div>
+                    <div className="mt-4 text-xs text-gray-500">
+                        Last Updated: {documentControl.last_updated}
+                    </div>
                 </div>
 
-                {/* Sections with Form and Table */}
-                {[1, 2, 3, 4, 5, 6, 7, 8].map(sectionNum => (
-                    <div key={sectionNum} className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                {/* Numbered Sections 1-6 */}
+                {sections.slice(0, 6).map(section => (
+                    <div key={section.num} className="bg-white rounded-lg border border-gray-200 mb-4 shadow-sm">
                         <button
-                            onClick={() => toggleSection(sectionNum)}
-                            className="w-full px-6 py-4 bg-scl-purple/10 hover:bg-scl-purple/20 text-left font-semibold text-gray-900 flex items-center justify-between transition"
+                            onClick={() => toggleSection(section.num)}
+                            className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition"
                         >
-                            <span>Section {sectionNum}: {SECTION_CONFIG[sectionNum].title}</span>
-                            {expandedSections[sectionNum] ? (
-                                <ChevronUp className="w-5 h-5" />
+                            <h3 className="text-lg font-bold text-gray-900">
+                                Section {section.num} – {section.title}
+                            </h3>
+                            {expandedSections[section.num] ? (
+                                <ChevronUp className="w-5 h-5 text-gray-600" />
                             ) : (
-                                <ChevronDown className="w-5 h-5" />
+                                <ChevronDown className="w-5 h-5 text-gray-600" />
                             )}
                         </button>
 
-                        {expandedSections[sectionNum] && (
-                            <div className="p-6 border-t border-gray-200">
-                                {/* Form at Top */}
-                                <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 mb-4">
-                                    <h4 className="font-semibold text-gray-900 mb-3 text-sm">
-                                        {editingRowIdx !== null && editingSection === sectionNum ? 'Edit Task' : 'Add New Task'}
-                                    </h4>
-                                    
-                                    {/* Row 1: Task Area (full width) */}
-                                    <div className="mb-2">
-                                        <label className="block text-xs font-semibold text-gray-700 mb-0.5">Task Area *</label>
-                                        <select
-                                            value={currentForm.area}
-                                            onChange={(e) => {
-                                                const selectedTask = SECTION_CONFIG[sectionNum].tasks.find(t => t.area === e.target.value);
-                                                setCurrentForm(prev => ({
-                                                    ...prev,
-                                                    area: e.target.value,
-                                                    description: selectedTask?.description || ''
-                                                }));
-                                            }}
-                                            className="w-full px-2 py-1 border border-gray-300 rounded text-xs"
-                                        >
-                                            <option value="">Select Area</option>
-                                            {SECTION_CONFIG[sectionNum].tasks.map(task => (
-                                                <option key={task.area} value={task.area}>{task.area}</option>
-                                            ))}
-                                        </select>
-                                    </div>
+                        {expandedSections[section.num] && (
+                            <div className="px-6 py-4 border-t border-gray-200">
+                                <div className="space-y-4">
+                                    {(sectionData[section.num] || []).map((task, idx) => (
+                                        <div key={idx} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+                                                <div>
+                                                    <label className="block text-xs font-semibold text-gray-600 mb-1">Task / Requirement</label>
+                                                    <input
+                                                        type="text"
+                                                        value={task.description || ''}
+                                                        onChange={(e) => handleSectionTaskChange(section.num, idx, 'description', e.target.value)}
+                                                        className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                                                        placeholder="Describe the task"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-xs font-semibold text-gray-600 mb-1">Status</label>
+                                                    <select
+                                                        value={task.status || 'Not Started'}
+                                                        onChange={(e) => handleSectionTaskChange(section.num, idx, 'status', e.target.value)}
+                                                        className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                                                    >
+                                                        <option>Not Started</option>
+                                                        <option>In Progress</option>
+                                                        <option>Completed</option>
+                                                    </select>
+                                                </div>
+                                            </div>
 
-                                    {/* Row 2: Description & Responsible Person */}
-                                    <div className="grid grid-cols-3 gap-2 mb-2">
-                                        <div className="col-span-2">
-                                            <label className="block text-xs font-semibold text-gray-700 mb-0.5">Description</label>
-                                            <textarea
-                                                value={currentForm.description}
-                                                onChange={(e) => setCurrentForm(prev => ({ ...prev, description: e.target.value }))}
-                                                placeholder={SECTION_CONFIG[sectionNum].tasks.find(t => t.area === currentForm.area)?.description || 'Type description here...'}
-                                                className="w-full px-2 py-1 border border-gray-300 rounded text-xs"
-                                                rows="2"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs font-semibold text-gray-700 mb-0.5">Responsible Person</label>
-                                            <input
-                                                type="text"
-                                                value={currentForm.responsible}
-                                                onChange={(e) => setCurrentForm(prev => ({ ...prev, responsible: e.target.value }))}
-                                                placeholder="Name"
-                                                className="w-full px-2 py-1 border border-gray-300 rounded text-xs"
-                                            />
-                                        </div>
-                                    </div>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+                                                <div>
+                                                    <label className="block text-xs font-semibold text-gray-600 mb-1">Evidence Required</label>
+                                                    <input
+                                                        type="text"
+                                                        value={task.evidence_required || ''}
+                                                        onChange={(e) => handleSectionTaskChange(section.num, idx, 'evidence_required', e.target.value)}
+                                                        className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                                                        placeholder="What evidence"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-xs font-semibold text-gray-600 mb-1">Source / Reference</label>
+                                                    <input
+                                                        type="text"
+                                                        value={task.source_reference || ''}
+                                                        onChange={(e) => handleSectionTaskChange(section.num, idx, 'source_reference', e.target.value)}
+                                                        className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                                                        placeholder="Source"
+                                                    />
+                                                </div>
+                                            </div>
 
-                                    {/* Row 3: Source & Evidence File Uploads */}
-                                    <div className="grid grid-cols-3 gap-2 mb-2">
-                                        <div>
-                                            <label className="block text-xs font-semibold text-gray-700 mb-0.5">Source (File)</label>
-                                            <input
-                                                ref={sourceInputRef}
-                                                type="file"
-                                                onChange={(e) => setCurrentForm(prev => ({ ...prev, source: e.target.files ? e.target.files[0].name : '' }))}
-                                                className="w-full text-xs"
-                                            />
-                                            {currentForm.source && <p className="text-xs text-gray-600 mt-0.5">✓ {currentForm.source.substring(0, 20)}</p>}
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs font-semibold text-gray-700 mb-0.5">Evidence (File)</label>
-                                            <input
-                                                ref={evidenceInputRef}
-                                                type="file"
-                                                onChange={(e) => setCurrentForm(prev => ({ ...prev, evidence: e.target.files ? e.target.files[0].name : '' }))}
-                                                className="w-full text-xs"
-                                            />
-                                            {currentForm.evidence && <p className="text-xs text-gray-600 mt-0.5">✓ {currentForm.evidence.substring(0, 20)}</p>}
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs font-semibold text-gray-700 mb-0.5">Review Notes</label>
-                                            <textarea
-                                                value={currentForm.notes}
-                                                onChange={(e) => setCurrentForm(prev => ({ ...prev, notes: e.target.value }))}
-                                                placeholder="Notes..."
-                                                className="w-full px-2 py-1 border border-gray-300 rounded text-xs"
-                                                rows="2"
-                                            />
-                                        </div>
-                                    </div>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+                                                <div>
+                                                    <label className="block text-xs font-semibold text-gray-600 mb-1">Responsible Person</label>
+                                                    <input
+                                                        type="text"
+                                                        value={task.responsible_person || ''}
+                                                        onChange={(e) => handleSectionTaskChange(section.num, idx, 'responsible_person', e.target.value)}
+                                                        className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                                                        placeholder="Person"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-xs font-semibold text-gray-600 mb-1">Due Date</label>
+                                                    <input
+                                                        type="date"
+                                                        value={task.due_date || ''}
+                                                        onChange={(e) => handleSectionTaskChange(section.num, idx, 'due_date', e.target.value)}
+                                                        className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                                                    />
+                                                </div>
+                                            </div>
 
-                                    {/* Row 4: Status Checkbox & Buttons */}
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-2">
-                                            <input
-                                                type="checkbox"
-                                                checked={currentForm.status}
-                                                onChange={(e) => setCurrentForm(prev => ({ ...prev, status: e.target.checked }))}
-                                                className="w-4 h-4"
-                                            />
-                                            <label className="text-xs font-semibold text-gray-700">Complete</label>
-                                        </div>
-                                        <div className="flex gap-2">
+                                            <div className="mb-3">
+                                                <label className="block text-xs font-semibold text-gray-600 mb-1">Notes / Progress</label>
+                                                <textarea
+                                                    value={task.notes || ''}
+                                                    onChange={(e) => handleSectionTaskChange(section.num, idx, 'notes', e.target.value)}
+                                                    className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                                                    rows="2"
+                                                    placeholder="Notes"
+                                                />
+                                            </div>
+
                                             <button
-                                                onClick={() => handleAddTask(sectionNum)}
-                                                className="px-3 py-1 bg-scl-purple text-white rounded text-xs font-semibold hover:bg-scl-purple/90"
+                                                onClick={() => removeTaskFromSection(section.num, idx)}
+                                                className="text-red-500 hover:text-red-700 text-sm font-semibold"
                                             >
-                                                {editingRowIdx !== null && editingSection === sectionNum ? 'Update' : 'Add'}
+                                                <Trash2 className="w-4 h-4 inline mr-1" />
+                                                Remove
                                             </button>
-                                            {(editingRowIdx !== null || currentForm.area) && (
-                                                <button
-                                                    onClick={handleFormReset}
-                                                    className="px-3 py-1 border border-gray-300 rounded text-xs font-semibold text-gray-700 hover:bg-gray-100"
-                                                >
-                                                    Cancel
-                                                </button>
-                                            )}
                                         </div>
-                                    </div>
-                                </div>
+                                    ))}
 
-                                {/* Table at Bottom */}
-                                {(formData.sections[sectionNum] || []).length > 0 && (
-                                    <div className="overflow-x-auto">
-                                        <table className="w-full text-sm border-collapse">
-                                            <thead>
-                                                <tr className="bg-gray-100">
-                                                    <th className="border border-gray-300 px-3 py-2 text-left font-semibold">Task Area</th>
-                                                    <th className="border border-gray-300 px-3 py-2 text-left font-semibold">Description</th>
-                                                    <th className="border border-gray-300 px-3 py-2 text-left font-semibold">Responsible</th>
-                                                    <th className="border border-gray-300 px-3 py-2 text-center font-semibold">Status</th>
-                                                    <th className="border border-gray-300 px-3 py-2 text-center font-semibold">Actions</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {(formData.sections[sectionNum] || []).map((task, idx) => (
-                                                    <tr key={task.id || task.tempId || idx} className="hover:bg-blue-50">
-                                                        <td className="border border-gray-300 px-3 py-2 text-sm font-medium">{task.area}</td>
-                                                        <td className="border border-gray-300 px-3 py-2 text-sm">{task.description.substring(0, 50)}...</td>
-                                                        <td className="border border-gray-300 px-3 py-2 text-sm">{task.responsible}</td>
-                                                        <td className="border border-gray-300 px-3 py-2 text-center">
-                                                            {task.status ? <span className="text-green-600 font-semibold">✓</span> : <span className="text-gray-400">○</span>}
-                                                        </td>
-                                                        <td className="border border-gray-300 px-3 py-2 text-center">
-                                                            <button
-                                                                onClick={() => handleEditTask(sectionNum, idx)}
-                                                                className="text-blue-500 hover:text-blue-700 font-semibold text-sm mr-2"
-                                                            >
-                                                                Edit
-                                                            </button>
-                                                            <button
-                                                                onClick={() => {
-                                                                    if (window.confirm('Delete this task?')) {
-                                                                        handleDeleteTask(sectionNum, idx);
-                                                                    }
-                                                                }}
-                                                                className="text-red-500 hover:text-red-700 font-semibold text-sm"
-                                                            >
-                                                                Delete
-                                                            </button>
-                                                        </td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                )}
+                                    <button
+                                        onClick={() => addTaskToSection(section.num)}
+                                        className="w-full px-4 py-2 border-2 border-dashed border-scl-purple text-scl-purple rounded-lg hover:bg-scl-purple/5 font-semibold"
+                                    >
+                                        <Plus className="w-4 h-4 inline mr-2" />
+                                        Add Task
+                                    </button>
+                                </div>
                             </div>
                         )}
                     </div>
                 ))}
 
+                {/* Section 7 - Risk & Issue Log */}
+                <div className="bg-white rounded-lg border border-gray-200 mb-4 shadow-sm">
+                    <button
+                        onClick={() => toggleSection(7)}
+                        className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition"
+                    >
+                        <h3 className="text-lg font-bold text-gray-900">Section 7 – Risk & Issue Log</h3>
+                        {expandedSections[7] ? (
+                            <ChevronUp className="w-5 h-5 text-gray-600" />
+                        ) : (
+                            <ChevronDown className="w-5 h-5 text-gray-600" />
+                        )}
+                    </button>
+
+                    {expandedSections[7] && (
+                        <div className="px-6 py-4 border-t border-gray-200">
+                            <div className="space-y-4">
+                                {risks.map((risk) => (
+                                    <div key={risk.id} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+                                            <div>
+                                                <label className="block text-xs font-semibold text-gray-600 mb-1">Risk / Issue</label>
+                                                <input type="text" value={risk.impact} readOnly className="w-full px-2 py-1 border border-gray-300 rounded text-sm bg-gray-100" />
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-semibold text-gray-600 mb-1">Status</label>
+                                                <select
+                                                    value={risk.status}
+                                                    onChange={(e) => {
+                                                        const updated = risks.map(r => r.id === risk.id ? { ...r, status: e.target.value } : r);
+                                                        setRisks(updated);
+                                                    }}
+                                                    className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                                                >
+                                                    <option>Open</option>
+                                                    <option>In Progress</option>
+                                                    <option>Resolved</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+                                            <div>
+                                                <label className="block text-xs font-semibold text-gray-600 mb-1">Owner</label>
+                                                <input type="text" value={risk.owner} readOnly className="w-full px-2 py-1 border border-gray-300 rounded text-sm bg-gray-100" />
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-semibold text-gray-600 mb-1">Review Date</label>
+                                                <input type="date" value={risk.review_date} readOnly className="w-full px-2 py-1 border border-gray-300 rounded text-sm bg-gray-100" />
+                                            </div>
+                                        </div>
+                                        <div className="mb-3">
+                                            <label className="block text-xs font-semibold text-gray-600 mb-1">Mitigation</label>
+                                            <textarea value={risk.mitigation} readOnly className="w-full px-2 py-1 border border-gray-300 rounded text-sm bg-gray-100" rows="2" />
+                                        </div>
+                                        <button onClick={() => removeRisk(risk.id)} className="text-red-500 hover:text-red-700 text-sm font-semibold">
+                                            <Trash2 className="w-4 h-4 inline mr-1" />
+                                            Remove
+                                        </button>
+                                    </div>
+                                ))}
+
+                                <div className="border border-gray-200 rounded-lg p-4 bg-blue-50">
+                                    <h4 className="font-semibold text-gray-900 mb-3">Add Risk</h4>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+                                        <input
+                                            type="text"
+                                            value={newRisk.impact}
+                                            onChange={(e) => setNewRisk({ ...newRisk, impact: e.target.value })}
+                                            className="px-2 py-1 border border-gray-300 rounded text-sm"
+                                            placeholder="Risk"
+                                        />
+                                        <input
+                                            type="text"
+                                            value={newRisk.owner}
+                                            onChange={(e) => setNewRisk({ ...newRisk, owner: e.target.value })}
+                                            className="px-2 py-1 border border-gray-300 rounded text-sm"
+                                            placeholder="Owner"
+                                        />
+                                    </div>
+                                    <textarea
+                                        value={newRisk.mitigation}
+                                        onChange={(e) => setNewRisk({ ...newRisk, mitigation: e.target.value })}
+                                        className="w-full px-2 py-1 border border-gray-300 rounded text-sm mb-3"
+                                        rows="2"
+                                        placeholder="Mitigation"
+                                    />
+                                    <input
+                                        type="date"
+                                        value={newRisk.review_date}
+                                        onChange={(e) => setNewRisk({ ...newRisk, review_date: e.target.value })}
+                                        className="w-full px-2 py-1 border border-gray-300 rounded text-sm mb-3"
+                                    />
+                                    <button onClick={addRisk} className="px-4 py-2 bg-scl-purple text-white rounded text-sm font-semibold">
+                                        <Plus className="w-4 h-4 inline mr-1" />
+                                        Add
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                {/* Section 8 - Sign-offs */}
+                <div className="bg-white rounded-lg border border-gray-200 mb-4 shadow-sm">
+                    <button
+                        onClick={() => toggleSection(8)}
+                        className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition"
+                    >
+                        <h3 className="text-lg font-bold text-gray-900">Section 8 – Sign-off</h3>
+                        {expandedSections[8] ? (
+                            <ChevronUp className="w-5 h-5 text-gray-600" />
+                        ) : (
+                            <ChevronDown className="w-5 h-5 text-gray-600" />
+                        )}
+                    </button>
+
+                    {expandedSections[8] && (
+                        <div className="px-6 py-4 border-t border-gray-200">
+                            <div className="space-y-4">
+                                {signoffs.map((signoff) => (
+                                    <div key={signoff.id} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
+                                            <input type="text" value={signoff.name} readOnly className="px-2 py-1 border border-gray-300 rounded text-sm bg-gray-100" />
+                                            <input type="text" value={signoff.role} readOnly className="px-2 py-1 border border-gray-300 rounded text-sm bg-gray-100" />
+                                            <input type="date" value={signoff.sign_date} readOnly className="px-2 py-1 border border-gray-300 rounded text-sm bg-gray-100" />
+                                        </div>
+                                        <button onClick={() => removeSignoff(signoff.id)} className="text-red-500 hover:text-red-700 text-sm font-semibold">
+                                            <Trash2 className="w-4 h-4 inline mr-1" />
+                                            Remove
+                                        </button>
+                                    </div>
+                                ))}
+
+                                <div className="border border-gray-200 rounded-lg p-4 bg-green-50">
+                                    <h4 className="font-semibold text-gray-900 mb-3">Add Sign-off</h4>
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
+                                        <input
+                                            type="text"
+                                            value={newSignoff.name}
+                                            onChange={(e) => setNewSignoff({ ...newSignoff, name: e.target.value })}
+                                            className="px-2 py-1 border border-gray-300 rounded text-sm"
+                                            placeholder="Name"
+                                        />
+                                        <input
+                                            type="text"
+                                            value={newSignoff.role}
+                                            onChange={(e) => setNewSignoff({ ...newSignoff, role: e.target.value })}
+                                            className="px-2 py-1 border border-gray-300 rounded text-sm"
+                                            placeholder="Role"
+                                        />
+                                        <input
+                                            type="date"
+                                            value={newSignoff.sign_date}
+                                            onChange={(e) => setNewSignoff({ ...newSignoff, sign_date: e.target.value })}
+                                            className="px-2 py-1 border border-gray-300 rounded text-sm"
+                                        />
+                                    </div>
+                                    <button onClick={addSignoff} className="px-4 py-2 bg-scl-purple text-white rounded text-sm font-semibold">
+                                        <Plus className="w-4 h-4 inline mr-1" />
+                                        Add
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+
                 {/* Footer */}
-                <div className="sticky bottom-0 bg-white border-t border-gray-200 px-6 py-4 flex items-center justify-end gap-3">
+                <div className="flex gap-3 mt-8">
                     <button
                         onClick={() => navigate('/course-accreditations')}
-                        className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-semibold"
+                        className="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-semibold"
                     >
                         Cancel
                     </button>
                     <button
                         onClick={handleSave}
                         disabled={saving}
-                        className="px-4 py-2 bg-scl-purple text-white rounded-lg hover:bg-scl-purple/90 font-semibold disabled:opacity-50"
+                        className="px-6 py-3 bg-scl-purple text-white rounded-lg hover:bg-scl-purple/90 font-semibold disabled:opacity-50"
                     >
-                        {saving ? 'Saving...' : (isNew ? 'Create' : 'Save')}
+                        <Save className="w-4 h-4 inline mr-2" />
+                        {saving ? 'Saving...' : 'Save'}
                     </button>
                 </div>
             </div>
