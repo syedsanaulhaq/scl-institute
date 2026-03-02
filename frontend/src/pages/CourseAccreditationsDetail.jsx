@@ -115,7 +115,7 @@ const CourseAccreditationsDetail = () => {
 
     useEffect(() => {
         fetchCourses();
-        if (!isNew) {
+        if (id && id !== 'new') {
             fetchAccreditation();
         }
     }, [id]);

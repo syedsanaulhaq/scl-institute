@@ -115,7 +115,7 @@ const CourseInductionsDetail = () => {
 
     useEffect(() => {
         fetchCourses();
-        if (!isNew) {
+        if (id && id !== 'new') {
             fetchInduction();
         }
     }, [id]);
