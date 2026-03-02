@@ -73,9 +73,14 @@ const CourseAccreditations = ({ user }) => {
     const fetchCourses = async () => {
         try {
             const response = await axios.get(`${API_URL}/students/courses`);
-            setCourses(response.data || []);
+            // Handle different response structures
+            const coursesData = Array.isArray(response.data) 
+                ? response.data 
+                : response.data?.data || response.data?.courses || [];
+            setCourses(Array.isArray(coursesData) ? coursesData : []);
         } catch (err) {
             console.error('Failed to fetch courses:', err);
+            setCourses([]);
         }
     };
 
@@ -143,7 +148,7 @@ const CourseAccreditations = ({ user }) => {
             const accreditation = response.data?.data || response.data;
             
             // Find matching course
-            const matchedCourse = courses.find(c => c.course_title === accreditation.course_title);
+            const matchedCourse = Array.isArray(courses) && courses.find(c => c.course_title === accreditation.course_title);
             setSelectedCourse(matchedCourse || null);
             setCourseInfo(matchedCourse || null);
             
@@ -439,7 +444,7 @@ const CourseAccreditations = ({ user }) => {
                             <select
                                 value={selectedCourse?.id || ''}
                                 onChange={(e) => {
-                                    const course = courses.find(c => c.id === parseInt(e.target.value));
+                                    const course = Array.isArray(courses) && courses.find(c => c.id === parseInt(e.target.value));
                                     if (course) {
                                         handleCourseSelect(course);
                                     }
@@ -447,7 +452,7 @@ const CourseAccreditations = ({ user }) => {
                                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-scl-purple focus:border-transparent"
                             >
                                 <option value="">-- Select a Course --</option>
-                                {courses.map(course => (
+                                {Array.isArray(courses) && courses.map(course => (
                                     <option key={course.id} value={course.id}>
                                         {course.course_title} ({course.course_code})
                                     </option>
