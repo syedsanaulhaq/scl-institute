@@ -80,8 +80,13 @@ const CourseInductionsDetail = () => {
     const navigate = useNavigate();
     const isNew = id === 'new';
     
-    const [loading, setLoading] = useState(!isNew);
+    const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
+    const [courses, setCourses] = useState([]);
+    const [selectedCourseId, setSelectedCourseId] = useState(null);
+    const [courseLoading, setCourseLoading] = useState(true);
+    const [inductionExists, setInductionExists] = useState(false);
+    const [existingInductionId, setExistingInductionId] = useState(null);
     const [expandedSections, setExpandedSections] = useState({ 1: true });
     const [editingRowIdx, setEditingRowIdx] = useState(null);
     const [editingSection, setEditingSection] = useState(null);
@@ -109,18 +114,112 @@ const CourseInductionsDetail = () => {
     });
 
     useEffect(() => {
+        fetchCourses();
         if (!isNew) {
             fetchInduction();
-        } else {
-            // Initialize new form with empty sections
-            initializeNewForm();
         }
     }, [id]);
+
+    const fetchCourses = async () => {
+        try {
+            setCourseLoading(true);
+            const response = await axios.get(`${API_URL}/students/courses`);
+            const coursesList = Array.isArray(response.data?.data) ? response.data.data : response.data;
+            setCourses(Array.isArray(coursesList) ? coursesList : []);
+        } catch (err) {
+            console.error('Failed to fetch courses:', err);
+            setCourses([]);
+        } finally {
+            setCourseLoading(false);
+        }
+    };
+
+    const handleCourseSelect = async (courseId) => {
+        setSelectedCourseId(courseId);
+        const course = courses.find(c => c.id === parseInt(courseId));
+        
+        if (course) {
+            // Set the course info
+            setFormData(prev => ({
+                ...prev,
+                course_title: course.fullname || course.course_title || '',
+                course_code: course.shortname || course.course_code || ''
+            }));
+
+            // Check if induction already exists for this course
+            try {
+                const response = await axios.get(`${API_URL}/inductions`, { 
+                    params: { course_id: courseId } 
+                });
+                const existingInduction = response.data?.data?.find(ind => ind.course_id === courseId || ind.course_title === (course.fullname || course.course_title));
+                
+                if (existingInduction) {
+                    // Load existing induction data
+                    setInductionExists(true);
+                    setExistingInductionId(existingInduction.id);
+                    setLoading(true);
+                    try {
+                        const detailResponse = await axios.get(`${API_URL}/inductions/${existingInduction.id}`);
+                        const bundle = detailResponse.data?.data;
+                        
+                        if (bundle && bundle.induction) {
+                            const induction = bundle.induction;
+                            const requirements = bundle.requirements || [];
+                            
+                            const sectionsByNum = {};
+                            for (let i = 1; i <= 8; i++) {
+                                sectionsByNum[i] = [];
+                            }
+                            
+                            requirements.forEach(req => {
+                                const sectionNum = req.section_number || 1;
+                                if (sectionsByNum[sectionNum]) {
+                                    sectionsByNum[sectionNum].push({
+                                        id: req.id,
+                                        area: req.requirement_area || '',
+                                        description: req.evidence_required || '',
+                                        source: req.evidence_links?.split('|')[0] || '',
+                                        evidence: req.evidence_links?.split('|')[1] || '',
+                                        responsible: req.responsible_role || '',
+                                        status: req.status === 'Completed',
+                                        notes: req.notes || ''
+                                    });
+                                }
+                            });
+                            
+                            setFormData({
+                                course_title: induction.course_title || '',
+                                course_code: induction.course_code || '',
+                                awarding_body: induction.awarding_body || '',
+                                application_type: induction.application_type || '',
+                                date_started: induction.date_started || '',
+                                expected_submission_date: induction.expected_submission_date || '',
+                                lead_coordinator: induction.induction_owner || '',
+                                version: induction.version || '1.0',
+                                sections: sectionsByNum
+                            });
+                        }
+                    } catch (err) {
+                        console.error('Failed to fetch induction details:', err);
+                    } finally {
+                        setLoading(false);
+                    }
+                } else {
+                    // New induction - initialize empty sections
+                    setInductionExists(false);
+                    initializeNewForm();
+                }
+            } catch (err) {
+                console.error('Failed to check induction:', err);
+                setInductionExists(false);
+                initializeNewForm();
+            }
+        }
+    };
 
     const initializeNewForm = () => {
         const sections = {};
         for (let i = 1; i <= 8; i++) {
-            // Initialize with empty sections - only show data when user adds via form
             sections[i] = [];
         }
         setFormData(prev => ({ ...prev, sections }));
@@ -182,63 +281,159 @@ const CourseInductionsDetail = () => {
     const handleSave = async () => {
         try {
             setSaving(true);
-            let inductionId = id;
+            
+            // If coming from course selection on new page
+            if (isNew && selectedCourseId) {
+                if (inductionExists && existingInductionId) {
+                    // Update existing induction for this course
+                    await axios.put(`${API_URL}/inductions/${existingInductionId}`, formData);
+                    
+                    // Save all requirements
+                    for (let sectionNum = 1; sectionNum <= 8; sectionNum++) {
+                        let requirements = formData.sections[sectionNum] || [];
+                        
+                        const seen = new Set();
+                        requirements = requirements.filter(req => {
+                            if (!req.area) return false;
+                            const key = `${req.area}|${req.responsible}|${req.description}`;
+                            if (seen.has(key)) {
+                                console.warn('Duplicate requirement detected and skipped:', key);
+                                return false;
+                            }
+                            seen.add(key);
+                            return true;
+                        });
+                        
+                        for (const req of requirements) {
+                            const reqData = {
+                                section_number: sectionNum,
+                                section_title: SECTION_CONFIG[sectionNum].title,
+                                requirement_area: req.area,
+                                evidence_required: req.description,
+                                responsible_role: req.responsible,
+                                status: req.status ? 'Completed' : 'Not Started',
+                                notes: req.notes,
+                                evidence_links: req.source && req.evidence ? `${req.source}|${req.evidence}` : ''
+                            };
 
-            // Step 1: Save/Update the induction header
-            if (isNew) {
-                const response = await axios.post(`${API_URL}/inductions`, formData);
-                inductionId = response.data.data.id;
-            } else {
-                await axios.put(`${API_URL}/inductions/${inductionId}`, formData);
-            }
-
-            // Step 2: Save all requirements for each section
-            for (let sectionNum = 1; sectionNum <= 8; sectionNum++) {
-                let requirements = formData.sections[sectionNum] || [];
-                
-                // Deduplicate requirements before saving
-                const seen = new Set();
-                requirements = requirements.filter(req => {
-                    if (!req.area) return false; // Skip empty requirements
-                    const key = `${req.area}|${req.responsible}|${req.description}`;
-                    if (seen.has(key)) {
-                        console.warn('Duplicate requirement detected and skipped:', key);
-                        return false; // Skip duplicates
+                            if (req.id) {
+                                await axios.put(
+                                    `${API_URL}/inductions/${existingInductionId}/requirements/${req.id}`,
+                                    reqData
+                                );
+                            } else {
+                                await axios.post(
+                                    `${API_URL}/inductions/${existingInductionId}/requirements`,
+                                    reqData
+                                );
+                            }
+                        }
                     }
-                    seen.add(key);
-                    return true;
-                });
-                
-                for (const req of requirements) {
-                    // Prepare requirement data
-                    const reqData = {
-                        section_number: sectionNum,
-                        section_title: SECTION_CONFIG[sectionNum].title,
-                        requirement_area: req.area,
-                        evidence_required: req.description,
-                        responsible_role: req.responsible,
-                        status: req.status ? 'Completed' : 'Not Started',
-                        notes: req.notes,
-                        evidence_links: req.source && req.evidence ? `${req.source}|${req.evidence}` : ''
-                    };
+                    
+                    navigate('/course-inductions');
+                } else {
+                    // Create new induction
+                    const response = await axios.post(`${API_URL}/inductions`, formData);
+                    const inductionId = response.data.data.id;
+                    
+                    // Save all requirements
+                    for (let sectionNum = 1; sectionNum <= 8; sectionNum++) {
+                        let requirements = formData.sections[sectionNum] || [];
+                        
+                        const seen = new Set();
+                        requirements = requirements.filter(req => {
+                            if (!req.area) return false;
+                            const key = `${req.area}|${req.responsible}|${req.description}`;
+                            if (seen.has(key)) {
+                                console.warn('Duplicate requirement detected and skipped:', key);
+                                return false;
+                            }
+                            seen.add(key);
+                            return true;
+                        });
+                        
+                        for (const req of requirements) {
+                            const reqData = {
+                                section_number: sectionNum,
+                                section_title: SECTION_CONFIG[sectionNum].title,
+                                requirement_area: req.area,
+                                evidence_required: req.description,
+                                responsible_role: req.responsible,
+                                status: req.status ? 'Completed' : 'Not Started',
+                                notes: req.notes,
+                                evidence_links: req.source && req.evidence ? `${req.source}|${req.evidence}` : ''
+                            };
 
-                    // If requirement has an ID, it's an existing one - update it
-                    if (req.id) {
-                        await axios.put(
-                            `${API_URL}/inductions/${inductionId}/requirements/${req.id}`,
-                            reqData
-                        );
-                    } else {
-                        // New requirement - create it
-                        await axios.post(
-                            `${API_URL}/inductions/${inductionId}/requirements`,
-                            reqData
-                        );
+                            if (req.id) {
+                                await axios.put(
+                                    `${API_URL}/inductions/${inductionId}/requirements/${req.id}`,
+                                    reqData
+                                );
+                            } else {
+                                await axios.post(
+                                    `${API_URL}/inductions/${inductionId}/requirements`,
+                                    reqData
+                                );
+                            }
+                        }
+                    }
+                    
+                    navigate('/course-inductions');
+                }
+            } else {
+                // Old flow: URL-based id
+                let inductionId = id;
+                
+                if (isNew) {
+                    const response = await axios.post(`${API_URL}/inductions`, formData);
+                    inductionId = response.data.data.id;
+                } else {
+                    await axios.put(`${API_URL}/inductions/${inductionId}`, formData);
+                }
+
+                for (let sectionNum = 1; sectionNum <= 8; sectionNum++) {
+                    let requirements = formData.sections[sectionNum] || [];
+                    
+                    const seen = new Set();
+                    requirements = requirements.filter(req => {
+                        if (!req.area) return false;
+                        const key = `${req.area}|${req.responsible}|${req.description}`;
+                        if (seen.has(key)) {
+                            console.warn('Duplicate requirement detected and skipped:', key);
+                            return false;
+                        }
+                        seen.add(key);
+                        return true;
+                    });
+                    
+                    for (const req of requirements) {
+                        const reqData = {
+                            section_number: sectionNum,
+                            section_title: SECTION_CONFIG[sectionNum].title,
+                            requirement_area: req.area,
+                            evidence_required: req.description,
+                            responsible_role: req.responsible,
+                            status: req.status ? 'Completed' : 'Not Started',
+                            notes: req.notes,
+                            evidence_links: req.source && req.evidence ? `${req.source}|${req.evidence}` : ''
+                        };
+
+                        if (req.id) {
+                            await axios.put(
+                                `${API_URL}/inductions/${inductionId}/requirements/${req.id}`,
+                                reqData
+                            );
+                        } else {
+                            await axios.post(
+                                `${API_URL}/inductions/${inductionId}/requirements`,
+                                reqData
+                            );
+                        }
                     }
                 }
-            }
 
-            navigate('/course-inductions');
+                navigate('/course-inductions');
+            }
         } catch (err) {
             console.error('Failed to save:', err);
             alert('Error saving induction');
@@ -384,6 +579,43 @@ const CourseInductionsDetail = () => {
             </div>
 
             <div className="max-w-7xl mx-auto px-6 py-8 space-y-6">
+                {/* Course Selection - Only on New */}
+                {isNew && (
+                    <div className="bg-white rounded-lg border border-gray-200 p-6">
+                        <h2 className="text-lg font-bold text-gray-900 mb-4">Select Course</h2>
+                        <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-2">Course *</label>
+                            {courseLoading ? (
+                                <div className="text-sm text-gray-600">Loading courses...</div>
+                            ) : (
+                                <>
+                                    <select
+                                        value={selectedCourseId || ''}
+                                        onChange={(e) => handleCourseSelect(e.target.value)}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-scl-purple focus:border-transparent"
+                                    >
+                                        <option value="">-- Select a Course --</option>
+                                        {courses.map(course => (
+                                            <option key={course.id} value={course.id}>
+                                                {course.fullname || course.course_title} ({course.shortname || course.course_code})
+                                            </option>
+                                        ))}
+                                    </select>
+                                    {selectedCourseId && (
+                                        <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded">
+                                            <p className="text-sm text-blue-800">
+                                                {inductionExists 
+                                                    ? '✓ Induction record found - you can update it below' 
+                                                    : '✓ No induction record yet - create a new one below'}
+                                            </p>
+                                        </div>
+                                    )}
+                                </>
+                            )}
+                        </div>
+                    </div>
+                )}
+
                 {/* General Info */}
                 <div className="bg-white rounded-lg border border-gray-200 p-6">
                     <h2 className="text-lg font-bold text-gray-900 mb-4">Document Control - General Information</h2>
