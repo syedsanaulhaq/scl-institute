@@ -20,6 +20,94 @@ router.get('/', async (req, res) => {
 });
 
 // ===============================================
+// ROUTE 1B: POST /api/accreditations
+// Create new accreditation
+// ===============================================
+router.post('/', async (req, res) => {
+    try {
+        const { documentControl, sections, risks, signoffs } = req.body;
+
+        // Create main accreditation record
+        const [result] = await pool.query(
+            'INSERT INTO course_accreditations (course_title, awarding_body, application_type, expected_submission_date, lead_coordinator, version, overall_status) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            [
+                documentControl.course_title || 'Untitled',
+                documentControl.awarding_body || '',
+                documentControl.application_type || '',
+                documentControl.expected_submission_date || null,
+                documentControl.lead_coordinator || '',
+                documentControl.version || '1.0',
+                'Draft'
+            ]
+        );
+
+        const accreditationId = result.insertId;
+
+        // Add tasks/requirements for each section
+        if (sections && typeof sections === 'object') {
+            for (const [sectionNum, tasks] of Object.entries(sections)) {
+                if (Array.isArray(tasks)) {
+                    for (const task of tasks) {
+                        await pool.query(
+                            'INSERT INTO accreditation_tasks (accreditation_id, section_number, description, evidence_required, source_reference, responsible_person, due_date, status, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                            [
+                                accreditationId,
+                                sectionNum,
+                                task.description || '',
+                                task.evidence_required || '',
+                                task.source_reference || '',
+                                task.responsible_person || '',
+                                task.due_date || null,
+                                task.status || 'Not Started',
+                                task.notes || null
+                            ]
+                        );
+                    }
+                }
+            }
+        }
+
+        // Add risks
+        if (Array.isArray(risks)) {
+            for (const risk of risks) {
+                await pool.query(
+                    'INSERT INTO accreditation_risks (accreditation_id, impact, mitigation, owner, review_date, status) VALUES (?, ?, ?, ?, ?, ?)',
+                    [
+                        accreditationId,
+                        risk.impact || '',
+                        risk.mitigation || '',
+                        risk.owner || '',
+                        risk.review_date || null,
+                        risk.status || 'Open'
+                    ]
+                );
+            }
+        }
+
+        // Add signoffs
+        if (Array.isArray(signoffs)) {
+            for (const signoff of signoffs) {
+                await pool.query(
+                    'INSERT INTO accreditation_signoffs (accreditation_id, name, role, sign_date) VALUES (?, ?, ?, ?)',
+                    [
+                        accreditationId,
+                        signoff.name || '',
+                        signoff.role || '',
+                        signoff.sign_date || null
+                    ]
+                );
+            }
+        }
+
+        const [rows] = await pool.query('SELECT * FROM course_accreditations WHERE id = ?', [accreditationId]);
+        res.status(201).json({ success: true, data: rows[0], message: 'Accreditation created successfully' });
+    } catch (error) {
+        console.error('Error creating accreditation:', error.message);
+        res.status(500).json({ success: false, message: 'Failed to create accreditation', error: error.message });
+    }
+});
+
+// ===============================================
 // ROUTE 2: GET /api/accreditations/:id
 // Get single accreditation with all details
 // ===============================================
@@ -72,50 +160,121 @@ router.get('/:id', async (req, res) => {
 
 // ===============================================
 // ROUTE 3: PUT /api/accreditations/:id
-// Update accreditation (Document Control fields)
+// Update accreditation (Document Control fields and all sections)
 // ===============================================
 router.put('/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const allowedFields = [
-            'course_title',
-            'awarding_body',
-            'application_type',
-            'date_started',
-            'expected_submission_date',
-            'lead_coordinator',
-            'version',
-            'overall_status',
-            'completion_percentage',
-            'updated_by'
-        ];
+        const { documentControl, sections, risks, signoffs } = req.body;
 
-        const updates = [];
-        const params = [];
+        if (documentControl) {
+            const updates = [];
+            const params = [];
+            const allowedFields = ['course_title', 'awarding_body', 'application_type', 'expected_submission_date', 'lead_coordinator', 'version', 'overall_status', 'completion_percentage'];
 
-        allowedFields.forEach(field => {
-            if (req.body[field] !== undefined) {
-                updates.push(`${field} = ?`);
-                params.push(req.body[field]);
+            allowedFields.forEach(field => {
+                if (documentControl[field] !== undefined) {
+                    updates.push(`${field} = ?`);
+                    params.push(documentControl[field]);
+                }
+            });
+
+            if (updates.length > 0) {
+                params.push(id);
+                await pool.query(
+                    `UPDATE course_accreditations SET ${updates.join(', ')} WHERE id = ?`,
+                    params
+                );
             }
-        });
-
-        if (updates.length === 0) {
-            return res.status(400).json({ success: false, message: 'No valid fields to update' });
         }
 
-        params.push(id);
+        // Update/replace tasks for each section
+        if (sections && typeof sections === 'object') {
+            // Delete all existing tasks for this accreditation
+            await pool.query('DELETE FROM accreditation_tasks WHERE accreditation_id = ?', [id]);
 
-        await pool.query(
-            `UPDATE course_accreditations SET ${updates.join(', ')} WHERE id = ?`,
-            params
-        );
+            for (const [sectionNum, tasks] of Object.entries(sections)) {
+                if (Array.isArray(tasks)) {
+                    for (const task of tasks) {
+                        await pool.query(
+                            'INSERT INTO accreditation_tasks (accreditation_id, section_number, description, evidence_required, source_reference, responsible_person, due_date, status, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                            [
+                                id,
+                                sectionNum,
+                                task.description || '',
+                                task.evidence_required || '',
+                                task.source_reference || '',
+                                task.responsible_person || '',
+                                task.due_date || null,
+                                task.status || 'Not Started',
+                                task.notes || null
+                            ]
+                        );
+                    }
+                }
+            }
+        }
+
+        // Update/replace risks
+        if (Array.isArray(risks)) {
+            await pool.query('DELETE FROM accreditation_risks WHERE accreditation_id = ?', [id]);
+            for (const risk of risks) {
+                await pool.query(
+                    'INSERT INTO accreditation_risks (accreditation_id, impact, mitigation, owner, review_date, status) VALUES (?, ?, ?, ?, ?, ?)',
+                    [
+                        id,
+                        risk.impact || '',
+                        risk.mitigation || '',
+                        risk.owner || '',
+                        risk.review_date || null,
+                        risk.status || 'Open'
+                    ]
+                );
+            }
+        }
+
+        // Update/replace signoffs
+        if (Array.isArray(signoffs)) {
+            await pool.query('DELETE FROM accreditation_signoffs WHERE accreditation_id = ?', [id]);
+            for (const signoff of signoffs) {
+                await pool.query(
+                    'INSERT INTO accreditation_signoffs (accreditation_id, name, role, sign_date) VALUES (?, ?, ?, ?)',
+                    [
+                        id,
+                        signoff.name || '',
+                        signoff.role || '',
+                        signoff.sign_date || null
+                    ]
+                );
+            }
+        }
 
         const [rows] = await pool.query('SELECT * FROM course_accreditations WHERE id = ?', [id]);
-        res.json({ success: true, data: rows[0] });
+        res.json({ success: true, data: rows[0], message: 'Accreditation updated successfully' });
     } catch (error) {
         console.error('Error updating accreditation:', error.message);
         res.status(500).json({ success: false, message: 'Failed to update accreditation', error: error.message });
+    }
+});
+
+// ===============================================
+// ROUTE 3B: DELETE /api/accreditations/:id
+// Delete accreditation
+// ===============================================
+router.delete('/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        // Delete all related data (cascading)
+        await pool.query('DELETE FROM accreditation_tasks WHERE accreditation_id = ?', [id]);
+        await pool.query('DELETE FROM accreditation_risks WHERE accreditation_id = ?', [id]);
+        await pool.query('DELETE FROM accreditation_signoffs WHERE accreditation_id = ?', [id]);
+        await pool.query('DELETE FROM course_accreditations WHERE id = ?', [id]);
+
+        res.json({ success: true, message: 'Accreditation deleted successfully' });
+    } catch (error) {
+        console.error('Error deleting accreditation:', error.message);
+        res.status(500).json({ success: false, message: 'Failed to delete accreditation', error: error.message });
     }
 });
 
@@ -347,6 +506,46 @@ router.put('/:id/signoffs/:signoffId', async (req, res) => {
     } catch (error) {
         console.error('Error updating sign-off:', error.message);
         res.status(500).json({ success: false, message: 'Failed to update sign-off', error: error.message });
+    }
+});
+
+// ===============================================
+// ROUTE 10: DELETE /api/accreditations/:id/risks/:riskId
+// Delete risk/issue
+// ===============================================
+router.delete('/:id/risks/:riskId', async (req, res) => {
+    try {
+        const { id, riskId } = req.params;
+
+        await pool.query(
+            'DELETE FROM accreditation_risks WHERE accreditation_id = ? AND id = ?',
+            [id, riskId]
+        );
+
+        res.json({ success: true, message: 'Risk deleted successfully' });
+    } catch (error) {
+        console.error('Error deleting risk:', error.message);
+        res.status(500).json({ success: false, message: 'Failed to delete risk', error: error.message });
+    }
+});
+
+// ===============================================
+// ROUTE 11: DELETE /api/accreditations/:id/signoffs/:signoffId
+// Delete sign-off
+// ===============================================
+router.delete('/:id/signoffs/:signoffId', async (req, res) => {
+    try {
+        const { id, signoffId } = req.params;
+
+        await pool.query(
+            'DELETE FROM accreditation_signoffs WHERE accreditation_id = ? AND id = ?',
+            [id, signoffId]
+        );
+
+        res.json({ success: true, message: 'Sign-off deleted successfully' });
+    } catch (error) {
+        console.error('Error deleting sign-off:', error.message);
+        res.status(500).json({ success: false, message: 'Failed to delete sign-off', error: error.message });
     }
 });
 
