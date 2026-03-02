@@ -853,9 +853,8 @@ const CourseAccreditations = ({ user }) => {
                             </>
                         )}
                     </div>
-                </div>
 
-                {/* Accreditations Table */}
+                    {/* Accreditations Table */}
                 {loading ? (
                     <div className="text-center py-12">
                         <div className="inline-block animate-spin">⏳</div>
@@ -920,7 +919,7 @@ const CourseAccreditations = ({ user }) => {
                         </table>
                     </div>
                 )}
-            </div>
+                </div>
         </div>
     );
 };
