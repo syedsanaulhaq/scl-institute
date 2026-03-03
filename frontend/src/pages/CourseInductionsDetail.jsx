@@ -582,65 +582,50 @@ const CourseInductionsDetail = () => {
             </div>
 
             <div className="max-w-7xl mx-auto px-6 py-8 space-y-6">
-                {/* Course Selection - Top Section for New Records */}
-                {isNew && (
-                    <div className="bg-white rounded-lg border border-blue-200 p-6">
-                        <h2 className="text-lg font-bold text-gray-900 mb-4">1. Select a Course</h2>
+                {/* General Info */}}
+                <div className="bg-white rounded-lg border border-gray-200 p-6">
+                    <h2 className="text-lg font-bold text-gray-900 mb-4">Document Control - General Information</h2>
+                    <div className="grid grid-cols-2 gap-4">
+                        
                         <div>
-                            <label className="block text-sm font-semibold text-gray-700 mb-2">
-                                Course * {courseLoading && <span className="text-gray-500 text-xs">(loading...)</span>}
-                            </label>
+                            <label className="block text-sm font-semibold text-gray-700 mb-1">Course Title *</label>
                             <select
-                                value={selectedCourseId || ''}
-                                onChange={(e) => handleCourseSelect(e.target.value)}
+                                value={formData.course_title}
+                                onChange={(e) => {
+                                    const course = courses.find(c => (c.fullname || c.course_title) === e.target.value);
+                                    if (course) {
+                                        setFormData(prev => ({
+                                            ...prev,
+                                            course_title: course.fullname || course.course_title || '',
+                                            course_code: course.shortname || course.course_code || ''
+                                        }));
+                                        // Check if induction exists for this course
+                                        handleCourseSelect(course.id);
+                                    }
+                                }}
                                 disabled={courseLoading}
                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-scl-purple focus:border-transparent disabled:bg-gray-50 disabled:cursor-not-allowed"
                             >
-                                <option value="">{courseLoading ? 'Loading courses...' : '-- Select a Course --'}</option>
+                                <option value="">-- Select a Course --</option>
                                 {courses.length > 0 ? (
                                     courses.map(course => (
-                                        <option key={course.id} value={course.id}>
-                                            {course.fullname || course.course_title} ({course.shortname || course.course_code})
+                                        <option key={course.id} value={course.fullname || course.course_title}>
+                                            {course.fullname || course.course_title}
                                         </option>
                                     ))
                                 ) : (
                                     !courseLoading && <option value="">No courses available</option>
                                 )}
                             </select>
-                            {selectedCourseId && (
-                                <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded">
-                                    <p className="text-sm text-blue-800 font-semibold">
-                                        {inductionExists 
-                                            ? '✓ Induction record found - you can update it below' 
-                                            : '✓ New induction - fill in the details below'}
-                                    </p>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                )}
-
-                {/* General Info */}
-                <div className="bg-white rounded-lg border border-gray-200 p-6">
-                    <h2 className="text-lg font-bold text-gray-900 mb-4">2. Document Control - General Information</h2>
-                    <div className="grid grid-cols-2 gap-4">
-                        
-                        <div>
-                            <label className="block text-sm font-semibold text-gray-700 mb-1">Course Title *</label>
-                            <input
-                                type="text"
-                                value={formData.course_title}
-                                onChange={(e) => handleInputChange('course_title', e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-scl-purple focus:border-transparent"
-                            />
                         </div>
                         <div>
                             <label className="block text-sm font-semibold text-gray-700 mb-1">Course Code</label>
                             <input
                                 type="text"
                                 value={formData.course_code}
-                                onChange={(e) => handleInputChange('course_code', e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-scl-purple focus:border-transparent"
+                                readOnly
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 cursor-not-allowed text-gray-600"
+                                placeholder="Auto-filled from course selection"
                             />
                         </div>
                         <div>
