@@ -307,15 +307,41 @@ const CourseInductionsDetail = () => {
         }
     };
 
+    const transformInductionData = () => {
+        // Transform frontend formData to match backend inductions endpoint expectations
+        return {
+            course_id: selectedCourseId || null,
+            course_code: formData.course_code || '',
+            course_title: formData.course_title || '',
+            awarding_body: formData.awarding_body || '',
+            version: formData.version || '1.0',
+            induction_owner: formData.lead_coordinator || '',
+            start_date: formData.date_started || null,
+            review_date: formData.expected_submission_date || null,
+            overall_status: 'Draft',
+            created_by: null
+        };
+    };
+
     const handleSave = async () => {
         try {
             setSaving(true);
+            
+            // Validation
+            if (!formData.course_title) {
+                alert('Please select a course');
+                setSaving(false);
+                return;
+            }
+            
+            const transformedData = transformInductionData();
+            console.log('Transformed induction data:', transformedData);
             
             // If coming from course selection on new page
             if (isNew && selectedCourseId) {
                 if (inductionExists && existingInductionId) {
                     // Update existing induction for this course
-                    await axios.put(`${API_URL}/inductions/${existingInductionId}`, formData);
+                    await axios.put(`${API_URL}/inductions/${existingInductionId}`, transformedData);
                     
                     // Save all requirements
                     for (let sectionNum = 1; sectionNum <= 8; sectionNum++) {
@@ -363,7 +389,7 @@ const CourseInductionsDetail = () => {
                 } else {
                     // Create new induction
                     console.log('Creating new induction');
-                    const response = await axios.post(`${API_URL}/inductions`, formData);
+                    const response = await axios.post(`${API_URL}/inductions`, transformedData);
                     console.log('Create response:', response.data);
                     
                     const inductionId = response.data?.data?.id || response.data?.id;
@@ -422,7 +448,7 @@ const CourseInductionsDetail = () => {
                 
                 if (isNew) {
                     console.log('Creating new induction (old flow)');
-                    const response = await axios.post(`${API_URL}/inductions`, formData);
+                    const response = await axios.post(`${API_URL}/inductions`, transformedData);
                     console.log('Create response:', response.data);
                     
                     inductionId = response.data?.data?.id || response.data?.id;
@@ -431,7 +457,7 @@ const CourseInductionsDetail = () => {
                     }
                     console.log('Created induction with ID:', inductionId);
                 } else {
-                    await axios.put(`${API_URL}/inductions/${inductionId}`, formData);
+                    await axios.put(`${API_URL}/inductions/${inductionId}`, transformedData);
                 }
 
                 for (let sectionNum = 1; sectionNum <= 8; sectionNum++) {

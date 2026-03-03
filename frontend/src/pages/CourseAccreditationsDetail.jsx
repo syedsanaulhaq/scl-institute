@@ -307,6 +307,41 @@ const CourseAccreditationsDetail = () => {
         }
     };
 
+    const transformFormData = () => {
+        // Transform frontend formData structure to match backend expectations
+        const documentControl = {
+            course_title: formData.course_title || '',
+            awarding_body: formData.awarding_body || '',
+            application_type: formData.application_type || '',
+            expected_submission_date: formData.expected_submission_date || null,
+            lead_coordinator: formData.lead_coordinator || '',
+            version: formData.version || '1.0'
+        };
+
+        // Extract risks from section 7
+        const risks = (formData.sections[7] || []).map(task => ({
+            impact: task.description || '',
+            mitigation: task.responsible || '',
+            owner: task.source || '',
+            review_date: null,
+            status: task.status ? 'Completed' : 'Open'
+        }));
+
+        // Extract signoffs from section 8
+        const signoffs = (formData.sections[8] || []).map(task => ({
+            name: task.description || '',
+            role: task.area || '',
+            sign_date: null
+        }));
+
+        return {
+            documentControl,
+            sections: formData.sections || {},
+            risks,
+            signoffs
+        };
+    };
+
     const handleSave = async () => {
         try {
             setSaving(true);
@@ -322,12 +357,15 @@ const CourseAccreditationsDetail = () => {
             console.log('SelectedCourseId:', selectedCourseId);
             console.log('IsNew:', isNew);
             
+            const transformedData = transformFormData();
+            console.log('Transformed data for backend:', transformedData);
+            
             // If coming from course selection on new page
             if (isNew && selectedCourseId) {
                 if (accreditationExists && existingAccreditationId) {
                     // Update existing accreditation for this course
                     console.log('Updating existing accreditation:', existingAccreditationId);
-                    await axios.put(`${API_URL}/accreditations/${existingAccreditationId}`, formData);
+                    await axios.put(`${API_URL}/accreditations/${existingAccreditationId}`, transformedData);
                     
                     // Save all tasks
                     for (let sectionNum = 1; sectionNum <= 8; sectionNum++) {
@@ -376,7 +414,7 @@ const CourseAccreditationsDetail = () => {
                 } else {
                     // Create new accreditation
                     console.log('Creating new accreditation');
-                    const response = await axios.post(`${API_URL}/accreditations`, formData);
+                    const response = await axios.post(`${API_URL}/accreditations`, transformedData);
                     console.log('Create response:', response.data);
                     
                     const accreditationId = response.data?.data?.id || response.data?.id;
@@ -438,7 +476,7 @@ const CourseAccreditationsDetail = () => {
 
                 if (isNew) {
                     console.log('Creating new accreditation (old flow)');
-                    const response = await axios.post(`${API_URL}/accreditations`, formData);
+                    const response = await axios.post(`${API_URL}/accreditations`, transformedData);
                     console.log('Create response:', response.data);
                     
                     accreditationId = response.data?.data?.id || response.data?.id;
@@ -448,7 +486,7 @@ const CourseAccreditationsDetail = () => {
                     console.log('Created accreditation with ID:', accreditationId);
                 } else {
                     console.log('Updating accreditation:', accreditationId);
-                    await axios.put(`${API_URL}/accreditations/${accreditationId}`, formData);
+                    await axios.put(`${API_URL}/accreditations/${accreditationId}`, transformedData);
                 }
 
                 for (let sectionNum = 1; sectionNum <= 8; sectionNum++) {
