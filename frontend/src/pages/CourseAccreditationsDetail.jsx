@@ -519,14 +519,16 @@ const CourseAccreditationsDetail = () => {
                     id: existingId
                 };
             } else {
-                // Check if task already exists
-                const alreadyExists = newData.sections[sectionNum].some(
-                    task => task.area === currentForm.area && task.responsible === currentForm.responsible
-                );
-                
-                if (alreadyExists) {
-                    alert('This task already exists in this section');
-                    return newData;
+                // Check if task already exists (skip for Section 8 - Sign-off, which has pre-defined rows)
+                if (sectionNum !== 8) {
+                    const alreadyExists = newData.sections[sectionNum].some(
+                        task => task.area === currentForm.area && task.responsible === currentForm.responsible
+                    );
+                    
+                    if (alreadyExists) {
+                        alert('This task already exists in this section');
+                        return newData;
+                    }
                 }
                 
                 // Add new
