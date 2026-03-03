@@ -123,8 +123,11 @@ const CourseAccreditationsDetail = () => {
     const fetchCourses = async () => {
         try {
             setCourseLoading(true);
+            console.log('Fetching courses from:', `${API_URL}/students/courses`);
             const response = await axios.get(`${API_URL}/students/courses`);
+            console.log('Courses response:', response.data);
             const coursesList = Array.isArray(response.data?.data) ? response.data.data : response.data;
+            console.log('Processed courses list:', coursesList);
             setCourses(Array.isArray(coursesList) ? coursesList : []);
         } catch (err) {
             console.error('Failed to fetch courses:', err);
@@ -583,39 +586,34 @@ const CourseAccreditationsDetail = () => {
                     <div className="bg-white rounded-lg border border-blue-200 p-6">
                         <h2 className="text-lg font-bold text-gray-900 mb-4">1. Select a Course</h2>
                         <div>
-                            <label className="block text-sm font-semibold text-gray-700 mb-2">Course *</label>
-                            {courseLoading ? (
-                                <div className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-600 text-sm">
-                                    Loading courses...
+                            <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                Course * {courseLoading && <span className="text-gray-500 text-xs">(loading...)</span>}
+                            </label>
+                            <select
+                                value={selectedCourseId || ''}
+                                onChange={(e) => handleCourseSelect(e.target.value)}
+                                disabled={courseLoading}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-scl-purple focus:border-transparent disabled:bg-gray-50 disabled:cursor-not-allowed"
+                            >
+                                <option value="">{courseLoading ? 'Loading courses...' : '-- Select a Course --'}</option>
+                                {courses.length > 0 ? (
+                                    courses.map(course => (
+                                        <option key={course.id} value={course.id}>
+                                            {course.fullname || course.course_title} ({course.shortname || course.course_code})
+                                        </option>
+                                    ))
+                                ) : (
+                                    !courseLoading && <option value="">No courses available</option>
+                                )}
+                            </select>
+                            {selectedCourseId && (
+                                <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded">
+                                    <p className="text-sm text-blue-800 font-semibold">
+                                        {accreditationExists 
+                                            ? '✓ Accreditation record found - you can update it below' 
+                                            : '✓ New accreditation - fill in the details below'}
+                                    </p>
                                 </div>
-                            ) : (
-                                <>
-                                    <select
-                                        value={selectedCourseId || ''}
-                                        onChange={(e) => handleCourseSelect(e.target.value)}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-scl-purple focus:border-transparent"
-                                    >
-                                        <option value="">-- Select a Course --</option>
-                                        {courses.length > 0 ? (
-                                            courses.map(course => (
-                                                <option key={course.id} value={course.id}>
-                                                    {course.fullname || course.course_title} ({course.shortname || course.course_code})
-                                                </option>
-                                            ))
-                                        ) : (
-                                            <option value="">No courses available</option>
-                                        )}
-                                    </select>
-                                    {selectedCourseId && (
-                                        <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded">
-                                            <p className="text-sm text-blue-800 font-semibold">
-                                                {accreditationExists 
-                                                    ? '✓ Accreditation record found - you can update it below' 
-                                                    : '✓ New accreditation - fill in the details below'}
-                                            </p>
-                                        </div>
-                                    )}
-                                </>
                             )}
                         </div>
                     </div>
@@ -632,8 +630,7 @@ const CourseAccreditationsDetail = () => {
                                 type="text"
                                 value={formData.course_title}
                                 onChange={(e) => handleInputChange('course_title', e.target.value)}
-                                disabled={!isNew}
-                                className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-scl-purple focus:border-transparent ${!isNew ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-scl-purple focus:border-transparent"
                             />
                         </div>
                         <div>
@@ -642,8 +639,7 @@ const CourseAccreditationsDetail = () => {
                                 type="text"
                                 value={formData.course_code}
                                 onChange={(e) => handleInputChange('course_code', e.target.value)}
-                                disabled={!isNew}
-                                className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-scl-purple focus:border-transparent ${!isNew ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-scl-purple focus:border-transparent"
                             />
                         </div>
                         <div>
