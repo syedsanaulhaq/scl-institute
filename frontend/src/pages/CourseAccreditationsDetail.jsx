@@ -114,6 +114,7 @@ const CourseAccreditationsDetail = () => {
         version: '1.0',
         sections: {}
     });
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     useEffect(() => {
         fetchCourses();
@@ -500,10 +501,13 @@ const CourseAccreditationsDetail = () => {
     };
 
     const handleAddTask = (sectionNum) => {
+        if (isSubmitting) return; // Prevent multiple rapid submissions
         if (!currentForm.area) {
             alert('Please select a task area');
             return;
         }
+        
+        setIsSubmitting(true);
         
         setFormData(prev => {
             const newData = { ...prev };
@@ -532,6 +536,7 @@ const CourseAccreditationsDetail = () => {
         });
         
         handleFormReset();
+        setIsSubmitting(false);
     };
 
     const handleEditTask = (sectionNum, rowIdx) => {
@@ -793,13 +798,16 @@ const CourseAccreditationsDetail = () => {
                                                 </div>
                                                 <div className="flex gap-2">
                                                     <button
+                                                        type="button"
                                                         onClick={() => handleAddTask(sectionNum)}
-                                                        className="px-3 py-1 bg-scl-purple text-white rounded text-xs font-semibold hover:bg-scl-purple/90"
+                                                        disabled={isSubmitting}
+                                                        className="px-3 py-1 bg-scl-purple text-white rounded text-xs font-semibold hover:bg-scl-purple/90 disabled:opacity-50 disabled:cursor-not-allowed"
                                                     >
                                                         {editingRowIdx !== null && editingSection === sectionNum ? 'Update' : 'Add'}
                                                     </button>
                                                     {(editingRowIdx !== null || currentForm.area) && (
                                                         <button
+                                                            type="button"
                                                             onClick={handleFormReset}
                                                             className="px-3 py-1 border border-gray-300 rounded text-xs font-semibold text-gray-700 hover:bg-gray-100"
                                                         >
@@ -1041,13 +1049,16 @@ const CourseAccreditationsDetail = () => {
                                                 </div>
                                                 <div className="flex gap-2">
                                                     <button
+                                                        type="button"
                                                         onClick={() => handleAddTask(sectionNum)}
-                                                        className="px-3 py-1 bg-scl-purple text-white rounded text-xs font-semibold hover:bg-scl-purple/90"
+                                                        disabled={isSubmitting}
+                                                        className="px-3 py-1 bg-scl-purple text-white rounded text-xs font-semibold hover:bg-scl-purple/90 disabled:opacity-50 disabled:cursor-not-allowed"
                                                     >
                                                         {editingRowIdx !== null && editingSection === sectionNum ? 'Update' : 'Add'}
                                                     </button>
                                                     {(editingRowIdx !== null || currentForm.area) && (
                                                         <button
+                                                            type="button"
                                                             onClick={handleFormReset}
                                                             className="px-3 py-1 border border-gray-300 rounded text-xs font-semibold text-gray-700 hover:bg-gray-100"
                                                         >
