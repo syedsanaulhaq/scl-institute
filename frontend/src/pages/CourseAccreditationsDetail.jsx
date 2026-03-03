@@ -192,6 +192,15 @@ const CourseAccreditationsDetail = () => {
                                 });
                             }
                             
+                            // Ensure Section 8 (Sign-off) always has the three required roles
+                            if (!sectionsByNum[8] || sectionsByNum[8].length === 0) {
+                                sectionsByNum[8] = [
+                                    { area: 'Lead Coordinator', description: '', source: '', responsible: '' },
+                                    { area: 'QA Manager', description: '', source: '', responsible: '' },
+                                    { area: 'Principal / CEO', description: '', source: '', responsible: '' }
+                                ];
+                            }
+                            
                             setFormData({
                                 course_title: accreditation.course_title || '',
                                 course_code: accreditation.course_code || '',
@@ -227,6 +236,12 @@ const CourseAccreditationsDetail = () => {
         for (let i = 1; i <= 8; i++) {
             sections[i] = [];
         }
+        // Pre-populate Section 8 (Sign-off) with the three required roles
+        sections[8] = [
+            { area: 'Lead Coordinator', description: '', source: '', responsible: '', tempId: 'signoff-1' },
+            { area: 'QA Manager', description: '', source: '', responsible: '', tempId: 'signoff-2' },
+            { area: 'Principal / CEO', description: '', source: '', responsible: '', tempId: 'signoff-3' }
+        ];
         setFormData(prev => ({ ...prev, sections }));
     };
 
@@ -262,6 +277,15 @@ const CourseAccreditationsDetail = () => {
                         });
                     }
                 });
+            }
+            
+            // Ensure Section 8 (Sign-off) always has the three required roles
+            if (!sectionsByNum[8] || sectionsByNum[8].length === 0) {
+                sectionsByNum[8] = [
+                    { area: 'Lead Coordinator', description: '', source: '', responsible: '' },
+                    { area: 'QA Manager', description: '', source: '', responsible: '' },
+                    { area: 'Principal / CEO', description: '', source: '', responsible: '' }
+                ];
             }
             
             setFormData({
