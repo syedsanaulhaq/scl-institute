@@ -578,43 +578,53 @@ const CourseAccreditationsDetail = () => {
             </div>
 
             <div className="max-w-7xl mx-auto px-6 py-8 space-y-6">
-                {/* General Info */}
-                <div className="bg-white rounded-lg border border-gray-200 p-6">
-                    <h2 className="text-lg font-bold text-gray-900 mb-4">Document Control - General Information</h2>
-                    <div className="grid grid-cols-2 gap-4">
-                        {/* Course Selection - Only on New */}
-                        {isNew && (
-                            <div className="col-span-2">
-                                <label className="block text-sm font-semibold text-gray-700 mb-2">Select Course *</label>
-                                {courseLoading ? (
-                                    <div className="text-sm text-gray-600">Loading courses...</div>
-                                ) : (
-                                    <>
-                                        <select
-                                            value={selectedCourseId || ''}
-                                            onChange={(e) => handleCourseSelect(e.target.value)}
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-scl-purple focus:border-transparent"
-                                        >
-                                            <option value="">-- Select a Course --</option>
-                                            {courses.map(course => (
+                {/* Course Selection - Top Section for New Records */}
+                {isNew && (
+                    <div className="bg-white rounded-lg border border-blue-200 p-6">
+                        <h2 className="text-lg font-bold text-gray-900 mb-4">1. Select a Course</h2>
+                        <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-2">Course *</label>
+                            {courseLoading ? (
+                                <div className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-600 text-sm">
+                                    Loading courses...
+                                </div>
+                            ) : (
+                                <>
+                                    <select
+                                        value={selectedCourseId || ''}
+                                        onChange={(e) => handleCourseSelect(e.target.value)}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-scl-purple focus:border-transparent"
+                                    >
+                                        <option value="">-- Select a Course --</option>
+                                        {courses.length > 0 ? (
+                                            courses.map(course => (
                                                 <option key={course.id} value={course.id}>
                                                     {course.fullname || course.course_title} ({course.shortname || course.course_code})
                                                 </option>
-                                            ))}
-                                        </select>
-                                        {selectedCourseId && (
-                                            <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded">
-                                                <p className="text-sm text-blue-800">
-                                                    {accreditationExists 
-                                                        ? '✓ Accreditation record found - you can update it below' 
-                                                        : '✓ No accreditation record yet - create a new one below'}
-                                                </p>
-                                            </div>
+                                            ))
+                                        ) : (
+                                            <option value="">No courses available</option>
                                         )}
-                                    </>
-                                )}
-                            </div>
-                        )}
+                                    </select>
+                                    {selectedCourseId && (
+                                        <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded">
+                                            <p className="text-sm text-blue-800 font-semibold">
+                                                {accreditationExists 
+                                                    ? '✓ Accreditation record found - you can update it below' 
+                                                    : '✓ New accreditation - fill in the details below'}
+                                            </p>
+                                        </div>
+                                    )}
+                                </>
+                            )}
+                        </div>
+                    </div>
+                )}
+
+                {/* General Info */}
+                <div className="bg-white rounded-lg border border-gray-200 p-6">
+                    <h2 className="text-lg font-bold text-gray-900 mb-4">2. Document Control - General Information</h2>
+                    <div className="grid grid-cols-2 gap-4">
                         
                         <div>
                             <label className="block text-sm font-semibold text-gray-700 mb-1">Course Title *</label>
