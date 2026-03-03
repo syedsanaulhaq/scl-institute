@@ -39,7 +39,7 @@ const CourseAccreditations = ({ user }) => {
     };
 
     const handleEdit = (id) => {
-        navigate(`/course-accreditations/${id}/edit`);
+        navigate(`/course-accreditations/${id}`);
     };
 
     const handleDelete = async (id) => {

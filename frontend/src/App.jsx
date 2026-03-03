@@ -240,16 +240,7 @@ function App() {
                         <LoginPage onLoginSuccess={handleLoginSuccess} />
                     )
                 } />
-                <Route path="/course-accreditations/new" element={
-                    user && user?.role?.toLowerCase() !== 'student' ? (
-                        <Layout user={user} onLogout={handleLogout}>
-                            <CourseAccreditationsDetail user={user} />
-                        </Layout>
-                    ) : (
-                        <LoginPage onLoginSuccess={handleLoginSuccess} />
-                    )
-                } />
-                <Route path="/course-accreditations/:id/edit" element={
+                <Route path="/course-accreditations/:id" element={
                     user && user?.role?.toLowerCase() !== 'student' ? (
                         <Layout user={user} onLogout={handleLogout}>
                             <CourseAccreditationsDetail user={user} />
@@ -267,16 +258,7 @@ function App() {
                         <LoginPage onLoginSuccess={handleLoginSuccess} />
                     )
                 } />
-                <Route path="/course-inductions/new" element={
-                    user && user?.role?.toLowerCase() !== 'student' ? (
-                        <Layout user={user} onLogout={handleLogout}>
-                            <CourseInductionsDetail user={user} />
-                        </Layout>
-                    ) : (
-                        <LoginPage onLoginSuccess={handleLoginSuccess} />
-                    )
-                } />
-                <Route path="/course-inductions/:id/edit" element={
+                <Route path="/course-inductions/:id" element={
                     user && user?.role?.toLowerCase() !== 'student' ? (
                         <Layout user={user} onLogout={handleLogout}>
                             <CourseInductionsDetail user={user} />
