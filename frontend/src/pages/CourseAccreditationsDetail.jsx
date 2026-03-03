@@ -311,10 +311,22 @@ const CourseAccreditationsDetail = () => {
         try {
             setSaving(true);
             
+            // Validation
+            if (!formData.course_title) {
+                alert('Please select a course');
+                setSaving(false);
+                return;
+            }
+            
+            console.log('Saving accreditation with formData:', formData);
+            console.log('SelectedCourseId:', selectedCourseId);
+            console.log('IsNew:', isNew);
+            
             // If coming from course selection on new page
             if (isNew && selectedCourseId) {
                 if (accreditationExists && existingAccreditationId) {
                     // Update existing accreditation for this course
+                    console.log('Updating existing accreditation:', existingAccreditationId);
                     await axios.put(`${API_URL}/accreditations/${existingAccreditationId}`, formData);
                     
                     // Save all tasks
@@ -359,11 +371,14 @@ const CourseAccreditationsDetail = () => {
                         }
                     }
                     
+                    alert('Accreditation updated successfully!');
                     navigate('/course-accreditations');
                 } else {
                     // Create new accreditation
+                    console.log('Creating new accreditation');
                     const response = await axios.post(`${API_URL}/accreditations`, formData);
                     const accreditationId = response.data.data.id;
+                    console.log('Created accreditation with ID:', accreditationId);
                     
                     // Save all tasks
                     for (let sectionNum = 1; sectionNum <= 8; sectionNum++) {
@@ -381,6 +396,7 @@ const CourseAccreditationsDetail = () => {
                             return true;
                         });
                         
+                        console.log(`Saving ${tasks.length} tasks for section ${sectionNum}`);
                         for (const task of tasks) {
                             const taskData = {
                                 section_number: sectionNum,
@@ -407,16 +423,21 @@ const CourseAccreditationsDetail = () => {
                         }
                     }
                     
+                    alert('Accreditation created successfully!');
                     navigate('/course-accreditations');
                 }
             } else {
                 // Old flow: URL-based id
+                console.log('Using old flow, id:', id);
                 let accreditationId = id;
 
                 if (isNew) {
+                    console.log('Creating new accreditation (old flow)');
                     const response = await axios.post(`${API_URL}/accreditations`, formData);
                     accreditationId = response.data.data.id;
+                    console.log('Created accreditation with ID:', accreditationId);
                 } else {
+                    console.log('Updating accreditation:', accreditationId);
                     await axios.put(`${API_URL}/accreditations/${accreditationId}`, formData);
                 }
 
@@ -435,6 +456,7 @@ const CourseAccreditationsDetail = () => {
                         return true;
                     });
                     
+                    console.log(`Saving ${tasks.length} tasks for section ${sectionNum}`);
                     for (const task of tasks) {
                         const taskData = {
                             section_number: sectionNum,
@@ -461,11 +483,13 @@ const CourseAccreditationsDetail = () => {
                     }
                 }
 
+                alert('Accreditation saved successfully!');
                 navigate('/course-accreditations');
             }
         } catch (err) {
             console.error('Failed to save:', err);
-            alert('Error saving accreditation');
+            console.error('Error details:', err.response?.data || err.message);
+            alert(`Error saving accreditation: ${err.response?.data?.message || err.message}`);
         } finally {
             setSaving(false);
         }
