@@ -559,10 +559,17 @@ const CourseAccreditationsDetail = () => {
     const handleDeleteTask = (sectionNum, rowIdx) => {
         setFormData(prev => {
             const newData = { ...prev };
+            
+            // Safety check: ensure section and row exist
+            if (!newData.sections[sectionNum] || !newData.sections[sectionNum][rowIdx]) {
+                console.error(`Section ${sectionNum} or row ${rowIdx} does not exist`);
+                return newData;
+            }
+            
             const deletedTask = newData.sections[sectionNum][rowIdx];
             
             // If task has an ID, delete it from the database
-            if (deletedTask.id && !isNew) {
+            if (deletedTask && deletedTask.id && !isNew) {
                 axios.delete(`${API_URL}/accreditations/${id}/tasks/${deletedTask.id}`)
                     .catch(err => console.error('Failed to delete task from database:', err));
             }

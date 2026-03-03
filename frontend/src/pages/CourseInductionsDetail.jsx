@@ -559,10 +559,17 @@ const CourseInductionsDetail = () => {
     const handleDeleteRequirement = (sectionNum, rowIdx) => {
         setFormData(prev => {
             const newData = { ...prev };
+            
+            // Safety check: ensure section and row exist
+            if (!newData.sections[sectionNum] || !newData.sections[sectionNum][rowIdx]) {
+                console.error(`Section ${sectionNum} or row ${rowIdx} does not exist`);
+                return newData;
+            }
+            
             const deletedReq = newData.sections[sectionNum][rowIdx];
             
             // If requirement has an ID, delete it from the database immediately
-            if (deletedReq.id && !isNew) {
+            if (deletedReq && deletedReq.id && !isNew) {
                 axios.delete(`${API_URL}/inductions/${id}/requirements/${deletedReq.id}`)
                     .catch(err => console.error('Failed to delete requirement from database:', err));
             }
