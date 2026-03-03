@@ -94,7 +94,6 @@ const CourseAccreditationsDetail = () => {
     const [editingSection, setEditingSection] = useState(null);
     const sourceInputRef = useRef(null);
     const evidenceInputRef = useRef(null);
-    const lastSubmitTimeRef = useRef(0); // Track last submission time to prevent double submissions
     const [currentForm, setCurrentForm] = useState({
         area: '',
         description: '',
@@ -501,24 +500,12 @@ const CourseAccreditationsDetail = () => {
     };
 
     const handleAddTask = (sectionNum) => {
-        // Prevent double submissions using a re-entry guard
-        if (lastSubmitTimeRef.current === true) {
-            return; // Already processing, ignore this call
-        }
-        
-        // Mark as processing immediately
-        lastSubmitTimeRef.current = true;
-        
         if (!currentForm.area) {
-            lastSubmitTimeRef.current = false; // Reset flag
             alert('Please select a task area');
             return;
         }
         
-        const newTask = { 
-            ...currentForm,
-            tempId: `temp_${Date.now()}_${Math.random()}`
-        };
+        const taskId = `temp_${Date.now()}_${Math.random()}`;
 
         setFormData(prev => {
             const newData = { ...prev };
@@ -535,19 +522,27 @@ const CourseAccreditationsDetail = () => {
                 };
                 alert('Record updated in the section');
             } else {
-                // Add new
-                newData.sections[sectionNum].push(newTask);
-                alert('Record added to the section successfully');
+                // Check if this exact task was just added (prevent duplicates from double-rendering)
+                const isDuplicate = newData.sections[sectionNum].some(
+                    task => task.area === currentForm.area &&
+                            task.description === currentForm.description &&
+                            task.responsible === currentForm.responsible
+                );
+                
+                if (!isDuplicate) {
+                    // Add new
+                    const newTask = { 
+                        ...currentForm,
+                        tempId: taskId
+                    };
+                    newData.sections[sectionNum].push(newTask);
+                    alert('Record added to the section successfully');
+                }
             }
             return newData;
         });
         
         handleFormReset();
-        
-        // Reset flag after a brief delay to allow state updates to complete
-        setTimeout(() => {
-            lastSubmitTimeRef.current = false;
-        }, 100);
     };
 
     const handleEditTask = (sectionNum, rowIdx) => {

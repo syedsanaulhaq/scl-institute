@@ -94,7 +94,6 @@ const CourseInductionsDetail = () => {
     const [editingSection, setEditingSection] = useState(null);
     const sourceInputRef = useRef(null);
     const evidenceInputRef = useRef(null);
-    const lastSubmitTimeRef = useRef(0); // Track last submission time to prevent double submissions
     const [currentForm, setCurrentForm] = useState({
         area: '',
         description: '',
@@ -501,24 +500,12 @@ const CourseInductionsDetail = () => {
     };
 
     const handleAddRequirement = (sectionNum) => {
-        // Prevent double submissions using a re-entry guard
-        if (lastSubmitTimeRef.current === true) {
-            return; // Already processing, ignore this call
-        }
-        
-        // Mark as processing immediately
-        lastSubmitTimeRef.current = true;
-        
         if (!currentForm.area) {
-            lastSubmitTimeRef.current = false; // Reset flag
             alert('Please select a requirement area');
             return;
         }
         
-        const newReq = { 
-            ...currentForm,
-            tempId: `temp_${Date.now()}_${Math.random()}`
-        };
+        const reqId = `temp_${Date.now()}_${Math.random()}`;
 
         setFormData(prev => {
             const newData = { ...prev };
@@ -535,19 +522,27 @@ const CourseInductionsDetail = () => {
                 };
                 alert('Record updated in the section');
             } else {
-                // Add new - generate temporary ID if not from database
-                newData.sections[sectionNum].push(newReq);
-                alert('Record added to the section successfully');
+                // Check if this exact requirement was just added (prevent duplicates from double-rendering)
+                const isDuplicate = newData.sections[sectionNum].some(
+                    req => req.area === currentForm.area &&
+                           req.description === currentForm.description &&
+                           req.responsible === currentForm.responsible
+                );
+                
+                if (!isDuplicate) {
+                    // Add new - generate temporary ID if not from database
+                    const newReq = { 
+                        ...currentForm,
+                        tempId: reqId
+                    };
+                    newData.sections[sectionNum].push(newReq);
+                    alert('Record added to the section successfully');
+                }
             }
             return newData;
         });
         
         handleFormReset();
-        
-        // Reset flag after a brief delay to allow state updates to complete
-        setTimeout(() => {
-            lastSubmitTimeRef.current = false;
-        }, 100);
     };
 
     const handleEditRequirement = (sectionNum, rowIdx) => {
