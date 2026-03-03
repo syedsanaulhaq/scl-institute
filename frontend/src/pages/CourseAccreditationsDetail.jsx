@@ -115,7 +115,6 @@ const CourseAccreditationsDetail = () => {
         version: '1.0',
         sections: {}
     });
-    const [isSubmitting, setIsSubmitting] = useState(false);
 
     useEffect(() => {
         fetchCourses();
@@ -502,20 +501,25 @@ const CourseAccreditationsDetail = () => {
     };
 
     const handleAddTask = (sectionNum) => {
-        // Prevent double submissions within 500ms window
-        const now = Date.now();
-        if (now - lastSubmitTimeRef.current < 500) {
-            return;
+        // Prevent double submissions using a re-entry guard
+        if (lastSubmitTimeRef.current === true) {
+            return; // Already processing, ignore this call
         }
-        lastSubmitTimeRef.current = now;
+        
+        // Mark as processing immediately
+        lastSubmitTimeRef.current = true;
         
         if (!currentForm.area) {
+            lastSubmitTimeRef.current = false; // Reset flag
             alert('Please select a task area');
             return;
         }
         
-        setIsSubmitting(true);
-        
+        const newTask = { 
+            ...currentForm,
+            tempId: `temp_${Date.now()}_${Math.random()}`
+        };
+
         setFormData(prev => {
             const newData = { ...prev };
             if (!newData.sections[sectionNum]) {
@@ -532,10 +536,6 @@ const CourseAccreditationsDetail = () => {
                 alert('Record updated in the section');
             } else {
                 // Add new
-                const newTask = { 
-                    ...currentForm,
-                    tempId: `temp_${Date.now()}_${Math.random()}`
-                };
                 newData.sections[sectionNum].push(newTask);
                 alert('Record added to the section successfully');
             }
@@ -543,7 +543,11 @@ const CourseAccreditationsDetail = () => {
         });
         
         handleFormReset();
-        setIsSubmitting(false);
+        
+        // Reset flag after a brief delay to allow state updates to complete
+        setTimeout(() => {
+            lastSubmitTimeRef.current = false;
+        }, 100);
     };
 
     const handleEditTask = (sectionNum, rowIdx) => {
@@ -807,8 +811,7 @@ const CourseAccreditationsDetail = () => {
                                                     <button
                                                         type="button"
                                                         onClick={() => handleAddTask(sectionNum)}
-                                                        disabled={isSubmitting}
-                                                        className="px-3 py-1 bg-scl-purple text-white rounded text-xs font-semibold hover:bg-scl-purple/90 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                        className="px-3 py-1 bg-scl-purple text-white rounded text-xs font-semibold hover:bg-scl-purple/90"
                                                     >
                                                         {editingRowIdx !== null && editingSection === sectionNum ? 'Update' : 'Add'}
                                                     </button>
@@ -1058,8 +1061,7 @@ const CourseAccreditationsDetail = () => {
                                                     <button
                                                         type="button"
                                                         onClick={() => handleAddTask(sectionNum)}
-                                                        disabled={isSubmitting}
-                                                        className="px-3 py-1 bg-scl-purple text-white rounded text-xs font-semibold hover:bg-scl-purple/90 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                        className="px-3 py-1 bg-scl-purple text-white rounded text-xs font-semibold hover:bg-scl-purple/90"
                                                     >
                                                         {editingRowIdx !== null && editingSection === sectionNum ? 'Update' : 'Add'}
                                                     </button>
