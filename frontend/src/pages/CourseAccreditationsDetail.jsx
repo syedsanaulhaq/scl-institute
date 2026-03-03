@@ -62,16 +62,18 @@ const SECTION_CONFIG = {
     7: {
         title: 'Risk & Issue Log',
         tasks: [
-            { area: 'Risk / Issue', description: 'Describe the risk or issue' }
-        ]
+            { area: 'Example: Staffing gap in specialist subject', impact: 'Delays in course delivery', mitigation: 'Recruit part-time lecturer', owner: 'HR Manager', status: 'Open' }
+        ],
+        fields: ['risk', 'impact', 'mitigation', 'owner', 'status']
     },
     8: {
         title: 'Sign-off',
         tasks: [
-            { area: 'Lead Coordinator', description: 'Approval by Lead Coordinator' },
-            { area: 'QA Manager', description: 'Approval by QA Manager' },
-            { area: 'Principal / CEO', description: 'Approval by Principal / CEO' }
-        ]
+            { area: 'Lead Coordinator', role: '', date: '', signature: '' },
+            { area: 'QA Manager', role: '', date: '', signature: '' },
+            { area: 'Principal / CEO', role: '', date: '', signature: '' }
+        ],
+        fields: ['name', 'role', 'date', 'signature']
     }
 };
 
@@ -705,162 +707,379 @@ const CourseAccreditationsDetail = () => {
 
                         {expandedSections[sectionNum] && (
                             <div className="p-6 border-t border-gray-200">
-                                {/* Form at Top */}
-                                <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 mb-4">
-                                    <h4 className="font-semibold text-gray-900 mb-3 text-sm">
-                                        {editingRowIdx !== null && editingSection === sectionNum ? 'Edit Task' : 'Add New Task'}
-                                    </h4>
-                                    
-                                    <div className="mb-2">
-                                        <label className="block text-xs font-semibold text-gray-700 mb-0.5">Task Area *</label>
-                                        <select
-                                            value={currentForm.area}
-                                            onChange={(e) => {
-                                                const selectedTask = SECTION_CONFIG[sectionNum].tasks.find(t => t.area === e.target.value);
-                                                setCurrentForm(prev => ({
-                                                    ...prev,
-                                                    area: e.target.value,
-                                                    description: selectedTask?.description || ''
-                                                }));
-                                            }}
-                                            className="w-full px-2 py-1 border border-gray-300 rounded text-xs"
-                                        >
-                                            <option value="">Select Area</option>
-                                            {SECTION_CONFIG[sectionNum].tasks.map(task => (
-                                                <option key={task.area} value={task.area}>{task.area}</option>
-                                            ))}
-                                        </select>
+                                {/* Section 7: Risk & Issue Log */}
+                                {sectionNum === 7 && (
+                                    <div>
+                                        <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 mb-4">
+                                            <h4 className="font-semibold text-gray-900 mb-3 text-sm">
+                                                {editingRowIdx !== null && editingSection === sectionNum ? 'Edit Risk/Issue' : 'Add New Risk/Issue'}
+                                            </h4>
+                                            <div className="grid grid-cols-2 gap-2 mb-2">
+                                                <div>
+                                                    <label className="block text-xs font-semibold text-gray-700 mb-0.5">Risk / Issue *</label>
+                                                    <input
+                                                        type="text"
+                                                        value={currentForm.area}
+                                                        onChange={(e) => setCurrentForm(prev => ({ ...prev, area: e.target.value }))}
+                                                        placeholder="Describe the risk or issue"
+                                                        className="w-full px-2 py-1 border border-gray-300 rounded text-xs"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-xs font-semibold text-gray-700 mb-0.5">Impact *</label>
+                                                    <input
+                                                        type="text"
+                                                        value={currentForm.description}
+                                                        onChange={(e) => setCurrentForm(prev => ({ ...prev, description: e.target.value }))}
+                                                        placeholder="Impact"
+                                                        className="w-full px-2 py-1 border border-gray-300 rounded text-xs"
+                                                    />
+                                                </div>
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-2 mb-2">
+                                                <div>
+                                                    <label className="block text-xs font-semibold text-gray-700 mb-0.5">Mitigation / Action *</label>
+                                                    <textarea
+                                                        value={currentForm.source}
+                                                        onChange={(e) => setCurrentForm(prev => ({ ...prev, source: e.target.value }))}
+                                                        placeholder="Mitigation or action plan"
+                                                        className="w-full px-2 py-1 border border-gray-300 rounded text-xs"
+                                                        rows="2"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-xs font-semibold text-gray-700 mb-0.5">Owner *</label>
+                                                    <input
+                                                        type="text"
+                                                        value={currentForm.responsible}
+                                                        onChange={(e) => setCurrentForm(prev => ({ ...prev, responsible: e.target.value }))}
+                                                        placeholder="Owner name"
+                                                        className="w-full px-2 py-1 border border-gray-300 rounded text-xs"
+                                                    />
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-2">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={currentForm.status}
+                                                        onChange={(e) => setCurrentForm(prev => ({ ...prev, status: e.target.checked }))}
+                                                        className="w-4 h-4"
+                                                    />
+                                                    <label className="text-xs font-semibold text-gray-700">Closed</label>
+                                                </div>
+                                                <div className="flex gap-2">
+                                                    <button
+                                                        onClick={() => handleAddTask(sectionNum)}
+                                                        className="px-3 py-1 bg-scl-purple text-white rounded text-xs font-semibold hover:bg-scl-purple/90"
+                                                    >
+                                                        {editingRowIdx !== null && editingSection === sectionNum ? 'Update' : 'Add'}
+                                                    </button>
+                                                    {(editingRowIdx !== null || currentForm.area) && (
+                                                        <button
+                                                            onClick={handleFormReset}
+                                                            className="px-3 py-1 border border-gray-300 rounded text-xs font-semibold text-gray-700 hover:bg-gray-100"
+                                                        >
+                                                            Cancel
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        {(formData.sections[sectionNum] || []).length > 0 && (
+                                            <div className="overflow-x-auto">
+                                                <table className="w-full text-sm border-collapse">
+                                                    <thead>
+                                                        <tr className="bg-gray-100">
+                                                            <th className="border border-gray-300 px-3 py-2 text-left font-semibold">Risk / Issue</th>
+                                                            <th className="border border-gray-300 px-3 py-2 text-left font-semibold">Impact</th>
+                                                            <th className="border border-gray-300 px-3 py-2 text-left font-semibold">Mitigation / Action</th>
+                                                            <th className="border border-gray-300 px-3 py-2 text-left font-semibold">Owner</th>
+                                                            <th className="border border-gray-300 px-3 py-2 text-center font-semibold">Status</th>
+                                                            <th className="border border-gray-300 px-3 py-2 text-center font-semibold">Actions</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {(formData.sections[sectionNum] || []).map((task, idx) => (
+                                                            <tr key={task.id || task.tempId || idx} className="hover:bg-blue-50">
+                                                                <td className="border border-gray-300 px-3 py-2 text-sm font-medium">{task.area}</td>
+                                                                <td className="border border-gray-300 px-3 py-2 text-sm">{task.description.substring(0, 30)}...</td>
+                                                                <td className="border border-gray-300 px-3 py-2 text-sm">{task.source?.substring(0, 30)}...</td>
+                                                                <td className="border border-gray-300 px-3 py-2 text-sm">{task.responsible}</td>
+                                                                <td className="border border-gray-300 px-3 py-2 text-center">
+                                                                    <span className={task.status ? "text-green-600 font-semibold" : "text-orange-600 font-semibold"}>
+                                                                        {task.status ? "Closed" : "Open"}
+                                                                    </span>
+                                                                </td>
+                                                                <td className="border border-gray-300 px-3 py-2 text-center">
+                                                                    <button
+                                                                        onClick={() => handleEditTask(sectionNum, idx)}
+                                                                        className="text-blue-500 hover:text-blue-700 font-semibold text-sm mr-2"
+                                                                    >
+                                                                        Edit
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => {
+                                                                            if (window.confirm('Delete this risk/issue?')) {
+                                                                                handleDeleteTask(sectionNum, idx);
+                                                                            }
+                                                                        }}
+                                                                        className="text-red-500 hover:text-red-700 font-semibold text-sm"
+                                                                    >
+                                                                        Delete
+                                                                    </button>
+                                                                </td>
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        )}
                                     </div>
+                                )}
 
-                                    <div className="grid grid-cols-3 gap-2 mb-2">
-                                        <div className="col-span-2">
-                                            <label className="block text-xs font-semibold text-gray-700 mb-0.5">Description</label>
-                                            <textarea
-                                                value={currentForm.description}
-                                                onChange={(e) => setCurrentForm(prev => ({ ...prev, description: e.target.value }))}
-                                                placeholder={SECTION_CONFIG[sectionNum].tasks.find(t => t.area === currentForm.area)?.description || 'Type description here...'}
-                                                className="w-full px-2 py-1 border border-gray-300 rounded text-xs"
-                                                rows="2"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs font-semibold text-gray-700 mb-0.5">Responsible Person</label>
-                                            <input
-                                                type="text"
-                                                value={currentForm.responsible}
-                                                onChange={(e) => setCurrentForm(prev => ({ ...prev, responsible: e.target.value }))}
-                                                placeholder="Name"
-                                                className="w-full px-2 py-1 border border-gray-300 rounded text-xs"
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <div className="grid grid-cols-3 gap-2 mb-2">
-                                        <div>
-                                            <label className="block text-xs font-semibold text-gray-700 mb-0.5">Source (File)</label>
-                                            <input
-                                                ref={sourceInputRef}
-                                                type="file"
-                                                onChange={(e) => setCurrentForm(prev => ({ ...prev, source: e.target.files ? e.target.files[0].name : '' }))}
-                                                className="w-full text-xs"
-                                            />
-                                            {currentForm.source && <p className="text-xs text-gray-600 mt-0.5">✓ {currentForm.source.substring(0, 20)}</p>}
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs font-semibold text-gray-700 mb-0.5">Evidence (File)</label>
-                                            <input
-                                                ref={evidenceInputRef}
-                                                type="file"
-                                                onChange={(e) => setCurrentForm(prev => ({ ...prev, evidence: e.target.files ? e.target.files[0].name : '' }))}
-                                                className="w-full text-xs"
-                                            />
-                                            {currentForm.evidence && <p className="text-xs text-gray-600 mt-0.5">✓ {currentForm.evidence.substring(0, 20)}</p>}
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs font-semibold text-gray-700 mb-0.5">Review Notes</label>
-                                            <textarea
-                                                value={currentForm.notes}
-                                                onChange={(e) => setCurrentForm(prev => ({ ...prev, notes: e.target.value }))}
-                                                placeholder="Notes..."
-                                                className="w-full px-2 py-1 border border-gray-300 rounded text-xs"
-                                                rows="2"
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-2">
-                                            <input
-                                                type="checkbox"
-                                                checked={currentForm.status}
-                                                onChange={(e) => setCurrentForm(prev => ({ ...prev, status: e.target.checked }))}
-                                                className="w-4 h-4"
-                                            />
-                                            <label className="text-xs font-semibold text-gray-700">Complete</label>
-                                        </div>
-                                        <div className="flex gap-2">
-                                            <button
-                                                onClick={() => handleAddTask(sectionNum)}
-                                                className="px-3 py-1 bg-scl-purple text-white rounded text-xs font-semibold hover:bg-scl-purple/90"
-                                            >
-                                                {editingRowIdx !== null && editingSection === sectionNum ? 'Update' : 'Add'}
-                                            </button>
-                                            {(editingRowIdx !== null || currentForm.area) && (
-                                                <button
-                                                    onClick={handleFormReset}
-                                                    className="px-3 py-1 border border-gray-300 rounded text-xs font-semibold text-gray-700 hover:bg-gray-100"
-                                                >
-                                                    Cancel
-                                                </button>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Table at Bottom */}
-                                {(formData.sections[sectionNum] || []).length > 0 && (
-                                    <div className="overflow-x-auto">
-                                        <table className="w-full text-sm border-collapse">
-                                            <thead>
-                                                <tr className="bg-gray-100">
-                                                    <th className="border border-gray-300 px-3 py-2 text-left font-semibold">Task Area</th>
-                                                    <th className="border border-gray-300 px-3 py-2 text-left font-semibold">Description</th>
-                                                    <th className="border border-gray-300 px-3 py-2 text-left font-semibold">Responsible</th>
-                                                    <th className="border border-gray-300 px-3 py-2 text-center font-semibold">Status</th>
-                                                    <th className="border border-gray-300 px-3 py-2 text-center font-semibold">Actions</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {(formData.sections[sectionNum] || []).map((task, idx) => (
-                                                    <tr key={task.id || task.tempId || idx} className="hover:bg-blue-50">
-                                                        <td className="border border-gray-300 px-3 py-2 text-sm font-medium">{task.area}</td>
-                                                        <td className="border border-gray-300 px-3 py-2 text-sm">{task.description.substring(0, 50)}...</td>
-                                                        <td className="border border-gray-300 px-3 py-2 text-sm">{task.responsible}</td>
-                                                        <td className="border border-gray-300 px-3 py-2 text-center">
-                                                            {task.status ? <span className="text-green-600 font-semibold">✓</span> : <span className="text-gray-400">○</span>}
-                                                        </td>
-                                                        <td className="border border-gray-300 px-3 py-2 text-center">
-                                                            <button
-                                                                onClick={() => handleEditTask(sectionNum, idx)}
-                                                                className="text-blue-500 hover:text-blue-700 font-semibold text-sm mr-2"
-                                                            >
-                                                                Edit
-                                                            </button>
-                                                            <button
-                                                                onClick={() => {
-                                                                    if (window.confirm('Delete this task?')) {
-                                                                        handleDeleteTask(sectionNum, idx);
-                                                                    }
-                                                                }}
-                                                                className="text-red-500 hover:text-red-700 font-semibold text-sm"
-                                                            >
-                                                                Delete
-                                                            </button>
-                                                        </td>
+                                {/* Section 8: Sign-off */}
+                                {sectionNum === 8 && (
+                                    <div>
+                                        <div className="overflow-x-auto">
+                                            <table className="w-full text-sm border-collapse">
+                                                <thead>
+                                                    <tr className="bg-gray-100">
+                                                        <th className="border border-gray-300 px-3 py-2 text-left font-semibold">Name</th>
+                                                        <th className="border border-gray-300 px-3 py-2 text-left font-semibold">Role</th>
+                                                        <th className="border border-gray-300 px-3 py-2 text-left font-semibold">Date</th>
+                                                        <th className="border border-gray-300 px-3 py-2 text-left font-semibold">Signature</th>
+                                                        <th className="border border-gray-300 px-3 py-2 text-center font-semibold">Actions</th>
                                                     </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
+                                                </thead>
+                                                <tbody>
+                                                    {(formData.sections[sectionNum] || []).map((task, idx) => (
+                                                        <tr key={task.id || task.tempId || idx} className="hover:bg-blue-50">
+                                                            <td className="border border-gray-300 px-3 py-2 text-sm font-medium">{task.area}</td>
+                                                            <td className="border border-gray-300 px-3 py-2 text-sm">
+                                                                <input
+                                                                    type="text"
+                                                                    value={task.description || ''}
+                                                                    onChange={(e) => {
+                                                                        const sections = { ...formData.sections };
+                                                                        sections[sectionNum][idx].description = e.target.value;
+                                                                        setFormData(prev => ({ ...prev, sections }));
+                                                                    }}
+                                                                    placeholder="Role"
+                                                                    className="w-full px-2 py-1 border border-gray-300 rounded text-xs"
+                                                                />
+                                                            </td>
+                                                            <td className="border border-gray-300 px-3 py-2 text-sm">
+                                                                <input
+                                                                    type="date"
+                                                                    value={task.source || ''}
+                                                                    onChange={(e) => {
+                                                                        const sections = { ...formData.sections };
+                                                                        sections[sectionNum][idx].source = e.target.value;
+                                                                        setFormData(prev => ({ ...prev, sections }));
+                                                                    }}
+                                                                    className="w-full px-2 py-1 border border-gray-300 rounded text-xs"
+                                                                />
+                                                            </td>
+                                                            <td className="border border-gray-300 px-3 py-2 text-sm">
+                                                                <input
+                                                                    type="text"
+                                                                    value={task.responsible || ''}
+                                                                    onChange={(e) => {
+                                                                        const sections = { ...formData.sections };
+                                                                        sections[sectionNum][idx].responsible = e.target.value;
+                                                                        setFormData(prev => ({ ...prev, sections }));
+                                                                    }}
+                                                                    placeholder="Signature"
+                                                                    className="w-full px-2 py-1 border border-gray-300 rounded text-xs"
+                                                                />
+                                                            </td>
+                                                            <td className="border border-gray-300 px-3 py-2 text-center">
+                                                                <button
+                                                                    onClick={() => {
+                                                                        if (window.confirm('Reset this sign-off entry?')) {
+                                                                            const sections = { ...formData.sections };
+                                                                            sections[sectionNum][idx] = {
+                                                                                area: task.area,
+                                                                                description: '',
+                                                                                source: '',
+                                                                                responsible: ''
+                                                                            };
+                                                                            setFormData(prev => ({ ...prev, sections }));
+                                                                        }
+                                                                    }}
+                                                                    className="text-red-500 hover:text-red-700 font-semibold text-sm"
+                                                                >
+                                                                    Clear
+                                                                </button>
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Other Sections: Generic Form */}
+                                {sectionNum !== 7 && sectionNum !== 8 && (
+                                    <div>
+                                        <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 mb-4">
+                                            <h4 className="font-semibold text-gray-900 mb-3 text-sm">
+                                                {editingRowIdx !== null && editingSection === sectionNum ? 'Edit Task' : 'Add New Task'}
+                                            </h4>
+                                            
+                                            <div className="mb-2">
+                                                <label className="block text-xs font-semibold text-gray-700 mb-0.5">Task Area *</label>
+                                                <select
+                                                    value={currentForm.area}
+                                                    onChange={(e) => {
+                                                        const selectedTask = SECTION_CONFIG[sectionNum].tasks.find(t => t.area === e.target.value);
+                                                        setCurrentForm(prev => ({
+                                                            ...prev,
+                                                            area: e.target.value,
+                                                            description: selectedTask?.description || ''
+                                                        }));
+                                                    }}
+                                                    className="w-full px-2 py-1 border border-gray-300 rounded text-xs"
+                                                >
+                                                    <option value="">Select Area</option>
+                                                    {SECTION_CONFIG[sectionNum].tasks.map(task => (
+                                                        <option key={task.area} value={task.area}>{task.area}</option>
+                                                    ))}
+                                                </select>
+                                            </div>
+
+                                            <div className="grid grid-cols-3 gap-2 mb-2">
+                                                <div className="col-span-2">
+                                                    <label className="block text-xs font-semibold text-gray-700 mb-0.5">Description</label>
+                                                    <textarea
+                                                        value={currentForm.description}
+                                                        onChange={(e) => setCurrentForm(prev => ({ ...prev, description: e.target.value }))}
+                                                        placeholder={SECTION_CONFIG[sectionNum].tasks.find(t => t.area === currentForm.area)?.description || 'Type description here...'}
+                                                        className="w-full px-2 py-1 border border-gray-300 rounded text-xs"
+                                                        rows="2"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-xs font-semibold text-gray-700 mb-0.5">Responsible Person</label>
+                                                    <input
+                                                        type="text"
+                                                        value={currentForm.responsible}
+                                                        onChange={(e) => setCurrentForm(prev => ({ ...prev, responsible: e.target.value }))}
+                                                        placeholder="Name"
+                                                        className="w-full px-2 py-1 border border-gray-300 rounded text-xs"
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            <div className="grid grid-cols-3 gap-2 mb-2">
+                                                <div>
+                                                    <label className="block text-xs font-semibold text-gray-700 mb-0.5">Source (File)</label>
+                                                    <input
+                                                        ref={sourceInputRef}
+                                                        type="file"
+                                                        onChange={(e) => setCurrentForm(prev => ({ ...prev, source: e.target.files ? e.target.files[0].name : '' }))}
+                                                        className="w-full text-xs"
+                                                    />
+                                                    {currentForm.source && <p className="text-xs text-gray-600 mt-0.5">✓ {currentForm.source.substring(0, 20)}</p>}
+                                                </div>
+                                                <div>
+                                                    <label className="block text-xs font-semibold text-gray-700 mb-0.5">Evidence (File)</label>
+                                                    <input
+                                                        ref={evidenceInputRef}
+                                                        type="file"
+                                                        onChange={(e) => setCurrentForm(prev => ({ ...prev, evidence: e.target.files ? e.target.files[0].name : '' }))}
+                                                        className="w-full text-xs"
+                                                    />
+                                                    {currentForm.evidence && <p className="text-xs text-gray-600 mt-0.5">✓ {currentForm.evidence.substring(0, 20)}</p>}
+                                                </div>
+                                                <div>
+                                                    <label className="block text-xs font-semibold text-gray-700 mb-0.5">Review Notes</label>
+                                                    <textarea
+                                                        value={currentForm.notes}
+                                                        onChange={(e) => setCurrentForm(prev => ({ ...prev, notes: e.target.value }))}
+                                                        placeholder="Notes..."
+                                                        className="w-full px-2 py-1 border border-gray-300 rounded text-xs"
+                                                        rows="2"
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-2">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={currentForm.status}
+                                                        onChange={(e) => setCurrentForm(prev => ({ ...prev, status: e.target.checked }))}
+                                                        className="w-4 h-4"
+                                                    />
+                                                    <label className="text-xs font-semibold text-gray-700">Complete</label>
+                                                </div>
+                                                <div className="flex gap-2">
+                                                    <button
+                                                        onClick={() => handleAddTask(sectionNum)}
+                                                        className="px-3 py-1 bg-scl-purple text-white rounded text-xs font-semibold hover:bg-scl-purple/90"
+                                                    >
+                                                        {editingRowIdx !== null && editingSection === sectionNum ? 'Update' : 'Add'}
+                                                    </button>
+                                                    {(editingRowIdx !== null || currentForm.area) && (
+                                                        <button
+                                                            onClick={handleFormReset}
+                                                            className="px-3 py-1 border border-gray-300 rounded text-xs font-semibold text-gray-700 hover:bg-gray-100"
+                                                        >
+                                                            Cancel
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {(formData.sections[sectionNum] || []).length > 0 && (
+                                            <div className="overflow-x-auto">
+                                                <table className="w-full text-sm border-collapse">
+                                                    <thead>
+                                                        <tr className="bg-gray-100">
+                                                            <th className="border border-gray-300 px-3 py-2 text-left font-semibold">Task Area</th>
+                                                            <th className="border border-gray-300 px-3 py-2 text-left font-semibold">Description</th>
+                                                            <th className="border border-gray-300 px-3 py-2 text-left font-semibold">Responsible</th>
+                                                            <th className="border border-gray-300 px-3 py-2 text-center font-semibold">Status</th>
+                                                            <th className="border border-gray-300 px-3 py-2 text-center font-semibold">Actions</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {(formData.sections[sectionNum] || []).map((task, idx) => (
+                                                            <tr key={task.id || task.tempId || idx} className="hover:bg-blue-50">
+                                                                <td className="border border-gray-300 px-3 py-2 text-sm font-medium">{task.area}</td>
+                                                                <td className="border border-gray-300 px-3 py-2 text-sm">{task.description.substring(0, 50)}...</td>
+                                                                <td className="border border-gray-300 px-3 py-2 text-sm">{task.responsible}</td>
+                                                                <td className="border border-gray-300 px-3 py-2 text-center">
+                                                                    {task.status ? <span className="text-green-600 font-semibold">✓</span> : <span className="text-gray-400">○</span>}
+                                                                </td>
+                                                                <td className="border border-gray-300 px-3 py-2 text-center">
+                                                                    <button
+                                                                        onClick={() => handleEditTask(sectionNum, idx)}
+                                                                        className="text-blue-500 hover:text-blue-700 font-semibold text-sm mr-2"
+                                                                    >
+                                                                        Edit
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => {
+                                                                            if (window.confirm('Delete this task?')) {
+                                                                                handleDeleteTask(sectionNum, idx);
+                                                                            }
+                                                                        }}
+                                                                        className="text-red-500 hover:text-red-700 font-semibold text-sm"
+                                                                    >
+                                                                        Delete
+                                                                    </button>
+                                                                </td>
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        )}
                                     </div>
                                 )}
                             </div>

@@ -62,16 +62,18 @@ const SECTION_CONFIG = {
     7: {
         title: 'Risk & Issue Log',
         tasks: [
-            { area: 'Risk / Issue', description: 'Describe the risk or issue' }
-        ]
+            { area: 'Example: Staffing gap in specialist subject', impact: 'Delays in course delivery', mitigation: 'Recruit part-time lecturer', owner: 'HR Manager', status: 'Open' }
+        ],
+        fields: ['risk', 'impact', 'mitigation', 'owner', 'status']
     },
     8: {
         title: 'Sign-off',
         tasks: [
-            { area: 'Lead Coordinator', description: 'Approval by Lead Coordinator' },
-            { area: 'QA Manager', description: 'Approval by QA Manager' },
-            { area: 'Principal / CEO', description: 'Approval by Principal / CEO' }
-        ]
+            { area: 'Lead Coordinator', role: '', date: '', signature: '' },
+            { area: 'QA Manager', role: '', date: '', signature: '' },
+            { area: 'Principal / CEO', role: '', date: '', signature: '' }
+        ],
+        fields: ['name', 'role', 'date', 'signature']
     }
 };
 
