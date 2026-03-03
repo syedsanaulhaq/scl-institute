@@ -94,6 +94,7 @@ const CourseAccreditationsDetail = () => {
     const [editingSection, setEditingSection] = useState(null);
     const sourceInputRef = useRef(null);
     const evidenceInputRef = useRef(null);
+    const lastSubmitTimeRef = useRef(0); // Track last submission time to prevent double submissions
     const [currentForm, setCurrentForm] = useState({
         area: '',
         description: '',
@@ -501,7 +502,13 @@ const CourseAccreditationsDetail = () => {
     };
 
     const handleAddTask = (sectionNum) => {
-        if (isSubmitting) return; // Prevent multiple rapid submissions
+        // Prevent double submissions within 500ms window
+        const now = Date.now();
+        if (now - lastSubmitTimeRef.current < 500) {
+            return;
+        }
+        lastSubmitTimeRef.current = now;
+        
         if (!currentForm.area) {
             alert('Please select a task area');
             return;
