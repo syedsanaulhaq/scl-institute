@@ -362,8 +362,15 @@ const CourseInductionsDetail = () => {
                     navigate('/course-inductions');
                 } else {
                     // Create new induction
+                    console.log('Creating new induction');
                     const response = await axios.post(`${API_URL}/inductions`, formData);
-                    const inductionId = response.data.data.id;
+                    console.log('Create response:', response.data);
+                    
+                    const inductionId = response.data?.data?.id || response.data?.id;
+                    if (!inductionId) {
+                        throw new Error(`Invalid response from server: ${JSON.stringify(response.data)}`);
+                    }
+                    console.log('Created induction with ID:', inductionId);
                     
                     // Save all requirements
                     for (let sectionNum = 1; sectionNum <= 8; sectionNum++) {
@@ -414,8 +421,15 @@ const CourseInductionsDetail = () => {
                 let inductionId = id;
                 
                 if (isNew) {
+                    console.log('Creating new induction (old flow)');
                     const response = await axios.post(`${API_URL}/inductions`, formData);
-                    inductionId = response.data.data.id;
+                    console.log('Create response:', response.data);
+                    
+                    inductionId = response.data?.data?.id || response.data?.id;
+                    if (!inductionId) {
+                        throw new Error(`Invalid response from server: ${JSON.stringify(response.data)}`);
+                    }
+                    console.log('Created induction with ID:', inductionId);
                 } else {
                     await axios.put(`${API_URL}/inductions/${inductionId}`, formData);
                 }

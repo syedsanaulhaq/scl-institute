@@ -377,7 +377,12 @@ const CourseAccreditationsDetail = () => {
                     // Create new accreditation
                     console.log('Creating new accreditation');
                     const response = await axios.post(`${API_URL}/accreditations`, formData);
-                    const accreditationId = response.data.data.id;
+                    console.log('Create response:', response.data);
+                    
+                    const accreditationId = response.data?.data?.id || response.data?.id;
+                    if (!accreditationId) {
+                        throw new Error(`Invalid response from server: ${JSON.stringify(response.data)}`);
+                    }
                     console.log('Created accreditation with ID:', accreditationId);
                     
                     // Save all tasks
@@ -434,7 +439,12 @@ const CourseAccreditationsDetail = () => {
                 if (isNew) {
                     console.log('Creating new accreditation (old flow)');
                     const response = await axios.post(`${API_URL}/accreditations`, formData);
-                    accreditationId = response.data.data.id;
+                    console.log('Create response:', response.data);
+                    
+                    accreditationId = response.data?.data?.id || response.data?.id;
+                    if (!accreditationId) {
+                        throw new Error(`Invalid response from server: ${JSON.stringify(response.data)}`);
+                    }
                     console.log('Created accreditation with ID:', accreditationId);
                 } else {
                     console.log('Updating accreditation:', accreditationId);
