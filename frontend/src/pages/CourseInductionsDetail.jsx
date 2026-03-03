@@ -632,7 +632,7 @@ const CourseInductionsDetail = () => {
             </div>
 
             <div className="max-w-7xl mx-auto px-6 py-8 space-y-6">
-                {/* General Info */}}
+                {/* General Info */}
                 <div className="bg-white rounded-lg border border-gray-200 p-6">
                     <h2 className="text-lg font-bold text-gray-900 mb-4">Document Control - General Information</h2>
                     <div className="grid grid-cols-2 gap-4">
