@@ -518,31 +518,15 @@ const CourseInductionsDetail = () => {
                     ...currentForm,
                     id: existingId // Preserve ID for existing records
                 };
+                alert('Record updated in the section');
             } else {
-                // Check if requirement already exists (skip for Section 8 - Sign-off, which has pre-defined rows)
-                // Only check if we have meaningful data (area + responsible or area + description)
-                if (sectionNum !== 8 && sectionNum !== 7) {
-                    const hasMeaningfulData = currentForm.responsible || currentForm.description;
-                    if (hasMeaningfulData) {
-                        const alreadyExists = newData.sections[sectionNum].some(
-                            req => req.area === currentForm.area && 
-                                   (req.responsible === currentForm.responsible || 
-                                    req.description === currentForm.description)
-                        );
-                        
-                        if (alreadyExists) {
-                            alert('This requirement already exists in this section');
-                            return newData; // Don't add duplicate
-                        }
-                    }
-                }
-                
                 // Add new - generate temporary ID if not from database
                 const newReq = { 
                     ...currentForm,
                     tempId: `temp_${Date.now()}_${Math.random()}`  // Temporary unique ID
                 };
                 newData.sections[sectionNum].push(newReq);
+                alert('Record added to the section successfully');
             }
             return newData;
         });

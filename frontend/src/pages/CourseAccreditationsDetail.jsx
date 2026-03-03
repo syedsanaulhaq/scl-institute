@@ -518,31 +518,15 @@ const CourseAccreditationsDetail = () => {
                     ...currentForm,
                     id: existingId
                 };
+                alert('Record updated in the section');
             } else {
-                // Check if task already exists (skip for Section 8 - Sign-off, which has pre-defined rows)
-                // Only check if we have meaningful data (area + responsible or area + description)
-                if (sectionNum !== 8 && sectionNum !== 7) {
-                    const hasMeaningfulData = currentForm.responsible || currentForm.description;
-                    if (hasMeaningfulData) {
-                        const alreadyExists = newData.sections[sectionNum].some(
-                            task => task.area === currentForm.area && 
-                                   (task.responsible === currentForm.responsible || 
-                                    task.description === currentForm.description)
-                        );
-                        
-                        if (alreadyExists) {
-                            alert('This task already exists in this section');
-                            return newData;
-                        }
-                    }
-                }
-                
                 // Add new
                 const newTask = { 
                     ...currentForm,
                     tempId: `temp_${Date.now()}_${Math.random()}`
                 };
                 newData.sections[sectionNum].push(newTask);
+                alert('Record added to the section successfully');
             }
             return newData;
         });
