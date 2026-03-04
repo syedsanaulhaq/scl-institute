@@ -258,6 +258,8 @@ const CourseInductionsDetail = () => {
     const fetchInduction = async () => {
         try {
             const response = await axios.get(`${API_URL}/inductions/${id}`);
+            console.log('Induction response:', response.data);
+            
             const bundle = response.data?.data;
             
             if (!bundle || !bundle.induction) {
@@ -266,6 +268,9 @@ const CourseInductionsDetail = () => {
             
             const induction = bundle.induction;
             const requirements = bundle.requirements || [];
+            
+            console.log('Loaded induction:', induction);
+            console.log('Loaded requirements:', requirements);
             
             // Group requirements by section_number
             const sectionsByNum = {};
@@ -324,14 +329,19 @@ const CourseInductionsDetail = () => {
             setEditingSection(null);
 
             // Find and set the matching course ID from currently loaded courses
+            console.log('Available courses:', courses.map(c => ({ id: c.id, fullname: c.fullname || c.course_title })));
+            console.log('Looking for course with title:', induction.course_title);
             if (courses.length > 0) {
                 const matchingCourse = courses.find(c => 
                     (c.fullname || c.course_title) === induction.course_title
                 );
+                console.log('Found matching course?', !!matchingCourse, matchingCourse);
                 if (matchingCourse) {
                     setSelectedCourseId(matchingCourse.id);
-                    console.log('Matched course:', matchingCourse.id, matchingCourse.fullname);
+                    console.log('Set selectedCourseId to:', matchingCourse.id);
                 }
+            } else {
+                console.log('No courses loaded yet');
             }
         } catch (err) {
             console.error('Failed to fetch induction:', err);

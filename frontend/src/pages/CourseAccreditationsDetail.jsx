@@ -258,21 +258,27 @@ const CourseAccreditationsDetail = () => {
     const fetchAccreditation = async () => {
         try {
             const response = await axios.get(`${API_URL}/accreditations/${id}`);
-            const accreditation = response.data?.data;
+            console.log('Accreditation response:', response.data);
+            
+            // The backend returns { accreditation, tasks, risks, signoffs } inside data
+            const { accreditation, tasks = [] } = response.data?.data || {};
             
             if (!accreditation) {
                 throw new Error('Invalid data structure');
             }
             
-            // Group tasks by section_number (assuming tasks come with accreditation)
+            console.log('Loaded accreditation:', accreditation);
+            console.log('Loaded tasks:', tasks);
+            
+            // Group tasks by section_number
             const sectionsByNum = {};
             for (let i = 1; i <= 8; i++) {
                 sectionsByNum[i] = [];
             }
             
-            // If accreditation has tasks/requirements, populate them
-            if (accreditation.tasks) {
-                accreditation.tasks.forEach(task => {
+            // Populate tasks from the response
+            if (Array.isArray(tasks)) {
+                tasks.forEach(task => {
                     const sectionNum = task.section_number || 1;
                     if (sectionsByNum[sectionNum]) {
                         sectionsByNum[sectionNum].push({
@@ -324,14 +330,19 @@ const CourseAccreditationsDetail = () => {
             setEditingSection(null);
 
             // Find and set the matching course ID from currently loaded courses
+            console.log('Available courses:', courses.map(c => ({ id: c.id, fullname: c.fullname || c.course_title })));
+            console.log('Looking for course with title:', accreditation.course_title);
             if (courses.length > 0) {
                 const matchingCourse = courses.find(c => 
                     (c.fullname || c.course_title) === accreditation.course_title
                 );
+                console.log('Found matching course?', !!matchingCourse, matchingCourse);
                 if (matchingCourse) {
                     setSelectedCourseId(matchingCourse.id);
-                    console.log('Matched course:', matchingCourse.id, matchingCourse.fullname);
+                    console.log('Set selectedCourseId to:', matchingCourse.id);
                 }
+            } else {
+                console.log('No courses loaded yet');
             }
         } catch (err) {
             console.error('Failed to fetch accreditation:', err);
