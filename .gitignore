@@ -5,11 +5,12 @@ dist/
 .env
 .env.local
 .env.*.local
+.env.production
+.env.development
 
-# Keep example files for reference - these are safe to commit
-# .env.example
-# .env.development.example
-# .env.production.example
+# Keep example files for reference - these are SAFE to commit
+.env.example
+.env.production.example
 
 # Database and volume data
 moodle_data/
