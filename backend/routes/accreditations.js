@@ -369,12 +369,15 @@ router.post('/:id/signoffs', async (req, res) => {
         const { id } = req.params;
         const { role, name, sign_date, signature } = req.body;
 
-        await pool.query(
+        console.log('Creating signoff:', { accreditation_id: id, role, name, sign_date, signature });
+
+        const [result] = await pool.query(
             'INSERT INTO accreditation_signoffs (accreditation_id, role, name, sign_date, signature) VALUES (?, ?, ?, ?, ?)',
             [id, role, name, sign_date, signature]
         );
 
-        res.json({ success: true, message: 'Sign-off added successfully' });
+        const [rows] = await pool.query('SELECT * FROM accreditation_signoffs WHERE id = ?', [result.insertId]);
+        res.status(201).json({ success: true, data: rows[0], message: 'Sign-off added successfully' });
     } catch (error) {
         console.error('Error adding sign-off:', error.message);
         res.status(500).json({ success: false, message: 'Failed to add sign-off', error: error.message });
