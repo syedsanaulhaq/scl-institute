@@ -130,6 +130,22 @@ const CourseAccreditationsDetail = () => {
         initializeData();
     }, [id]);
 
+    // Second useEffect to ensure course dropdown is selected after both courses and formData are loaded
+    useEffect(() => {
+        if (formData.course_title && courses.length > 0 && !loading) {
+            console.log('Attempting to auto-select course in dropdown:', formData.course_title);
+            const matchingCourse = courses.find(c => 
+                (c.fullname || c.course_title) === formData.course_title
+            );
+            if (matchingCourse) {
+                setSelectedCourseId(matchingCourse.id);
+                console.log('Auto-selected course with ID:', matchingCourse.id);
+            } else {
+                console.log('No matching course found for:', formData.course_title);
+            }
+        }
+    }, [formData.course_title, courses, loading]);
+
     const fetchCourses = async () => {
         try {
             setCourseLoading(true);
