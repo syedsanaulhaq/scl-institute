@@ -29,9 +29,10 @@ router.post('/', async (req, res) => {
 
         // Create main accreditation record
         const [result] = await pool.query(
-            'INSERT INTO course_accreditations (course_title, awarding_body, application_type, expected_submission_date, lead_coordinator, version, overall_status) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            'INSERT INTO course_accreditations (course_title, course_code, awarding_body, application_type, expected_submission_date, lead_coordinator, version, overall_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
             [
                 documentControl.course_title || 'Untitled',
+                documentControl.course_code || '',
                 documentControl.awarding_body || '',
                 documentControl.application_type || '',
                 documentControl.expected_submission_date || null,
@@ -170,7 +171,7 @@ router.put('/:id', async (req, res) => {
         if (documentControl) {
             const updates = [];
             const params = [];
-            const allowedFields = ['course_title', 'awarding_body', 'application_type', 'expected_submission_date', 'lead_coordinator', 'version', 'overall_status', 'completion_percentage'];
+            const allowedFields = ['course_title', 'course_code', 'awarding_body', 'application_type', 'expected_submission_date', 'lead_coordinator', 'version', 'overall_status', 'completion_percentage'];
 
             allowedFields.forEach(field => {
                 if (documentControl[field] !== undefined) {

@@ -311,6 +311,7 @@ const CourseAccreditationsDetail = () => {
         // Transform frontend formData structure to match backend expectations
         const documentControl = {
             course_title: formData.course_title || '',
+            course_code: formData.course_code || '',
             awarding_body: formData.awarding_body || '',
             application_type: formData.application_type || '',
             expected_submission_date: formData.expected_submission_date || null,
