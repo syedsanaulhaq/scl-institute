@@ -116,23 +116,18 @@ const CourseAccreditationsDetail = () => {
     });
 
     useEffect(() => {
-        fetchCourses();
-        if (id && id !== 'new') {
-            fetchAccreditation();
-        }
-    }, [id]);
-
-    // When courses are loaded and in edit mode, try to match the selected course
-    useEffect(() => {
-        if (!isNew && courses.length > 0 && formData.course_title && !selectedCourseId) {
-            const matchingCourse = courses.find(c => 
-                (c.fullname || c.course_title) === formData.course_title
-            );
-            if (matchingCourse) {
-                setSelectedCourseId(matchingCourse.id);
+        const initializeData = async () => {
+            // First fetch courses
+            await fetchCourses();
+            
+            // Then fetch accreditation if in edit mode
+            if (id && id !== 'new') {
+                fetchAccreditation();
             }
-        }
-    }, [courses, isNew, formData.course_title, selectedCourseId]);
+        };
+        
+        initializeData();
+    }, [id]);
 
     const fetchCourses = async () => {
         try {
@@ -142,10 +137,13 @@ const CourseAccreditationsDetail = () => {
             console.log('Courses response:', response.data);
             const coursesList = Array.isArray(response.data?.data) ? response.data.data : response.data;
             console.log('Processed courses list:', coursesList);
-            setCourses(Array.isArray(coursesList) ? coursesList : []);
+            const coursesArray = Array.isArray(coursesList) ? coursesList : [];
+            setCourses(coursesArray);
+            return coursesArray; // Return the courses for use in async chain
         } catch (err) {
             console.error('Failed to fetch courses:', err);
             setCourses([]);
+            return [];
         } finally {
             setCourseLoading(false);
         }
@@ -312,13 +310,27 @@ const CourseAccreditationsDetail = () => {
                 sections: sectionsByNum
             });
 
-            // Find and set the matching course ID from loaded courses
+            // Reset the task form to prevent stale data from showing
+            setCurrentForm({
+                area: '',
+                description: '',
+                source: '',
+                evidence: '',
+                responsible: '',
+                status: false,
+                notes: ''
+            });
+            setEditingRowIdx(null);
+            setEditingSection(null);
+
+            // Find and set the matching course ID from currently loaded courses
             if (courses.length > 0) {
                 const matchingCourse = courses.find(c => 
                     (c.fullname || c.course_title) === accreditation.course_title
                 );
                 if (matchingCourse) {
                     setSelectedCourseId(matchingCourse.id);
+                    console.log('Matched course:', matchingCourse.id, matchingCourse.fullname);
                 }
             }
         } catch (err) {
