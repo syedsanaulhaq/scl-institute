@@ -29,12 +29,13 @@ router.post('/', async (req, res) => {
 
         // Create main accreditation record
         const [result] = await pool.query(
-            'INSERT INTO course_accreditations (course_title, course_code, awarding_body, application_type, expected_submission_date, lead_coordinator, version, overall_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+            'INSERT INTO course_accreditations (course_title, course_code, awarding_body, application_type, date_started, expected_submission_date, lead_coordinator, version, overall_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
             [
                 documentControl.course_title || 'Untitled',
                 documentControl.course_code || '',
                 documentControl.awarding_body || '',
                 documentControl.application_type || '',
+                documentControl.date_started || null,
                 documentControl.expected_submission_date || null,
                 documentControl.lead_coordinator || '',
                 documentControl.version || '1.0',
@@ -50,16 +51,16 @@ router.post('/', async (req, res) => {
                 if (Array.isArray(tasks)) {
                     for (const task of tasks) {
                         await pool.query(
-                            'INSERT INTO accreditation_tasks (accreditation_id, section_number, description, evidence_required, source_reference, responsible_person, due_date, status, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                            'INSERT INTO accreditation_tasks (accreditation_id, section_number, task_name, description, evidence_required, source_reference, responsible_person, status, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
                             [
                                 accreditationId,
                                 sectionNum,
+                                task.area || task.task_name || '',
                                 task.description || '',
-                                task.evidence_required || '',
-                                task.source_reference || '',
-                                task.responsible_person || '',
-                                task.due_date || null,
-                                task.status || 'Not Started',
+                                task.evidence || task.evidence_required || '',
+                                task.source || task.source_reference || '',
+                                task.responsible || task.responsible_person || '',
+                                task.status ? 'Completed' : 'Not Started',
                                 task.notes || null
                             ]
                         );
@@ -171,7 +172,7 @@ router.put('/:id', async (req, res) => {
         if (documentControl) {
             const updates = [];
             const params = [];
-            const allowedFields = ['course_title', 'course_code', 'awarding_body', 'application_type', 'expected_submission_date', 'lead_coordinator', 'version', 'overall_status', 'completion_percentage'];
+            const allowedFields = ['course_title', 'course_code', 'awarding_body', 'application_type', 'date_started', 'expected_submission_date', 'lead_coordinator', 'version', 'overall_status', 'completion_percentage'];
 
             allowedFields.forEach(field => {
                 if (documentControl[field] !== undefined) {
@@ -198,16 +199,16 @@ router.put('/:id', async (req, res) => {
                 if (Array.isArray(tasks)) {
                     for (const task of tasks) {
                         await pool.query(
-                            'INSERT INTO accreditation_tasks (accreditation_id, section_number, description, evidence_required, source_reference, responsible_person, due_date, status, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                            'INSERT INTO accreditation_tasks (accreditation_id, section_number, task_name, description, evidence_required, source_reference, responsible_person, status, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
                             [
                                 id,
                                 sectionNum,
+                                task.area || task.task_name || '',
                                 task.description || '',
-                                task.evidence_required || '',
-                                task.source_reference || '',
-                                task.responsible_person || '',
-                                task.due_date || null,
-                                task.status || 'Not Started',
+                                task.evidence || task.evidence_required || '',
+                                task.source || task.source_reference || '',
+                                task.responsible || task.responsible_person || '',
+                                task.status ? 'Completed' : 'Not Started',
                                 task.notes || null
                             ]
                         );

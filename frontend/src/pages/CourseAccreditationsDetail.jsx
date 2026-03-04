@@ -215,11 +215,11 @@ const CourseAccreditationsDetail = () => {
                                     if (sectionsByNum[sectionNum]) {
                                         sectionsByNum[sectionNum].push({
                                             id: task.id,
-                                            area: task.area || '',
+                                            area: task.task_name || '',
                                             description: task.description || '',
-                                            source: task.source || '',
-                                            evidence: task.evidence || '',
-                                            responsible: task.responsible || '',
+                                            source: task.source_reference || '',
+                                            evidence: task.evidence_required || '',
+                                            responsible: task.responsible_person || '',
                                             status: task.status === 'Completed',
                                             notes: task.notes || ''
                                         });
@@ -308,11 +308,11 @@ const CourseAccreditationsDetail = () => {
                     if (sectionsByNum[sectionNum]) {
                         sectionsByNum[sectionNum].push({
                             id: task.id,
-                            area: task.area || '',
+                            area: task.task_name || '',
                             description: task.description || '',
-                            source: task.source || '',
-                            evidence: task.evidence || '',
-                            responsible: task.responsible || '',
+                            source: task.source_reference || '',
+                            evidence: task.evidence_required || '',
+                            responsible: task.responsible_person || '',
                             status: task.status === 'Completed',
                             notes: task.notes || ''
                         });
