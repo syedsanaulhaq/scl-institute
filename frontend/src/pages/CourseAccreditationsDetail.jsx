@@ -245,7 +245,9 @@ const CourseAccreditationsDetail = () => {
                             if (accreditation.signoffs && accreditation.signoffs.length > 0) {
                                 // Filter to only the 3 required roles and map from database
                                 const requiredRoles = new Set(['Lead Coordinator', 'QA Manager', 'Principal / CEO']);
+                                console.log('[LOAD] Raw signoffs from API:', accreditation.signoffs);
                                 const validSignoffs = accreditation.signoffs.filter(s => requiredRoles.has(s.role));
+                                console.log('[LOAD] Filtered signoffs (only required roles):', validSignoffs);
                                 
                                 if (validSignoffs.length > 0) {
                                     sectionsByNum[8] = validSignoffs.map(signoff => ({
@@ -256,8 +258,10 @@ const CourseAccreditationsDetail = () => {
                                         responsible: signoff.signature || '',
                                         tempId: `signoff-${signoff.id}`
                                     }));
+                                    console.log('[LOAD] Mapped signoffs for form:', sectionsByNum[8]);
                                 } else {
                                     // Initialize with default roles if no valid signoffs
+                                    console.log('[LOAD] No valid signoffs found, initializing with empty defaults');
                                     sectionsByNum[8] = [
                                         { area: 'Lead Coordinator', description: '', source: '', responsible: '', tempId: 'signoff-1' },
                                         { area: 'QA Manager', description: '', source: '', responsible: '', tempId: 'signoff-2' },
@@ -266,6 +270,7 @@ const CourseAccreditationsDetail = () => {
                                 }
                             } else {
                                 // Initialize with default roles if no signoffs exist
+                                console.log('[LOAD] No signoffs in API response, initializing with empty defaults');
                                 sectionsByNum[8] = [
                                     { area: 'Lead Coordinator', description: '', source: '', responsible: '', tempId: 'signoff-1' },
                                     { area: 'QA Manager', description: '', source: '', responsible: '', tempId: 'signoff-2' },
