@@ -717,17 +717,7 @@ const CourseAccreditationsDetail = () => {
                         );
                     }
                 }
-                                taskData
-                            );
-                        } else {
-                            await axios.post(
-                                `${API_URL}/accreditations/${accreditationId}/tasks`,
-                                taskData
-                            );
-                        }
-                    }
-                }
-
+                
                 alert('Accreditation saved successfully!');
                 navigate('/course-accreditations');
             }
