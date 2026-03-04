@@ -208,21 +208,27 @@ const CourseAccreditationsDetail = () => {
                                 sectionsByNum[i] = [];
                             }
                             
-                            // If accreditation has tasks, populate them
+                            // If accreditation has tasks, populate them with duplicate prevention
+                            const taskKeys = new Set();
                             if (accreditation.tasks) {
                                 accreditation.tasks.forEach(task => {
                                     const sectionNum = task.section_number || 1;
                                     if (sectionsByNum[sectionNum]) {
-                                        sectionsByNum[sectionNum].push({
-                                            id: task.id,
-                                            area: task.task_name || '',
-                                            description: task.description || '',
-                                            source: task.source_reference || '',
-                                            evidence: task.evidence_required || '',
-                                            responsible: task.responsible_person || '',
-                                            status: task.status === 'Completed',
-                                            notes: task.notes || ''
-                                        });
+                                        // Create unique key to prevent duplicates
+                                        const taskKey = `${task.id}|${task.task_name}|${task.description}`;
+                                        if (!taskKeys.has(taskKey)) {
+                                            taskKeys.add(taskKey);
+                                            sectionsByNum[sectionNum].push({
+                                                id: task.id,
+                                                area: task.task_name || '',
+                                                description: task.description || '',
+                                                source: task.source_reference || '',
+                                                evidence: task.evidence_required || '',
+                                                responsible: task.responsible_person || '',
+                                                status: task.status === 'Completed',
+                                                notes: task.notes || ''
+                                            });
+                                        }
                                     }
                                 });
                             }
@@ -282,6 +288,7 @@ const CourseAccreditationsDetail = () => {
 
     const fetchAccreditation = async (coursesList = []) => {
         try {
+            setLoading(true);
             const response = await axios.get(`${API_URL}/accreditations/${id}`);
             console.log('Accreditation response:', response.data);
             
@@ -301,21 +308,27 @@ const CourseAccreditationsDetail = () => {
                 sectionsByNum[i] = [];
             }
             
-            // Populate tasks from the response
+            // Populate tasks from the response - use Set to prevent duplicates
+            const taskKeys = new Set();
             if (Array.isArray(tasks)) {
                 tasks.forEach(task => {
                     const sectionNum = task.section_number || 1;
                     if (sectionsByNum[sectionNum]) {
-                        sectionsByNum[sectionNum].push({
-                            id: task.id,
-                            area: task.task_name || '',
-                            description: task.description || '',
-                            source: task.source_reference || '',
-                            evidence: task.evidence_required || '',
-                            responsible: task.responsible_person || '',
-                            status: task.status === 'Completed',
-                            notes: task.notes || ''
-                        });
+                        // Create unique key to prevent duplicates
+                        const taskKey = `${task.id}|${task.task_name}|${task.description}`;
+                        if (!taskKeys.has(taskKey)) {
+                            taskKeys.add(taskKey);
+                            sectionsByNum[sectionNum].push({
+                                id: task.id,
+                                area: task.task_name || '',
+                                description: task.description || '',
+                                source: task.source_reference || '',
+                                evidence: task.evidence_required || '',
+                                responsible: task.responsible_person || '',
+                                status: task.status === 'Completed',
+                                notes: task.notes || ''
+                            });
+                        }
                     }
                 });
             }
@@ -329,13 +342,18 @@ const CourseAccreditationsDetail = () => {
                 ];
             }
             
+            console.log('Setting formData with accreditation:', accreditation);
+            console.log('Date started value:', accreditation.date_started);
+            console.log('Formatted date:', formatDateForInput(accreditation.date_started));
+            
+            // Reset form completely before setting new data
             setFormData({
                 course_title: accreditation.course_title || '',
                 course_code: accreditation.course_code || '',
                 awarding_body: accreditation.awarding_body || '',
                 application_type: accreditation.application_type || '',
-                date_started: formatDateForInput(accreditation.date_started),
-                expected_submission_date: formatDateForInput(accreditation.expected_submission_date),
+                date_started: accreditation.date_started ? formatDateForInput(accreditation.date_started) : '',
+                expected_submission_date: accreditation.expected_submission_date ? formatDateForInput(accreditation.expected_submission_date) : '',
                 lead_coordinator: accreditation.lead_coordinator || '',
                 version: accreditation.version || '1.0',
                 sections: sectionsByNum
