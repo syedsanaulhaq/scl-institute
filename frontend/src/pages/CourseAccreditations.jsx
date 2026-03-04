@@ -108,8 +108,8 @@ const CourseAccreditations = ({ user }) => {
                         <table className="w-full">
                             <thead>
                                 <tr className="bg-gray-50 border-b border-gray-200">
-                                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Course Title</th>
-                                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Code</th>
+                                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Course Information</th>
+                                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Details</th>
                                     <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Awarding Body</th>
                                     <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Status</th>
                                     <th className="px-6 py-3 text-center text-sm font-semibold text-gray-900">Actions</th>
@@ -125,8 +125,17 @@ const CourseAccreditations = ({ user }) => {
                                 ) : (
                                     filteredAccreditations.map(accreditation => (
                                         <tr key={accreditation.id} className="border-b border-gray-100 hover:bg-gray-50">
-                                            <td className="px-6 py-4 text-sm text-gray-900 font-medium">{accreditation.course_title}</td>
-                                            <td className="px-6 py-4 text-sm text-gray-600">{accreditation.course_code}</td>
+                                            <td className="px-6 py-4 text-sm">
+                                                <div className="text-gray-900 font-medium">{accreditation.course_title}</div>
+                                                <div className="text-xs text-gray-500 mt-1">Code: <span className="font-semibold">{accreditation.course_code || '-'}</span></div>
+                                                <div className="text-xs text-gray-500">Type: <span className="font-semibold">{accreditation.application_type || '-'}</span></div>
+                                            </td>
+                                            <td className="px-6 py-4 text-sm">
+                                                <div className="text-xs space-y-1">
+                                                    <div><span className="text-gray-600">Submission:</span> <span className="font-medium">{accreditation.expected_submission_date ? new Date(accreditation.expected_submission_date).toLocaleDateString() : '-'}</span></div>
+                                                    <div><span className="text-gray-600">Version:</span> <span className="font-medium">{accreditation.version || '1.0'}</span></div>
+                                                </div>
+                                            </td>
                                             <td className="px-6 py-4 text-sm text-gray-600">{accreditation.awarding_body || '-'}</td>
                                             <td className="px-6 py-4 text-sm">
                                                 <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
