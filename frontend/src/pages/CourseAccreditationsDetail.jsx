@@ -131,7 +131,12 @@ const CourseAccreditationsDetail = () => {
             
             // Then fetch accreditation if in edit mode, passing courses along
             if (id && id !== 'new') {
+                // Reset form state before loading new data
+                resetEditForm();
                 fetchAccreditation(coursesList);
+            } else {
+                // Initialize new form
+                initializeNewForm();
             }
         };
         
@@ -286,6 +291,33 @@ const CourseAccreditationsDetail = () => {
         setFormData(prev => ({ ...prev, sections }));
     };
 
+    const resetEditForm = () => {
+        // Completely reset form state before loading new data
+        setFormData({
+            course_title: '',
+            course_code: '',
+            awarding_body: '',
+            application_type: '',
+            date_started: '',
+            expected_submission_date: '',
+            lead_coordinator: '',
+            version: '1.0',
+            sections: {}
+        });
+        setCurrentForm({
+            area: '',
+            description: '',
+            source: '',
+            evidence: '',
+            responsible: '',
+            status: false,
+            notes: ''
+        });
+        setEditingRowIdx(null);
+        setEditingSection(null);
+        setSelectedCourseId(null);
+    };
+
     const fetchAccreditation = async (coursesList = []) => {
         try {
             setLoading(true);
@@ -402,13 +434,31 @@ const CourseAccreditationsDetail = () => {
             course_code: formData.course_code || '',
             awarding_body: formData.awarding_body || '',
             application_type: formData.application_type || '',
+            date_started: formData.date_started || null,
             expected_submission_date: formData.expected_submission_date || null,
             lead_coordinator: formData.lead_coordinator || '',
             version: formData.version || '1.0'
         };
 
+        // Deduplicate and filter sections before sending to backend
+        const cleanedSections = {};
+        for (let i = 1; i <= 8; i++) {
+            const sectionTasks = formData.sections[i] || [];
+            const seen = new Set();
+            cleanedSections[i] = sectionTasks.filter(task => {
+                if (!task.area) return false;
+                const key = `${task.area}|${task.responsible}|${task.description}`;
+                if (seen.has(key)) {
+                    console.warn(`Deduplicating task in section ${i}:`, key);
+                    return false;
+                }
+                seen.add(key);
+                return true;
+            });
+        }
+
         // Extract risks from section 7
-        const risks = (formData.sections[7] || []).map(task => ({
+        const risks = (cleanedSections[7] || []).map(task => ({
             impact: task.description || '',
             mitigation: task.responsible || '',
             owner: task.source || '',
@@ -417,7 +467,7 @@ const CourseAccreditationsDetail = () => {
         }));
 
         // Extract signoffs from section 8
-        const signoffs = (formData.sections[8] || []).map(task => ({
+        const signoffs = (cleanedSections[8] || []).map(task => ({
             name: task.description || '',
             role: task.area || '',
             sign_date: null
@@ -425,7 +475,7 @@ const CourseAccreditationsDetail = () => {
 
         return {
             documentControl,
-            sections: formData.sections || {},
+            sections: cleanedSections || {},
             risks,
             signoffs
         };
