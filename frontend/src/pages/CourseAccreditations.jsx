@@ -6,7 +6,8 @@ import {
     Search,
     Edit2,
     Trash2,
-    X
+    X,
+    Eye
 } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
@@ -147,6 +148,13 @@ const CourseAccreditations = ({ user }) => {
                                                 </span>
                                             </td>
                                             <td className="px-6 py-4 text-center">
+                                                <button
+                                                    onClick={() => handleEdit(accreditation.id)}
+                                                    className="inline-block text-blue-500 hover:text-blue-700 mr-3"
+                                                    title="View accreditation details"
+                                                >
+                                                    <Eye className="w-4 h-4" />
+                                                </button>
                                                 <button
                                                     onClick={() => handleEdit(accreditation.id)}
                                                     className="inline-block text-scl-purple hover:text-scl-purple/70 mr-4"
