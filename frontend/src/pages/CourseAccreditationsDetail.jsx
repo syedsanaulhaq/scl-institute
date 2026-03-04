@@ -250,15 +250,16 @@ const CourseAccreditationsDetail = () => {
                                 console.log('[LOAD] Filtered signoffs (only required roles):', validSignoffs);
                                 
                                 if (validSignoffs.length > 0) {
-                                    sectionsByNum[8] = validSignoffs.map(signoff => ({
+                                    const mappedSignoffs = validSignoffs.map(signoff => ({
                                         id: signoff.id,
                                         area: signoff.role || '',
                                         description: signoff.name || '',
-                                        source: signoff.sign_date || '',
+                                        source: formatDateForInput(signoff.sign_date) || '',
                                         responsible: signoff.signature || '',
                                         tempId: `signoff-${signoff.id}`
                                     }));
-                                    console.log('[LOAD] Mapped signoffs for form:', sectionsByNum[8]);
+                                    console.log('[LOAD] Mapped signoffs for form:', mappedSignoffs);
+                                    sectionsByNum[8] = mappedSignoffs;
                                 } else {
                                     // Initialize with default roles if no valid signoffs
                                     console.log('[LOAD] No valid signoffs found, initializing with empty defaults');
@@ -365,7 +366,7 @@ const CourseAccreditationsDetail = () => {
             console.log('Accreditation response:', response.data);
             
             // The backend returns { accreditation, tasks, risks, signoffs } inside data
-            const { accreditation, tasks = [] } = response.data?.data || {};
+            const { accreditation, tasks = [], signoffs = [] } = response.data?.data || {};
             
             if (!accreditation) {
                 throw new Error('Invalid data structure');
@@ -373,6 +374,9 @@ const CourseAccreditationsDetail = () => {
             
             console.log('Loaded accreditation:', accreditation);
             console.log('Loaded tasks:', tasks);
+            console.log('[LOAD] Loaded signoffs from API:', signoffs);
+            console.log('[LOAD] Signoffs array exists?', !!signoffs);
+            console.log('[LOAD] Signoffs length:', signoffs?.length || 0);
             
             // Group tasks by section_number
             const sectionsByNum = {};
@@ -405,8 +409,36 @@ const CourseAccreditationsDetail = () => {
                 });
             }
             
-            // Ensure Section 8 (Sign-off) always has the three required roles
-            if (!sectionsByNum[8] || sectionsByNum[8].length === 0) {
+            // Populate Section 8 with sign-offs
+            if (signoffs && signoffs.length > 0) {
+                const requiredRoles = new Set(['Lead Coordinator', 'QA Manager', 'Principal / CEO']);
+                console.log('[LOAD] Raw signoffs from API:', signoffs);
+                const validSignoffs = signoffs.filter(s => requiredRoles.has(s.role));
+                console.log('[LOAD] Filtered signoffs (only required roles):', validSignoffs);
+                
+                if (validSignoffs.length > 0) {
+                    const mappedSignoffs = validSignoffs.map(signoff => ({
+                        id: signoff.id,
+                        area: signoff.role || '',
+                        description: signoff.name || '',
+                        source: formatDateForInput(signoff.sign_date) || '',
+                        responsible: signoff.signature || '',
+                        tempId: `signoff-${signoff.id}`
+                    }));
+                    console.log('[LOAD] Mapped signoffs for form:', mappedSignoffs);
+                    sectionsByNum[8] = mappedSignoffs;
+                } else {
+                    // Initialize with default roles if no valid signoffs
+                    console.log('[LOAD] No valid signoffs found, initializing with empty defaults');
+                    sectionsByNum[8] = [
+                        { area: 'Lead Coordinator', description: '', source: '', responsible: '' },
+                        { area: 'QA Manager', description: '', source: '', responsible: '' },
+                        { area: 'Principal / CEO', description: '', source: '', responsible: '' }
+                    ];
+                }
+            } else {
+                // Initialize with default roles if no signoffs exist
+                console.log('[LOAD] No signoffs in API response, initializing with empty defaults');
                 sectionsByNum[8] = [
                     { area: 'Lead Coordinator', description: '', source: '', responsible: '' },
                     { area: 'QA Manager', description: '', source: '', responsible: '' },
@@ -443,6 +475,18 @@ const CourseAccreditationsDetail = () => {
             });
             setEditingRowIdx(null);
             setEditingSection(null);
+            
+            // Log all sections for debugging
+            console.log('=== ALL FORM DATA LOADED ===');
+            console.log('Section 1:', sectionsByNum[1]);
+            console.log('Section 2:', sectionsByNum[2]);
+            console.log('Section 3:', sectionsByNum[3]);
+            console.log('Section 4:', sectionsByNum[4]);
+            console.log('Section 5:', sectionsByNum[5]);
+            console.log('Section 6:', sectionsByNum[6]);
+            console.log('Section 7:', sectionsByNum[7]);
+            console.log('Section 8 (Sign-offs):', sectionsByNum[8]);
+            console.log('=== END FORM DATA ===');
 
             // Find and set the matching course ID using the passed-in coursesList
             console.log('Available courses:', coursesList.map(c => ({ id: c.id, fullname: c.fullname || c.course_title })));
@@ -1252,6 +1296,15 @@ const CourseAccreditationsDetail = () => {
                                                             <td className="border border-gray-300 px-3 py-2 text-center">
                                                                 <button
                                                                     onClick={() => {
+                                                                        const message = `Sign-off Details:\n\nRole: ${task.area}\nName: ${task.description || 'N/A'}\nDate: ${task.source || 'N/A'}\nSignature: ${task.responsible || 'N/A'}`;
+                                                                        alert(message);
+                                                                    }}
+                                                                    className="text-blue-500 hover:text-blue-700 font-semibold text-sm mr-2"
+                                                                >
+                                                                    View
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => {
                                                                         if (window.confirm('Reset this sign-off entry?')) {
                                                                             const sections = { ...formData.sections };
                                                                             sections[sectionNum][idx] = {
@@ -1265,7 +1318,7 @@ const CourseAccreditationsDetail = () => {
                                                                     }}
                                                                     className="text-red-500 hover:text-red-700 font-semibold text-sm"
                                                                 >
-                                                                    Clear
+                                                                    Delete
                                                                 </button>
                                                             </td>
                                                         </tr>
