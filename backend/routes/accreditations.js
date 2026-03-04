@@ -45,61 +45,9 @@ router.post('/', async (req, res) => {
 
         const accreditationId = result.insertId;
 
-        // Add tasks/requirements for each section
-        if (sections && typeof sections === 'object') {
-            for (const [sectionNum, tasks] of Object.entries(sections)) {
-                if (Array.isArray(tasks)) {
-                    for (const task of tasks) {
-                        await pool.query(
-                            'INSERT INTO accreditation_tasks (accreditation_id, section_number, task_name, description, evidence_required, source_reference, responsible_person, status, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-                            [
-                                accreditationId,
-                                sectionNum,
-                                task.area || task.task_name || '',
-                                task.description || '',
-                                task.evidence || task.evidence_required || '',
-                                task.source || task.source_reference || '',
-                                task.responsible || task.responsible_person || '',
-                                task.status ? 'Completed' : 'Not Started',
-                                task.notes || null
-                            ]
-                        );
-                    }
-                }
-            }
-        }
-
-        // Add risks
-        if (Array.isArray(risks)) {
-            for (const risk of risks) {
-                await pool.query(
-                    'INSERT INTO accreditation_risks (accreditation_id, impact, mitigation, owner, review_date, status) VALUES (?, ?, ?, ?, ?, ?)',
-                    [
-                        accreditationId,
-                        risk.impact || '',
-                        risk.mitigation || '',
-                        risk.owner || '',
-                        risk.review_date || null,
-                        risk.status || 'Open'
-                    ]
-                );
-            }
-        }
-
-        // Add signoffs
-        if (Array.isArray(signoffs)) {
-            for (const signoff of signoffs) {
-                await pool.query(
-                    'INSERT INTO accreditation_signoffs (accreditation_id, name, role, sign_date) VALUES (?, ?, ?, ?)',
-                    [
-                        accreditationId,
-                        signoff.name || '',
-                        signoff.role || '',
-                        signoff.sign_date || null
-                    ]
-                );
-            }
-        }
+        // NOTE: Tasks, risks, and signoffs are handled separately by the frontend
+        // via the individual endpoint calls, not through the sections array here.
+        // This prevents duplicate inserts.
 
         const [rows] = await pool.query('SELECT * FROM course_accreditations WHERE id = ?', [accreditationId]);
         res.status(201).json({ success: true, data: rows[0], message: 'Accreditation created successfully' });
@@ -167,7 +115,7 @@ router.get('/:id', async (req, res) => {
 router.put('/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const { documentControl, sections, risks, signoffs } = req.body;
+        const { documentControl } = req.body;
 
         if (documentControl) {
             const updates = [];
@@ -190,66 +138,9 @@ router.put('/:id', async (req, res) => {
             }
         }
 
-        // Update/replace tasks for each section
-        if (sections && typeof sections === 'object') {
-            // Delete all existing tasks for this accreditation
-            await pool.query('DELETE FROM accreditation_tasks WHERE accreditation_id = ?', [id]);
-
-            for (const [sectionNum, tasks] of Object.entries(sections)) {
-                if (Array.isArray(tasks)) {
-                    for (const task of tasks) {
-                        await pool.query(
-                            'INSERT INTO accreditation_tasks (accreditation_id, section_number, task_name, description, evidence_required, source_reference, responsible_person, status, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-                            [
-                                id,
-                                sectionNum,
-                                task.area || task.task_name || '',
-                                task.description || '',
-                                task.evidence || task.evidence_required || '',
-                                task.source || task.source_reference || '',
-                                task.responsible || task.responsible_person || '',
-                                task.status ? 'Completed' : 'Not Started',
-                                task.notes || null
-                            ]
-                        );
-                    }
-                }
-            }
-        }
-
-        // Update/replace risks
-        if (Array.isArray(risks)) {
-            await pool.query('DELETE FROM accreditation_risks WHERE accreditation_id = ?', [id]);
-            for (const risk of risks) {
-                await pool.query(
-                    'INSERT INTO accreditation_risks (accreditation_id, impact, mitigation, owner, review_date, status) VALUES (?, ?, ?, ?, ?, ?)',
-                    [
-                        id,
-                        risk.impact || '',
-                        risk.mitigation || '',
-                        risk.owner || '',
-                        risk.review_date || null,
-                        risk.status || 'Open'
-                    ]
-                );
-            }
-        }
-
-        // Update/replace signoffs
-        if (Array.isArray(signoffs)) {
-            await pool.query('DELETE FROM accreditation_signoffs WHERE accreditation_id = ?', [id]);
-            for (const signoff of signoffs) {
-                await pool.query(
-                    'INSERT INTO accreditation_signoffs (accreditation_id, name, role, sign_date) VALUES (?, ?, ?, ?)',
-                    [
-                        id,
-                        signoff.name || '',
-                        signoff.role || '',
-                        signoff.sign_date || null
-                    ]
-                );
-            }
-        }
+        // NOTE: Tasks, risks, and signoffs are handled separately by the frontend
+        // via the individual endpoint calls, not through the sections array here.
+        // This prevents duplicate inserts.
 
         const [rows] = await pool.query('SELECT * FROM course_accreditations WHERE id = ?', [id]);
         res.json({ success: true, data: rows[0], message: 'Accreditation updated successfully' });
@@ -287,11 +178,23 @@ router.delete('/:id', async (req, res) => {
 router.post('/:id/tasks', async (req, res) => {
     try {
         const { id } = req.params;
-        const { section_number, section_title, task_name, description, evidence_required, source_reference, responsible_person, due_date, status, notes } = req.body;
+        const { section_number, area, description, responsible, status, notes, source, evidence } = req.body;
+
+        // Get section title from SECTION_CONFIG or use default
+        const sectionTitles = {
+            1: 'Initial Planning & Approval',
+            2: 'Application Preparation',
+            3: 'Submission & Engagement',
+            4: 'Review, Visits & Validation',
+            5: 'Agreement & Implementation',
+            6: 'Post-Approval Monitoring',
+            7: 'Risk & Issue Log',
+            8: 'Sign-off'
+        };
 
         const [result] = await pool.query(
-            'INSERT INTO accreditation_tasks (accreditation_id, section_number, section_title, task_name, description, evidence_required, source_reference, responsible_person, due_date, status, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            [id, section_number, section_title, task_name, description, evidence_required, source_reference, responsible_person, due_date, status || 'Not Started', notes || null]
+            'INSERT INTO accreditation_tasks (accreditation_id, section_number, section_title, task_name, description, evidence_required, source_reference, responsible_person, status, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [id, section_number, sectionTitles[section_number] || '', area || '', description || '', evidence || '', source || '', responsible || '', status || 'Not Started', notes || null]
         );
 
         const [rows] = await pool.query('SELECT * FROM accreditation_tasks WHERE id = ?', [result.insertId]);
@@ -309,26 +212,40 @@ router.post('/:id/tasks', async (req, res) => {
 router.put('/:id/tasks/:taskId', async (req, res) => {
     try {
         const { id, taskId } = req.params;
-        const allowedFields = [
-            'section_number',
-            'section_title',
-            'task_name',
-            'description',
-            'evidence_required',
-            'source_reference',
-            'responsible_person',
-            'due_date',
-            'status',
-            'notes'
-        ];
+        const { section_number, area, description, responsible, status, notes, source, evidence } = req.body;
+
+        // Section title lookup
+        const sectionTitles = {
+            1: 'Initial Planning & Approval',
+            2: 'Application Preparation',
+            3: 'Submission & Engagement',
+            4: 'Review, Visits & Validation',
+            5: 'Agreement & Implementation',
+            6: 'Post-Approval Monitoring',
+            7: 'Risk & Issue Log',
+            8: 'Sign-off'
+        };
+
+        // Map frontend field names to database field names
+        const fieldMap = {
+            section_number: section_number,
+            section_title: section_number ? sectionTitles[section_number] : undefined,
+            task_name: area,
+            description: description,
+            evidence_required: evidence,
+            source_reference: source,
+            responsible_person: responsible,
+            status: status,
+            notes: notes
+        };
 
         const updates = [];
         const params = [];
 
-        allowedFields.forEach(field => {
-            if (req.body[field] !== undefined) {
-                updates.push(`${field} = ?`);
-                params.push(req.body[field]);
+        Object.entries(fieldMap).forEach(([dbField, value]) => {
+            if (value !== undefined) {
+                updates.push(`${dbField} = ?`);
+                params.push(value);
             }
         });
 

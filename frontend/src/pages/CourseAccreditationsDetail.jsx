@@ -218,6 +218,9 @@ const CourseAccreditationsDetail = () => {
                             if (accreditation.tasks) {
                                 accreditation.tasks.forEach(task => {
                                     const sectionNum = task.section_number || 1;
+                                    // Skip section 8 - it uses signoffs table instead
+                                    if (sectionNum === 8) return;
+                                    
                                     if (sectionsByNum[sectionNum]) {
                                         // Create unique key to prevent duplicates
                                         const taskKey = `${task.id}|${task.task_name}|${task.description}`;
@@ -238,12 +241,35 @@ const CourseAccreditationsDetail = () => {
                                 });
                             }
                             
-                            // Ensure Section 8 (Sign-off) always has the three required roles
-                            if (!sectionsByNum[8] || sectionsByNum[8].length === 0) {
+                            // Load signoffs for section 8
+                            if (accreditation.signoffs && accreditation.signoffs.length > 0) {
+                                // Filter to only the 3 required roles and map from database
+                                const requiredRoles = new Set(['Lead Coordinator', 'QA Manager', 'Principal / CEO']);
+                                const validSignoffs = accreditation.signoffs.filter(s => requiredRoles.has(s.role));
+                                
+                                if (validSignoffs.length > 0) {
+                                    sectionsByNum[8] = validSignoffs.map(signoff => ({
+                                        id: signoff.id,
+                                        area: signoff.role || '',
+                                        description: signoff.name || '',
+                                        source: signoff.sign_date || '',
+                                        responsible: signoff.signature || '',
+                                        tempId: `signoff-${signoff.id}`
+                                    }));
+                                } else {
+                                    // Initialize with default roles if no valid signoffs
+                                    sectionsByNum[8] = [
+                                        { area: 'Lead Coordinator', description: '', source: '', responsible: '', tempId: 'signoff-1' },
+                                        { area: 'QA Manager', description: '', source: '', responsible: '', tempId: 'signoff-2' },
+                                        { area: 'Principal / CEO', description: '', source: '', responsible: '', tempId: 'signoff-3' }
+                                    ];
+                                }
+                            } else {
+                                // Initialize with default roles if no signoffs exist
                                 sectionsByNum[8] = [
-                                    { area: 'Lead Coordinator', description: '', source: '', responsible: '' },
-                                    { area: 'QA Manager', description: '', source: '', responsible: '' },
-                                    { area: 'Principal / CEO', description: '', source: '', responsible: '' }
+                                    { area: 'Lead Coordinator', description: '', source: '', responsible: '', tempId: 'signoff-1' },
+                                    { area: 'QA Manager', description: '', source: '', responsible: '', tempId: 'signoff-2' },
+                                    { area: 'Principal / CEO', description: '', source: '', responsible: '', tempId: 'signoff-3' }
                                 ];
                             }
                             
@@ -440,21 +466,10 @@ const CourseAccreditationsDetail = () => {
             version: formData.version || '1.0'
         };
 
-        // Deduplicate and filter sections before sending to backend
+        // Extract sections (no deduplication - let backend handle unique constraints)
         const cleanedSections = {};
         for (let i = 1; i <= 8; i++) {
-            const sectionTasks = formData.sections[i] || [];
-            const seen = new Set();
-            cleanedSections[i] = sectionTasks.filter(task => {
-                if (!task.area) return false;
-                const key = `${task.area}|${task.responsible}|${task.description}`;
-                if (seen.has(key)) {
-                    console.warn(`Deduplicating task in section ${i}:`, key);
-                    return false;
-                }
-                seen.add(key);
-                return true;
-            });
+            cleanedSections[i] = (formData.sections[i] || []).filter(task => task.area);
         }
 
         // Extract risks from section 7
@@ -506,21 +521,9 @@ const CourseAccreditationsDetail = () => {
                     console.log('Updating existing accreditation:', existingAccreditationId);
                     await axios.put(`${API_URL}/accreditations/${existingAccreditationId}`, transformedData);
                     
-                    // Save all tasks
-                    for (let sectionNum = 1; sectionNum <= 8; sectionNum++) {
-                        let tasks = formData.sections[sectionNum] || [];
-                        
-                        const seen = new Set();
-                        tasks = tasks.filter(task => {
-                            if (!task.area) return false;
-                            const key = `${task.area}|${task.responsible}|${task.description}`;
-                            if (seen.has(key)) {
-                                console.warn('Duplicate task detected and skipped:', key);
-                                return false;
-                            }
-                            seen.add(key);
-                            return true;
-                        });
+                    // Save all tasks (skip section 8)
+                    for (let sectionNum = 1; sectionNum <= 7; sectionNum++) {
+                        const tasks = (formData.sections[sectionNum] || []).filter(task => task.area);
                         
                         for (const task of tasks) {
                             const taskData = {
@@ -548,6 +551,31 @@ const CourseAccreditationsDetail = () => {
                         }
                     }
                     
+                    // Save section 8 signoffs (only the 3 required roles)
+                    const requiredRoles = new Set(['Lead Coordinator', 'QA Manager', 'Principal / CEO']);
+                    const signoffs = (formData.sections[8] || []).filter(s => requiredRoles.has(s.area));
+                    console.log(`Saving ${signoffs.length} signoffs`);
+                    for (const signoff of signoffs) {
+                        const signoffData = {
+                            role: signoff.area,
+                            name: signoff.description || '',
+                            sign_date: signoff.source || null,
+                            signature: signoff.responsible || ''
+                        };
+
+                        if (signoff.id) {
+                            await axios.put(
+                                `${API_URL}/accreditations/${existingAccreditationId}/signoffs/${signoff.id}`,
+                                signoffData
+                            );
+                        } else {
+                            await axios.post(
+                                `${API_URL}/accreditations/${existingAccreditationId}/signoffs`,
+                                signoffData
+                            );
+                        }
+                    }
+                    
                     alert('Accreditation updated successfully!');
                     navigate('/course-accreditations');
                 } else {
@@ -562,22 +590,9 @@ const CourseAccreditationsDetail = () => {
                     }
                     console.log('Created accreditation with ID:', accreditationId);
                     
-                    // Save all tasks
-                    for (let sectionNum = 1; sectionNum <= 8; sectionNum++) {
-                        let tasks = formData.sections[sectionNum] || [];
-                        
-                        const seen = new Set();
-                        tasks = tasks.filter(task => {
-                            if (!task.area) return false;
-                            const key = `${task.area}|${task.responsible}|${task.description}`;
-                            if (seen.has(key)) {
-                                console.warn('Duplicate task detected and skipped:', key);
-                                return false;
-                            }
-                            seen.add(key);
-                            return true;
-                        });
-                        
+                    // Save all tasks (skip section 8)
+                    for (let sectionNum = 1; sectionNum <= 7; sectionNum++) {
+                        const tasks = (formData.sections[sectionNum] || []).filter(task => task.area);
                         console.log(`Saving ${tasks.length} tasks for section ${sectionNum}`);
                         for (const task of tasks) {
                             const taskData = {
@@ -605,6 +620,24 @@ const CourseAccreditationsDetail = () => {
                         }
                     }
                     
+                    // Save section 8 signoffs (only the 3 required roles)
+                    const requiredSignoffRoles = new Set(['Lead Coordinator', 'QA Manager', 'Principal / CEO']);
+                    const newSignoffs = (formData.sections[8] || []).filter(s => requiredSignoffRoles.has(s.area));
+                    console.log(`Saving ${newSignoffs.length} signoffs`);
+                    for (const signoff of newSignoffs) {
+                        const signoffData = {
+                            role: signoff.area,
+                            name: signoff.description || '',
+                            sign_date: signoff.source || null,
+                            signature: signoff.responsible || ''
+                        };
+
+                        await axios.post(
+                            `${API_URL}/accreditations/${accreditationId}/signoffs`,
+                            signoffData
+                        );
+                    }
+                    
                     alert('Accreditation created successfully!');
                     navigate('/course-accreditations');
                 }
@@ -629,20 +662,10 @@ const CourseAccreditationsDetail = () => {
                 }
 
                 for (let sectionNum = 1; sectionNum <= 8; sectionNum++) {
-                    let tasks = formData.sections[sectionNum] || [];
+                    // Skip section 8 - handle separately as signoffs
+                    if (sectionNum === 8) continue;
                     
-                    const seen = new Set();
-                    tasks = tasks.filter(task => {
-                        if (!task.area) return false;
-                        const key = `${task.area}|${task.responsible}|${task.description}`;
-                        if (seen.has(key)) {
-                            console.warn('Duplicate task detected and skipped:', key);
-                            return false;
-                        }
-                        seen.add(key);
-                        return true;
-                    });
-                    
+                    const tasks = (formData.sections[sectionNum] || []).filter(task => task.area);
                     console.log(`Saving ${tasks.length} tasks for section ${sectionNum}`);
                     for (const task of tasks) {
                         const taskData = {
@@ -659,6 +682,41 @@ const CourseAccreditationsDetail = () => {
                         if (task.id) {
                             await axios.put(
                                 `${API_URL}/accreditations/${accreditationId}/tasks/${task.id}`,
+                                taskData
+                            );
+                        } else {
+                            await axios.post(
+                                `${API_URL}/accreditations/${accreditationId}/tasks`,
+                                taskData
+                            );
+                        }
+                    }
+                }
+                
+                // Save section 8 signoffs (only the 3 required roles)
+                const oldFlowRequiredRoles = new Set(['Lead Coordinator', 'QA Manager', 'Principal / CEO']);
+                const oldFlowSignoffs = (formData.sections[8] || []).filter(s => oldFlowRequiredRoles.has(s.area));
+                console.log(`Saving ${oldFlowSignoffs.length} signoffs`);
+                for (const signoff of oldFlowSignoffs) {
+                    const signoffData = {
+                        role: signoff.area,
+                        name: signoff.description || '',
+                        sign_date: signoff.source || null,
+                        signature: signoff.responsible || ''
+                    };
+
+                    if (signoff.id) {
+                        await axios.put(
+                            `${API_URL}/accreditations/${accreditationId}/signoffs/${signoff.id}`,
+                            signoffData
+                        );
+                    } else {
+                        await axios.post(
+                            `${API_URL}/accreditations/${accreditationId}/signoffs`,
+                            signoffData
+                        );
+                    }
+                }
                                 taskData
                             );
                         } else {

@@ -414,19 +414,7 @@ const CourseInductionsDetail = () => {
                     
                     // Save all requirements
                     for (let sectionNum = 1; sectionNum <= 8; sectionNum++) {
-                        let requirements = formData.sections[sectionNum] || [];
-                        
-                        const seen = new Set();
-                        requirements = requirements.filter(req => {
-                            if (!req.area) return false;
-                            const key = `${req.area}|${req.responsible}|${req.description}`;
-                            if (seen.has(key)) {
-                                console.warn('Duplicate requirement detected and skipped:', key);
-                                return false;
-                            }
-                            seen.add(key);
-                            return true;
-                        });
+                        const requirements = (formData.sections[sectionNum] || []).filter(req => req.area);
                         
                         for (const req of requirements) {
                             const reqData = {
@@ -469,19 +457,7 @@ const CourseInductionsDetail = () => {
                     
                     // Save all requirements
                     for (let sectionNum = 1; sectionNum <= 8; sectionNum++) {
-                        let requirements = formData.sections[sectionNum] || [];
-                        
-                        const seen = new Set();
-                        requirements = requirements.filter(req => {
-                            if (!req.area) return false;
-                            const key = `${req.area}|${req.responsible}|${req.description}`;
-                            if (seen.has(key)) {
-                                console.warn('Duplicate requirement detected and skipped:', key);
-                                return false;
-                            }
-                            seen.add(key);
-                            return true;
-                        });
+                        const requirements = (formData.sections[sectionNum] || []).filter(req => req.area);
                         
                         for (const req of requirements) {
                             const reqData = {
@@ -530,19 +506,7 @@ const CourseInductionsDetail = () => {
                 }
 
                 for (let sectionNum = 1; sectionNum <= 8; sectionNum++) {
-                    let requirements = formData.sections[sectionNum] || [];
-                    
-                    const seen = new Set();
-                    requirements = requirements.filter(req => {
-                        if (!req.area) return false;
-                        const key = `${req.area}|${req.responsible}|${req.description}`;
-                        if (seen.has(key)) {
-                            console.warn('Duplicate requirement detected and skipped:', key);
-                            return false;
-                        }
-                        seen.add(key);
-                        return true;
-                    });
+                    const requirements = (formData.sections[sectionNum] || []).filter(req => req.area);
                     
                     for (const req of requirements) {
                         const reqData = {
