@@ -393,6 +393,8 @@ router.put('/:id/signoffs/:signoffId', async (req, res) => {
         const { id, signoffId } = req.params;
         const { role, name, sign_date, signature } = req.body;
 
+        console.log('Updating signoff:', { accreditation_id: id, signoff_id: signoffId, role, name, sign_date, signature });
+
         const updates = [];
         const params = [];
 
@@ -419,12 +421,15 @@ router.put('/:id/signoffs/:signoffId', async (req, res) => {
 
         params.push(id, signoffId);
 
-        await pool.query(
+        const updateResult = await pool.query(
             `UPDATE accreditation_signoffs SET ${updates.join(', ')} WHERE accreditation_id = ? AND id = ?`,
             params
         );
 
-        res.json({ success: true, message: 'Sign-off updated successfully' });
+        console.log('Update result:', updateResult[0]);
+
+        const [rows] = await pool.query('SELECT * FROM accreditation_signoffs WHERE id = ?', [signoffId]);
+        res.json({ success: true, data: rows[0], message: 'Sign-off updated successfully' });
     } catch (error) {
         console.error('Error updating sign-off:', error.message);
         res.status(500).json({ success: false, message: 'Failed to update sign-off', error: error.message });
