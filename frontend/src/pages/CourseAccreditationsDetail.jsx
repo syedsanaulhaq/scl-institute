@@ -117,12 +117,13 @@ const CourseAccreditationsDetail = () => {
 
     useEffect(() => {
         const initializeData = async () => {
-            // First fetch courses
-            await fetchCourses();
+            // First fetch courses and get the list
+            const coursesList = await fetchCourses();
+            console.log('Courses loaded in useEffect:', coursesList);
             
-            // Then fetch accreditation if in edit mode
+            // Then fetch accreditation if in edit mode, passing courses along
             if (id && id !== 'new') {
-                fetchAccreditation();
+                fetchAccreditation(coursesList);
             }
         };
         
@@ -255,7 +256,7 @@ const CourseAccreditationsDetail = () => {
         setFormData(prev => ({ ...prev, sections }));
     };
 
-    const fetchAccreditation = async () => {
+    const fetchAccreditation = async (coursesList = []) => {
         try {
             const response = await axios.get(`${API_URL}/accreditations/${id}`);
             console.log('Accreditation response:', response.data);
@@ -329,11 +330,11 @@ const CourseAccreditationsDetail = () => {
             setEditingRowIdx(null);
             setEditingSection(null);
 
-            // Find and set the matching course ID from currently loaded courses
-            console.log('Available courses:', courses.map(c => ({ id: c.id, fullname: c.fullname || c.course_title })));
+            // Find and set the matching course ID using the passed-in coursesList
+            console.log('Available courses:', coursesList.map(c => ({ id: c.id, fullname: c.fullname || c.course_title })));
             console.log('Looking for course with title:', accreditation.course_title);
-            if (courses.length > 0) {
-                const matchingCourse = courses.find(c => 
+            if (coursesList.length > 0) {
+                const matchingCourse = coursesList.find(c => 
                     (c.fullname || c.course_title) === accreditation.course_title
                 );
                 console.log('Found matching course?', !!matchingCourse, matchingCourse);
@@ -342,7 +343,7 @@ const CourseAccreditationsDetail = () => {
                     console.log('Set selectedCourseId to:', matchingCourse.id);
                 }
             } else {
-                console.log('No courses loaded yet');
+                console.log('No courses provided to fetchAccreditation');
             }
         } catch (err) {
             console.error('Failed to fetch accreditation:', err);

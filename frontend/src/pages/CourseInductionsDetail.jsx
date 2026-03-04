@@ -117,12 +117,13 @@ const CourseInductionsDetail = () => {
 
     useEffect(() => {
         const initializeData = async () => {
-            // First fetch courses
-            await fetchCourses();
+            // First fetch courses and get the list
+            const coursesList = await fetchCourses();
+            console.log('Courses loaded in useEffect:', coursesList);
             
-            // Then fetch induction if in edit mode
+            // Then fetch induction if in edit mode, passing courses along
             if (id && id !== 'new') {
-                fetchInduction();
+                fetchInduction(coursesList);
             }
         };
         
@@ -255,7 +256,7 @@ const CourseInductionsDetail = () => {
         setFormData(prev => ({ ...prev, sections }));
     };
 
-    const fetchInduction = async () => {
+    const fetchInduction = async (coursesList = []) => {
         try {
             const response = await axios.get(`${API_URL}/inductions/${id}`);
             console.log('Induction response:', response.data);
@@ -328,11 +329,11 @@ const CourseInductionsDetail = () => {
             setEditingRowIdx(null);
             setEditingSection(null);
 
-            // Find and set the matching course ID from currently loaded courses
-            console.log('Available courses:', courses.map(c => ({ id: c.id, fullname: c.fullname || c.course_title })));
+            // Find and set the matching course ID using the passed-in coursesList
+            console.log('Available courses:', coursesList.map(c => ({ id: c.id, fullname: c.fullname || c.course_title })));
             console.log('Looking for course with title:', induction.course_title);
-            if (courses.length > 0) {
-                const matchingCourse = courses.find(c => 
+            if (coursesList.length > 0) {
+                const matchingCourse = coursesList.find(c => 
                     (c.fullname || c.course_title) === induction.course_title
                 );
                 console.log('Found matching course?', !!matchingCourse, matchingCourse);
@@ -341,7 +342,7 @@ const CourseInductionsDetail = () => {
                     console.log('Set selectedCourseId to:', matchingCourse.id);
                 }
             } else {
-                console.log('No courses loaded yet');
+                console.log('No courses provided to fetchInduction');
             }
         } catch (err) {
             console.error('Failed to fetch induction:', err);
