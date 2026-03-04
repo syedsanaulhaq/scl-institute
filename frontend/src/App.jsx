@@ -34,6 +34,7 @@ import StudentSupport from './components/student/StudentSupport';
 import StudentNotifications from './pages/StudentNotifications';
 import CourseAccreditations from './pages/CourseAccreditations';
 import CourseAccreditationsDetail from './pages/CourseAccreditationsDetail';
+import CourseAccreditationsView from './pages/CourseAccreditationsView';
 import CourseInductions from './pages/CourseInductions';
 import CourseInductionsDetail from './pages/CourseInductionsDetail';
 
@@ -235,6 +236,15 @@ function App() {
                     user && user?.role?.toLowerCase() !== 'student' ? (
                         <Layout user={user} onLogout={handleLogout}>
                             <CourseAccreditations user={user} />
+                        </Layout>
+                    ) : (
+                        <LoginPage onLoginSuccess={handleLoginSuccess} />
+                    )
+                } />
+                <Route path="/course-accreditations/:id/view" element={
+                    user && user?.role?.toLowerCase() !== 'student' ? (
+                        <Layout user={user} onLogout={handleLogout}>
+                            <CourseAccreditationsView user={user} />
                         </Layout>
                     ) : (
                         <LoginPage onLoginSuccess={handleLoginSuccess} />

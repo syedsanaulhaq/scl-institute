@@ -43,6 +43,10 @@ const CourseAccreditations = ({ user }) => {
         navigate(`/course-accreditations/${id}`);
     };
 
+    const handleView = (id) => {
+        navigate(`/course-accreditations/${id}/view`);
+    };
+
     const handleDelete = async (id) => {
         if (window.confirm('Are you sure?')) {
             try {
@@ -149,9 +153,9 @@ const CourseAccreditations = ({ user }) => {
                                             </td>
                                             <td className="px-6 py-4 text-center">
                                                 <button
-                                                    onClick={() => handleEdit(accreditation.id)}
+                                                    onClick={() => handleView(accreditation.id)}
                                                     className="inline-block text-blue-500 hover:text-blue-700 mr-3"
-                                                    title="View accreditation details"
+                                                    title="View accreditation report"
                                                 >
                                                     <Eye className="w-4 h-4" />
                                                 </button>
