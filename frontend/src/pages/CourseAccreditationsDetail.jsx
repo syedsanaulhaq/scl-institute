@@ -122,6 +122,18 @@ const CourseAccreditationsDetail = () => {
         }
     }, [id]);
 
+    // When courses are loaded and in edit mode, try to match the selected course
+    useEffect(() => {
+        if (!isNew && courses.length > 0 && formData.course_title && !selectedCourseId) {
+            const matchingCourse = courses.find(c => 
+                (c.fullname || c.course_title) === formData.course_title
+            );
+            if (matchingCourse) {
+                setSelectedCourseId(matchingCourse.id);
+            }
+        }
+    }, [courses, isNew, formData.course_title, selectedCourseId]);
+
     const fetchCourses = async () => {
         try {
             setCourseLoading(true);
@@ -299,6 +311,16 @@ const CourseAccreditationsDetail = () => {
                 version: accreditation.version || '1.0',
                 sections: sectionsByNum
             });
+
+            // Find and set the matching course ID from loaded courses
+            if (courses.length > 0) {
+                const matchingCourse = courses.find(c => 
+                    (c.fullname || c.course_title) === accreditation.course_title
+                );
+                if (matchingCourse) {
+                    setSelectedCourseId(matchingCourse.id);
+                }
+            }
         } catch (err) {
             console.error('Failed to fetch accreditation:', err);
             alert('Error loading accreditation data');
