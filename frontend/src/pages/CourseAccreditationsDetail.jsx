@@ -556,6 +556,14 @@ const CourseAccreditationsDetail = () => {
                     const signoffs = (formData.sections[8] || []).filter(s => requiredRoles.has(s.area));
                     console.log(`Saving ${signoffs.length} signoffs`);
                     for (const signoff of signoffs) {
+                        // Skip completely empty new signoffs (no name, date, or signature)
+                        const isEmpty = !signoff.description && !signoff.source && !signoff.responsible;
+                        const isNew = !signoff.id;
+                        if (isEmpty && isNew) {
+                            console.log(`Skipping empty signoff: ${signoff.area}`);
+                            continue;
+                        }
+                        
                         const signoffData = {
                             role: signoff.area,
                             name: signoff.description || '',
@@ -625,6 +633,13 @@ const CourseAccreditationsDetail = () => {
                     const newSignoffs = (formData.sections[8] || []).filter(s => requiredSignoffRoles.has(s.area));
                     console.log(`Saving ${newSignoffs.length} signoffs`);
                     for (const signoff of newSignoffs) {
+                        // Skip completely empty new signoffs
+                        const isEmpty = !signoff.description && !signoff.source && !signoff.responsible;
+                        if (isEmpty) {
+                            console.log(`Skipping empty signoff: ${signoff.area}`);
+                            continue;
+                        }
+                        
                         const signoffData = {
                             role: signoff.area,
                             name: signoff.description || '',
@@ -698,6 +713,14 @@ const CourseAccreditationsDetail = () => {
                 const oldFlowSignoffs = (formData.sections[8] || []).filter(s => oldFlowRequiredRoles.has(s.area));
                 console.log(`Saving ${oldFlowSignoffs.length} signoffs`);
                 for (const signoff of oldFlowSignoffs) {
+                    // Skip completely empty new signoffs
+                    const isEmpty = !signoff.description && !signoff.source && !signoff.responsible;
+                    const isNew = !signoff.id;
+                    if (isEmpty && isNew) {
+                        console.log(`Skipping empty signoff: ${signoff.area}`);
+                        continue;
+                    }
+                    
                     const signoffData = {
                         role: signoff.area,
                         name: signoff.description || '',
