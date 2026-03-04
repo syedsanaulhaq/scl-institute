@@ -278,6 +278,9 @@ const CourseAccreditationsDetail = () => {
                                 ];
                             }
                             
+                            console.log('[LOAD] About to set formData with sections:', sectionsByNum);
+                            console.log('[LOAD] Section 8 about to be set:', sectionsByNum[8]);
+                            
                             setFormData({
                                 course_title: accreditation.course_title || '',
                                 course_code: accreditation.course_code || '',
@@ -289,9 +292,15 @@ const CourseAccreditationsDetail = () => {
                                 version: accreditation.version || '1.0',
                                 sections: sectionsByNum
                             });
+                            
+                            // Log what was actually set
+                            setTimeout(() => {
+                                console.log('[LOAD] FormData state after setting:', formData);
+                            }, 100);
                         }
                     } catch (err) {
                         console.error('Failed to fetch accreditation details:', err);
+                        console.error('[LOAD] Error fetching:', err.response?.data || err.message);
                     } finally {
                         setLoading(false);
                     }
