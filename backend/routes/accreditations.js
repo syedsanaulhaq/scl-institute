@@ -457,6 +457,28 @@ router.delete('/:id/risks/:riskId', async (req, res) => {
 });
 
 // ===============================================
+// ROUTE 11A: DELETE /api/accreditations/:id/signoffs/all
+// Delete all sign-offs for an accreditation
+// ===============================================
+router.delete('/:id/signoffs/all', async (req, res) => {
+    try {
+        const { id } = req.params;
+        console.log('Deleting all signoffs for accreditation:', id);
+
+        const result = await pool.query(
+            'DELETE FROM accreditation_signoffs WHERE accreditation_id = ?',
+            [id]
+        );
+
+        console.log('Delete result:', result[0]);
+        res.json({ success: true, message: 'All sign-offs deleted successfully' });
+    } catch (error) {
+        console.error('Error deleting all sign-offs:', error.message);
+        res.status(500).json({ success: false, message: 'Failed to delete all sign-offs', error: error.message });
+    }
+});
+
+// ===============================================
 // ROUTE 11: DELETE /api/accreditations/:id/signoffs/:signoffId
 // Delete sign-off
 // ===============================================

@@ -552,15 +552,27 @@ const CourseAccreditationsDetail = () => {
                     }
                     
                     // Save section 8 signoffs (only the 3 required roles)
+                    // For updates: Delete all old signoffs and re-insert
                     const requiredRoles = new Set(['Lead Coordinator', 'QA Manager', 'Principal / CEO']);
                     const signoffs = (formData.sections[8] || []).filter(s => requiredRoles.has(s.area));
                     console.log(`[UPDATE] Saving ${signoffs.length} signoffs`, signoffs);
+                    
+                    // First, delete all existing signoffs for this accreditation
+                    try {
+                        console.log(`[UPDATE] Deleting all old signoffs for accreditation ${existingAccreditationId}`);
+                        await axios.delete(
+                            `${API_URL}/accreditations/${existingAccreditationId}/signoffs/all`
+                        );
+                    } catch (err) {
+                        console.warn(`[UPDATE] Could not delete old signoffs (may not exist):`, err.message);
+                    }
+                    
+                    // Then insert all non-empty signoffs
                     for (const signoff of signoffs) {
-                        // Skip completely empty new signoffs (no name, date, or signature)
+                        // Skip completely empty signoffs (no name, date, or signature)
                         const isEmpty = !signoff.description && !signoff.source && !signoff.responsible;
-                        const isNew = !signoff.id;
-                        console.log(`[UPDATE] Signoff: ${signoff.area}, isEmpty=${isEmpty}, isNew=${isNew}, data:`, signoff);
-                        if (isEmpty && isNew) {
+                        console.log(`[UPDATE] Signoff: ${signoff.area}, isEmpty=${isEmpty}, data:`, signoff);
+                        if (isEmpty) {
                             console.log(`[UPDATE] Skipping empty signoff: ${signoff.area}`);
                             continue;
                         }
@@ -572,20 +584,12 @@ const CourseAccreditationsDetail = () => {
                             signature: signoff.responsible || ''
                         };
                         console.log(`[UPDATE] Sending signoff data:`, signoffData);
-
-                        if (signoff.id) {
-                            console.log(`[UPDATE] PUT: /accreditations/${existingAccreditationId}/signoffs/${signoff.id}`);
-                            await axios.put(
-                                `${API_URL}/accreditations/${existingAccreditationId}/signoffs/${signoff.id}`,
-                                signoffData
-                            );
-                        } else {
-                            console.log(`[UPDATE] POST: /accreditations/${existingAccreditationId}/signoffs`);
-                            await axios.post(
-                                `${API_URL}/accreditations/${existingAccreditationId}/signoffs`,
-                                signoffData
-                            );
-                        }
+                        console.log(`[UPDATE] POST: /accreditations/${existingAccreditationId}/signoffs`);
+                        
+                        await axios.post(
+                            `${API_URL}/accreditations/${existingAccreditationId}/signoffs`,
+                            signoffData
+                        );
                         console.log(`[UPDATE] Signoff saved: ${signoff.area}`);
                     }
                     
@@ -721,12 +725,25 @@ const CourseAccreditationsDetail = () => {
                 const oldFlowRequiredRoles = new Set(['Lead Coordinator', 'QA Manager', 'Principal / CEO']);
                 const oldFlowSignoffs = (formData.sections[8] || []).filter(s => oldFlowRequiredRoles.has(s.area));
                 console.log(`[OLD] Saving ${oldFlowSignoffs.length} signoffs`, oldFlowSignoffs);
+                
+                // For updates: Delete all old signoffs first, then re-insert
+                if (!isNew) {
+                    try {
+                        console.log(`[OLD] Deleting all old signoffs for accreditation ${accreditationId}`);
+                        await axios.delete(
+                            `${API_URL}/accreditations/${accreditationId}/signoffs/all`
+                        );
+                    } catch (err) {
+                        console.warn(`[OLD] Could not delete old signoffs:`, err.message);
+                    }
+                }
+                
+                // Insert all non-empty signoffs
                 for (const signoff of oldFlowSignoffs) {
-                    // Skip completely empty new signoffs
+                    // Skip completely empty signoffs
                     const isEmpty = !signoff.description && !signoff.source && !signoff.responsible;
-                    const isNew = !signoff.id;
-                    console.log(`[OLD] Signoff: ${signoff.area}, isEmpty=${isEmpty}, isNew=${isNew}, data:`, signoff);
-                    if (isEmpty && isNew) {
+                    console.log(`[OLD] Signoff: ${signoff.area}, isEmpty=${isEmpty}, data:`, signoff);
+                    if (isEmpty) {
                         console.log(`[OLD] Skipping empty signoff: ${signoff.area}`);
                         continue;
                     }
@@ -738,20 +755,12 @@ const CourseAccreditationsDetail = () => {
                         signature: signoff.responsible || ''
                     };
                     console.log(`[OLD] Sending signoff data:`, signoffData);
-
-                    if (signoff.id) {
-                        console.log(`[OLD] PUT: /accreditations/${accreditationId}/signoffs/${signoff.id}`);
-                        await axios.put(
-                            `${API_URL}/accreditations/${accreditationId}/signoffs/${signoff.id}`,
-                            signoffData
-                        );
-                    } else {
-                        console.log(`[OLD] POST: /accreditations/${accreditationId}/signoffs`);
-                        await axios.post(
-                            `${API_URL}/accreditations/${accreditationId}/signoffs`,
-                            signoffData
-                        );
-                    }
+                    console.log(`[OLD] POST: /accreditations/${accreditationId}/signoffs`);
+                    
+                    await axios.post(
+                        `${API_URL}/accreditations/${accreditationId}/signoffs`,
+                        signoffData
+                    );
                     console.log(`[OLD] Signoff saved: ${signoff.area}`);
                 }
                 
