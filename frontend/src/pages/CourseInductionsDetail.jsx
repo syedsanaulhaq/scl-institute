@@ -5,6 +5,14 @@ import { ChevronDown, ChevronUp, ArrowLeft } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
 
+// Utility function to format dates for HTML5 date input (yyyy-MM-dd)
+const formatDateForInput = (dateString) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return '';
+    return date.toISOString().split('T')[0];
+};
+
 const SECTION_CONFIG = {
     1: {
         title: 'Initial Planning & Approval',
@@ -233,8 +241,8 @@ const CourseInductionsDetail = () => {
                                 course_code: induction.course_code || '',
                                 awarding_body: induction.awarding_body || '',
                                 application_type: induction.application_type || '',
-                                date_started: induction.date_started || '',
-                                expected_submission_date: induction.expected_submission_date || '',
+                                date_started: formatDateForInput(induction.date_started),
+                                expected_submission_date: formatDateForInput(induction.expected_submission_date),
                                 lead_coordinator: induction.induction_owner || '',
                                 version: induction.version || '1.0',
                                 sections: sectionsByNum
@@ -325,8 +333,8 @@ const CourseInductionsDetail = () => {
                 course_code: induction.course_code || '',
                 awarding_body: induction.awarding_body || '',
                 application_type: induction.application_type || '',
-                date_started: induction.date_started || '',
-                expected_submission_date: induction.expected_submission_date || '',
+                date_started: formatDateForInput(induction.date_started),
+                expected_submission_date: formatDateForInput(induction.expected_submission_date),
                 lead_coordinator: induction.induction_owner || '',
                 version: induction.version || '1.0',
                 sections: sectionsByNum

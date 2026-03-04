@@ -40,6 +40,53 @@ async function initDB() {
             )
         `);
         console.log("[DB] SSO Tokens table verified/created");
+        
+        // Add course_code column to course_accreditations if it doesn't exist
+        try {
+            const checkResult = await connection.query(
+                `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS 
+                 WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'course_accreditations' AND COLUMN_NAME = 'course_code'`,
+                [process.env.DB_NAME || 'scl_institute']
+            );
+            
+            if (checkResult[0].length === 0) {
+                await connection.query(
+                    `ALTER TABLE course_accreditations 
+                     ADD COLUMN course_code VARCHAR(100) AFTER course_title`
+                );
+                console.log("[DB] Added course_code column to course_accreditations");
+            }
+        } catch (err) {
+            if (err.message.includes('Unknown table')) {
+                console.log("[DB] course_accreditations table doesn't exist yet (will be created by migration)");
+            } else {
+                console.log("[DB] course_code column check/add:", err.message);
+            }
+        }
+        
+        // Add course_code column to inductions if it doesn't exist
+        try {
+            const checkResult = await connection.query(
+                `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS 
+                 WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'inductions' AND COLUMN_NAME = 'course_code'`,
+                [process.env.DB_NAME || 'scl_institute']
+            );
+            
+            if (checkResult[0].length === 0) {
+                await connection.query(
+                    `ALTER TABLE inductions 
+                     ADD COLUMN course_code VARCHAR(100) AFTER course_title`
+                );
+                console.log("[DB] Added course_code column to inductions");
+            }
+        } catch (err) {
+            if (err.message.includes('Unknown table')) {
+                console.log("[DB] inductions table doesn't exist yet (will be created by migration)");
+            } else {
+                console.log("[DB] course_code column check/add:", err.message);
+            }
+        }
+        
         connection.release();
     } catch (err) {
         console.error("[DB] Init Failed:", err.message);

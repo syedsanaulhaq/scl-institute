@@ -5,6 +5,14 @@ import { ChevronDown, ChevronUp, ArrowLeft } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
 
+// Utility function to format dates for HTML5 date input (yyyy-MM-dd)
+const formatDateForInput = (dateString) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return '';
+    return date.toISOString().split('T')[0];
+};
+
 const SECTION_CONFIG = {
     1: {
         title: 'Initial Planning & Approval',
@@ -233,8 +241,8 @@ const CourseAccreditationsDetail = () => {
                                 course_code: accreditation.course_code || '',
                                 awarding_body: accreditation.awarding_body || '',
                                 application_type: accreditation.application_type || '',
-                                date_started: accreditation.date_started || '',
-                                expected_submission_date: accreditation.expected_submission_date || '',
+                                date_started: formatDateForInput(accreditation.date_started),
+                                expected_submission_date: formatDateForInput(accreditation.expected_submission_date),
                                 lead_coordinator: accreditation.lead_coordinator || '',
                                 version: accreditation.version || '1.0',
                                 sections: sectionsByNum
@@ -326,8 +334,8 @@ const CourseAccreditationsDetail = () => {
                 course_code: accreditation.course_code || '',
                 awarding_body: accreditation.awarding_body || '',
                 application_type: accreditation.application_type || '',
-                date_started: accreditation.date_started || '',
-                expected_submission_date: accreditation.expected_submission_date || '',
+                date_started: formatDateForInput(accreditation.date_started),
+                expected_submission_date: formatDateForInput(accreditation.expected_submission_date),
                 lead_coordinator: accreditation.lead_coordinator || '',
                 version: accreditation.version || '1.0',
                 sections: sectionsByNum
