@@ -15,7 +15,7 @@ echo "=========================================="
 
 # Step 1: Export development database
 echo "[1/4] Exporting development database..."
-docker-compose exec -T scli-mysql mysqldump -u root -prootpassword --no-tablespaces scl_institute > "$LOCAL_DUMP"
+docker-compose exec -T scli-mysql mysqldump -u scl_user -pSclSecurePass2024! --no-tablespaces scl_institute > "$LOCAL_DUMP"
 echo "  ✅ Exported to: $LOCAL_DUMP"
 
 # Step 2: Copy to production server
@@ -25,13 +25,13 @@ echo "  ✅ Copied to production"
 
 # Step 3: Import on production
 echo "[3/4] Importing on production server..."
-ssh "$PROD_USER@$PROD_SERVER" "docker exec scli-mysql mysql -u root -p'RootSecurePass2024!' scl_institute < /root/scl-institute/$LOCAL_DUMP"
+ssh "$PROD_USER@$PROD_SERVER" "docker exec scli-mysql-prod mysql -u root -p'RootSecurePass2024!' scl_institute < /root/scl-institute/$LOCAL_DUMP"
 echo "  ✅ Database imported"
 
 # Step 4: Verify
 echo "[4/4] Verifying sync..."
-PROD_COUNT=$(ssh "$PROD_USER@$PROD_SERVER" "docker exec scli-mysql mysql -u scl_user -p'SclSecurePass2024!' scl_institute --execute='SELECT COUNT(*) as count FROM student_applications;' | tail -1")
-LOCAL_COUNT=$(docker-compose exec -T scli-mysql mysql -u scl_user -pscl_password scl_institute --execute="SELECT COUNT(*) as count FROM student_applications;" | tail -1)
+PROD_COUNT=$(ssh "$PROD_USER@$PROD_SERVER" "docker exec scli-mysql-prod mysql -u scl_user -p'SclSecurePass2024!' scl_institute --execute='SELECT COUNT(*) as count FROM student_applications;' | tail -1")
+LOCAL_COUNT=$(docker-compose exec -T scli-mysql mysql -u scl_user -pSclSecurePass2024! scl_institute --execute="SELECT COUNT(*) as count FROM student_applications;" | tail -1)
 
 echo "  Development applications: $LOCAL_COUNT"
 echo "  Production applications: $PROD_COUNT"
