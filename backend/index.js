@@ -89,14 +89,18 @@ app.use(cors({
     exposedHeaders: ['Content-Length', 'X-Foo', 'X-Bar']
 }));
 
-app.use(bodyParser.json());
+app.use(bodyParser.json({ verify: (req, res, buf, encoding) => {
+    req.rawBody = buf.toString(encoding);
+} }));
 app.use(bodyParser.urlencoded({ extended: true }));
 
 // Error handler for bodyParser
 app.use((err, req, res, next) => {
     if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
         console.error('[BODYPARSER ERROR] JSON Parse Error:', err.message);
-        console.error('[BODYPARSER ERROR] Raw body:', req.rawBody);
+        console.error('[BODYPARSER ERROR] Raw body:', req.rawBody || '(no raw body captured)');
+        console.error('[BODYPARSER ERROR] Content-Type:', req.get('Content-Type'));
+        console.error('[BODYPARSER ERROR] Request:', req.method, req.url);
         return res.status(400).json({ success: false, message: 'Invalid JSON' });
     }
     next();
