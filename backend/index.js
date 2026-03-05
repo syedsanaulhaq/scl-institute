@@ -555,10 +555,21 @@ app.get('/api/students/applications', async (req, res) => {
         const [applications] = await db.execute(
             `SELECT * FROM student_applications LIMIT 100`
         );
+        
+        // Transform results to generate reference numbers
+        const transformedApplications = (applications || []).map(app => {
+            const refNum = app.application_reference || `SCL${String(app.id).padStart(6, '0')}`;
+            return {
+                ...app,
+                reference_number: refNum,
+                application_reference: refNum
+            };
+        });
+        
         res.json({
             success: true,
             data: {
-                applications: applications || []
+                applications: transformedApplications
             }
         });
     } catch (err) {
