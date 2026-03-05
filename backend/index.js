@@ -414,8 +414,12 @@ const users = [
 app.post('/api/login', async (req, res) => {
     const { email, password } = req.body;
     
+    if (!email || !password) {
+        return res.status(400).json({ success: false, message: 'Email and password required' });
+    }
+    
     try {
-        // Get user from database instead of hardcoded array
+        // Get user from database
         const [rows] = await pool.query(
             'SELECT id, email, first_name, last_name, role FROM users WHERE email = ? AND password = ?', 
             [email, password]
@@ -423,13 +427,14 @@ app.post('/api/login', async (req, res) => {
         
         if (rows.length > 0) {
             const user = rows[0];
+            const fullName = [user.first_name, user.last_name].filter(Boolean).join(' ').trim() || email;
             console.log(`[LOGIN] User authenticated:`, { email: user.email, role: user.role });
             res.json({ 
                 success: true, 
                 user: { 
                     id: user.id, 
                     email: user.email, 
-                    name: `${user.first_name} ${user.last_name}`.trim(),
+                    name: fullName,
                     role: user.role 
                 } 
             });
@@ -439,7 +444,7 @@ app.post('/api/login', async (req, res) => {
         }
     } catch (error) {
         console.error('[LOGIN] Database error:', error.message);
-        res.status(500).json({ success: false, message: 'Database error' });
+        res.status(500).json({ success: false, message: 'Database error: ' + error.message });
     }
 });
 
