@@ -62,6 +62,8 @@ const AdminApplications = () => {
                 },
                 withCredentials: true
             });
+            console.log('Admin applications response:', response.data);
+            console.log('First app reference_number:', response.data?.[0]?.reference_number);
             setApplications(response.data);
         } catch (error) {
             console.error('Error fetching applications:', error);
