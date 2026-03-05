@@ -92,6 +92,16 @@ app.use(cors({
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
+// Error handler for bodyParser
+app.use((err, req, res, next) => {
+    if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
+        console.error('[BODYPARSER ERROR] JSON Parse Error:', err.message);
+        console.error('[BODYPARSER ERROR] Raw body:', req.rawBody);
+        return res.status(400).json({ success: false, message: 'Invalid JSON' });
+    }
+    next();
+});
+
 // ===============================
 // ROUTES
 // ===============================
