@@ -60,21 +60,26 @@ const Dashboard = () => {
     const fetchDashboardData = async () => {
         try {
             setLoading(true);
+            const token = localStorage.getItem('authToken') || sessionStorage.getItem('accessToken');
+            const headers = token ? { 'Authorization': token } : {};
             
             // Fetch dashboard stats
-            const statsResponse = await axios.get(`${API_URL}/admin/dashboard-stats?auth=admin`, {
+            const statsResponse = await axios.get(`${API_URL}/admin/dashboard-stats`, {
+                headers,
                 withCredentials: true
             });
             setStats(statsResponse.data);
 
             // Fetch recent applications
-            const applicationsResponse = await axios.get(`${API_URL}/admin/applications?auth=admin`, {
+            const applicationsResponse = await axios.get(`${API_URL}/admin/applications`, {
+                headers,
                 withCredentials: true
             });
             setRecentApplications(applicationsResponse.data.slice(0, 5)); // Get latest 5
 
             // Fetch recent enquiries
-            const enquiriesResponse = await axios.get(`${API_URL}/admin/enquiries?auth=admin`, {
+            const enquiriesResponse = await axios.get(`${API_URL}/admin/enquiries`, {
+                headers,
                 withCredentials: true
             });
             setRecentEnquiries(enquiriesResponse.data.slice(0, 5)); // Get latest 5

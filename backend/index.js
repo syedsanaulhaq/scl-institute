@@ -429,8 +429,10 @@ app.post('/api/login', async (req, res) => {
         if (rows.length > 0) {
             const user = rows[0];
             const fullName = [user.first_name, user.last_name].filter(Boolean).join(' ').trim() || email;
+            const token = 'Bearer ' + Buffer.from(`${user.id}:${user.email}`).toString('base64');
             res.json({ 
-                success: true, 
+                success: true,
+                token: token,
                 user: { 
                     id: user.id, 
                     email: user.email, 

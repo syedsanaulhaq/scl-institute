@@ -55,7 +55,11 @@ const AdminApplications = () => {
 
     const fetchApplications = async () => {
         try {
+            const token = localStorage.getItem('authToken') || sessionStorage.getItem('accessToken');
             const response = await axios.get(`${API_URL}/admin/applications`, {
+                headers: {
+                    'Authorization': token || ''
+                },
                 withCredentials: true
             });
             setApplications(response.data);
