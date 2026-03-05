@@ -540,11 +540,39 @@ app.get('/api/students/applications', async (req, res) => {
         const [applications] = await db.execute(
             `SELECT * FROM student_applications LIMIT 100`
         );
-        res.json(applications || []);
+        res.json({
+            success: true,
+            data: {
+                applications: applications || []
+            }
+        });
     } catch (err) {
         console.error('[STUDENT APPLICATIONS] Error:', err.message);
         // Return empty array if table doesn't exist yet
-        res.json([]);
+        res.json({
+            success: true,
+            data: {
+                applications: []
+            }
+        });
+    }
+});
+
+// GET /api/students/applications/:id/review - Get review status for an application
+app.get('/api/students/applications/:id/review', async (req, res) => {
+    try {
+        const { id } = req.params;
+        // For now, return null review data (can be extended later)
+        res.json({
+            success: true,
+            data: null
+        });
+    } catch (err) {
+        console.error('[REVIEW STATUS] Error:', err.message);
+        res.json({
+            success: true,
+            data: null
+        });
     }
 });
 
