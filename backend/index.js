@@ -224,7 +224,20 @@ app.get('/api/admin/applications', requireAuth, async (req, res) => {
         `;
         
         const [results] = await db.execute(query);
-        res.json(results);
+        
+        // Transform results to match frontend expectations
+        const transformedResults = results.map(app => ({
+            ...app,
+            // Generate reference number if doesn't exist
+            reference_number: app.application_reference || `SCL${app.id.toString().padStart(6, '0')}`,
+            application_reference: app.application_reference || `SCL${app.id.toString().padStart(6, '0')}`,
+            // Map status field
+            status: app.application_status,
+            // Map program_id (use 0 as default if not set)
+            program_id: app.program_id || 0
+        }));
+        
+        res.json(transformedResults);
     } catch (error) {
         console.error('Error fetching applications:', error);
         res.status(500).json({ error: 'Failed to fetch applications' });
