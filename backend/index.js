@@ -504,6 +504,61 @@ app.post('/api/sso/verify', async (req, res) => {
     }
 });
 
+// ====== NOTIFICATIONS ENDPOINTS ======
+// GET /api/notifications/user/:email - Get notifications for user
+app.get('/api/notifications/user/:email', async (req, res) => {
+    try {
+        const { email } = req.params;
+        const [notifications] = await db.execute(
+            `SELECT id, user_email, message, type, read_status, created_at 
+             FROM notifications 
+             WHERE user_email = ? 
+             ORDER BY created_at DESC 
+             LIMIT 50`,
+            [email]
+        );
+        res.json(notifications || []);
+    } catch (err) {
+        console.error('[NOTIFICATIONS] Error:', err.message);
+        res.status(500).json({ error: 'Failed to fetch notifications' });
+    }
+});
+
+// GET /api/notifications/unread-count/:email - Get unread count for user
+app.get('/api/notifications/unread-count/:email', async (req, res) => {
+    try {
+        const { email } = req.params;
+        const [result] = await db.execute(
+            `SELECT COUNT(*) as unread_count 
+             FROM notifications 
+             WHERE user_email = ? AND read_status = 0`,
+            [email]
+        );
+        res.json({ unread_count: result[0]?.unread_count || 0 });
+    } catch (err) {
+        console.error('[UNREAD COUNT] Error:', err.message);
+        res.status(500).json({ error: 'Failed to fetch unread count' });
+    }
+});
+
+// ====== STUDENT APPLICATIONS ENDPOINTS ======
+// GET /api/students/applications - Get all student applications
+app.get('/api/students/applications', async (req, res) => {
+    try {
+        const [applications] = await db.execute(
+            `SELECT id, application_reference, first_name, last_name, email, 
+                    program, status, created_at, updated_at
+             FROM student_applications 
+             WHERE is_deleted = 0 OR is_deleted IS NULL
+             ORDER BY created_at DESC`
+        );
+        res.json(applications || []);
+    } catch (err) {
+        console.error('[STUDENT APPLICATIONS] Error:', err.message);
+        res.status(500).json({ error: 'Failed to fetch applications' });
+    }
+});
+
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`Backend running on port ${PORT}`);
 });
