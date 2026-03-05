@@ -218,11 +218,9 @@ app.post('/api/public/enquiries', async (req, res) => {
 app.get('/api/admin/applications', requireAuth, async (req, res) => {
     try {
         const query = `
-            SELECT a.*, p.name as program_name, p.code as program_code
-            FROM student_applications a
-            LEFT JOIN programs p ON a.program_id = p.id
-            WHERE a.is_deleted = FALSE
-            ORDER BY a.created_at DESC
+            SELECT * FROM student_applications
+            WHERE is_deleted = FALSE
+            ORDER BY created_at DESC
         `;
         
         const [results] = await db.execute(query);
