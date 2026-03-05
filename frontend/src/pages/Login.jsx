@@ -19,13 +19,13 @@ const LoginPage = ({ onLoginSuccess }) => {
         setLoading(true);
 
         try {
-            const response = await axios.post(`${API_URL}/v1/auth/login`, {
+            const response = await axios.post(`${API_URL}/login`, {
                 email,
                 password
             });
 
             const userData = response.data.user;
-            sessionStorage.setItem('accessToken', response.data.tokens.accessToken);
+            sessionStorage.setItem('accessToken', response.data.user?.id || '');
             sessionStorage.setItem('user', JSON.stringify(userData));
             localStorage.setItem('studentEmail', userData.email);
             onLoginSuccess(userData);
