@@ -224,19 +224,21 @@ app.get('/api/admin/applications', requireAuth, async (req, res) => {
         `;
         
         const [results] = await db.execute(query);
+        console.log(`Fetched ${results.length} applications from database`);
         
         // Transform results to match frontend expectations
-        const transformedResults = results.map(app => ({
-            ...app,
-            // Generate reference number if doesn't exist
-            reference_number: app.application_reference || `SCL${app.id.toString().padStart(6, '0')}`,
-            application_reference: app.application_reference || `SCL${app.id.toString().padStart(6, '0')}`,
-            // Map status field
-            status: app.application_status,
-            // Map program_id (use 0 as default if not set)
-            program_id: app.program_id || 0
-        }));
+        const transformedResults = results.map(app => {
+            const refNum = app.application_reference || `SCL${String(app.id).padStart(6, '0')}`;
+            return {
+                ...app,
+                reference_number: refNum,
+                application_reference: refNum,
+                status: app.application_status || 'pending',
+                program_id: app.program_id || 0
+            };
+        });
         
+        console.log(`First application after transform:`, transformedResults[0]);
         res.json(transformedResults);
     } catch (error) {
         console.error('Error fetching applications:', error);
