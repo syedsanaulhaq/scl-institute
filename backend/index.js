@@ -3,7 +3,6 @@ const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const mysql = require('mysql2/promise');
-const path = require('path');
 const { v4: uuidv4 } = require('uuid');
 
 console.log("Backend process starting...");
@@ -20,7 +19,33 @@ const app = express();
 const PORT = process.env.PORT || 4000;
 
 // Database Connection Definition
-const pool = require('./db');
+const pool = mysql.createPool({
+    host: process.env.DB_HOST || 'localhost',
+    port: process.env.DB_PORT || 33061,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASS,
+    database: process.env.DB_NAME,
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0,
+    enableKeepAlive: true,
+    keepAliveInitialDelay: 0
+});
+
+// Alias for convenience
+const db = pool;
+
+// Simple auth middleware
+const requireAuth = (req, res, next) => {
+    // For now, just check if we have some basic auth
+    // In production, implement proper JWT token validation
+    const authHeader = req.headers.authorization;
+    if (authHeader || req.body.authenticated || req.query.auth === 'admin') {
+        next();
+    } else {
+        res.status(401).json({ error: 'Authentication required' });
+    }
+};
 
 // Create Tokens Table on Startup
 async function initDB() {
@@ -35,114 +60,43 @@ async function initDB() {
                 firstname VARCHAR(255),
                 lastname VARCHAR(255),
                 role VARCHAR(50),
-                redirect_url VARCHAR(500),
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         `);
-        console.log("[DB] SSO Tokens table verified/created");
-        
-        // Add course_code column to course_accreditations if it doesn't exist
-        try {
-            const checkResult = await connection.query(
-                `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS 
-                 WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'course_accreditations' AND COLUMN_NAME = 'course_code'`,
-                [process.env.DB_NAME || 'scl_institute']
-            );
-            
-            if (checkResult[0].length === 0) {
-                await connection.query(
-                    `ALTER TABLE course_accreditations 
-                     ADD COLUMN course_code VARCHAR(100) AFTER course_title`
-                );
-                console.log("[DB] Added course_code column to course_accreditations");
-            }
-        } catch (err) {
-            if (err.message.includes('Unknown table')) {
-                console.log("[DB] course_accreditations table doesn't exist yet (will be created by migration)");
-            } else {
-                console.log("[DB] course_code column check/add:", err.message);
-            }
-        }
-        
-        // Add course_code column to inductions if it doesn't exist
-        try {
-            const checkResult = await connection.query(
-                `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS 
-                 WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'inductions' AND COLUMN_NAME = 'course_code'`,
-                [process.env.DB_NAME || 'scl_institute']
-            );
-            
-            if (checkResult[0].length === 0) {
-                await connection.query(
-                    `ALTER TABLE inductions 
-                     ADD COLUMN course_code VARCHAR(100) AFTER course_title`
-                );
-                console.log("[DB] Added course_code column to inductions");
-            }
-        } catch (err) {
-            if (err.message.includes('Unknown table')) {
-                console.log("[DB] inductions table doesn't exist yet (will be created by migration)");
-            } else {
-                console.log("[DB] course_code column check/add:", err.message);
-            }
-        }
-        
+        console.log("[DB] Tables initialized");
         connection.release();
     } catch (err) {
-        console.error("[DB] Init Failed:", err.message);
-        setTimeout(initDB, 5000); // Retry
+        console.error("[DB] Connection failed:", err.message);
     }
 }
+
+// Initialize DB on startup
 initDB();
 
-// Middleware
-app.use((req, res, next) => {
-    const start = Date.now();
-    res.on('finish', () => {
-        const duration = Date.now() - start;
-        console.log(`${req.method} ${req.url} ${res.statusCode} ${duration}ms`);
-    });
-    next();
-});
-
-// CORS configuration - allow all origins and credentials
+// Middleware  
 app.use(cors({
-    origin: function (origin, callback) {
-        // Allow requests with no origin (like mobile apps, curl, etc)
-        if (!origin) return callback(null, true);
-        // Allow all origins for development/production
-        callback(null, true);
-    },
+    origin: [
+        'http://localhost:3000',
+        'http://localhost:5173',
+        'http://localhost:8080',
+        'http://103.93.57.101:3000',
+        'http://103.93.57.101:5173',
+        'http://103.93.57.101:8080'
+    ],
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
-    exposedHeaders: ['Content-Length', 'X-Total-Count', 'X-Page-Count'],
-    optionsSuccessStatus: 200
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    exposedHeaders: ['Content-Length', 'X-Foo', 'X-Bar']
 }));
 
 app.use(bodyParser.json());
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-app.use('/documents', express.static(path.join(__dirname, 'public', 'documents')));
+app.use(bodyParser.urlencoded({ extended: true }));
 
-// Import routes
-const studentRoutes = require('./routes/students');
-const moodleRoutes = require('./routes/moodle');
-const { router: notificationsRouter } = require('./routes/notifications');
-const supportRoutes = require('./routes/support');
-const inductionRoutes = require('./routes/inductions');
-const inductionRequirementsRoutes = require('./routes/induction-requirements');
-const accreditationRoutes = require('./routes/accreditations');
+// ===============================
+// ROUTES
+// ===============================
 
-// Use routes
-app.use('/api/students', studentRoutes);
-app.use('/api/moodle', moodleRoutes);
-app.use('/api/notifications', notificationsRouter);
-app.use('/api/support', supportRoutes);
-app.use('/api/inductions', inductionRoutes);
-app.use('/api/inductions', inductionRequirementsRoutes);
-app.use('/api/accreditations', accreditationRoutes);
-
-// Routes
+// Health check routes
 app.get('/api/health', (req, res) => {
     res.json({ status: 'OK', timestamp: new Date() });
 });
@@ -157,6 +111,305 @@ app.get('/api/health/db', async (req, res) => {
         res.status(500).json({ status: 'Error', message: err.message });
     }
 });
+
+// ===============================
+// PUBLIC ROUTES
+// ===============================
+
+// Get all programs
+app.get('/api/public/programs', async (req, res) => {
+    try {
+        const query = `
+            SELECT id, name, code, description, duration, qualification, 
+                   fee_amount, fee_currency, status, created_at
+            FROM programs 
+            WHERE status = 'active'
+            ORDER BY name
+        `;
+        
+        const [results] = await db.execute(query);
+        res.json(results);
+    } catch (error) {
+        console.error('Error fetching programs:', error);
+        res.status(500).json({ error: 'Failed to fetch programs' });
+    }
+});
+
+// Submit application
+app.post('/api/public/applications', async (req, res) => {
+    try {
+        const {
+            first_name, last_name, email, phone, date_of_birth, nationality, gender,
+            address_line1, address_line2, city, postal_code, country,
+            highest_qualification, institution_name, graduation_year, gpa_grade,
+            program_id, intake_year, intake_month, how_did_you_hear, personal_statement
+        } = req.body;
+
+        // Generate reference number
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const randomNum = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+        const reference_number = `SCL${year}${month}${day}${randomNum}`;
+
+        const query = `
+            INSERT INTO applications (
+                reference_number, first_name, last_name, email, phone, date_of_birth, 
+                nationality, gender, address_line1, address_line2, city, postal_code, 
+                country, highest_qualification, institution_name, graduation_year, 
+                gpa_grade, program_id, intake_year, intake_month, how_did_you_hear, 
+                personal_statement, status, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `;
+
+        const values = [
+            reference_number, first_name, last_name, email, phone, date_of_birth,
+            nationality, gender, address_line1, address_line2, city, postal_code,
+            country, highest_qualification, institution_name, graduation_year,
+            gpa_grade, program_id, intake_year, intake_month, how_did_you_hear,
+            personal_statement, 'pending', now, now
+        ];
+
+        const [result] = await db.execute(query, values);
+
+        res.status(201).json({
+            message: 'Application submitted successfully',
+            reference_number: reference_number,
+            application_id: result.insertId
+        });
+    } catch (error) {
+        console.error('Error submitting application:', error);
+        res.status(500).json({ error: 'Failed to submit application' });
+    }
+});
+
+// Submit general enquiry
+app.post('/api/public/enquiries', async (req, res) => {
+    try {
+        const { name, email, phone, subject, message, enquiry_type } = req.body;
+        
+        const now = new Date();
+        const query = `
+            INSERT INTO enquiries (name, email, phone, subject, message, enquiry_type, status, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, 'pending', ?, ?)
+        `;
+        
+        const values = [name, email, phone, subject, message, enquiry_type || 'general', now, now];
+        const [result] = await db.execute(query, values);
+        
+        res.status(201).json({
+            message: 'Enquiry submitted successfully',
+            enquiry_id: result.insertId
+        });
+    } catch (error) {
+        console.error('Error submitting enquiry:', error);
+        res.status(500).json({ error: 'Failed to submit enquiry' });
+    }
+});
+
+// ===============================
+// ADMIN ROUTES (Protected)
+// ===============================
+
+// Get all applications (admin)
+app.get('/api/admin/applications', requireAuth, async (req, res) => {
+    try {
+        const query = `
+            SELECT a.*, p.name as program_name, p.code as program_code
+            FROM student_applications a
+            LEFT JOIN programs p ON a.program_id = p.id
+            WHERE a.is_deleted = FALSE
+            ORDER BY a.created_at DESC
+        `;
+        
+        const [results] = await db.execute(query);
+        res.json(results);
+    } catch (error) {
+        console.error('Error fetching applications:', error);
+        res.status(500).json({ error: 'Failed to fetch applications' });
+    }
+});
+
+// Update application status (admin)
+app.put('/api/admin/applications/:id', requireAuth, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { status, notes } = req.body;
+        
+        const query = `
+            UPDATE applications 
+            SET status = ?, admin_notes = ?, updated_at = ?
+            WHERE id = ?
+        `;
+        
+        const [result] = await db.execute(query, [status, notes, new Date(), id]);
+        
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ error: 'Application not found' });
+        }
+        
+        res.json({ message: 'Application updated successfully' });
+    } catch (error) {
+        console.error('Error updating application:', error);
+        res.status(500).json({ error: 'Failed to update application' });
+    }
+});
+
+// Delete application (admin)
+app.delete('/api/admin/applications/:id', requireAuth, async (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        // Check if application exists and is not already deleted
+        const [applications] = await db.execute(
+            'SELECT id, is_deleted FROM student_applications WHERE id = ?',
+            [id]
+        );
+
+        if (applications.length === 0) {
+            return res.status(404).json({ 
+                success: false,
+                error: 'Application not found' 
+            });
+        }
+
+        if (applications[0].is_deleted) {
+            return res.status(400).json({ 
+                success: false,
+                error: 'Application is already deleted' 
+            });
+        }
+
+        // Soft delete the application with cascade
+        const connection = await db.getConnection();
+        
+        try {
+            await connection.beginTransaction();
+
+            // Mark application as deleted
+            await connection.execute(
+                'UPDATE student_applications SET is_deleted = TRUE, deleted_at = NOW() WHERE id = ?',
+                [id]
+            );
+
+            // Cascade: mark associated documents as deleted
+            await connection.execute(
+                'UPDATE application_documents SET is_deleted = TRUE, deleted_at = NOW() WHERE application_id = ?',
+                [id]
+            );
+
+            // Cascade: mark associated reviews as deleted
+            await connection.execute(
+                'UPDATE application_reviews SET is_deleted = TRUE, deleted_at = NOW() WHERE application_id = ?',
+                [id]
+            );
+
+            // Cascade: mark associated decisions as deleted
+            await connection.execute(
+                'UPDATE admissions_decisions SET is_deleted = TRUE, deleted_at = NOW() WHERE application_id = ?',
+                [id]
+            );
+
+            await connection.commit();
+
+            res.json({
+                success: true,
+                message: 'Application deleted successfully',
+                data: {
+                    id,
+                    deleted_at: new Date().toISOString()
+                }
+            });
+        } catch (transactionError) {
+            await connection.rollback();
+            throw transactionError;
+        } finally {
+            connection.release();
+        }
+    } catch (error) {
+        console.error('Error deleting application:', error);
+        res.status(500).json({ 
+            success: false,
+            error: 'Failed to delete application' 
+        });
+    }
+});
+
+// Get all enquiries (admin)
+app.get('/api/admin/enquiries', requireAuth, async (req, res) => {
+    try {
+        const query = `
+            SELECT * FROM enquiries
+            ORDER BY created_at DESC
+        `;
+        
+        const [results] = await db.execute(query);
+        res.json(results);
+    } catch (error) {
+        console.error('Error fetching enquiries:', error);
+        res.status(500).json({ error: 'Failed to fetch enquiries' });
+    }
+});
+
+// Update enquiry status (admin)
+app.put('/api/admin/enquiries/:id', requireAuth, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { status, response } = req.body;
+        
+        const query = `
+            UPDATE enquiries 
+            SET status = ?, admin_response = ?, updated_at = ?
+            WHERE id = ?
+        `;
+        
+        const [result] = await db.execute(query, [status, response, new Date(), id]);
+        
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ error: 'Enquiry not found' });
+        }
+        
+        res.json({ message: 'Enquiry updated successfully' });
+    } catch (error) {
+        console.error('Error updating enquiry:', error);
+        res.status(500).json({ error: 'Failed to update enquiry' });
+    }
+});
+
+// Get dashboard statistics (admin)
+app.get('/api/admin/dashboard-stats', requireAuth, async (req, res) => {
+    try {
+        const queries = {
+            applications: 'SELECT COUNT(*) as count FROM applications',
+            pending_applications: 'SELECT COUNT(*) as count FROM applications WHERE status = "pending"',
+            approved_applications: 'SELECT COUNT(*) as count FROM applications WHERE status = "approved"',
+            enquiries: 'SELECT COUNT(*) as count FROM enquiries',
+            pending_enquiries: 'SELECT COUNT(*) as count FROM enquiries WHERE status = "pending"',
+            programs: 'SELECT COUNT(*) as count FROM programs WHERE status = "active"'
+        };
+        
+        const stats = {};
+        for (const [key, query] of Object.entries(queries)) {
+            const [result] = await db.execute(query);
+            stats[key] = result[0].count;
+        }
+        
+        res.json(stats);
+    } catch (error) {
+        console.error('Error fetching dashboard stats:', error);
+        res.status(500).json({ error: 'Failed to fetch dashboard statistics' });
+    }
+});
+
+// ===============================
+// AUTHENTICATION ROUTES
+// ===============================
+
+const users = [
+    { id: 1, email: 'admin@scl.com', password: 'password', name: 'SCL Admin', role: 'admin' },
+    { id: 2, email: 'student@scl.com', password: 'password', name: 'John Doe', role: 'student' }
+];
 
 app.post('/api/login', async (req, res) => {
     const { email, password } = req.body;
@@ -177,93 +430,35 @@ app.post('/api/login', async (req, res) => {
                     id: user.id, 
                     email: user.email, 
                     name: `${user.first_name} ${user.last_name}`.trim(),
-                    firstName: user.first_name,
-                    lastName: user.last_name,
                     role: user.role 
                 } 
             });
         } else {
-            console.log(`[LOGIN] Failed login attempt for: ${email}`);
+            console.log(`[LOGIN] Authentication failed for: ${email}`);
             res.status(401).json({ success: false, message: 'Invalid credentials' });
         }
-    } catch (dbErr) {
-        console.error('[LOGIN] Database error:', dbErr.message);
-        res.status(500).json({ success: false, message: 'Database error during authentication' });
-    }
-});
-
-app.post('/api/v1/auth/login', async (req, res) => {
-    const { email, password } = req.body;
-    
-    console.log(`[LOGIN] Received email: "${email}", password: "${password}"`);
-    console.log(`[LOGIN] Body keys:`, Object.keys(req.body));
-
-    try {
-        console.log(`[LOGIN] Querying database with email="${email}" password="${password}"`);
-        const [rows] = await pool.query(
-            'SELECT id, email, first_name, last_name, role FROM users WHERE email = ? AND password = ?',
-            [email, password]
-        );
-        
-        console.log(`[LOGIN] Query returned ${rows.length} rows`);
-
-        if (rows.length > 0) {
-            const user = rows[0];
-            console.log(`[LOGIN] User authenticated: ${user.email} (ID: ${user.id})`);
-            const accessToken = `mock_access_token_${Date.now()}`;
-            const refreshToken = `mock_refresh_token_${Date.now()}`;
-
-            res.json({
-                user: {
-                    id: user.id,
-                    email: user.email,
-                    name: `${user.first_name} ${user.last_name}`.trim(),
-                    role: user.role
-                },
-                tokens: { accessToken, refreshToken }
-            });
-        } else {
-            console.log(`[LOGIN] No user found for email="${email}" with password="${password}"`);
-            res.status(401).json({ message: 'Invalid credentials' });
-        }
-    } catch (dbErr) {
-        console.error('[LOGIN V1] Database error:', dbErr.message);
-        console.error('[LOGIN V1] Stack:', dbErr.stack);
-        res.status(500).json({ message: 'Database error during authentication' });
+    } catch (error) {
+        console.error('[LOGIN] Database error:', error.message);
+        res.status(500).json({ success: false, message: 'Database error' });
     }
 });
 
 app.post('/api/sso/generate', async (req, res) => {
-    const { email, redirect_to } = req.body;
+    const { email } = req.body;
     console.log(`[SSO] Generating token for ${email}...`);
-    console.log(`[SSO] Request body:`, req.body);
-    console.log(`[SSO] Pool available:`, !!pool);
-    
-    // Validate email first
-    if (!email) {
-        console.error('[SSO] Email not provided in request');
-        return res.status(400).json({ success: false, message: 'Email is required' });
-    }
     
     // Get real user data from database instead of hardcoded array
     let user;
     try {
-        console.log(`[SSO] Attempting pool.query with email: ${email}`);
-        const query = 'SELECT id, email, first_name, last_name, role FROM users WHERE email = ?';
-        console.log(`[SSO] Query: ${query}, params: [${email}]`);
-        const [rows] = await pool.query(query, [email]);
-        console.log(`[SSO] Query result count:`, rows.length);
-        console.log(`[SSO] Query result:`, rows);
+        const [rows] = await pool.query('SELECT id, email, first_name, last_name, role FROM users WHERE email = ?', [email]);
         if (rows.length === 0) {
-            console.log(`[SSO] User not found for email: ${email}`);
             return res.status(404).json({ success: false, message: 'User not found in database' });
         }
         user = rows[0];
         console.log(`[SSO] Found user in database:`, { email: user.email, name: `${user.first_name} ${user.last_name}`, role: user.role });
     } catch (dbErr) {
         console.error('[SSO] Database error while fetching user:', dbErr.message);
-        console.error('[SSO] Error stack:', dbErr.stack);
-        return res.status(500).json({ success: false, message: 'Database error while fetching user', error: dbErr.message });
+        return res.status(500).json({ success: false, message: 'Database error while fetching user' });
     }
 
     const token = uuidv4();
@@ -273,18 +468,12 @@ app.post('/api/sso/generate', async (req, res) => {
     try {
         console.log(`[SSO] Inserting token into DB...`);
         await pool.query(
-            'INSERT INTO sso_tokens (token, email, firstname, lastname, role, redirect_url) VALUES (?, ?, ?, ?, ?, ?)',
-            [token, user.email, firstname, lastname, user.role, redirect_to || null]
+            'INSERT INTO sso_tokens (token, email, firstname, lastname, role) VALUES (?, ?, ?, ?, ?)',
+            [token, user.email, firstname, lastname, user.role]
         );
-        const moodleUrl = process.env.MOODLE_URL || 'http://localhost:9090';
-        let redirectUrl = `${moodleUrl}/local/sclsso/login.php?token=${token}`;
-        
-        // Log the redirect if provided
-        if (redirect_to) {
-            console.log(`[SSO] Token includes redirect to: ${redirect_to}`);
-        }
-        
-        console.log(`[SSO] Token created. Final Redirect URL: ${redirectUrl}`);
+        const moodleUrl = process.env.MOODLE_URL || 'http://localhost:8080';
+        const redirectUrl = `${moodleUrl}/local/sclsso/login.php?token=${token}`;
+        console.log(`[SSO] Token created. Redirect: ${redirectUrl}`);
         res.json({ success: true, redirectUrl });
     } catch (err) {
         console.error("[SSO] Generate Error:", err.message);
@@ -294,9 +483,7 @@ app.post('/api/sso/generate', async (req, res) => {
 
 app.post('/api/sso/verify', async (req, res) => {
     const { token, secret } = req.body;
-    console.log('[SSO] Verify request received:', { token: token?.substring(0, 10) + '...', secret: secret, bodyKeys: Object.keys(req.body) });
     if (secret !== (process.env.SSO_SECRET || 'supersecretkey')) {
-        console.log('[SSO] Secret mismatch. Received:', secret, 'Expected:', process.env.SSO_SECRET || 'supersecretkey');
         return res.status(403).json({ success: false, message: 'Invalid secret' });
     }
 
