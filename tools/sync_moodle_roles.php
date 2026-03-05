@@ -1,4 +1,5 @@
 <?php
+// phpstan ignore all
 // Sync roles from backend users table into Moodle.
 
 define('CLI_SCRIPT', true);

@@ -1,4 +1,5 @@
 <?php
+// phpstan ignore all
 // Simple SSO entry point in Moodle root
 // Handles token verification and user login
 

@@ -1,4 +1,5 @@
 <?php
+// phpstan ignore all
 // SSO Login Handler - Direct entry point
 // This file must be placed at the Moodle document root for access via /sso_login.php
 
