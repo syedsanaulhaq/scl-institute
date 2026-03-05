@@ -45,7 +45,9 @@ const moodleDbPool = mysql.createPool({
     database: process.env.MOODLE_DATABASE_NAME || process.env.MOODLE_DB_NAME || 'bitnami_moodle',
     waitForConnections: true,
     connectionLimit: 10,
-    queueLimit: 0
+    queueLimit: 0,
+    connectTimeout: 3000, // 3 second connection timeout
+    acquireTimeout: 3000  // 3 second timeout for acquiring connection from pool
 });
 
 // Configure multer for file uploads
@@ -73,6 +75,13 @@ const upload = multer({
         }
     }
 });
+
+// Multer config for mixed files and fields
+const uploadFields = upload.fields([
+    { name: 'documents', maxCount: 10 },
+    { name: 'documentType', maxCount: 1 },
+    { name: 'applicationId', maxCount: 1 }
+]);
 
 // ===============================================
 // ROUTE 1: GET /api/students/courses
@@ -1053,7 +1062,19 @@ router.get('/applications', async (req, res) => {
                     sa.consent_gdpr,
                     sa.consent_data_sharing,
                     sa.consent_marketing,
-                    sa.declaration_truth
+                    sa.declaration_truth,
+                    sa.offer_accepted,
+                    sa.passport_id_document,
+                    sa.academic_certificates,
+                    sa.academic_transcripts,
+                    sa.english_certificate,
+                    sa.student_contract,
+                    sa.cv_resume,
+                    sa.work_reference,
+                    sa.proof_of_address,
+                    sa.visa_immigration_document,
+                    sa.brp_card,
+                    sa.residency_proof
                 FROM student_applications sa
                 ${whereClause}
                 ORDER BY sa.id DESC
@@ -1609,17 +1630,46 @@ SCL Institute Admissions Team
     }
 });
 
-// Upload document for student application
-router.post('/applications/:id/upload-document', upload.single('document'), async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { documentType } = req.body;
-        const file = req.file;
-
-        if (!file) {
+// Upload multiple documents for student application
+router.post('/applications/:id/upload-document', (req, res, next) => {
+    // Use multer fields middleware to handle both files and form fields
+    uploadFields(req, res, (err) => {
+        if (err instanceof multer.MulterError) {
+            console.error(`[UPLOAD ERROR] MulterError: ${err.message}`);
             return res.status(400).json({
                 success: false,
-                message: 'No file uploaded'
+                message: `Upload validation error: ${err.message}`
+            });
+        } else if (err) {
+            console.error(`[UPLOAD ERROR] Error: ${err.message}`);
+            return res.status(400).json({
+                success: false,
+                message: `Upload error: ${err.message}`
+            });
+        }
+        // Continue to next middleware if no error
+        handleUploadLogic(req, res);
+    });
+});
+
+// Separated upload logic handler
+async function handleUploadLogic(req, res) {
+    try {
+        const { id } = req.params;
+        
+        // Get documentType from form fields (multer.fields puts non-file fields in req.body)
+        const documentType = req.body?.documentType;
+        
+        // Get files array from multer
+        const files = req.files?.documents || [];
+
+        console.log(`[UPLOAD DEBUG] ID: ${id}, DocumentType: ${documentType}, Files count: ${files.length}`);
+        console.log(`[UPLOAD DEBUG] Files:`, files.length > 0 ? files.map(f => f.originalname) : 'NONE');
+
+        if (!files || files.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'No files uploaded'
             });
         }
 
@@ -1665,54 +1715,65 @@ router.post('/applications/:id/upload-document', upload.single('document'), asyn
             visa_immigration_document: 'visa_immigration_document'
         };
 
-        // Store original filename in the application columns
-        const filePath = `/uploads/student-documents/${file.filename}`;
+        const uploadedFiles = [];
 
-        // Update the application with the original filename when mapped to a column
-        if (columnMap[documentType]) {
-            const updateQuery = `UPDATE student_applications SET ${columnMap[documentType]} = ? WHERE id = ?`;
-            await db.execute(updateQuery, [file.originalname, id]);
-        }
+        // Process each file
+        for (const file of files) {
+            const filePath = `/uploads/student-documents/${file.filename}`;
 
-        // Insert into application_documents for tracking
-        await db.execute(
-            `INSERT INTO application_documents (
-                application_id, document_type, original_filename, stored_filename,
-                file_path, file_size, mime_type, uploaded_by_ip
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
-            , [
-                id,
-                documentType,
-                file.originalname,
-                file.filename,
+            // Update the application with the original filename when mapped to a column (store first file)
+            if (columnMap[documentType] && uploadedFiles.length === 0) {
+                const updateQuery = `UPDATE student_applications SET ${columnMap[documentType]} = ? WHERE id = ?`;
+                await db.execute(updateQuery, [file.originalname, id]);
+            }
+
+            // Insert into application_documents for tracking
+            await db.execute(
+                `INSERT INTO application_documents (
+                    application_id, document_type, original_filename, stored_filename,
+                    file_path, file_size, mime_type, uploaded_by_ip
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+                , [
+                    id,
+                    documentType,
+                    file.originalname,
+                    file.filename,
+                    filePath,
+                    file.size,
+                    file.mimetype,
+                    req.ip
+                ]
+            );
+
+            uploadedFiles.push({
+                fileName: file.originalname,
+                storedName: file.filename,
                 filePath,
-                file.size,
-                file.mimetype,
-                req.ip
-            ]
-        );
+                fileSize: file.size
+            });
 
-        console.log(`[DOCUMENT UPLOAD] Application ${id}: ${documentType} uploaded - ${file.filename}`);
+            console.log(`[DOCUMENT UPLOAD] Application ${id}: ${documentType} uploaded - ${file.filename}`);
+        }
 
         res.json({
             success: true,
-            message: 'Document uploaded successfully',
+            message: `${uploadedFiles.length} document(s) uploaded successfully`,
             data: {
                 documentType,
-                fileName: file.filename,
-                filePath
+                filesCount: uploadedFiles.length,
+                files: uploadedFiles
             }
         });
 
     } catch (error) {
-        console.error('Error uploading document:', error);
+        console.error('Error uploading documents:', error);
         res.status(500).json({
             success: false,
-            message: 'Failed to upload document',
+            message: 'Failed to upload documents',
             error: error.message
         });
     }
-});
+}
 
 // Get document file path by application ID and document type
 router.get('/applications/:id/document/:documentType', async (req, res) => {
@@ -1743,6 +1804,106 @@ router.get('/applications/:id/document/:documentType', async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Failed to get document',
+            error: error.message
+        });
+    }
+});
+
+// Get all documents for a specific application and document type
+router.get('/applications/:id/documents/:documentType', async (req, res) => {
+    try {
+        const { id, documentType } = req.params;
+
+        // Get all documents for this type
+        const [results] = await db.execute(
+            `SELECT id, original_filename, stored_filename, file_path, file_size, upload_date, document_verified
+             FROM application_documents 
+             WHERE application_id = ? AND document_type = ? AND is_deleted = FALSE
+             ORDER BY upload_date DESC`,
+            [id, documentType]
+        );
+
+        res.json({
+            success: true,
+            data: {
+                documentType,
+                documents: results,
+                count: results.length
+            }
+        });
+    } catch (error) {
+        console.error('Error getting documents:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to get documents',
+            error: error.message
+        });
+    }
+});
+
+// Delete specific document by ID
+router.delete('/applications/:id/documents/:docId', async (req, res) => {
+    try {
+        const { id, docId } = req.params;
+
+        // Get the document info first
+        const [docResult] = await db.execute(
+            `SELECT document_type, file_path FROM application_documents 
+             WHERE id = ? AND application_id = ?`,
+            [docId, id]
+        );
+
+        if (docResult.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Document not found'
+            });
+        }
+
+        // Soft delete the document
+        await db.execute(
+            `UPDATE application_documents SET is_deleted = TRUE, deleted_at = NOW() WHERE id = ?`,
+            [docId]
+        );
+
+        // Check if there are other documents of same type
+        const [otherDocs] = await db.execute(
+            `SELECT COUNT(*) as count FROM application_documents 
+             WHERE application_id = ? AND document_type = ? AND is_deleted = FALSE`,
+            [id, docResult[0].document_type]
+        );
+
+        // If no other documents of this type, clear the main field
+        if (otherDocs[0].count === 0) {
+            const columnMap = {
+                passport_id_document: 'passport_id_document',
+                academic_certificates: 'academic_certificates',
+                academic_transcripts: 'academic_transcripts',
+                english_certificate: 'english_certificate',
+                student_contract: 'student_contract',
+                cv_resume: 'cv_resume',
+                work_reference: 'work_reference',
+                proof_of_address: 'proof_of_address',
+                visa_immigration_document: 'visa_immigration_document'
+            };
+
+            if (columnMap[docResult[0].document_type]) {
+                await db.execute(
+                    `UPDATE student_applications SET ${columnMap[docResult[0].document_type]} = NULL WHERE id = ?`,
+                    [id]
+                );
+            }
+        }
+
+        res.json({
+            success: true,
+            message: 'Document deleted successfully'
+        });
+    } catch (error) {
+        console.error('Error deleting document:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to delete document',
             error: error.message
         });
     }
@@ -2336,12 +2497,17 @@ router.get('/programme/:id', async (req, res) => {
         const courseCode = app.course_code || app.programme_code;
         const courseTitle = app.course_title || app.programme_title;
 
+        // Skip Moodle DB in dev if not configured or explicitly disabled
+        const enableMoodleIntegration = process.env.ENABLE_MOODLE_INTEGRATION !== 'false';
+        const skipMoodleDb = !enableMoodleIntegration || (!process.env.MOODLE_DATABASE_HOST && !process.env.MOODLE_DB_HOST);
+
         // Try Moodle DB first for accurate course data (using shared connection pool)
-        try {
-            // First, try to find by idnumber or shortname (indexed, faster)
-            const [courseRows] = await moodleDbPool.execute(
-                `
-                SELECT id, idnumber, shortname, fullname, startdate, enddate, summary
+        if (!skipMoodleDb) {
+            try {
+                // First, try to find by idnumber or shortname (indexed, faster)
+                const [courseRows] = await moodleDbPool.execute(
+                    `
+                    SELECT id, idnumber, shortname, fullname, startdate, enddate, summary
                 FROM mdl_course
                 WHERE idnumber = ? OR shortname = ?
                 LIMIT 1
@@ -2480,14 +2646,22 @@ router.get('/programme/:id', async (req, res) => {
         } catch (moodleDbError) {
             console.log('Moodle DB error, falling back to API/default:', moodleDbError.message);
         }
+        }
 
-        // Fallback: Moodle API
-        const moodleToken = process.env.MOODLE_TOKEN || 'e86dd021aaa42f78114e6c67cc9d8ff1';
-        const moodleUrl = process.env.MOODLE_INTERNAL_URL || 'http://scli-moodle-dev:8080';
-        const axios = require('axios');
+        // Fallback: Moodle API (skip if not configured or pointing to dev/localhost)
+        const moodleUrl = process.env.MOODLE_INTERNAL_URL || process.env.MOODLE_URL;
+        const skipMoodleApi = !enableMoodleIntegration || 
+            !moodleUrl || 
+            moodleUrl.includes('scli-moodle-dev') || 
+            moodleUrl.includes('localhost') ||
+            moodleUrl.includes('127.0.0.1');
 
-        try {
-            const coursesResponse = await axios.get(
+        if (!skipMoodleApi) {
+            const moodleToken = process.env.MOODLE_TOKEN || 'e86dd021aaa42f78114e6c67cc9d8ff1';
+            const axios = require('axios');
+
+            try {
+                const coursesResponse = await axios.get(
                 `${moodleUrl}/webservice/rest/server.php`,
                 {
                     params: {
@@ -2563,31 +2737,34 @@ router.get('/programme/:id', async (req, res) => {
 
         } catch (moodleError) {
             console.log('Moodle API error, returning default programme data:', moodleError.message);
-            
-            const response = {
-                success: true,
-                data: {
-                    programme: {
-                        code: courseCode,
-                        title: courseTitle,
-                        type: app.course_type || 'Bachelor Degree',
-                        studyMode: app.mode_of_study || 'Full-time',
-                        duration: '1 Year',
-                        startDate: app.intake_start_date || new Date()
-                    },
-                    modules: generateDefaultModules(courseCode),
-                    outcomes: [
-                        'Understand core principles and theories',
-                        'Apply knowledge in practical scenarios',
-                        'Develop critical thinking and analysis skills'
-                    ],
-                    source: 'default'
-                }
-            };
-            // Cache the response
-            programmeCache.set(cacheKey, response);
-            return res.json(response);
         }
+        }
+
+        // Return default programme data (Moodle not available or configured)
+        console.log('Returning default programme data for:', courseCode);
+        const response = {
+            success: true,
+            data: {
+                programme: {
+                    code: courseCode,
+                    title: courseTitle,
+                    type: app.course_type || 'Bachelor Degree',
+                    studyMode: app.mode_of_study || 'Full-time',
+                    duration: '1 Year',
+                    startDate: app.intake_start_date || new Date()
+                },
+                modules: generateDefaultModules(courseCode),
+                outcomes: [
+                    'Understand core principles and theories',
+                    'Apply knowledge in practical scenarios',
+                    'Develop critical thinking and analysis skills'
+                ],
+                source: 'default'
+            }
+        };
+        // Cache the response
+        programmeCache.set(cacheKey, response);
+        return res.json(response);
 
     } catch (error) {
         console.error('Error fetching programme:', error);

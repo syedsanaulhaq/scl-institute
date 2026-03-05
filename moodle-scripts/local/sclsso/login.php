@@ -80,11 +80,11 @@ if (empty($token)) {
 }
 
 // Verify token via SCL backend API
-// Use environment variable or fallback to backend service name
-$backendHost = getenv('SCL_BACKEND_HOST') ?: 'scli-backend';
+// Use environment variable, fallback to localhost for LAMP-based Moodle.
+$backendHost = getenv('SCL_BACKEND_HOST') ?: 'localhost';
 $backendPort = getenv('SCL_BACKEND_PORT') ?: '4000';
 $backendUrl = 'http://' . $backendHost . ':' . $backendPort . '/api/sso/verify';
-$ssoSecret = getenv('SSO_SECRET') ?: 'supersecretkey';
+$ssoSecret = getenv('SSO_SECRET') ?: 'dev-supersecretkey-changeinproduction';
 
 error_log('[SSO] Backend URL: ' . $backendUrl);
 

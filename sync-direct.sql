@@ -63,8 +63,8 @@ WHERE mc.id > 1
 
 SELECT CONCAT('✓ Enrol instances ready: ', ROW_COUNT()) as step3;
 
--- Step 4: Enroll students
--- Use a more flexible course matching
+-- Step 4: Enroll students in their SPECIFIC courses only
+-- Match by course_code or course_title
 INSERT IGNORE INTO moodle.mdl_user_enrolments (enrolid, userid, status, timestart, timeend, modifierid, timemodified)
 SELECT DISTINCT
     me.id,
@@ -77,11 +77,15 @@ SELECT DISTINCT
 FROM scl_institute.student_applications sa
 JOIN moodle.mdl_user mu ON LOWER(mu.email) COLLATE utf8mb4_unicode_ci = LOWER(sa.email) COLLATE utf8mb4_unicode_ci
 JOIN moodle.mdl_course mc ON (
-    /* Enroll in SCL courses by default */
-    mc.shortname LIKE 'SCL-%' AND mc.id > 1
+    /* Match by course code (idnumber or shortname) */
+    mc.idnumber = sa.course_code 
+    OR mc.shortname = sa.course_code
+    /* Or match by course title */
+    OR mc.fullname LIKE CONCAT('%', sa.course_title, '%')
 )
 JOIN moodle.mdl_enrol me ON me.courseid = mc.id AND me.enrol = 'manual'
-WHERE sa.is_deleted = 0;
+WHERE sa.is_deleted = 0
+  AND sa.application_status IN ('accepted', 'conditional_accept');
 
 SELECT CONCAT('✓ Students enrolled: ', ROW_COUNT()) as step4;
 

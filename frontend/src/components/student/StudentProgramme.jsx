@@ -29,14 +29,17 @@ const StudentProgramme = ({ user }) => {
     const fetchProgrammeData = async () => {
         try {
             setLoading(true);
-            // First get student's application to find their course
-            const appsResponse = await axios.get(`${API_URL}/students/applications`);
+            // Get student's accepted application directly by email (more efficient)
+            const appsResponse = await axios.get(`${API_URL}/students/my-applications`, {
+                params: { email: user.email }
+            });
+            
             if (appsResponse.data?.success) {
                 const apps = appsResponse.data.data?.applications || [];
-                const studentApp = apps.find(app => app.email === user.email);
+                const studentApp = apps[0]; // Get first accepted application
                 
                 if (studentApp) {
-                    // Then fetch the programme details
+                    // Then fetch the programme details from Moodle
                     const progResponse = await axios.get(`${API_URL}/students/programme/${studentApp.id}`);
                     if (progResponse.data?.success) {
                         const { programme, modules, outcomes } = progResponse.data.data;
@@ -48,7 +51,7 @@ const StudentProgramme = ({ user }) => {
                         setLearningOutcomes(outcomes || []);
                     }
                 } else {
-                    setError('No application found');
+                    setError('No accepted application found. Please contact admissions.');
                 }
             }
         } catch (err) {

@@ -4,8 +4,8 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 const mysql = require('mysql2/promise');
 const { v4: uuidv4 } = require('uuid');
-
 console.log("Backend process starting...");
+const studentsRouter = require('./routes/students');
 
 process.on('unhandledRejection', (reason, p) => {
     console.error('Unhandled Rejection at:', p, 'reason:', reason);
@@ -93,6 +93,7 @@ app.use(bodyParser.json({ verify: (req, res, buf, encoding) => {
     req.rawBody = buf.toString(encoding);
 } }));
 app.use(bodyParser.urlencoded({ extended: true }));
+app.use('/api/students', studentsRouter);
 
 // ===============================
 // ROUTES
@@ -457,6 +458,43 @@ app.post('/api/login', async (req, res) => {
             res.status(401).json({ success: false, message: 'Invalid credentials' });
         }
     } catch (error) {
+        res.status(500).json({ success: false, message: 'Database error' });
+    }
+});
+
+app.post('/api/v1/auth/login', async (req, res) => {
+    const { email, password } = req.body;
+    
+    try {
+        const [rows] = await pool.query(
+            'SELECT id, email, first_name, last_name, role FROM users WHERE email = ? AND password = ?', 
+            [email, password]
+        );
+        
+        if (rows.length > 0) {
+            const user = rows[0];
+            console.log(`[LOGIN V1] User authenticated:`, { email: user.email, role: user.role });
+            
+            const accessToken = `token_${user.id}_${Date.now()}`;
+            
+            res.json({ 
+                success: true,
+                tokens: {
+                    accessToken: accessToken
+                },
+                user: { 
+                    id: user.id, 
+                    email: user.email, 
+                    name: `${user.first_name} ${user.last_name}`.trim(),
+                    role: user.role 
+                } 
+            });
+        } else {
+            console.log(`[LOGIN V1] Authentication failed for: ${email}`);
+            res.status(401).json({ success: false, message: 'Invalid credentials' });
+        }
+    } catch (error) {
+        console.error('[LOGIN V1] Database error:', error.message);
         res.status(500).json({ success: false, message: 'Database error' });
     }
 });

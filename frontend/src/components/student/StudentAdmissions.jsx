@@ -17,6 +17,7 @@ const formatDate = (dateString) => {
 const StudentAdmissions = ({ user, initialTab }) => {
     const [applicationData, setApplicationData] = useState(null);
     const [inductionData, setInductionData] = useState({});
+    const [uploadedDocuments, setUploadedDocuments] = useState({}); // Track all documents by type
     const [savingInduction, setSavingInduction] = useState(false);
     const [loading, setLoading] = useState(true);
     const [uploading, setUploading] = useState(null);
@@ -38,8 +39,44 @@ const StudentAdmissions = ({ user, initialTab }) => {
     useEffect(() => {
         if (applicationData?.id) {
             fetchInductionData();
+            fetchUploadedDocuments();
         }
     }, [applicationData?.id]);
+
+    const fetchUploadedDocuments = async () => {
+        if (!applicationData?.id) return;
+        try {
+            const docTypes = [
+                'passport_id_document',
+                'academic_certificates',
+                'academic_transcripts',
+                'english_certificate',
+                'student_contract',
+                'cv_resume',
+                'work_reference',
+                'proof_of_address',
+                'visa_immigration_document'
+            ];
+
+            const docs = {};
+            for (const docType of docTypes) {
+                try {
+                    const response = await axios.get(
+                        `${API_URL}/students/applications/${applicationData.id}/documents/${docType}`
+                    );
+                    if (response.data?.success) {
+                        docs[docType] = response.data.data.documents || [];
+                    }
+                } catch (err) {
+                    // No documents of this type yet
+                    docs[docType] = [];
+                }
+            }
+            setUploadedDocuments(docs);
+        } catch (error) {
+            console.error('Error fetching uploaded documents:', error);
+        }
+    };
 
     const fetchApplicationData = async () => {
         try {
@@ -167,33 +204,41 @@ const StudentAdmissions = ({ user, initialTab }) => {
         }
     };
 
-    const handleFileUpload = async (docField, file) => {
-        console.log('Uploading file:', file.name, 'Type:', file.type, 'Size:', file.size);
-        
-        if (!file) return;
+    const handleFileUpload = async (docField, files) => {
+        if (!files || files.length === 0) return;
 
-        // Check file size (max 5MB)
-        if (file.size > 5 * 1024 * 1024) {
-            alert('File size must be less than 5MB');
-            return;
-        }
-
-        // Check file type - be more flexible
-        const fileName = file.name.toLowerCase();
-        const allowedExtensions = ['.pdf', '.jpg', '.jpeg', '.png'];
-        const hasAllowedExtension = allowedExtensions.some(ext => fileName.endsWith(ext));
+        console.log(`Uploading ${files.length} file(s) for:`, docField);
         
-        if (!hasAllowedExtension) {
-            alert('Only PDF and image files (JPG, PNG) are allowed. Selected file: ' + file.name);
-            console.log('File rejected. Name:', fileName, 'Type:', file.type);
-            return;
+        // Validate all files
+        for (const file of files) {
+            console.log('Uploading file:', file.name, 'Type:', file.type, 'Size:', file.size);
+            
+            // Check file size (max 5MB)
+            if (file.size > 5 * 1024 * 1024) {
+                alert(`File ${file.name} is too large (max 5MB)`);
+                return;
+            }
+
+            // Check file type
+            const fileName = file.name.toLowerCase();
+            const allowedExtensions = ['.pdf', '.jpg', '.jpeg', '.png'];
+            const hasAllowedExtension = allowedExtensions.some(ext => fileName.endsWith(ext));
+            
+            if (!hasAllowedExtension) {
+                alert(`Invalid file type for ${file.name}. Only PDF and image files (JPG, PNG) are allowed.`);
+                return;
+            }
         }
 
         try {
             console.log('Starting upload for:', docField);
             setUploading(docField);
             const formData = new FormData();
-            formData.append('document', file);
+            
+            // Add all files
+            for (const file of files) {
+                formData.append('documents', file);
+            }
             formData.append('documentType', docField);
             formData.append('applicationId', applicationData.id);
 
@@ -210,10 +255,11 @@ const StudentAdmissions = ({ user, initialTab }) => {
             console.log('Upload response:', response.data);
 
             if (response.data?.success) {
-                alert('Document uploaded successfully!');
-                // Add a small delay to ensure backend has processed the file
+                alert(`${response.data.data.filesCount} document(s) uploaded successfully!`);
+                // Add a small delay to ensure backend has processed the files
                 setTimeout(async () => {
                     await fetchApplicationData();
+                    await fetchUploadedDocuments();
                 }, 500);
             } else {
                 alert('Upload failed: ' + (response.data?.message || 'Unknown error'));
@@ -229,6 +275,28 @@ const StudentAdmissions = ({ user, initialTab }) => {
     const triggerFileInput = (docField) => {
         if (fileInputRefs.current[docField]) {
             fileInputRefs.current[docField].click();
+        }
+    };
+
+    const handleDeleteDocument = async (applicationId, docId, fileName) => {
+        if (!window.confirm(`Delete document: ${fileName}?`)) {
+            return;
+        }
+
+        try {
+            const response = await axios.delete(
+                `${API_URL}/students/applications/${applicationId}/documents/${docId}`
+            );
+
+            if (response.data?.success) {
+                alert('Document deleted successfully!');
+                await fetchUploadedDocuments();
+            } else {
+                alert('Failed to delete document: ' + (response.data?.message || 'Unknown error'));
+            }
+        } catch (error) {
+            console.error('Delete error:', error);
+            alert('Failed to delete document: ' + (error.response?.data?.message || error.message));
         }
     };
 
@@ -276,26 +344,6 @@ const StudentAdmissions = ({ user, initialTab }) => {
         } catch (error) {
             console.error('Download error:', error);
             alert('Failed to download document: ' + error.message);
-        }
-    };
-
-    const handleDeleteDocument = async (applicationId, documentType, docName) => {
-        if (!window.confirm(`Are you sure you want to delete ${docName}?`)) return;
-
-        try {
-            const response = await axios.delete(
-                `${API_URL}/students/applications/${applicationId}/document/${documentType}`
-            );
-
-            if (response.data?.success) {
-                alert('Document deleted successfully');
-                await fetchApplicationData();
-            } else {
-                alert('Failed to delete document');
-            }
-        } catch (error) {
-            console.error('Delete error:', error);
-            alert('Failed to delete document: ' + (error.response?.data?.message || error.message));
         }
     };
 
@@ -714,35 +762,36 @@ const StudentAdmissions = ({ user, initialTab }) => {
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-2">
-                                    {applicationData?.[doc.field] ? (
-                                        <div className="flex flex-col gap-2 items-end">
+                                    {(uploadedDocuments[doc.field]?.length > 0) ? (
+                                        <div className="flex flex-col gap-3 items-end w-full">
                                             <div className="flex items-center gap-2">
                                                 <CheckCircle className="w-5 h-5 text-green-600" />
-                                                <span className="text-sm text-green-600 font-medium">Uploaded</span>
+                                                <span className="text-sm text-green-600 font-medium">{uploadedDocuments[doc.field].length} file(s)</span>
                                             </div>
-                                            <div className="flex items-center gap-3">
-                                                <button 
-                                                    onClick={() => handleDownloadDocument(applicationData.id, doc.field, applicationData[doc.field])}
-                                                    className="text-blue-600 hover:text-blue-700 hover:scale-110 transition-transform"
-                                                    title="Download"
-                                                >
-                                                    <Download className="w-4 h-4" />
-                                                </button>
-                                                <button 
-                                                    onClick={() => triggerFileInput(doc.field)}
-                                                    className="text-amber-600 hover:text-amber-700 hover:scale-110 transition-transform"
-                                                    title="Replace"
-                                                >
-                                                    <RefreshCw className="w-4 h-4" />
-                                                </button>
-                                                <button 
-                                                    onClick={() => handleDeleteDocument(applicationData.id, doc.field, doc.name)}
-                                                    className="text-red-600 hover:text-red-700 hover:scale-110 transition-transform"
-                                                    title="Delete"
-                                                >
-                                                    <Trash2 className="w-4 h-4" />
-                                                </button>
+                                            {/* List all uploaded files */}
+                                            <div className="w-full space-y-2">
+                                                {uploadedDocuments[doc.field].map((file, idx) => (
+                                                    <div key={file.id} className="flex items-center justify-between p-2 bg-blue-50 rounded border border-blue-200">
+                                                        <span className="text-sm text-gray-700 truncate">{file.original_filename}</span>
+                                                        <button 
+                                                            onClick={() => handleDeleteDocument(applicationData.id, file.id, file.original_filename)}
+                                                            className="text-red-600 hover:text-red-700 transition-colors"
+                                                            title="Delete"
+                                                        >
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </button>
+                                                    </div>
+                                                ))}
                                             </div>
+                                            {/* Add more files button */}
+                                            <button 
+                                                onClick={() => triggerFileInput(doc.field)}
+                                                disabled={uploading === doc.field}
+                                                className="flex items-center gap-2 px-3 py-1 bg-amber-600 text-white rounded text-xs hover:bg-amber-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                                            >
+                                                <Upload className="w-3 h-3" />
+                                                {uploading === doc.field ? 'Adding...' : 'Add More'}
+                                            </button>
                                         </div>
                                     ) : (
                                         <button 
@@ -756,12 +805,13 @@ const StudentAdmissions = ({ user, initialTab }) => {
                                     )}
                                     <input
                                         type="file"
+                                        multiple
                                         ref={el => fileInputRefs.current[doc.field] = el}
                                         onChange={(e) => {
-                                            const file = e.target.files[0];
-                                            console.log('File selected:', file?.name);
-                                            if (file) {
-                                                handleFileUpload(doc.field, file);
+                                            const files = Array.from(e.target.files || []);
+                                            console.log('Files selected:', files.length);
+                                            if (files.length > 0) {
+                                                handleFileUpload(doc.field, files);
                                             }
                                             // Reset input after handling
                                             setTimeout(() => {
@@ -776,7 +826,7 @@ const StudentAdmissions = ({ user, initialTab }) => {
                         ))}
                     </div>
                     <p className="mt-6 text-sm text-gray-600 p-4 bg-blue-50 rounded-lg">
-                        <strong>Accepted formats:</strong> PDF, JPG, PNG | <strong>Max size:</strong> 5MB per file
+                        <strong>Accepted formats:</strong> PDF, JPG, PNG | <strong>Max size:</strong> 5MB per file | <strong>Multiple uploads:</strong> You can upload multiple files per document type
                     </p>
                     
                     {/* Navigation Button */}
