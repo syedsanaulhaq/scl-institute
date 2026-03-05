@@ -426,9 +426,15 @@ const users = [
 ];
 
 app.post('/api/login', async (req, res) => {
+    console.log('[LOGIN] Request received:', { method: req.method, url: req.url });
+    console.log('[LOGIN] Request headers:', req.headers);
+    console.log('[LOGIN] Request body:', req.body);
+    console.log('[LOGIN] Raw body:', req.rawBody);
+    
     const { email, password } = req.body;
     
     if (!email || !password) {
+        console.log('[LOGIN] Missing email or password');
         return res.status(400).json({ success: false, message: 'Email and password required' });
     }
     
