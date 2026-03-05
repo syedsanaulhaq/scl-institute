@@ -94,18 +94,6 @@ app.use(bodyParser.json({ verify: (req, res, buf, encoding) => {
 } }));
 app.use(bodyParser.urlencoded({ extended: true }));
 
-// Error handler for bodyParser
-app.use((err, req, res, next) => {
-    if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
-        console.error('[BODYPARSER ERROR] JSON Parse Error:', err.message);
-        console.error('[BODYPARSER ERROR] Raw body:', req.rawBody || '(no raw body captured)');
-        console.error('[BODYPARSER ERROR] Content-Type:', req.get('Content-Type'));
-        console.error('[BODYPARSER ERROR] Request:', req.method, req.url);
-        return res.status(400).json({ success: false, message: 'Invalid JSON' });
-    }
-    next();
-});
-
 // ===============================
 // ROUTES
 // ===============================
@@ -426,20 +414,13 @@ const users = [
 ];
 
 app.post('/api/login', async (req, res) => {
-    console.log('[LOGIN] Request received:', { method: req.method, url: req.url });
-    console.log('[LOGIN] Request headers:', req.headers);
-    console.log('[LOGIN] Request body:', req.body);
-    console.log('[LOGIN] Raw body:', req.rawBody);
-    
     const { email, password } = req.body;
     
     if (!email || !password) {
-        console.log('[LOGIN] Missing email or password');
         return res.status(400).json({ success: false, message: 'Email and password required' });
     }
     
     try {
-        // Get user from database
         const [rows] = await pool.query(
             'SELECT id, email, first_name, last_name, role FROM users WHERE email = ? AND password = ?', 
             [email, password]
@@ -448,7 +429,6 @@ app.post('/api/login', async (req, res) => {
         if (rows.length > 0) {
             const user = rows[0];
             const fullName = [user.first_name, user.last_name].filter(Boolean).join(' ').trim() || email;
-            console.log(`[LOGIN] User authenticated:`, { email: user.email, role: user.role });
             res.json({ 
                 success: true, 
                 user: { 
@@ -459,12 +439,10 @@ app.post('/api/login', async (req, res) => {
                 } 
             });
         } else {
-            console.log(`[LOGIN] Authentication failed for: ${email}`);
             res.status(401).json({ success: false, message: 'Invalid credentials' });
         }
     } catch (error) {
-        console.error('[LOGIN] Database error:', error.message);
-        res.status(500).json({ success: false, message: 'Database error: ' + error.message });
+        res.status(500).json({ success: false, message: 'Database error' });
     }
 });
 
