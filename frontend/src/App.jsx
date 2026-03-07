@@ -37,6 +37,7 @@ import CourseAccreditationsDetail from './pages/CourseAccreditationsDetail';
 import CourseAccreditationsView from './pages/CourseAccreditationsView';
 import CourseInductions from './pages/CourseInductions';
 import CourseInductionsDetail from './pages/CourseInductionsDetail';
+import { getRoleContext } from './utils/roleAccess';
 
 function App() {
     const [user, setUser] = useState(() => {
@@ -74,8 +75,9 @@ function App() {
         return null;
     }
 
-    // Helper function to check if user is a student
-    const isStudent = user && user?.role?.toLowerCase() === 'student';
+    const roleContext = getRoleContext(user);
+    const canAccessStudentPortal = roleContext.canAccessStudentPortal;
+    const canAccessManagementPortal = roleContext.canAccessManagementPortal;
     
     return (
         <Router>
@@ -84,7 +86,7 @@ function App() {
                 <Route path="/login" element={<LoginPage onLoginSuccess={handleLoginSuccess} />} />
                 <Route path="/" element={
                     user ? (
-                        user?.role?.toLowerCase() === 'student' ? (
+                        canAccessStudentPortal && !canAccessManagementPortal ? (
                             <Layout user={user} onLogout={handleLogout}>
                                 <StudentPortalDashboard user={user} />
                             </Layout>
@@ -98,7 +100,7 @@ function App() {
                     )
                 } />
                 <Route path="/student/dashboard" element={
-                    user && user?.role?.toLowerCase() === 'student' ? (
+                    user && canAccessStudentPortal ? (
                         <Layout user={user} onLogout={handleLogout}>
                             <StudentPortalDashboard user={user} />
                         </Layout>
@@ -107,7 +109,7 @@ function App() {
                     )
                 } />
                 <Route path="/student/profile" element={
-                    user && user?.role?.toLowerCase() === 'student' ? (
+                    user && canAccessStudentPortal ? (
                         <Layout user={user} onLogout={handleLogout}>
                             <StudentProfile user={user} />
                         </Layout>
@@ -116,7 +118,7 @@ function App() {
                     )
                 } />
                 <Route path="/student/admissions" element={
-                    user && user?.role?.toLowerCase() === 'student' ? (
+                    user && canAccessStudentPortal ? (
                         <Layout user={user} onLogout={handleLogout}>
                             <StudentAdmissions user={user} />
                         </Layout>
@@ -125,7 +127,7 @@ function App() {
                     )
                 } />
                 <Route path="/student/induction" element={
-                    user && user?.role?.toLowerCase() === 'student' ? (
+                    user && canAccessStudentPortal ? (
                         <Layout user={user} onLogout={handleLogout}>
                             <StudentAdmissions user={user} initialTab="induction" />
                         </Layout>
@@ -134,7 +136,7 @@ function App() {
                     )
                 } />
                 <Route path="/student/contract" element={
-                    user && user?.role?.toLowerCase() === 'student' ? (
+                    user && canAccessStudentPortal ? (
                         <Layout user={user} onLogout={handleLogout}>
                             <StudentContract user={user} />
                         </Layout>
@@ -143,7 +145,7 @@ function App() {
                     )
                 } />
                 <Route path="/student/course-changes" element={
-                    user && user?.role?.toLowerCase() === 'student' ? (
+                    user && canAccessStudentPortal ? (
                         <Layout user={user} onLogout={handleLogout}>
                             <StudentCourseChanges user={user} />
                         </Layout>
@@ -152,7 +154,7 @@ function App() {
                     )
                 } />
                 <Route path="/student/documents" element={
-                    user && user?.role?.toLowerCase() === 'student' ? (
+                    user && canAccessStudentPortal ? (
                         <Layout user={user} onLogout={handleLogout}>
                             <StudentDocumentsCentre user={user} />
                         </Layout>
@@ -161,7 +163,7 @@ function App() {
                     )
                 } />
                 <Route path="/student/materials" element={
-                    user && user?.role?.toLowerCase() === 'student' ? (
+                    user && canAccessStudentPortal ? (
                         <Layout user={user} onLogout={handleLogout}>
                             <StudentMaterials user={user} />
                         </Layout>
@@ -170,7 +172,7 @@ function App() {
                     )
                 } />
                 <Route path="/student/right-to-study" element={
-                    user && user?.role?.toLowerCase() === 'student' ? (
+                    user && canAccessStudentPortal ? (
                         <Layout user={user} onLogout={handleLogout}>
                             <StudentRightToStudy user={user} />
                         </Layout>
@@ -179,7 +181,7 @@ function App() {
                     )
                 } />
                 <Route path="/student/programme" element={
-                    user && user?.role?.toLowerCase() === 'student' ? (
+                    user && canAccessStudentPortal ? (
                         <Layout user={user} onLogout={handleLogout}>
                             <StudentProgramme user={user} />
                         </Layout>
@@ -188,7 +190,7 @@ function App() {
                     )
                 } />
                 <Route path="/student/timetable" element={
-                    user && user?.role?.toLowerCase() === 'student' ? (
+                    user && canAccessStudentPortal ? (
                         <Layout user={user} onLogout={handleLogout}>
                             <StudentTimetable user={user} />
                         </Layout>
@@ -197,7 +199,7 @@ function App() {
                     )
                 } />
                 <Route path="/student/assessments" element={
-                    user && user?.role?.toLowerCase() === 'student' ? (
+                    user && canAccessStudentPortal ? (
                         <Layout user={user} onLogout={handleLogout}>
                             <StudentAssessments user={user} />
                         </Layout>
@@ -206,7 +208,7 @@ function App() {
                     )
                 } />
                 <Route path="/student/grades" element={
-                    user && user?.role?.toLowerCase() === 'student' ? (
+                    user && canAccessStudentPortal ? (
                         <Layout user={user} onLogout={handleLogout}>
                             <StudentGrades user={user} />
                         </Layout>
@@ -215,7 +217,7 @@ function App() {
                     )
                 } />
                 <Route path="/student/attendance" element={
-                    user && user?.role?.toLowerCase() === 'student' ? (
+                    user && canAccessStudentPortal ? (
                         <Layout user={user} onLogout={handleLogout}>
                             <StudentAttendance user={user} />
                         </Layout>
@@ -224,7 +226,7 @@ function App() {
                     )
                 } />
                 <Route path="/student/library" element={
-                    user && user?.role?.toLowerCase() === 'student' ? (
+                    user && canAccessStudentPortal ? (
                         <Layout user={user} onLogout={handleLogout}>
                             <StudentLibrary user={user} />
                         </Layout>
@@ -233,7 +235,7 @@ function App() {
                     )
                 } />
                 <Route path="/course-accreditations" element={
-                    user && user?.role?.toLowerCase() !== 'student' ? (
+                    user && canAccessManagementPortal ? (
                         <Layout user={user} onLogout={handleLogout}>
                             <CourseAccreditations user={user} />
                         </Layout>
@@ -242,7 +244,7 @@ function App() {
                     )
                 } />
                 <Route path="/course-accreditations/:id/view" element={
-                    user && user?.role?.toLowerCase() !== 'student' ? (
+                    user && canAccessManagementPortal ? (
                         <Layout user={user} onLogout={handleLogout}>
                             <CourseAccreditationsView user={user} />
                         </Layout>
@@ -251,7 +253,7 @@ function App() {
                     )
                 } />
                 <Route path="/course-accreditations/:id" element={
-                    user && user?.role?.toLowerCase() !== 'student' ? (
+                    user && canAccessManagementPortal ? (
                         <Layout user={user} onLogout={handleLogout}>
                             <CourseAccreditationsDetail user={user} />
                         </Layout>
@@ -260,7 +262,7 @@ function App() {
                     )
                 } />
                 <Route path="/course-inductions" element={
-                    user && user?.role?.toLowerCase() !== 'student' ? (
+                    user && canAccessManagementPortal ? (
                         <Layout user={user} onLogout={handleLogout}>
                             <CourseInductions user={user} />
                         </Layout>
@@ -269,7 +271,7 @@ function App() {
                     )
                 } />
                 <Route path="/course-inductions/:id" element={
-                    user && user?.role?.toLowerCase() !== 'student' ? (
+                    user && canAccessManagementPortal ? (
                         <Layout user={user} onLogout={handleLogout}>
                             <CourseInductionsDetail user={user} />
                         </Layout>
@@ -278,7 +280,7 @@ function App() {
                     )
                 } />
                 <Route path="/student/support" element={
-                    user && user?.role?.toLowerCase() === 'student' ? (
+                    user && canAccessStudentPortal ? (
                         <Layout user={user} onLogout={handleLogout}>
                             <StudentSupportHub user={user} />
                         </Layout>
@@ -287,7 +289,7 @@ function App() {
                     )
                 } />
                 <Route path="/student/messages" element={
-                    user && user?.role?.toLowerCase() === 'student' ? (
+                    user && canAccessStudentPortal ? (
                         <Layout user={user} onLogout={handleLogout}>
                             <StudentSupportHub user={user} />
                         </Layout>
@@ -296,7 +298,7 @@ function App() {
                     )
                 } />
                 <Route path="/student/fees" element={
-                    user && user?.role?.toLowerCase() === 'student' ? (
+                    user && canAccessStudentPortal ? (
                         <Layout user={user} onLogout={handleLogout}>
                             <StudentFees user={user} />
                         </Layout>
@@ -305,7 +307,7 @@ function App() {
                     )
                 } />
                 <Route path="/student/support" element={
-                    user && user?.role?.toLowerCase() === 'student' ? (
+                    user && canAccessStudentPortal ? (
                         <Layout user={user} onLogout={handleLogout}>
                             <StudentSupport user={user} />
                         </Layout>
@@ -314,7 +316,7 @@ function App() {
                     )
                 } />
                 <Route path="/student/notifications" element={
-                    user && user?.role?.toLowerCase() === 'student' ? (
+                    user && canAccessStudentPortal ? (
                         <Layout user={user} onLogout={handleLogout}>
                             <StudentNotifications user={user} />
                         </Layout>
@@ -323,7 +325,7 @@ function App() {
                     )
                 } />
                 <Route path="/admin/dashboard" element={
-                    user && user?.role?.toLowerCase() !== 'student' ? (
+                    user && canAccessManagementPortal ? (
                         <Layout user={user} onLogout={handleLogout}>
                             <AdminDashboard user={user} />
                         </Layout>
@@ -332,7 +334,7 @@ function App() {
                     )
                 } />
                 <Route path="/students" element={
-                    user ? (
+                    user && canAccessManagementPortal ? (
                         <Layout user={user} onLogout={handleLogout}>
                             <StudentDashboard />
                         </Layout>
@@ -341,7 +343,7 @@ function App() {
                     )
                 } />
                 <Route path="/student-application" element={
-                    user ? (
+                    user && canAccessManagementPortal ? (
                         <Layout user={user} onLogout={handleLogout}>
                             <StudentAdmissionForm />
                         </Layout>
@@ -350,7 +352,7 @@ function App() {
                     )
                 } />
                 <Route path="/student-list" element={
-                    user ? (
+                    user && canAccessManagementPortal ? (
                         <Layout user={user} onLogout={handleLogout}>
                             <StudentList />
                         </Layout>
@@ -359,7 +361,7 @@ function App() {
                     )
                 } />
                 <Route path="/applicants" element={
-                    user ? (
+                    user && canAccessManagementPortal ? (
                         <Layout user={user} onLogout={handleLogout}>
                             <ApplicantsList />
                         </Layout>
@@ -368,7 +370,7 @@ function App() {
                     )
                 } />
                 <Route path="/applications-report" element={
-                    user ? (
+                    user && canAccessManagementPortal ? (
                         <Layout user={user} onLogout={handleLogout}>
                             <ApplicationReport />
                         </Layout>
@@ -377,7 +379,7 @@ function App() {
                     )
                 } />
                 <Route path="/applications" element={
-                    user ? (
+                    user && canAccessManagementPortal ? (
                         <Layout user={user} onLogout={handleLogout}>
                             <ApplicationRequests />
                         </Layout>
@@ -386,7 +388,7 @@ function App() {
                     )
                 } />
                 <Route path="/student-detail/:id" element={
-                    user ? (
+                    user && canAccessManagementPortal ? (
                         <Layout user={user} onLogout={handleLogout}>
                             <StudentDetail />
                         </Layout>
@@ -395,7 +397,7 @@ function App() {
                     )
                 } />
                 <Route path="/applications/:id/review" element={
-                    user ? (
+                    user && canAccessManagementPortal ? (
                         <Layout user={user} onLogout={handleLogout}>
                             <ApplicationReview />
                         </Layout>
@@ -404,7 +406,7 @@ function App() {
                     )
                 } />
                 <Route path="/applications/:id/edit" element={
-                    user ? (
+                    user && canAccessManagementPortal ? (
                         <Layout user={user} onLogout={handleLogout}>
                             <StudentAdmissionForm isEditMode={true} />
                         </Layout>
@@ -413,7 +415,7 @@ function App() {
                     )
                 } />
                 <Route path="/students/report" element={
-                    user ? (
+                    user && canAccessManagementPortal ? (
                         <Layout user={user} onLogout={handleLogout}>
                             <StudentReport />
                         </Layout>

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { User, Lock, Loader2, Eye, EyeOff } from 'lucide-react';
+import { getRoleContext } from '../utils/roleAccess';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
 
@@ -32,8 +33,10 @@ const LoginPage = ({ onLoginSuccess }) => {
             localStorage.setItem('authToken', token);
             onLoginSuccess(userData);
             
-            // Redirect based on user role
-            if (userData?.role?.toLowerCase() === 'student') {
+            const roleContext = getRoleContext(userData);
+
+            // Student-only users land on student portal; mixed and management users land on main dashboard.
+            if (roleContext.canAccessStudentPortal && !roleContext.canAccessManagementPortal) {
                 navigate('/student/dashboard');
             } else {
                 navigate('/');

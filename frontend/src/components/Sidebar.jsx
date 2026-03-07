@@ -23,6 +23,7 @@ import {
     HelpCircle,
     DollarSign
 } from 'lucide-react';
+import { getRoleContext } from '../utils/roleAccess';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
 
@@ -31,6 +32,8 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
     const location = useLocation();
     const [expandedMenus, setExpandedMenus] = useState({ 'student-admission': true });
     const [loading, setLoading] = useState(false);
+    const roleContext = getRoleContext(user);
+    const { canAccessStudentPortal, canAccessManagementPortal, hasTeaching } = roleContext;
 
     const handleAccessLMS = async () => {
         try {
@@ -51,117 +54,115 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
         }
     };
 
-    // Admin menu items
-    const adminMenuItems = [
-        { name: 'Dashboard', icon: LayoutDashboard, path: '/' },
-        { name: 'Admissions Hub', icon: BarChart3, path: '/admin/dashboard' },
+    const menuItems = [
         {
-            name: 'Student Admission',
-            icon: Users,
-            isParent: true,
-            key: 'student-admission',
-            subItems: [
-                { name: 'Applications', icon: BarChart3, path: '/applications' },
-                { name: 'New Admission', icon: UserPlus, path: '/student-application' },
-                { name: 'Applicants List', icon: UserCheck, path: '/applicants' },
-                { name: 'Reports', icon: FileText, path: '/applications-report' }
-            ]
-        },
-        { name: 'Course Accreditations', icon: FileText, path: '/course-accreditations' },
-        { name: 'Access LMS', icon: GraduationCap, isSSO: true },
-        { name: 'Settings', icon: Settings, path: '/settings' },
+            name: 'Dashboard',
+            icon: LayoutDashboard,
+            path: canAccessStudentPortal && !canAccessManagementPortal ? '/student/dashboard' : '/'
+        }
     ];
 
-    // Student menu items organized by linked modules
-    const studentMenuItems = [
-        { name: 'Dashboard', icon: LayoutDashboard, path: '/student/dashboard' },
-        { name: 'My Profile', icon: User, path: '/student/profile' },
-        
-        // Admissions Module
-        {
-            name: 'Admissions',
-            icon: FileText,
-            isParent: true,
-            key: 'admissions',
-            subItems: [
-                { name: 'Admissions & Enrolment', icon: UserCheck, path: '/student/admissions' },
-                { name: 'Right to Study', icon: ShieldCheck, path: '/student/right-to-study' },
-                { name: 'Student Contract', icon: FileText, path: '/student/contract' },
-                { name: 'Induction & Orientation', icon: BookOpen, path: '/student/induction' },
-                { name: 'Course Changes', icon: ClipboardList, path: '/student/course-changes' },
-                { name: 'Documents Centre', icon: FileText, path: '/student/documents' },
-            ]
-        },
+    if (canAccessStudentPortal) {
+        menuItems.push(
+            { name: 'My Profile', icon: User, path: '/student/profile' },
+            {
+                name: 'Admissions',
+                icon: FileText,
+                isParent: true,
+                key: 'admissions',
+                subItems: [
+                    { name: 'Admissions & Enrolment', icon: UserCheck, path: '/student/admissions' },
+                    { name: 'Right to Study', icon: ShieldCheck, path: '/student/right-to-study' },
+                    { name: 'Student Contract', icon: FileText, path: '/student/contract' },
+                    { name: 'Induction & Orientation', icon: BookOpen, path: '/student/induction' },
+                    { name: 'Course Changes', icon: ClipboardList, path: '/student/course-changes' },
+                    { name: 'Documents Centre', icon: FileText, path: '/student/documents' }
+                ]
+            },
+            {
+                name: 'Learning (LMS)',
+                icon: GraduationCap,
+                isParent: true,
+                key: 'learning-lms',
+                subItems: [
+                    { name: 'My Programme', icon: BookOpen, path: '/student/programme' },
+                    { name: 'Timetable', icon: Calendar, path: '/student/timetable' },
+                    { name: 'Access Moodle LMS', icon: GraduationCap, isSSO: true },
+                    { name: 'Learning Materials', icon: BookOpen, path: '/student/materials' },
+                    { name: 'Assessments & Exams', icon: ClipboardList, path: '/student/assessments' },
+                    { name: 'Grades & Progress', icon: BarChart3, path: '/student/grades' },
+                    { name: 'Attendance', icon: UserCheck, path: '/student/attendance' },
+                    { name: 'Library Resources', icon: BookOpen, path: '/student/library' }
+                ]
+            },
+            {
+                name: 'Support & Wellbeing',
+                icon: HelpCircle,
+                isParent: true,
+                key: 'support',
+                subItems: [
+                    { name: 'Messages & Announcements', icon: Bell, path: '/student/messages' },
+                    { name: 'Support Requests', icon: HelpCircle, path: '/student/support' },
+                    { name: 'Feedback & Evaluations', icon: ClipboardList, path: '/student/support' },
+                    { name: 'Complaints & Appeals', icon: FileText, path: '/student/support' },
+                    { name: 'Disability Support', icon: ShieldCheck, path: '/student/support' },
+                    { name: 'Safeguarding & Prevent', icon: ShieldCheck, path: '/student/support' }
+                ]
+            },
+            {
+                name: 'Finance',
+                icon: DollarSign,
+                isParent: true,
+                key: 'finance',
+                subItems: [
+                    { name: 'Fees & Payments', icon: DollarSign, path: '/student/fees' }
+                ]
+            }
+        );
+    }
 
-        // LMS Module
-        {
-            name: 'Learning (LMS)',
-            icon: GraduationCap,
+    if (hasTeaching) {
+        menuItems.push({
+            name: 'Teaching (LMS)',
+            icon: BookOpen,
             isParent: true,
-            key: 'lms',
+            key: 'teaching-lms',
             subItems: [
-                { name: 'My Programme', icon: BookOpen, path: '/student/programme' },
-                { name: 'Timetable', icon: Calendar, path: '/student/timetable' },
-                { name: 'Access Moodle LMS', icon: GraduationCap, isSSO: true },
-                { name: 'Learning Materials', icon: BookOpen, path: '/student/materials' },
-                { name: 'Assessments & Exams', icon: ClipboardList, path: '/student/assessments' },
-                { name: 'Grades & Progress', icon: BarChart3, path: '/student/grades' },
-                { name: 'Attendance', icon: UserCheck, path: '/student/attendance' },
-                { name: 'Library Resources', icon: BookOpen, path: '/student/library' },
+                { name: 'Open Moodle Teaching', icon: GraduationCap, isSSO: true },
+                { name: 'My Timetable', icon: Calendar, path: '/student/timetable' }
             ]
-        },
+        });
+    }
 
-        // Support & Wellbeing Module
-        {
-            name: 'Support & Wellbeing',
-            icon: HelpCircle,
-            isParent: true,
-            key: 'support',
-            subItems: [
-                { name: 'Messages & Announcements', icon: Bell, path: '/student/messages' },
-                { name: 'Support Requests', icon: HelpCircle, path: '/student/support' },
-                { name: 'Feedback & Evaluations', icon: ClipboardList, path: '/student/support' },
-                { name: 'Complaints & Appeals', icon: FileText, path: '/student/support' },
-                { name: 'Disability Support', icon: ShieldCheck, path: '/student/support' },
-                { name: 'Safeguarding & Prevent', icon: ShieldCheck, path: '/student/support' },
-            ]
-        },
+    if (canAccessManagementPortal) {
+        menuItems.push(
+            { name: 'Admissions Hub', icon: BarChart3, path: '/admin/dashboard' },
+            {
+                name: 'Student Admission',
+                icon: Users,
+                isParent: true,
+                key: 'student-admission',
+                subItems: [
+                    { name: 'Applications', icon: BarChart3, path: '/applications' },
+                    { name: 'New Admission', icon: UserPlus, path: '/student-application' },
+                    { name: 'Applicants List', icon: UserCheck, path: '/applicants' },
+                    { name: 'Reports', icon: FileText, path: '/applications-report' }
+                ]
+            },
+            { name: 'Course Accreditations', icon: FileText, path: '/course-accreditations' },
+            { name: 'Access LMS', icon: GraduationCap, isSSO: true },
+            { name: 'Settings', icon: Settings, path: '/settings' }
+        );
+    }
 
-        // Finance Module
-        {
-            name: 'Finance',
-            icon: DollarSign,
-            isParent: true,
-            key: 'finance',
-            subItems: [
-                { name: 'Fees & Payments', icon: DollarSign, path: '/student/fees' },
-            ]
-        },
-
-        // Compliance Module
-        {
-            name: 'Compliance',
-            icon: ShieldCheck,
-            isParent: true,
-            key: 'compliance',
-            subItems: [
-                { name: 'Data Protection', icon: ShieldCheck, path: '/student/data-protection' },
-                { name: 'Health & Safety', icon: HelpCircle, path: '/student/health-safety' },
-            ]
-        },
-    ];
-
-    // Select menu based on user role (case-insensitive)
-    const menuItems = user?.role?.toLowerCase() === 'student' ? studentMenuItems : adminMenuItems;
+    if (!canAccessStudentPortal && !hasTeaching && !canAccessManagementPortal) {
+        menuItems.push({ name: 'Access Moodle LMS', icon: GraduationCap, isSSO: true });
+    }
 
     const toggleSubMenu = (menuKey) => {
         setExpandedMenus(prev => ({
-            // Close all other menus
-            admissions: menuKey === 'admissions' ? !prev.admissions : false,
-            lms: menuKey === 'lms' ? !prev.lms : false,
-            support: menuKey === 'support' ? !prev.support : false,
-            finance: menuKey === 'finance' ? !prev.finance : false,
-            compliance: menuKey === 'compliance' ? !prev.compliance : false,
+            ...prev,
+            [menuKey]: !prev[menuKey]
         }));
     };
 
@@ -306,7 +307,7 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
 
                     {isOpen && (
                         <div className="mt-4 px-4 pb-2">
-                            <p className="text-[10px] text-purple-300/50 uppercase tracking-widest font-bold">Admin Portal v1.0</p>
+                            <p className="text-[10px] text-purple-300/50 uppercase tracking-widest font-bold">SCL Portal v2.0</p>
                         </div>
                     )}
                 </div>

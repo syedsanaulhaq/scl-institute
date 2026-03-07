@@ -422,6 +422,53 @@ app.get('/api/admin/dashboard-stats', requireAuth, async (req, res) => {
 // AUTHENTICATION ROUTES
 // ===============================
 
+const roleAliasMap = {
+    'super admin': 'manager',
+    'lms manager': 'manager',
+    'course creator': 'coursecreator',
+    'non-editing teacher': 'teacher',
+    noneditingteacher: 'teacher',
+    'authenticated user': 'user',
+    'authenticated user on site home': 'frontpage'
+};
+
+const managementRoles = new Set(['admin', 'manager', 'coursecreator']);
+const teachingRoles = new Set(['editingteacher', 'teacher']);
+const learningRoles = new Set(['student']);
+
+function normalizeRole(role) {
+    if (!role) {
+        return '';
+    }
+
+    const normalized = String(role).trim().toLowerCase();
+    return roleAliasMap[normalized] || normalized;
+}
+
+function parseRoleTokens(roleValue) {
+    if (!roleValue) {
+        return [];
+    }
+
+    return String(roleValue)
+        .split(/[|,;]+/)
+        .map((entry) => normalizeRole(entry))
+        .filter(Boolean);
+}
+
+function buildRoleContext(roleValue) {
+    const roles = [...new Set(parseRoleTokens(roleValue))];
+    const primaryRole = roles[0] || null;
+
+    return {
+        primaryRole,
+        roles,
+        hasManagement: roles.some((role) => managementRoles.has(role)),
+        hasTeaching: roles.some((role) => teachingRoles.has(role)),
+        hasStudent: roles.some((role) => learningRoles.has(role))
+    };
+}
+
 const users = [
     { id: 1, email: 'admin@scl.com', password: 'password', name: 'SCL Admin', role: 'admin' },
     { id: 2, email: 'student@scl.com', password: 'password', name: 'John Doe', role: 'student' }
@@ -443,6 +490,7 @@ app.post('/api/login', async (req, res) => {
         if (rows.length > 0) {
             const user = rows[0];
             const fullName = [user.first_name, user.last_name].filter(Boolean).join(' ').trim() || email;
+            const roleContext = buildRoleContext(user.role);
             const token = 'Bearer ' + Buffer.from(`${user.id}:${user.email}`).toString('base64');
             res.json({ 
                 success: true,
@@ -451,7 +499,9 @@ app.post('/api/login', async (req, res) => {
                     id: user.id, 
                     email: user.email, 
                     name: fullName,
-                    role: user.role 
+                    role: roleContext.primaryRole || user.role,
+                    roles: roleContext.roles,
+                    roleContext
                 } 
             });
         } else {
@@ -473,6 +523,7 @@ app.post('/api/v1/auth/login', async (req, res) => {
         
         if (rows.length > 0) {
             const user = rows[0];
+            const roleContext = buildRoleContext(user.role);
             console.log(`[LOGIN V1] User authenticated:`, { email: user.email, role: user.role });
             
             const accessToken = `token_${user.id}_${Date.now()}`;
@@ -486,7 +537,9 @@ app.post('/api/v1/auth/login', async (req, res) => {
                     id: user.id, 
                     email: user.email, 
                     name: `${user.first_name} ${user.last_name}`.trim(),
-                    role: user.role 
+                    role: roleContext.primaryRole || user.role,
+                    roles: roleContext.roles,
+                    roleContext
                 } 
             });
         } else {
