@@ -3,6 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const mysql = require('mysql2/promise');
+const axios = require('axios');
 const { v4: uuidv4 } = require('uuid');
 console.log("Backend process starting...");
 const studentsRouter = require('./routes/students');
@@ -469,6 +470,91 @@ function buildRoleContext(roleValue) {
     };
 }
 
+function getRolePriority(role) {
+    const priority = {
+        manager: 1,
+        admin: 1,
+        coursecreator: 2,
+        editingteacher: 3,
+        teacher: 4,
+        student: 5,
+        user: 6,
+        frontpage: 7,
+        guest: 8
+    };
+
+    return priority[role] || 99;
+}
+
+async function callMoodle(wsfunction, params = {}) {
+    const moodleBaseUrl = process.env.MOODLE_INTERNAL_URL || process.env.MOODLE_URL || 'http://localhost:9090';
+    const moodleToken = process.env.MOODLE_TOKEN;
+
+    if (!moodleToken) {
+        return null;
+    }
+
+    const endpoint = `${moodleBaseUrl.replace(/\/$/, '')}/webservice/rest/server.php`;
+
+    const response = await axios.post(endpoint, null, {
+        params: {
+            wstoken: moodleToken,
+            wsfunction,
+            moodlewsrestformat: 'json',
+            ...params
+        },
+        timeout: 5000
+    });
+
+    const payload = response?.data;
+    if (payload && payload.exception) {
+        throw new Error(`${wsfunction} failed: ${payload.message || payload.exception}`);
+    }
+
+    return payload;
+}
+
+async function getMoodleRolesByEmail(email) {
+    try {
+        const usersResult = await callMoodle('core_user_get_users_by_field', {
+            field: 'email',
+            'values[0]': email
+        });
+
+        if (!Array.isArray(usersResult) || usersResult.length === 0) {
+            return null;
+        }
+
+        const moodleUser = usersResult[0];
+        const roleAssignments = await callMoodle('core_role_get_user_roles', { userid: moodleUser.id });
+
+        if (!Array.isArray(roleAssignments) || roleAssignments.length === 0) {
+            return {
+                source: 'moodle',
+                moodleUserId: moodleUser.id,
+                roles: []
+            };
+        }
+
+        const roles = [
+            ...new Set(
+                roleAssignments
+                    .map((assignment) => normalizeRole(assignment.shortname || assignment.name))
+                    .filter(Boolean)
+            )
+        ].sort((a, b) => getRolePriority(a) - getRolePriority(b));
+
+        return {
+            source: 'moodle',
+            moodleUserId: moodleUser.id,
+            roles
+        };
+    } catch (error) {
+        console.warn('[LOGIN] Moodle role fetch failed, using local role fallback:', error.message);
+        return null;
+    }
+}
+
 const users = [
     { id: 1, email: 'admin@scl.com', password: 'password', name: 'SCL Admin', role: 'admin' },
     { id: 2, email: 'student@scl.com', password: 'password', name: 'John Doe', role: 'student' }
@@ -490,7 +576,9 @@ app.post('/api/login', async (req, res) => {
         if (rows.length > 0) {
             const user = rows[0];
             const fullName = [user.first_name, user.last_name].filter(Boolean).join(' ').trim() || email;
-            const roleContext = buildRoleContext(user.role);
+            const moodleRoleData = await getMoodleRolesByEmail(user.email);
+            const roleSeed = moodleRoleData?.roles?.length ? moodleRoleData.roles.join(',') : user.role;
+            const roleContext = buildRoleContext(roleSeed);
             const token = 'Bearer ' + Buffer.from(`${user.id}:${user.email}`).toString('base64');
             res.json({ 
                 success: true,
@@ -501,7 +589,10 @@ app.post('/api/login', async (req, res) => {
                     name: fullName,
                     role: roleContext.primaryRole || user.role,
                     roles: roleContext.roles,
-                    roleContext
+                    roleContext: {
+                        ...roleContext,
+                        source: moodleRoleData ? 'moodle' : 'local'
+                    }
                 } 
             });
         } else {
@@ -523,7 +614,9 @@ app.post('/api/v1/auth/login', async (req, res) => {
         
         if (rows.length > 0) {
             const user = rows[0];
-            const roleContext = buildRoleContext(user.role);
+            const moodleRoleData = await getMoodleRolesByEmail(user.email);
+            const roleSeed = moodleRoleData?.roles?.length ? moodleRoleData.roles.join(',') : user.role;
+            const roleContext = buildRoleContext(roleSeed);
             console.log(`[LOGIN V1] User authenticated:`, { email: user.email, role: user.role });
             
             const accessToken = `token_${user.id}_${Date.now()}`;
@@ -539,7 +632,10 @@ app.post('/api/v1/auth/login', async (req, res) => {
                     name: `${user.first_name} ${user.last_name}`.trim(),
                     role: roleContext.primaryRole || user.role,
                     roles: roleContext.roles,
-                    roleContext
+                    roleContext: {
+                        ...roleContext,
+                        source: moodleRoleData ? 'moodle' : 'local'
+                    }
                 } 
             });
         } else {
@@ -573,12 +669,15 @@ app.post('/api/sso/generate', async (req, res) => {
     const token = uuidv4();
     const firstname = user.first_name || 'SCL';
     const lastname = user.last_name || 'User';
+    const moodleRoleData = await getMoodleRolesByEmail(user.email);
+    const roleSeed = moodleRoleData?.roles?.length ? moodleRoleData.roles.join(',') : user.role;
+    const roleContext = buildRoleContext(roleSeed);
 
     try {
         console.log(`[SSO] Inserting token into DB...`);
         await pool.query(
             'INSERT INTO sso_tokens (token, email, firstname, lastname, role) VALUES (?, ?, ?, ?, ?)',
-            [token, user.email, firstname, lastname, user.role]
+            [token, user.email, firstname, lastname, roleContext.primaryRole || user.role]
         );
         const moodleUrl = process.env.MOODLE_URL || 'http://localhost:8080';
         const redirectUrl = `${moodleUrl}/local/sclsso/login.php?token=${token}`;
