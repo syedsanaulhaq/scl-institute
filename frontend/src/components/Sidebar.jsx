@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import {
@@ -30,10 +30,16 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
 const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
     const navigate = useNavigate();
     const location = useLocation();
-    const [expandedMenus, setExpandedMenus] = useState({ 'student-admission': true });
     const [loading, setLoading] = useState(false);
     const roleContext = getRoleContext(user);
     const { canAccessStudentPortal, canAccessManagementPortal, hasTeaching } = roleContext;
+    const [activeSectionTitle, setActiveSectionTitle] = useState(() => {
+        if (canAccessManagementPortal) return 'Manager Menu';
+        if (canAccessStudentPortal) return 'Student Menu';
+        if (hasTeaching) return 'Teacher Menu';
+        return 'General Menu';
+    });
+    const [activeSubMenuKey, setActiveSubMenuKey] = useState('student-admission');
 
     const handleAccessLMS = async () => {
         try {
@@ -54,16 +60,32 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
         }
     };
 
-    const menuItems = [
-        {
-            name: 'Dashboard',
-            icon: LayoutDashboard,
-            path: canAccessStudentPortal && !canAccessManagementPortal ? '/student/dashboard' : '/'
-        }
-    ];
+    const managerMenuItems = canAccessManagementPortal
+        ? [
+            { name: 'Dashboard', icon: LayoutDashboard, path: '/' },
+            { name: 'Admissions Hub', icon: BarChart3, path: '/admin/dashboard' },
+            {
+                name: 'Student Admission',
+                icon: Users,
+                isParent: true,
+                key: 'student-admission',
+                subItems: [
+                    { name: 'Applications', icon: BarChart3, path: '/applications' },
+                    { name: 'New Admission', icon: UserPlus, path: '/student-application' },
+                    { name: 'Applicants List', icon: UserCheck, path: '/applicants' },
+                    { name: 'Reports', icon: FileText, path: '/applications-report' }
+                ]
+            },
+            { name: 'Course Accreditations', icon: FileText, path: '/course-accreditations' },
+            { name: 'Access LMS', icon: GraduationCap, isSSO: true },
+            { name: 'Settings', icon: Settings, path: '/settings' }
+        ]
+        : [];
 
-    if (canAccessStudentPortal) {
-        menuItems.push(
+    const studentMenuItems = canAccessStudentPortal
+        ? [
+            { name: 'Dashboard', icon: LayoutDashboard, path: '/student/dashboard' },
+            { name: 'Portal Home', icon: BookOpen, path: '/student/portal' },
             { name: 'My Profile', icon: User, path: '/student/profile' },
             {
                 name: 'Admissions',
@@ -118,52 +140,50 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
                     { name: 'Fees & Payments', icon: DollarSign, path: '/student/fees' }
                 ]
             }
-        );
-    }
+        ]
+        : [];
 
-    if (hasTeaching) {
-        menuItems.push({
-            name: 'Teaching (LMS)',
-            icon: BookOpen,
-            isParent: true,
-            key: 'teaching-lms',
-            subItems: [
-                { name: 'Open Moodle Teaching', icon: GraduationCap, isSSO: true },
-                { name: 'My Timetable', icon: Calendar, path: '/student/timetable' }
-            ]
-        });
-    }
-
-    if (canAccessManagementPortal) {
-        menuItems.push(
-            { name: 'Admissions Hub', icon: BarChart3, path: '/admin/dashboard' },
+    const teacherMenuItems = hasTeaching
+        ? [
+            { name: 'Dashboard', icon: LayoutDashboard, path: '/teacher/dashboard' },
             {
-                name: 'Student Admission',
-                icon: Users,
+                name: 'Teaching (LMS)',
+                icon: BookOpen,
                 isParent: true,
-                key: 'student-admission',
+                key: 'teaching-lms',
                 subItems: [
-                    { name: 'Applications', icon: BarChart3, path: '/applications' },
-                    { name: 'New Admission', icon: UserPlus, path: '/student-application' },
-                    { name: 'Applicants List', icon: UserCheck, path: '/applicants' },
-                    { name: 'Reports', icon: FileText, path: '/applications-report' }
+                    { name: 'Open Moodle Teaching', icon: GraduationCap, isSSO: true },
+                    { name: 'My Timetable', icon: Calendar, path: '/student/timetable' }
                 ]
-            },
-            { name: 'Course Accreditations', icon: FileText, path: '/course-accreditations' },
-            { name: 'Access LMS', icon: GraduationCap, isSSO: true },
-            { name: 'Settings', icon: Settings, path: '/settings' }
-        );
-    }
+            }
+        ]
+        : [];
 
-    if (!canAccessStudentPortal && !hasTeaching && !canAccessManagementPortal) {
-        menuItems.push({ name: 'Access Moodle LMS', icon: GraduationCap, isSSO: true });
-    }
+    const generalMenuItems = (!canAccessStudentPortal && !hasTeaching && !canAccessManagementPortal)
+        ? [{ name: 'Access Moodle LMS', icon: GraduationCap, isSSO: true }]
+        : [];
+
+    const menuSections = [
+        { title: 'Manager Menu', items: managerMenuItems },
+        { title: 'Student Menu', items: studentMenuItems },
+        { title: 'Teacher Menu', items: teacherMenuItems },
+        { title: 'General Menu', items: generalMenuItems }
+    ].filter((section) => section.items.length > 0);
+
+    useEffect(() => {
+        const sectionExists = menuSections.some((section) => section.title === activeSectionTitle);
+        if (!sectionExists && menuSections.length > 0) {
+            setActiveSectionTitle(menuSections[0].title);
+        }
+    }, [activeSectionTitle, menuSections]);
+
+    const toggleSection = (sectionTitle) => {
+        setActiveSectionTitle((prev) => (prev === sectionTitle ? '' : sectionTitle));
+        setActiveSubMenuKey(null);
+    };
 
     const toggleSubMenu = (menuKey) => {
-        setExpandedMenus(prev => ({
-            ...prev,
-            [menuKey]: !prev[menuKey]
-        }));
+        setActiveSubMenuKey((prev) => (prev === menuKey ? null : menuKey));
     };
 
     const handleMenuClick = (item) => {
@@ -211,77 +231,91 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
                 </button>
 
                 {/* Navigation Items */}
-                <nav className="flex-1 px-2 py-4 space-y-1 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent hover:scrollbar-thumb-white/40">
-                    {menuItems.map((item) => {
-                        const isActive = location.pathname === item.path;
-                        const isExpanded = item.isParent && expandedMenus[item.key];
-                        
-                        return (
-                            <div key={item.name}>
-                                {/* Main Menu Item */}
+                <nav className="flex-1 px-2 py-4 space-y-3 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent hover:scrollbar-thumb-white/40">
+                    {menuSections.map((section) => (
+                        <div key={section.title} className="space-y-1">
+                            {isOpen ? (
                                 <button
-                                    onClick={() => handleMenuClick(item)}
-                                    disabled={item.isSSO && loading}
-                                    className={`w-full flex items-center h-10 rounded-lg transition-all duration-200 group relative ${
-                                        isActive
-                                            ? 'bg-scl-purple text-white shadow-lg shadow-scl-purple/20'
-                                            : 'text-purple-100/70 hover:bg-white/5 hover:text-white'
-                                    } ${item.isSSO && loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                    onClick={() => toggleSection(section.title)}
+                                    className="w-full px-3 pt-1 pb-1 text-[10px] uppercase tracking-widest text-purple-200/60 font-bold border-b border-white/10 flex items-center justify-between hover:text-purple-100"
                                 >
-                                    <div className={`flex items-center justify-center transition-all duration-300 ${isOpen ? 'pl-3 w-10' : 'w-full'}`}>
-                                        <item.icon className={`w-4 h-4 ${isActive ? 'scale-110' : 'group-hover:scale-110 transition-transform'}`} />
-                                    </div>
-                                    <span className={`font-medium whitespace-nowrap transition-all duration-300 text-sm overflow-hidden ${
-                                        isOpen ? 'opacity-100 ml-3 flex-1 text-left' : 'opacity-0 w-0'
-                                    }`}>
-                                        {item.name}
-                                    </span>
-                                    
-                                    {/* Chevron for parent items */}
-                                    {item.isParent && isOpen && (
-                                        <div className="pr-4">
-                                            {isExpanded ? 
-                                                <ChevronDown className="w-4 h-4 transition-transform" /> : 
-                                                <ChevronRight className="w-4 h-4 transition-transform" />
-                                            }
-                                        </div>
-                                    )}
-
-                                    {!isOpen && (
-                                        <div className="absolute left-full ml-4 px-2 py-1 bg-scl-dark text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50 shadow-xl border border-white/10">
-                                            {item.name}
-                                        </div>
-                                    )}
+                                    <span>{section.title}</span>
+                                    {activeSectionTitle === section.title
+                                        ? <ChevronDown className="w-3 h-3" />
+                                        : <ChevronRight className="w-3 h-3" />}
                                 </button>
+                            ) : (
+                                <div className="mx-2 h-px bg-white/10" />
+                            )}
 
-                                {/* Sub Menu Items */}
-                                {item.isParent && isExpanded && isOpen && (
-                                    <div className="ml-4 mt-1 space-y-1">
-                                        {item.subItems.map((subItem) => {
-                                            const isSubActive = location.pathname === subItem.path;
-                                            return (
-                                                <button
-                                                    key={subItem.name}
-                                                    onClick={() => handleSubItemClick(subItem)}
-                                                    disabled={subItem.isSSO && loading}
-                                                    className={`w-full flex items-center justify-start h-10 rounded-lg transition-all duration-200 group relative pl-4 ${
-                                                        isSubActive
-                                                            ? 'bg-scl-purple/50 text-white shadow-md'
-                                                            : 'text-purple-100/60 hover:bg-white/5 hover:text-white'
-                                                    } ${subItem.isSSO && loading ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                                >
-                                                    <subItem.icon className="w-4 h-4 mr-3 flex-shrink-0" />
-                                                    <span className="font-medium text-xs text-left">
-                                                        {subItem.name}
-                                                    </span>
-                                                </button>
-                                            );
-                                        })}
+                            {(activeSectionTitle === section.title || !isOpen) && section.items.map((item) => {
+                                const isActive = location.pathname === item.path;
+                                const isExpanded = item.isParent && activeSubMenuKey === item.key;
+
+                                return (
+                                    <div key={`${section.title}-${item.name}`}>
+                                        <button
+                                            onClick={() => handleMenuClick(item)}
+                                            disabled={item.isSSO && loading}
+                                            className={`w-full flex items-center h-10 rounded-lg transition-all duration-200 group relative ${
+                                                isActive
+                                                    ? 'bg-scl-purple text-white shadow-lg shadow-scl-purple/20'
+                                                    : 'text-purple-100/70 hover:bg-white/5 hover:text-white'
+                                            } ${item.isSSO && loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                        >
+                                            <div className={`flex items-center justify-center transition-all duration-300 ${isOpen ? 'pl-3 w-10' : 'w-full'}`}>
+                                                <item.icon className={`w-4 h-4 ${isActive ? 'scale-110' : 'group-hover:scale-110 transition-transform'}`} />
+                                            </div>
+                                            <span className={`font-medium whitespace-nowrap transition-all duration-300 text-sm overflow-hidden ${
+                                                isOpen ? 'opacity-100 ml-3 flex-1 text-left' : 'opacity-0 w-0'
+                                            }`}>
+                                                {item.name}
+                                            </span>
+
+                                            {item.isParent && isOpen && (
+                                                <div className="pr-4">
+                                                    {isExpanded
+                                                        ? <ChevronDown className="w-4 h-4 transition-transform" />
+                                                        : <ChevronRight className="w-4 h-4 transition-transform" />}
+                                                </div>
+                                            )}
+
+                                            {!isOpen && (
+                                                <div className="absolute left-full ml-4 px-2 py-1 bg-scl-dark text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50 shadow-xl border border-white/10">
+                                                    {item.name}
+                                                </div>
+                                            )}
+                                        </button>
+
+                                        {item.isParent && isExpanded && isOpen && (
+                                            <div className="ml-4 mt-1 space-y-1">
+                                                {item.subItems.map((subItem) => {
+                                                    const isSubActive = location.pathname === subItem.path;
+                                                    return (
+                                                        <button
+                                                            key={subItem.name}
+                                                            onClick={() => handleSubItemClick(subItem)}
+                                                            disabled={subItem.isSSO && loading}
+                                                            className={`w-full flex items-center justify-start h-10 rounded-lg transition-all duration-200 group relative pl-4 ${
+                                                                isSubActive
+                                                                    ? 'bg-scl-purple/50 text-white shadow-md'
+                                                                    : 'text-purple-100/60 hover:bg-white/5 hover:text-white'
+                                                            } ${subItem.isSSO && loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                        >
+                                                            <subItem.icon className="w-4 h-4 mr-3 flex-shrink-0" />
+                                                            <span className="font-medium text-xs text-left">
+                                                                {subItem.name}
+                                                            </span>
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
                                     </div>
-                                )}
-                            </div>
-                        );
-                    })}
+                                );
+                            })}
+                        </div>
+                    ))}
                 </nav>
 
                 {/* Footer / Logout Area */}

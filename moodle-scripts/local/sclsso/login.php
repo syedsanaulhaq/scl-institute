@@ -49,6 +49,26 @@ function assignMoodleRoles($userid, $sclRole) {
         }
         return;
     }
+
+    // For non-super-admin users, ensure accidental site admin access is removed.
+    $admins = array_filter(explode(',', (string)$CFG->siteadmins));
+    if (in_array((string)$userid, array_map('strval', $admins), true)) {
+        $admins = array_values(array_filter($admins, function($id) use ($userid) {
+            return (string)$id !== (string)$userid;
+        }));
+        set_config('siteadmins', implode(',', $admins));
+        error_log('[SSO] Removed user ' . $userid . ' from siteadmins (non-super-admin login)');
+    }
+
+    // Clear previously assigned system-level role mappings to prevent role drift.
+    $context = context_system::instance();
+    $managedRoleShortnames = array('manager', 'editingteacher', 'teacher', 'student', 'coursecreator');
+    foreach ($managedRoleShortnames as $shortname) {
+        $existingRole = $DB->get_record('role', array('shortname' => $shortname));
+        if ($existingRole) {
+            role_unassign($existingRole->id, $userid, $context->id);
+        }
+    }
     
     // Get the Moodle role ID for the mapped role
     $moodleRole = isset($roleMapping[$sclRole]) ? $roleMapping[$sclRole] : null;
@@ -66,11 +86,74 @@ function assignMoodleRoles($userid, $sclRole) {
         return;
     }
     
-    // Assign the role at system context (all courses)
-    $context = context_system::instance();
+    // Assign the mapped role at system context (all courses)
     role_assign($role->id, $userid, $context->id);
     
     error_log('[SSO] Role assigned: user ' . $userid . ' assigned Moodle role ' . $moodleRole . ' (ID: ' . $role->id . ')');
+}
+
+/**
+ * Sync Moodle role assignments back to SCL backend
+ */
+function syncRolesToBackend($userid, $email, $backendHost, $backendPort) {
+    global $DB;
+    
+    // Fetch all role assignments for this user with full context
+    $sql = "SELECT DISTINCT r.shortname, r.name, c.contextlevel, c.id as contextid, c.instanceid as courseid
+            FROM {role_assignments} ra
+            JOIN {role} r ON ra.roleid = r.id
+            JOIN {context} c ON ra.contextid = c.id
+            WHERE ra.userid = ?
+            ORDER BY c.contextlevel ASC, r.sortorder ASC";
+    
+    $roleRecords = $DB->get_records_sql($sql, array($userid));
+    
+    if (empty($roleRecords)) {
+        error_log('[SSO ROLE SYNC] No roles found for user ' . $userid);
+        return;
+    }
+    
+    // Build roles array (use shortnames) and detailed assignments
+    $roles = array();
+    $assignments = array();
+    foreach ($roleRecords as $record) {
+        $roles[] = $record->shortname;
+        $assignments[] = array(
+            'shortname' => $record->shortname,
+            'name' => $record->name,
+            'contextlevel' => (int)$record->contextlevel,
+            'contextid' => (int)$record->contextid,
+            'courseid' => $record->contextlevel == 50 ? (int)$record->courseid : null
+        );
+    }
+    
+    $ssoSecret = getenv('SSO_SECRET') ?: 'dev-supersecretkey-changeinproduction';
+    $syncUrl = 'http://' . $backendHost . ':' . $backendPort . '/api/sso/role-sync';
+    
+    $postData = json_encode([
+        'email' => $email,
+        'moodle_user_id' => $userid,
+        'roles' => $roles,
+        'role_data' => array('assignments' => $assignments),
+        'secret' => $ssoSecret
+    ]);
+    
+    $ch = curl_init($syncUrl);
+    curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'POST');
+    curl_setopt($ch, CURLOPT_POSTFIELDS, $postData);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type: application/json'));
+    curl_setopt($ch, CURLOPT_TIMEOUT, 5);
+    
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+    
+    if ($httpCode === 200) {
+        error_log('[SSO ROLE SYNC] Successfully synced roles for ' . $email . ': ' . implode(', ', $roles));
+    } else {
+        error_log('[SSO ROLE SYNC] Failed to sync roles for ' . $email . ': HTTP ' . $httpCode . ' - ' . $response);
+    }
 }
 
 $token = optional_param('token', '', PARAM_ALPHANUMEXT);
@@ -166,6 +249,9 @@ assignMoodleRoles($user->id, $sclRole);
 complete_user_login($user);
 
 error_log('[SSO] User logged in: ' . $email);
+
+// Sync role data back to SCL backend
+syncRolesToBackend($user->id, $email, $backendHost, $backendPort);
 
 // Redirect to provided location or default to courses page
 error_log('[SSO] About to redirect. redirectUrl=' . var_export($redirectUrl, true));

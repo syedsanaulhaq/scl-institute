@@ -18,6 +18,7 @@ process.on('uncaughtException', (err) => {
 
 const app = express();
 const PORT = process.env.PORT || 4000;
+const moodleTablePrefix = process.env.MOODLE_TABLE_PREFIX || 'mdl_';
 
 // Database Connection Definition
 const pool = mysql.createPool({
@@ -35,6 +36,17 @@ const pool = mysql.createPool({
 
 // Alias for convenience
 const db = pool;
+
+const moodlePool = mysql.createPool({
+    host: process.env.MOODLE_DATABASE_HOST || 'host.docker.internal',
+    port: process.env.MOODLE_DATABASE_PORT || 3306,
+    user: process.env.MOODLE_DATABASE_USER,
+    password: process.env.MOODLE_DATABASE_PASSWORD,
+    database: process.env.MOODLE_DATABASE_NAME || 'moodle',
+    waitForConnections: true,
+    connectionLimit: 5,
+    queueLimit: 0
+});
 
 // Simple auth middleware
 const requireAuth = (req, res, next) => {
@@ -63,6 +75,22 @@ async function initDB() {
                 role VARCHAR(50),
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
+        `);
+        await connection.query(`
+            CREATE TABLE IF NOT EXISTS user_role_snapshots (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                email VARCHAR(255) NOT NULL,
+                moodle_user_id INT DEFAULT NULL,
+                roles TEXT NOT NULL,
+                role_data JSON DEFAULT NULL,
+                synced_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                expires_at TIMESTAMP DEFAULT NULL,
+                source VARCHAR(50) DEFAULT 'moodle',
+                UNIQUE KEY unique_email (email),
+                INDEX idx_email (email),
+                INDEX idx_synced_at (synced_at),
+                INDEX idx_expires_at (expires_at)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
         `);
         console.log("[DB] Tables initialized");
         connection.release();
@@ -457,16 +485,52 @@ function parseRoleTokens(roleValue) {
         .filter(Boolean);
 }
 
-function buildRoleContext(roleValue) {
+function buildRoleContext(roleValue, roleData = null) {
     const roles = [...new Set(parseRoleTokens(roleValue))];
     const primaryRole = roles[0] || null;
+
+    // Extract context-aware assignments if available
+    const assignments = roleData?.assignments || [];
+    
+    // Categorize by context level
+    const systemRoles = [];
+    const courseRoles = {};
+    
+    for (const assignment of assignments) {
+        const normalized = normalizeRole(assignment.shortname);
+        if (!normalized) continue;
+        
+        if (assignment.contextlevel === 10) {
+            // System-level role
+            if (!systemRoles.includes(normalized)) {
+                systemRoles.push(normalized);
+            }
+        } else if (assignment.contextlevel === 50 && assignment.courseid) {
+            // Course-level role
+            if (!courseRoles[assignment.courseid]) {
+                courseRoles[assignment.courseid] = [];
+            }
+            if (!courseRoles[assignment.courseid].includes(normalized)) {
+                courseRoles[assignment.courseid].push(normalized);
+            }
+        }
+    }
+
+    // Check for system-level management access
+    const hasSystemManagement = systemRoles.some((role) => managementRoles.has(role));
 
     return {
         primaryRole,
         roles,
+        assignments,
+        systemRoles,
+        courseRoles,
+        hasSystemManagement,
         hasManagement: roles.some((role) => managementRoles.has(role)),
         hasTeaching: roles.some((role) => teachingRoles.has(role)),
-        hasStudent: roles.some((role) => learningRoles.has(role))
+        hasStudent: roles.some((role) => learningRoles.has(role)),
+        canAccessManagementPortal: hasSystemManagement,
+        canAccessStudentPortal: roles.some((role) => learningRoles.has(role) || teachingRoles.has(role))
     };
 }
 
@@ -514,7 +578,148 @@ async function callMoodle(wsfunction, params = {}) {
     return payload;
 }
 
-async function getMoodleRolesByEmail(email) {
+async function getRoleSnapshot(email) {
+    try {
+        const [rows] = await pool.query(
+            'SELECT * FROM user_role_snapshots WHERE email = ? AND (expires_at IS NULL OR expires_at > NOW()) ORDER BY synced_at DESC LIMIT 1',
+            [email]
+        );
+
+        if (rows.length === 0) {
+            return null;
+        }
+
+        const snapshot = rows[0];
+        const snapshotRoles = String(snapshot.roles || '')
+            .split(',')
+            .map((role) => role.trim())
+            .filter(Boolean);
+
+        if (snapshotRoles.length === 0) {
+            return null;
+        }
+
+        let roleData = null;
+        if (snapshot.role_data) {
+            try {
+                roleData = typeof snapshot.role_data === 'string' 
+                    ? JSON.parse(snapshot.role_data) 
+                    : snapshot.role_data;
+            } catch (e) {
+                console.warn('[SNAPSHOT] Failed to parse role_data:', e.message);
+            }
+        }
+
+        return {
+            source: 'snapshot',
+            moodleUserId: snapshot.moodle_user_id,
+            roles: snapshotRoles,
+            roleData,
+            syncedAt: snapshot.synced_at
+        };
+    } catch (error) {
+        console.warn('[LOGIN] Role snapshot fetch failed:', error.message);
+        return null;
+    }
+}
+
+async function upsertRoleSnapshot({ email, moodleUserId = null, roles = [], roleData = null, source = 'moodle' }) {
+    if (!email || !Array.isArray(roles)) {
+        return;
+    }
+
+    const rolesString = roles.join(',');
+    const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
+
+    await pool.query(
+        `INSERT INTO user_role_snapshots (email, moodle_user_id, roles, role_data, synced_at, expires_at, source)
+         VALUES (?, ?, ?, ?, NOW(), ?, ?)
+         ON DUPLICATE KEY UPDATE
+            moodle_user_id = VALUES(moodle_user_id),
+            roles = VALUES(roles),
+            role_data = VALUES(role_data),
+            synced_at = NOW(),
+            expires_at = VALUES(expires_at),
+            source = VALUES(source)`,
+        [email, moodleUserId, rolesString, roleData ? JSON.stringify(roleData) : null, expiresAt, source]
+    );
+}
+
+async function getMoodleRolesFromDbByEmail(email) {
+    if (!process.env.MOODLE_DATABASE_USER || !process.env.MOODLE_DATABASE_PASSWORD) {
+        return null;
+    }
+
+    const [userRows] = await moodlePool.query(
+        `SELECT id FROM ${moodleTablePrefix}user WHERE email = ? AND deleted = 0 LIMIT 1`,
+        [email]
+    );
+
+    if (!Array.isArray(userRows) || userRows.length === 0) {
+        return null;
+    }
+
+    const moodleUserId = userRows[0].id;
+    const [roleRows] = await moodlePool.query(
+        `SELECT DISTINCT r.shortname, r.name, c.contextlevel, c.id as contextid, c.instanceid as courseid
+         FROM ${moodleTablePrefix}role_assignments ra
+         JOIN ${moodleTablePrefix}role r ON r.id = ra.roleid
+         JOIN ${moodleTablePrefix}context c ON c.id = ra.contextid
+         WHERE ra.userid = ?
+         ORDER BY c.contextlevel ASC, r.sortorder ASC`,
+        [moodleUserId]
+    );
+
+    const roles = [
+        ...new Set(
+            (roleRows || [])
+                .map((row) => normalizeRole(row.shortname || row.name))
+                .filter(Boolean)
+        )
+    ].sort((a, b) => getRolePriority(a) - getRolePriority(b));
+
+    if (roles.length === 0) {
+        return null;
+    }
+
+    // Build context-aware role assignments
+    const assignments = (roleRows || []).map((row) => ({
+        shortname: row.shortname || null,
+        name: row.name || null,
+        contextlevel: row.contextlevel || null,
+        contextid: row.contextid || null,
+        courseid: row.contextlevel === 50 ? row.courseid : null // Only include courseid for course context
+    }));
+
+    const roleData = { assignments };
+
+    await upsertRoleSnapshot({
+        email,
+        moodleUserId,
+        roles,
+        roleData,
+        source: 'moodle-db'
+    });
+
+    return {
+        source: 'moodle-db',
+        moodleUserId,
+        roles,
+        roleData
+    };
+}
+
+async function getMoodleRolesByEmail(email, options = {}) {
+    const preferSnapshot = options.preferSnapshot !== false;
+
+    if (preferSnapshot) {
+        const snapshot = await getRoleSnapshot(email);
+        if (snapshot) {
+            console.log(`[LOGIN] Using cached role snapshot for ${email} (synced: ${snapshot.syncedAt})`);
+            return snapshot;
+        }
+    }
+
     try {
         const usersResult = await callMoodle('core_user_get_users_by_field', {
             field: 'email',
@@ -526,33 +731,81 @@ async function getMoodleRolesByEmail(email) {
         }
 
         const moodleUser = usersResult[0];
-        const roleAssignments = await callMoodle('core_role_get_user_roles', { userid: moodleUser.id });
+        const wsRoleTokens = new Set();
+        const wsRoleData = [];
 
-        if (!Array.isArray(roleAssignments) || roleAssignments.length === 0) {
-            return {
-                source: 'moodle',
-                moodleUserId: moodleUser.id,
-                roles: []
-            };
+        const userCourses = await callMoodle('core_enrol_get_users_courses', {
+            userid: moodleUser.id
+        });
+
+        if (Array.isArray(userCourses) && userCourses.length > 0) {
+            const courseIds = userCourses.map((course) => course.id).filter(Boolean).slice(0, 25);
+
+            for (const courseId of courseIds) {
+                const courseProfiles = await callMoodle('core_user_get_course_user_profiles', {
+                    'userlist[0][userid]': moodleUser.id,
+                    'userlist[0][courseid]': courseId
+                });
+
+                const profile = Array.isArray(courseProfiles) ? courseProfiles[0] : null;
+                const profileRoles = Array.isArray(profile?.roles) ? profile.roles : [];
+
+                for (const role of profileRoles) {
+                    const normalized = normalizeRole(role.shortname || role.name);
+                    if (!normalized) {
+                        continue;
+                    }
+                    wsRoleTokens.add(normalized);
+                    wsRoleData.push({
+                        shortname: role.shortname || null,
+                        name: role.name || null,
+                        contextlevel: 50, // Course context
+                        contextid: role.roleid || null,
+                        courseid: courseId
+                    });
+                }
+            }
         }
 
-        const roles = [
-            ...new Set(
-                roleAssignments
-                    .map((assignment) => normalizeRole(assignment.shortname || assignment.name))
-                    .filter(Boolean)
-            )
-        ].sort((a, b) => getRolePriority(a) - getRolePriority(b));
+        const wsRoles = [...wsRoleTokens].sort((a, b) => getRolePriority(a) - getRolePriority(b));
+        if (wsRoles.length > 0) {
+            const roleData = { assignments: wsRoleData };
+            await upsertRoleSnapshot({
+                email,
+                moodleUserId: moodleUser.id,
+                roles: wsRoles,
+                roleData,
+                source: 'moodle-ws'
+            });
 
-        return {
-            source: 'moodle',
-            moodleUserId: moodleUser.id,
-            roles
-        };
+            return {
+                source: 'moodle-ws',
+                moodleUserId: moodleUser.id,
+                roles: wsRoles,
+                roleData
+            };
+        }
     } catch (error) {
-        console.warn('[LOGIN] Moodle role fetch failed, using local role fallback:', error.message);
-        return null;
+        console.warn('[LOGIN] Moodle API role fetch failed:', error.message);
     }
+
+    try {
+        const dbRoles = await getMoodleRolesFromDbByEmail(email);
+        if (dbRoles) {
+            return dbRoles;
+        }
+    } catch (error) {
+        console.warn('[LOGIN] Moodle DB role fetch failed:', error.message);
+    }
+
+    const snapshot = await getRoleSnapshot(email);
+    if (snapshot) {
+        console.log(`[LOGIN] Falling back to cached role snapshot for ${email} (synced: ${snapshot.syncedAt})`);
+        return snapshot;
+    }
+
+    console.warn('[LOGIN] Falling back to local role after Moodle API/DB/snapshot lookup failed');
+    return null;
 }
 
 const users = [
@@ -576,9 +829,9 @@ app.post('/api/login', async (req, res) => {
         if (rows.length > 0) {
             const user = rows[0];
             const fullName = [user.first_name, user.last_name].filter(Boolean).join(' ').trim() || email;
-            const moodleRoleData = await getMoodleRolesByEmail(user.email);
+            const moodleRoleData = await getMoodleRolesByEmail(user.email, { preferSnapshot: false });
             const roleSeed = moodleRoleData?.roles?.length ? moodleRoleData.roles.join(',') : user.role;
-            const roleContext = buildRoleContext(roleSeed);
+            const roleContext = buildRoleContext(roleSeed, moodleRoleData?.roleData);
             const token = 'Bearer ' + Buffer.from(`${user.id}:${user.email}`).toString('base64');
             res.json({ 
                 success: true,
@@ -591,7 +844,7 @@ app.post('/api/login', async (req, res) => {
                     roles: roleContext.roles,
                     roleContext: {
                         ...roleContext,
-                        source: moodleRoleData ? 'moodle' : 'local'
+                        source: moodleRoleData?.source || 'local'
                     }
                 } 
             });
@@ -614,9 +867,9 @@ app.post('/api/v1/auth/login', async (req, res) => {
         
         if (rows.length > 0) {
             const user = rows[0];
-            const moodleRoleData = await getMoodleRolesByEmail(user.email);
+            const moodleRoleData = await getMoodleRolesByEmail(user.email, { preferSnapshot: false });
             const roleSeed = moodleRoleData?.roles?.length ? moodleRoleData.roles.join(',') : user.role;
-            const roleContext = buildRoleContext(roleSeed);
+            const roleContext = buildRoleContext(roleSeed, moodleRoleData?.roleData);
             console.log(`[LOGIN V1] User authenticated:`, { email: user.email, role: user.role });
             
             const accessToken = `token_${user.id}_${Date.now()}`;
@@ -634,7 +887,7 @@ app.post('/api/v1/auth/login', async (req, res) => {
                     roles: roleContext.roles,
                     roleContext: {
                         ...roleContext,
-                        source: moodleRoleData ? 'moodle' : 'local'
+                        source: moodleRoleData?.source || 'local'
                     }
                 } 
             });
@@ -669,15 +922,15 @@ app.post('/api/sso/generate', async (req, res) => {
     const token = uuidv4();
     const firstname = user.first_name || 'SCL';
     const lastname = user.last_name || 'User';
-    const moodleRoleData = await getMoodleRolesByEmail(user.email);
-    const roleSeed = moodleRoleData?.roles?.length ? moodleRoleData.roles.join(',') : user.role;
-    const roleContext = buildRoleContext(roleSeed);
+    // Keep SCL base role for SSO provisioning. Moodle/snapshot roles are used at login,
+    // but should not overwrite the role sent to Moodle for assignment during SSO.
+    const baseRole = user.role;
 
     try {
         console.log(`[SSO] Inserting token into DB...`);
         await pool.query(
             'INSERT INTO sso_tokens (token, email, firstname, lastname, role) VALUES (?, ?, ?, ?, ?)',
-            [token, user.email, firstname, lastname, roleContext.primaryRole || user.role]
+            [token, user.email, firstname, lastname, baseRole]
         );
         const moodleUrl = process.env.MOODLE_URL || 'http://localhost:8080';
         const redirectUrl = `${moodleUrl}/local/sclsso/login.php?token=${token}`;
@@ -711,6 +964,42 @@ app.post('/api/sso/verify', async (req, res) => {
         res.status(500).json({ success: false, message: 'DB Error' });
     }
 });
+
+app.post('/api/sso/role-sync', async (req, res) => {
+    const { email, moodle_user_id, roles, role_data, secret } = req.body;
+    
+    if (secret !== (process.env.SSO_SECRET || 'supersecretkey')) {
+        return res.status(403).json({ success: false, message: 'Invalid secret' });
+    }
+
+    if (!email || !roles) {
+        return res.status(400).json({ success: false, message: 'Email and roles required' });
+    }
+
+    try {
+        const rolesString = Array.isArray(roles) ? roles.join(',') : String(roles);
+        const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes from now
+        
+        await pool.query(`
+            INSERT INTO user_role_snapshots (email, moodle_user_id, roles, role_data, synced_at, expires_at, source)
+            VALUES (?, ?, ?, ?, NOW(), ?, 'moodle')
+            ON DUPLICATE KEY UPDATE
+                moodle_user_id = VALUES(moodle_user_id),
+                roles = VALUES(roles),
+                role_data = VALUES(role_data),
+                synced_at = NOW(),
+                expires_at = VALUES(expires_at),
+                source = 'moodle'
+        `, [email, moodle_user_id || null, rolesString, role_data ? JSON.stringify(role_data) : null, expiresAt]);
+        
+        console.log(`[SSO ROLE SYNC] Updated role snapshot for ${email}: ${rolesString}`);
+        res.json({ success: true, message: 'Role snapshot updated' });
+    } catch (err) {
+        console.error('[SSO ROLE SYNC] Error:', err.message);
+        res.status(500).json({ success: false, message: 'Failed to update role snapshot' });
+    }
+});
+
 
 // ====== NOTIFICATIONS ENDPOINTS ======
 // GET /api/notifications/user/:email - Get notifications for user

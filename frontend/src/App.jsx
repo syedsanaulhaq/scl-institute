@@ -86,13 +86,21 @@ function App() {
                 <Route path="/login" element={<LoginPage onLoginSuccess={handleLoginSuccess} />} />
                 <Route path="/" element={
                     user ? (
-                        canAccessStudentPortal && !canAccessManagementPortal ? (
+                        canAccessManagementPortal ? (
                             <Layout user={user} onLogout={handleLogout}>
-                                <StudentPortalDashboard user={user} />
+                                <Dashboard user={user} onLogout={handleLogout} viewMode="manager" />
+                            </Layout>
+                        ) : roleContext.hasTeaching ? (
+                            <Layout user={user} onLogout={handleLogout}>
+                                <Dashboard user={user} onLogout={handleLogout} viewMode="teacher" />
+                            </Layout>
+                        ) : canAccessStudentPortal ? (
+                            <Layout user={user} onLogout={handleLogout}>
+                                <Dashboard user={user} onLogout={handleLogout} viewMode="student" />
                             </Layout>
                         ) : (
                             <Layout user={user} onLogout={handleLogout}>
-                                <Dashboard user={user} onLogout={handleLogout} />
+                                <Dashboard user={user} onLogout={handleLogout} viewMode="auto" />
                             </Layout>
                         )
                     ) : (
@@ -100,6 +108,24 @@ function App() {
                     )
                 } />
                 <Route path="/student/dashboard" element={
+                    user && canAccessStudentPortal ? (
+                        <Layout user={user} onLogout={handleLogout}>
+                            <Dashboard user={user} onLogout={handleLogout} viewMode="student" />
+                        </Layout>
+                    ) : (
+                        <LoginPage onLoginSuccess={handleLoginSuccess} />
+                    )
+                } />
+                <Route path="/teacher/dashboard" element={
+                    user && roleContext.hasTeaching ? (
+                        <Layout user={user} onLogout={handleLogout}>
+                            <Dashboard user={user} onLogout={handleLogout} viewMode="teacher" />
+                        </Layout>
+                    ) : (
+                        <LoginPage onLoginSuccess={handleLoginSuccess} />
+                    )
+                } />
+                <Route path="/student/portal" element={
                     user && canAccessStudentPortal ? (
                         <Layout user={user} onLogout={handleLogout}>
                             <StudentPortalDashboard user={user} />

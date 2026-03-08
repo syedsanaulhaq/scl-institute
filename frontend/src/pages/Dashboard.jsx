@@ -20,11 +20,13 @@ import {
     ClipboardList
 } from 'lucide-react';
 import { openMoodleSSO } from '../utils/ssoService';
+import { getRoleContext } from '../utils/roleAccess';
 
-const Dashboard = ({ user, onLogout }) => {
+const Dashboard = ({ user, viewMode = 'auto' }) => {
     const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const roleContext = getRoleContext(user);
 
     const handleAccessLMS = async () => {
         setLoading(true);
@@ -48,14 +50,15 @@ const Dashboard = ({ user, onLogout }) => {
         }
     };
 
-    // Module Definitions with Role-Based Visibility
+    // Module definitions with explicit audience targeting
     const modules = [
         {
             id: 'applications',
             title: 'Student Applications',
             description: 'Review incoming student admission requests, applications, and manage enrollment decisions.',
             icon: Users,
-            roles: ['Super Admin', 'Admissions Officer'],
+            requiredRoles: ['manager', 'admin', 'admissions officer', 'super admin'],
+            audiences: ['manager'],
             color: 'green',
             path: '/applications'
         },
@@ -64,7 +67,8 @@ const Dashboard = ({ user, onLogout }) => {
             title: 'Student Management',
             description: 'Student records, admissions, enrollment tracking and comprehensive management dashboard.',
             icon: Users2,
-            roles: ['Super Admin', 'Admissions Officer', 'Student'],
+            requiredRoles: ['manager', 'admin', 'admissions officer', 'super admin'],
+            audiences: ['manager'],
             color: 'blue',
             path: '/students'
         },
@@ -73,7 +77,8 @@ const Dashboard = ({ user, onLogout }) => {
             title: 'Partner & Associates Management',
             description: 'Manage institutional partnerships and external associate directories.',
             icon: Users,
-            roles: ['Super Admin', 'Partners Manager'],
+            requiredRoles: ['manager', 'admin', 'partners manager', 'super admin'],
+            audiences: ['manager'],
             color: 'indigo'
         },
         {
@@ -81,7 +86,8 @@ const Dashboard = ({ user, onLogout }) => {
             title: 'Accreditation, QA & Compliance',
             description: 'Track accreditation status, quality assurance audits, and regulatory compliance.',
             icon: ShieldCheck,
-            roles: ['Super Admin', 'Compliance Officer'],
+            requiredRoles: ['manager', 'admin', 'compliance officer', 'super admin'],
+            audiences: ['manager'],
             color: 'indigo'
         },
         {
@@ -89,7 +95,8 @@ const Dashboard = ({ user, onLogout }) => {
             title: 'Course Induction Compliance',
             description: 'Track course approval requirements, risks, conditions, and sign-offs.',
             icon: ClipboardList,
-            roles: ['Super Admin'],
+            requiredRoles: ['manager', 'admin', 'super admin'],
+            audiences: ['manager'],
             color: 'blue',
             path: '/course-inductions'
         },
@@ -98,7 +105,8 @@ const Dashboard = ({ user, onLogout }) => {
             title: 'Course Offerings & Program Catalog',
             description: 'Define and manage full program lifecycle, modules, and credit structures.',
             icon: Library,
-            roles: ['Super Admin', 'Teacher', 'Student', 'Admissions Officer'],
+            requiredRoles: ['manager', 'admin', 'teacher', 'editingteacher', 'student', 'admissions officer', 'super admin'],
+            audiences: ['manager', 'teacher', 'student'],
             color: 'purple'
         },
         {
@@ -106,7 +114,8 @@ const Dashboard = ({ user, onLogout }) => {
             title: 'Student Portal',
             description: 'Access induction resources, support requests, and formal appeals.',
             icon: UserCircle,
-            roles: ['Super Admin', 'Student'],
+            requiredRoles: ['student', 'super admin', 'manager', 'admin'],
+            audiences: ['student', 'manager'],
             color: 'emerald'
         },
         {
@@ -114,7 +123,8 @@ const Dashboard = ({ user, onLogout }) => {
             title: 'Faculty Management & HR Directory',
             description: 'Staff directory, workload management, and HR essentials.',
             icon: UserSquare2,
-            roles: ['Super Admin', 'Faculty & HR Manager', 'Teacher'],
+            requiredRoles: ['manager', 'admin', 'faculty & hr manager', 'teacher', 'editingteacher', 'super admin'],
+            audiences: ['manager', 'teacher'],
             color: 'orange'
         },
         {
@@ -122,7 +132,8 @@ const Dashboard = ({ user, onLogout }) => {
             title: 'Learning Management (Moodle)',
             description: 'Seamless Single Sign-On access to the Moodle education platform.',
             icon: GraduationCap,
-            roles: ['Super Admin', 'LMS Manager', 'Teacher', 'Student'],
+            requiredRoles: ['manager', 'admin', 'lms manager', 'teacher', 'editingteacher', 'student', 'super admin'],
+            audiences: ['manager', 'teacher', 'student'],
             color: 'scl-purple',
             isSSO: true
         },
@@ -131,16 +142,46 @@ const Dashboard = ({ user, onLogout }) => {
             title: 'Governance & ERP Lite Essentials',
             description: 'Core institutional records, financial summaries, and governance tools.',
             icon: Settings2,
-            roles: ['Super Admin'],
+            requiredRoles: ['manager', 'admin', 'super admin'],
+            audiences: ['manager'],
             color: 'slate'
         }
     ];
 
-    // Filter modules based on user role (case-insensitive comparison)
-    const normalizedUserRole = user.role 
-        ? user.role.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')
-        : '';
-    const visibleModules = modules.filter(mod => mod.roles.includes(normalizedUserRole));
+    // Resolve current dashboard audience mode.
+    const activeView = viewMode !== 'auto'
+        ? viewMode
+        : roleContext?.canAccessManagementPortal
+            ? 'manager'
+            : roleContext?.hasTeaching
+                ? 'teacher'
+                : 'student';
+
+    // Filter modules using canonical role context from backend/login.
+    const normalizedRoles = Array.isArray(roleContext?.roles)
+        ? roleContext.roles
+            .map((role) => String(role || '').trim().toLowerCase())
+            .filter(Boolean)
+        : [];
+    const fallbackPrimaryRole = String(roleContext?.primaryRole || user?.role || '')
+        .trim()
+        .toLowerCase();
+    const effectiveRoles = new Set([
+        ...normalizedRoles,
+        ...(fallbackPrimaryRole ? [fallbackPrimaryRole] : [])
+    ]);
+
+    const visibleModules = modules.filter((mod) => {
+        const audiences = Array.isArray(mod.audiences) ? mod.audiences : [];
+        if (!audiences.includes(activeView)) {
+            return false;
+        }
+
+        const requiredRoles = (mod.requiredRoles || []).map((role) => String(role || '').toLowerCase());
+        return requiredRoles.some((role) => effectiveRoles.has(role));
+    });
+
+    const accessLabel = roleContext?.primaryRole || user?.role || 'user';
 
     const stats = [
         { label: 'Active Sessions', value: '12', icon: Activity, color: 'blue' },
@@ -154,12 +195,12 @@ const Dashboard = ({ user, onLogout }) => {
                 <div>
                     <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">Institutional Dashboard</h1>
                     <p className="text-gray-500 mt-1 text-sm font-medium">
-                        Welcome back, <span className="text-scl-purple">{user.name}</span>. Managing SCL Institute.
+                        Welcome back, <span className="text-scl-purple">{user.name}</span>. Viewing {activeView} dashboard.
                     </p>
                 </div>
                 <div className="hidden sm:flex space-x-2">
                     <span className="px-3 py-1 bg-scl-purple/10 text-scl-purple rounded-full text-xs font-bold uppercase tracking-wider border border-scl-purple/20">
-                        {normalizedUserRole || user.role} Access
+                        {accessLabel} Access
                     </span>
                 </div>
             </div>
@@ -211,7 +252,7 @@ const Dashboard = ({ user, onLogout }) => {
 
                                     <div className="mt-2 pt-2 border-t border-white/10 flex items-center justify-between">
                                         <span className="text-[8px] uppercase font-black tracking-widest text-white/60">
-                                            {normalizedUserRole && normalizedUserRole.includes('Super') ? 'Full' : 'Std'}
+                                            {roleContext?.hasSystemManagement ? 'Full' : 'Std'}
                                         </span>
                                         {module.isSSO ? (
                                             <button

@@ -56,6 +56,25 @@ export function getUserRoles(user) {
 }
 
 export function getRoleContext(user) {
+    // If backend already provided a context-aware roleContext, use it
+    if (user?.roleContext?.systemRoles || user?.roleContext?.courseRoles) {
+        return {
+            roles: user.roleContext.roles || [],
+            primaryRole: user.roleContext.primaryRole || null,
+            assignments: user.roleContext.assignments || [],
+            systemRoles: user.roleContext.systemRoles || [],
+            courseRoles: user.roleContext.courseRoles || {},
+            hasSystemManagement: user.roleContext.hasSystemManagement || false,
+            hasManagement: user.roleContext.hasManagement || false,
+            hasTeaching: user.roleContext.hasTeaching || false,
+            hasStudent: user.roleContext.hasStudent || false,
+            canAccessManagementPortal: user.roleContext.canAccessManagementPortal || false,
+            canAccessStudentPortal: user.roleContext.canAccessStudentPortal || false,
+            source: user.roleContext.source || 'local'
+        };
+    }
+
+    // Fallback to legacy role parsing if backend doesn't provide context
     const roles = getUserRoles(user);
 
     const hasManagement = roles.some((role) => MANAGEMENT_ROLES.has(role));
@@ -65,10 +84,15 @@ export function getRoleContext(user) {
     return {
         roles,
         primaryRole: roles[0] || null,
+        assignments: [],
+        systemRoles: [],
+        courseRoles: {},
+        hasSystemManagement: false,
         hasManagement,
         hasTeaching,
         hasStudent,
-        canAccessStudentPortal: hasStudent,
-        canAccessManagementPortal: hasManagement
+        canAccessStudentPortal: hasStudent || hasTeaching,
+        canAccessManagementPortal: hasManagement,
+        source: 'local'
     };
 }
