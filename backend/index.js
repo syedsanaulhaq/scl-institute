@@ -7,6 +7,7 @@ const axios = require('axios');
 const { v4: uuidv4 } = require('uuid');
 console.log("Backend process starting...");
 const studentsRouter = require('./routes/students');
+const { router: notificationsRouter } = require('./routes/notifications');
 
 process.on('unhandledRejection', (reason, p) => {
     console.error('Unhandled Rejection at:', p, 'reason:', reason);
@@ -123,6 +124,7 @@ app.use(bodyParser.json({ verify: (req, res, buf, encoding) => {
 } }));
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use('/api/students', studentsRouter);
+app.use('/api/notifications', notificationsRouter);
 
 // ===============================
 // ROUTES
@@ -832,6 +834,26 @@ app.post('/api/login', async (req, res) => {
             const moodleRoleData = await getMoodleRolesByEmail(user.email, { preferSnapshot: false });
             const roleSeed = moodleRoleData?.roles?.length ? moodleRoleData.roles.join(',') : user.role;
             const roleContext = buildRoleContext(roleSeed, moodleRoleData?.roleData);
+
+            // Student accounts must have at least one accepted application to sign in.
+            const isStudentOnly = roleContext.hasStudent && !roleContext.hasManagement && !roleContext.hasTeaching;
+            if (isStudentOnly) {
+                const [acceptedApps] = await pool.query(
+                    `SELECT id
+                     FROM student_applications
+                     WHERE email = ? AND application_status = 'accepted' AND is_deleted = FALSE
+                     LIMIT 1`,
+                    [user.email]
+                );
+
+                if (acceptedApps.length === 0) {
+                    return res.status(403).json({
+                        success: false,
+                        message: 'Your application is not accepted yet. Please wait for admissions approval.'
+                    });
+                }
+            }
+
             const token = 'Bearer ' + Buffer.from(`${user.id}:${user.email}`).toString('base64');
             res.json({ 
                 success: true,
@@ -870,6 +892,26 @@ app.post('/api/v1/auth/login', async (req, res) => {
             const moodleRoleData = await getMoodleRolesByEmail(user.email, { preferSnapshot: false });
             const roleSeed = moodleRoleData?.roles?.length ? moodleRoleData.roles.join(',') : user.role;
             const roleContext = buildRoleContext(roleSeed, moodleRoleData?.roleData);
+
+            // Student accounts must have at least one accepted application to sign in.
+            const isStudentOnly = roleContext.hasStudent && !roleContext.hasManagement && !roleContext.hasTeaching;
+            if (isStudentOnly) {
+                const [acceptedApps] = await pool.query(
+                    `SELECT id
+                     FROM student_applications
+                     WHERE email = ? AND application_status = 'accepted' AND is_deleted = FALSE
+                     LIMIT 1`,
+                    [user.email]
+                );
+
+                if (acceptedApps.length === 0) {
+                    return res.status(403).json({
+                        success: false,
+                        message: 'Your application is not accepted yet. Please wait for admissions approval.'
+                    });
+                }
+            }
+
             console.log(`[LOGIN V1] User authenticated:`, { email: user.email, role: user.role });
             
             const accessToken = `token_${user.id}_${Date.now()}`;
@@ -902,8 +944,8 @@ app.post('/api/v1/auth/login', async (req, res) => {
 });
 
 app.post('/api/sso/generate', async (req, res) => {
-    const { email } = req.body;
-    console.log(`[SSO] Generating token for ${email}...`);
+    const { email, redirect_url } = req.body;
+    console.log(`[SSO] Generating token for ${email}...`, redirect_url ? `with redirect: ${redirect_url}` : '');
     
     // Get real user data from database instead of hardcoded array
     let user;
@@ -929,8 +971,8 @@ app.post('/api/sso/generate', async (req, res) => {
     try {
         console.log(`[SSO] Inserting token into DB...`);
         await pool.query(
-            'INSERT INTO sso_tokens (token, email, firstname, lastname, role) VALUES (?, ?, ?, ?, ?)',
-            [token, user.email, firstname, lastname, baseRole]
+            'INSERT INTO sso_tokens (token, email, firstname, lastname, role, redirect_url) VALUES (?, ?, ?, ?, ?, ?)',
+            [token, user.email, firstname, lastname, baseRole, redirect_url || null]
         );
         const moodleUrl = process.env.MOODLE_URL || 'http://localhost:8080';
         const redirectUrl = `${moodleUrl}/local/sclsso/login.php?token=${token}`;

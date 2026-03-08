@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BookOpen, Calendar, Award, Target, ExternalLink } from 'lucide-react';
+import { BookOpen, Award, Target } from 'lucide-react';
 import axios from 'axios';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
@@ -8,8 +8,11 @@ const StudentProgramme = ({ user }) => {
     const [programmeData, setProgrammeData] = useState(null);
     const [courseModules, setCourseModules] = useState([]);
     const [learningOutcomes, setLearningOutcomes] = useState([]);
+    const [registeredCourses, setRegisteredCourses] = useState([]);
+    const [selectedCourseId, setSelectedCourseId] = useState('');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [programmeWarning, setProgrammeWarning] = useState('');
     const [ssoLoading, setSsoLoading] = useState(false);
     const [ssoError, setSsoError] = useState('');
     const [expandedSections, setExpandedSections] = useState({});
@@ -26,9 +29,62 @@ const StudentProgramme = ({ user }) => {
         fetchProgrammeData();
     }, [user]);
 
+    useEffect(() => {
+        if (registeredCourses.length > 0) {
+            setSelectedCourseId(String(registeredCourses[0].moodle_course_id || registeredCourses[0].id));
+        } else {
+            setSelectedCourseId('');
+        }
+    }, [registeredCourses]);
+
+    // Fetch Moodle sections/modules when selected course changes
+    useEffect(() => {
+        if (selectedCourseId) {
+            fetchCourseSections();
+        } else {
+            setCourseModules([]);
+            setProgrammeData(null);
+        }
+    }, [selectedCourseId, registeredCourses]);
+
+    const fetchCourseSections = async () => {
+        try {
+            const response = await axios.get(
+                `${API_URL}/students/moodle-course/${selectedCourseId}/sections`
+            );
+            if (response.data?.success) {
+                const { sections } = response.data.data;
+                // Transform sections into module format matching expected structure
+                const modulesData = sections.map(section => ({
+                    id: section.id,
+                    name: section.name,
+                    summary: section.summary,
+                    modules: section.modules.map(mod => ({
+                        id: mod.id,
+                        name: mod.idnumber || `Module ${mod.id}`,
+                        type: mod.type
+                    }))
+                }));
+                setCourseModules(modulesData);
+            }
+        } catch (err) {
+            console.error('Error fetching course sections:', err);
+            setCourseModules([]);
+        }
+    };
+
     const fetchProgrammeData = async () => {
         try {
             setLoading(true);
+            setError('');
+            setProgrammeWarning('');
+
+            const registeredCoursesResponse = await axios.get(`${API_URL}/students/my-moodle-courses`, {
+                params: { email: user.email }
+            });
+            const myStudentCourses = (registeredCoursesResponse.data?.data || []).filter((course) => course.isStudentEnrolled);
+            setRegisteredCourses(myStudentCourses);
+
             // Get student's accepted application directly by email (more efficient)
             const appsResponse = await axios.get(`${API_URL}/students/my-applications`, {
                 params: { email: user.email }
@@ -43,6 +99,7 @@ const StudentProgramme = ({ user }) => {
                     const progResponse = await axios.get(`${API_URL}/students/programme/${studentApp.id}`);
                     if (progResponse.data?.success) {
                         const { programme, modules, outcomes } = progResponse.data.data;
+                        setError('');
                         setProgrammeData({
                             ...studentApp,
                             ...programme
@@ -51,7 +108,7 @@ const StudentProgramme = ({ user }) => {
                         setLearningOutcomes(outcomes || []);
                     }
                 } else {
-                    setError('No accepted application found. Please contact admissions.');
+                    setProgrammeWarning('No accepted application found. Showing your registered Moodle courses below.');
                 }
             }
         } catch (err) {
@@ -62,12 +119,13 @@ const StudentProgramme = ({ user }) => {
         }
     };
 
-    const handleAccessLMS = async () => {
+    const handleAccessLMS = async (courseId = null) => {
         try {
             setSsoLoading(true);
             setSsoError('');
             const response = await axios.post(`${API_URL}/sso/generate`, {
-                email: user.email
+                email: user.email,
+                redirect_url: courseId ? `/course/view.php?id=${courseId}` : null
             });
 
             if (response.data?.success && response.data?.redirectUrl) {
@@ -86,6 +144,10 @@ const StudentProgramme = ({ user }) => {
         outcomesRef.current?.scrollIntoView({ behavior: 'smooth' });
     };
 
+    const selectedCourse = registeredCourses.find(
+        (course) => String(course.moodle_course_id || course.id) === String(selectedCourseId)
+    );
+
     if (loading) {
         return <div className="p-8 text-center">Loading programme details...</div>;
     }
@@ -98,16 +160,44 @@ const StudentProgramme = ({ user }) => {
         <div className="p-6 bg-gray-50 min-h-screen">
             <h1 className="text-3xl font-bold text-gray-900 mb-8">My Programme</h1>
 
+            {programmeWarning && (
+                <div className="mb-6 p-3 bg-yellow-50 text-yellow-800 border border-yellow-200 rounded-lg text-sm">
+                    {programmeWarning}
+                </div>
+            )}
+
+            {registeredCourses.length > 0 && (
+                <div className="bg-white rounded-lg shadow p-6 mb-8">
+                    <h2 className="text-2xl font-bold text-gray-900 mb-4">Select Programme Course</h2>
+                    <label htmlFor="programme-course-select" className="block text-sm font-medium text-gray-700 mb-2">
+                        Registered Courses
+                    </label>
+                    <select
+                        id="programme-course-select"
+                        value={selectedCourseId}
+                        onChange={(e) => setSelectedCourseId(e.target.value)}
+                        className="w-full md:w-2/3 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                        {registeredCourses.map((course) => (
+                            <option key={course.id} value={String(course.moodle_course_id || course.id)}>
+                                {course.course_title} ({course.course_code || `COURSE-${course.id}`})
+                            </option>
+                        ))}
+                    </select>
+                </div>
+            )}
+
             {/* Programme Overview */}
+            {(selectedCourse || programmeData) && (
             <div className="bg-gradient-to-r from-blue-600 to-blue-800 rounded-lg shadow p-6 mb-8 text-white">
                 <div className="flex items-start justify-between">
                     <div>
-                        <h2 className="text-2xl font-bold mb-2">{programmeData?.title || programmeData?.course_title || 'Programme Title'}</h2>
-                        <p className="text-blue-100 mb-4">Programme Code: {programmeData?.code || programmeData?.course_code || 'N/A'}</p>
+                        <h2 className="text-2xl font-bold mb-2">{selectedCourse?.course_title || programmeData?.title || programmeData?.course_title || 'Programme Title'}</h2>
+                        <p className="text-blue-100 mb-4">Programme Code: {selectedCourse?.course_code || programmeData?.code || programmeData?.course_code || 'N/A'}</p>
                         <div className="grid grid-cols-2 gap-4 text-sm">
                             <div>
                                 <p className="text-blue-200">Programme Type</p>
-                                <p className="font-semibold">{programmeData?.type || 'Bachelor Degree'}</p>
+                                <p className="font-semibold">{selectedCourse?.course_type || programmeData?.type || 'Bachelor Degree'}</p>
                             </div>
                             <div>
                                 <p className="text-blue-200">Study Mode</p>
@@ -128,6 +218,7 @@ const StudentProgramme = ({ user }) => {
                     <Award className="w-16 h-16 text-blue-200" />
                 </div>
             </div>
+            )}
 
             {ssoError && (
                 <div className="mb-6 p-3 bg-red-50 text-red-700 border border-red-200 rounded-lg text-sm">
@@ -199,11 +290,11 @@ const StudentProgramme = ({ user }) => {
             {/* Simple Access LMS Button */}
             <div className="flex gap-3 mb-8">
                 <button
-                    onClick={handleAccessLMS}
+                    onClick={() => handleAccessLMS(selectedCourse?.moodle_course_id || selectedCourse?.id || null)}
                     disabled={ssoLoading}
                     className="px-4 py-2 bg-blue-600 text-white rounded text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-60"
                 >
-                    {ssoLoading ? 'Connecting...' : 'Open in Moodle'}
+                    {ssoLoading ? 'Connecting...' : selectedCourse ? 'Open Selected Course in Moodle' : 'Open in Moodle'}
                 </button>
             </div>
         </div>

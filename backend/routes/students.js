@@ -84,6 +84,299 @@ const uploadFields = upload.fields([
 ]);
 
 // ===============================================
+// ROUTE: GET /api/students/teacher-courses
+// Get courses where user is assigned as teacher/editingteacher
+// ===============================================
+router.get('/teacher-courses', async (req, res) => {
+    const { email } = req.query;
+    
+    if (!email) {
+        return res.status(400).json({
+            success: false,
+            message: 'Email parameter is required'
+        });
+    }
+
+    try {
+        // Fetch courses from Moodle where user has teaching role
+        const [teacherCourses] = await moodleDbPool.execute(`
+            SELECT DISTINCT
+                c.id,
+                c.idnumber as course_code,
+                c.shortname as course_shortname,
+                c.fullname as course_title,
+                COALESCE(cc.name, 'General') as course_type,
+                c.summary as description,
+                c.category,
+                c.visible,
+                c.timecreated,
+                c.timemodified,
+                r.shortname as role_name
+            FROM mdl_user u
+            INNER JOIN mdl_role_assignments ra ON ra.userid = u.id
+            INNER JOIN mdl_role r ON r.id = ra.roleid
+            INNER JOIN mdl_context ctx ON ctx.id = ra.contextid
+            INNER JOIN mdl_course c ON c.id = ctx.instanceid
+            LEFT JOIN mdl_course_categories cc ON c.category = cc.id
+            WHERE u.email = ?
+                AND ctx.contextlevel = 50
+                AND r.shortname IN ('teacher', 'editingteacher', 'noneditingteacher')
+                AND c.id > 1
+                AND c.visible = 1
+            ORDER BY c.fullname ASC
+        `, [email]);
+
+        const courses = teacherCourses.map(course => ({
+            id: course.id,
+            course_code: course.course_code || course.course_shortname || `COURSE-${course.id}`,
+            course_title: course.course_title,
+            course_type: course.course_type,
+            department: 'General',
+            description: course.description || course.course_title,
+            duration_months: 12,
+            awarding_body: 'SCL Institute',
+            moodle_course_id: course.id,
+            role: course.role_name
+        }));
+
+        console.log(`✓ Fetched ${courses.length} teaching courses for ${email} from Moodle`);
+        return res.json({
+            success: true,
+            message: `Found ${courses.length} courses`,
+            data: courses,
+            source: 'moodle-database'
+        });
+    } catch (error) {
+        console.error('Error fetching teacher courses:', error.message);
+        return res.status(500).json({
+            success: false,
+            message: 'Failed to fetch teacher courses from Moodle',
+            error: error.message
+        });
+    }
+});
+
+// ===============================================
+// ROUTE: GET /api/students/my-moodle-courses
+// Get Moodle courses for a user with role flags (teaching/student)
+// ===============================================
+router.get('/my-moodle-courses', async (req, res) => {
+    const { email } = req.query;
+
+    if (!email) {
+        return res.status(400).json({
+            success: false,
+            message: 'Email parameter is required'
+        });
+    }
+
+    try {
+        // Teaching assignments from course-level role assignments.
+        const [teachingRows] = await moodleDbPool.execute(`
+            SELECT DISTINCT
+                c.id,
+                c.idnumber AS course_code,
+                c.shortname AS course_shortname,
+                c.fullname AS course_title,
+                COALESCE(cc.name, 'General') AS course_type,
+                c.summary AS description,
+                r.shortname AS role_name
+            FROM mdl_user u
+            INNER JOIN mdl_role_assignments ra ON ra.userid = u.id
+            INNER JOIN mdl_role r ON r.id = ra.roleid
+            INNER JOIN mdl_context ctx ON ctx.id = ra.contextid
+            INNER JOIN mdl_course c ON c.id = ctx.instanceid
+            LEFT JOIN mdl_course_categories cc ON c.category = cc.id
+            WHERE u.email = ?
+              AND ctx.contextlevel = 50
+              AND r.shortname IN ('teacher', 'editingteacher', 'noneditingteacher')
+              AND c.id > 1
+              AND c.visible = 1
+            ORDER BY c.fullname ASC
+        `, [email]);
+
+        // Active enrolments (student registrations) from enrol/user_enrolments.
+        const [enrolledRows] = await moodleDbPool.execute(`
+            SELECT DISTINCT
+                c.id,
+                c.idnumber AS course_code,
+                c.shortname AS course_shortname,
+                c.fullname AS course_title,
+                COALESCE(cc.name, 'General') AS course_type,
+                c.summary AS description
+            FROM mdl_user u
+            INNER JOIN mdl_user_enrolments ue ON ue.userid = u.id AND ue.status = 0
+            INNER JOIN mdl_enrol e ON e.id = ue.enrolid AND e.status = 0
+            INNER JOIN mdl_course c ON c.id = e.courseid
+            LEFT JOIN mdl_course_categories cc ON c.category = cc.id
+            WHERE u.email = ?
+              AND c.id > 1
+              AND c.visible = 1
+            ORDER BY c.fullname ASC
+        `, [email]);
+
+        // Merge by Moodle course id so UI can render one consistent list.
+        const byCourseId = new Map();
+
+        teachingRows.forEach((course) => {
+            const id = Number(course.id);
+            byCourseId.set(id, {
+                id,
+                moodle_course_id: id,
+                course_code: course.course_code || course.course_shortname || `COURSE-${id}`,
+                course_title: course.course_title,
+                course_type: course.course_type,
+                department: 'General',
+                description: course.description || course.course_title,
+                duration_months: 12,
+                awarding_body: 'SCL Institute',
+                hasTeachingRole: true,
+                isStudentEnrolled: false
+            });
+        });
+
+        enrolledRows.forEach((course) => {
+            const id = Number(course.id);
+            const existing = byCourseId.get(id);
+
+            if (existing) {
+                existing.isStudentEnrolled = true;
+                return;
+            }
+
+            byCourseId.set(id, {
+                id,
+                moodle_course_id: id,
+                course_code: course.course_code || course.course_shortname || `COURSE-${id}`,
+                course_title: course.course_title,
+                course_type: course.course_type,
+                department: 'General',
+                description: course.description || course.course_title,
+                duration_months: 12,
+                awarding_body: 'SCL Institute',
+                hasTeachingRole: false,
+                isStudentEnrolled: true
+            });
+        });
+
+        const courses = Array.from(byCourseId.values()).sort((a, b) =>
+            String(a.course_title || '').localeCompare(String(b.course_title || ''))
+        );
+
+        return res.json({
+            success: true,
+            message: `Found ${courses.length} Moodle courses for ${email}`,
+            data: courses,
+            source: 'moodle-db'
+        });
+    } catch (error) {
+        console.error('Error fetching my Moodle courses:', error.message);
+        return res.status(500).json({
+            success: false,
+            message: 'Failed to fetch Moodle courses',
+            error: error.message
+        });
+    }
+});
+
+// ===============================================
+// ROUTE: GET /api/students/moodle-course/:courseId/sections
+// Fetch course sections and modules from Moodle by course ID
+// ===============================================
+router.get('/moodle-course/:courseId/sections', async (req, res) => {
+    const { courseId } = req.params;
+
+    if (!courseId) {
+        return res.status(400).json({
+            success: false,
+            message: 'Course ID is required'
+        });
+    }
+
+    try {
+        const numCourseId = Number(courseId);
+
+        // Fetch course details from Moodle
+        const [courseRows] = await moodleDbPool.execute(`
+            SELECT id, fullname, summary, startdate, enddate
+            FROM mdl_course
+            WHERE id = ?
+        `, [numCourseId]);
+
+        if (courseRows.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Course not found in Moodle'
+            });
+        }
+
+        const course = courseRows[0];
+
+        // Fetch course sections
+        const [sectionRows] = await moodleDbPool.execute(`
+            SELECT id, section, name, summary
+            FROM mdl_course_sections
+            WHERE course = ?
+            ORDER BY section ASC
+        `, [numCourseId]);
+
+        // Fetch course modules
+        const [moduleRows] = await moodleDbPool.execute(`
+            SELECT cm.id, cm.section, cm.instance, cm.idnumber, m.name as module_type
+            FROM mdl_course_modules cm
+            INNER JOIN mdl_modules m ON m.id = cm.module
+            WHERE cm.course = ? AND cm.deletioninprogress = 0
+            ORDER BY cm.section ASC, cm.id ASC
+        `, [numCourseId]);
+
+        // Group modules by section
+        const modulesBySection = {};
+        moduleRows.forEach(mod => {
+            if (!modulesBySection[mod.section]) {
+                modulesBySection[mod.section] = [];
+            }
+            modulesBySection[mod.section].push({
+                id: mod.id,
+                instance: mod.instance,
+                type: mod.module_type,
+                idnumber: mod.idnumber
+            });
+        });
+
+        // Build section with modules structure
+        const sections = sectionRows.map(section => ({
+            id: section.id,
+            section: section.section,
+            name: section.name || `Section ${section.section}`,
+            summary: section.summary,
+            modules: modulesBySection[section.section] || []
+        }));
+
+        return res.json({
+            success: true,
+            message: 'Course sections loaded',
+            data: {
+                course: {
+                    id: course.id,
+                    title: course.fullname,
+                    summary: course.summary,
+                    startdate: course.startdate,
+                    enddate: course.enddate
+                },
+                sections: sections
+            }
+        });
+    } catch (error) {
+        console.error('Error fetching course sections:', error.message);
+        return res.status(500).json({
+            success: false,
+            message: 'Failed to fetch course sections',
+            error: error.message
+        });
+    }
+});
+
+// ===============================================
 // ROUTE 1: GET /api/students/courses
 // Get list of available courses - fetching directly from Moodle database
 // ===============================================
@@ -122,8 +415,6 @@ router.get('/courses', async (req, res) => {
                 awarding_body: 'SCL Institute',
                 moodle_course_id: course.id
             }));
-
-            await moodleDb.end();
 
             if (moodleCourses.length > 0) {
                 console.log(`Γ£ô Fetched ${moodleCourses.length} courses from Moodle database`);

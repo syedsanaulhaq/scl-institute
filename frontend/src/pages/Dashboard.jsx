@@ -28,6 +28,15 @@ const Dashboard = ({ user, viewMode = 'auto' }) => {
     const [error, setError] = useState('');
     const roleContext = getRoleContext(user);
 
+    // Resolve current dashboard audience mode.
+    const activeView = viewMode !== 'auto'
+        ? viewMode
+        : roleContext?.canAccessManagementPortal
+            ? 'manager'
+            : roleContext?.hasTeaching
+                ? 'teacher'
+                : 'student';
+
     const handleAccessLMS = async () => {
         setLoading(true);
         setError('');
@@ -43,6 +52,8 @@ const Dashboard = ({ user, viewMode = 'auto' }) => {
     const handleModuleClick = (module) => {
         if (module.isSSO) {
             handleAccessLMS();
+        } else if (module.id === 'programs') {
+            navigate(activeView === 'teacher' ? '/teacher/programme' : '/student/programme');
         } else if (module.path) {
             navigate(module.path);
         } else {
@@ -107,7 +118,8 @@ const Dashboard = ({ user, viewMode = 'auto' }) => {
             icon: Library,
             requiredRoles: ['manager', 'admin', 'teacher', 'editingteacher', 'student', 'admissions officer', 'super admin'],
             audiences: ['manager', 'teacher', 'student'],
-            color: 'purple'
+            color: 'purple',
+            path: '/student/programme'
         },
         {
             id: 'student-portal',
@@ -116,7 +128,8 @@ const Dashboard = ({ user, viewMode = 'auto' }) => {
             icon: UserCircle,
             requiredRoles: ['student', 'super admin', 'manager', 'admin'],
             audiences: ['student', 'manager'],
-            color: 'emerald'
+            color: 'emerald',
+            path: '/student/portal'
         },
         {
             id: 'faculty-hr',
@@ -147,15 +160,6 @@ const Dashboard = ({ user, viewMode = 'auto' }) => {
             color: 'slate'
         }
     ];
-
-    // Resolve current dashboard audience mode.
-    const activeView = viewMode !== 'auto'
-        ? viewMode
-        : roleContext?.canAccessManagementPortal
-            ? 'manager'
-            : roleContext?.hasTeaching
-                ? 'teacher'
-                : 'student';
 
     // Filter modules using canonical role context from backend/login.
     const normalizedRoles = Array.isArray(roleContext?.roles)

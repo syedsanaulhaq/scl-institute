@@ -23,6 +23,7 @@ import StudentDocumentsCentre from './components/student/StudentDocumentsCentre'
 import StudentMaterials from './components/student/StudentMaterials';
 import StudentRightToStudy from './components/student/StudentRightToStudy';
 import StudentProgramme from './components/student/StudentProgramme';
+import TeacherProgramme from './components/teacher/TeacherProgramme';
 import StudentTimetable from './components/student/StudentTimetable';
 import StudentAssessments from './components/student/StudentAssessments';
 import StudentGrades from './components/student/StudentGrades';
@@ -80,7 +81,7 @@ function App() {
     const canAccessManagementPortal = roleContext.canAccessManagementPortal;
     
     return (
-        <Router>
+        <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
             <Routes>
                 {/* Protected Routes */}
                 <Route path="/login" element={<LoginPage onLoginSuccess={handleLoginSuccess} />} />
@@ -210,6 +211,15 @@ function App() {
                     user && canAccessStudentPortal ? (
                         <Layout user={user} onLogout={handleLogout}>
                             <StudentProgramme user={user} />
+                        </Layout>
+                    ) : (
+                        <LoginPage onLoginSuccess={handleLoginSuccess} />
+                    )
+                } />
+                <Route path="/teacher/programme" element={
+                    user && roleContext.hasTeaching ? (
+                        <Layout user={user} onLogout={handleLogout}>
+                            <TeacherProgramme user={user} />
                         </Layout>
                     ) : (
                         <LoginPage onLoginSuccess={handleLoginSuccess} />

@@ -146,6 +146,7 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
     const teacherMenuItems = hasTeaching
         ? [
             { name: 'Dashboard', icon: LayoutDashboard, path: '/teacher/dashboard' },
+            { name: 'My Teaching Programme', icon: BookOpen, path: '/teacher/programme' },
             {
                 name: 'Teaching (LMS)',
                 icon: BookOpen,
@@ -171,6 +172,9 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
     ].filter((section) => section.items.length > 0);
 
     useEffect(() => {
+        // Allow empty string (collapsed state) - don't auto-expand
+        if (activeSectionTitle === '') return;
+        
         const sectionExists = menuSections.some((section) => section.title === activeSectionTitle);
         if (!sectionExists && menuSections.length > 0) {
             setActiveSectionTitle(menuSections[0].title);
