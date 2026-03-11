@@ -204,7 +204,7 @@ router.get('/my-moodle-courses', async (req, res) => {
             ORDER BY c.fullname ASC
         `, [email]);
 
-        // Active enrolments (student registrations) from enrol/user_enrolments.
+        // Student registrations from enrol/user_enrolments (active + suspended for progression visibility).
         const [enrolledRows] = await moodleDbPool.execute(`
             SELECT DISTINCT
                 c.id,
@@ -212,9 +212,10 @@ router.get('/my-moodle-courses', async (req, res) => {
                 c.shortname AS course_shortname,
                 c.fullname AS course_title,
                 COALESCE(cc.name, 'General') AS course_type,
-                c.summary AS description
+                c.summary AS description,
+                ue.status AS enrolment_status
             FROM mdl_user u
-            INNER JOIN mdl_user_enrolments ue ON ue.userid = u.id AND ue.status = 0
+            INNER JOIN mdl_user_enrolments ue ON ue.userid = u.id AND ue.status IN (0, 1)
             INNER JOIN mdl_enrol e ON e.id = ue.enrolid AND e.status = 0
             INNER JOIN mdl_course c ON c.id = e.courseid
             LEFT JOIN mdl_course_categories cc ON c.category = cc.id
@@ -223,6 +224,28 @@ router.get('/my-moodle-courses', async (req, res) => {
               AND c.visible = 1
             ORDER BY c.fullname ASC
         `, [email]);
+
+        const enrolledCourseIds = Array.from(new Set(enrolledRows.map((course) => Number(course.id)).filter(Boolean)));
+        const completedCourseIds = await getCompletedCourseIdsByEmail(email, enrolledCourseIds);
+        const groupedByProgramme = new Map();
+
+        enrolledRows.forEach((course) => {
+            const code = String(course.course_code || course.course_shortname || '').toUpperCase();
+            const programmeMatch = code.match(/^([A-Z]+-\d+)-/);
+            const programmeCode = programmeMatch ? programmeMatch[1] : null;
+            if (!programmeCode) {
+                return;
+            }
+
+            if (!groupedByProgramme.has(programmeCode)) {
+                groupedByProgramme.set(programmeCode, []);
+            }
+
+            groupedByProgramme.get(programmeCode).push({
+                id: Number(course.id),
+                course_code: course.course_code || course.course_shortname || `COURSE-${course.id}`
+            });
+        });
 
         // Merge by Moodle course id so UI can render one consistent list.
         const byCourseId = new Map();
@@ -247,16 +270,42 @@ router.get('/my-moodle-courses', async (req, res) => {
         enrolledRows.forEach((course) => {
             const id = Number(course.id);
             const existing = byCourseId.get(id);
+            const normalizedCode = course.course_code || course.course_shortname || `COURSE-${id}`;
+            const yearNumber = extractYearNumberFromCourseCode(normalizedCode);
+            const semesterNumber = extractSemesterNumberFromCourseCode(normalizedCode);
+            const programmeMatch = String(normalizedCode).toUpperCase().match(/^([A-Z]+-\d+)-/);
+            const programmeCode = programmeMatch ? programmeMatch[1] : null;
+            const programmeCourses = programmeCode ? groupedByProgramme.get(programmeCode) || [] : [];
+            const progressionUnlocked = isYearUnlocked(
+                { id, course_code: normalizedCode },
+                programmeCourses,
+                completedCourseIds
+            );
+            const enrolmentStatus = Number(course.enrolment_status || 0);
+            const isLocked = !progressionUnlocked || enrolmentStatus !== 0;
+            const lockReason = !progressionUnlocked
+                ? `Locked: complete all previous years before Year ${yearNumber}`
+                : enrolmentStatus !== 0
+                    ? 'Registration is currently suspended'
+                    : null;
+            const isCompleted = completedCourseIds.has(id);
 
             if (existing) {
                 existing.isStudentEnrolled = true;
+                existing.hasActiveEnrollment = enrolmentStatus === 0;
+                existing.enrolment_status = enrolmentStatus;
+                existing.year_number = yearNumber;
+                existing.semester_number = semesterNumber;
+                existing.isLocked = isLocked;
+                existing.lockReason = lockReason;
+                existing.isCompleted = isCompleted;
                 return;
             }
 
             byCourseId.set(id, {
                 id,
                 moodle_course_id: id,
-                course_code: course.course_code || course.course_shortname || `COURSE-${id}`,
+                course_code: normalizedCode,
                 course_title: course.course_title,
                 course_type: course.course_type,
                 department: 'General',
@@ -264,7 +313,14 @@ router.get('/my-moodle-courses', async (req, res) => {
                 duration_months: 12,
                 awarding_body: 'SCL Institute',
                 hasTeachingRole: false,
-                isStudentEnrolled: true
+                isStudentEnrolled: true,
+                hasActiveEnrollment: enrolmentStatus === 0,
+                enrolment_status: enrolmentStatus,
+                year_number: yearNumber,
+                semester_number: semesterNumber,
+                isLocked,
+                lockReason,
+                isCompleted
             });
         });
 
@@ -551,6 +607,139 @@ router.get('/courses', async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Failed to fetch courses',
+            error: error.message
+        });
+    }
+});
+
+// ===============================================
+// ROUTE: GET /api/students/course-catalog
+// Returns hierarchical course catalog: category -> subcategory -> courses
+// ===============================================
+router.get('/course-catalog', async (req, res) => {
+    try {
+        const [categoryRows] = await moodleDbPool.execute(`
+            SELECT id, name, parent, depth, path
+            FROM mdl_course_categories
+            ORDER BY depth ASC, sortorder ASC, name ASC
+        `);
+
+        const [courseRows] = await moodleDbPool.execute(`
+            SELECT
+                c.id,
+                c.idnumber AS course_code,
+                c.shortname AS course_shortname,
+                c.fullname AS course_title,
+                c.summary AS description,
+                c.startdate,
+                c.enddate,
+                c.visible,
+                c.category AS category_id,
+                cc.name AS category_name
+            FROM mdl_course c
+            LEFT JOIN mdl_course_categories cc ON cc.id = c.category
+            WHERE c.id > 1
+              AND c.visible = 1
+            ORDER BY c.fullname ASC
+        `);
+
+        const categoryById = new Map(categoryRows.map((row) => [Number(row.id), {
+            id: Number(row.id),
+            name: row.name,
+            parent: Number(row.parent || 0),
+            depth: Number(row.depth || 0)
+        }]));
+
+        const getAncestors = (categoryId) => {
+            const ancestors = [];
+            let cursor = categoryById.get(Number(categoryId));
+            const guard = new Set();
+
+            while (cursor && !guard.has(cursor.id)) {
+                guard.add(cursor.id);
+                ancestors.unshift(cursor);
+                if (!cursor.parent) {
+                    break;
+                }
+                cursor = categoryById.get(cursor.parent);
+            }
+
+            return ancestors;
+        };
+
+        const hierarchy = new Map();
+
+        for (const course of courseRows) {
+            const courseCategoryId = Number(course.category_id || 0);
+            const ancestors = getAncestors(courseCategoryId);
+            if (ancestors.length === 0) {
+                continue;
+            }
+
+            const topCategory = ancestors[0];
+            const subcategory = ancestors.length > 1 ? ancestors[1] : null;
+
+            if (!hierarchy.has(topCategory.id)) {
+                hierarchy.set(topCategory.id, {
+                    id: topCategory.id,
+                    name: topCategory.name,
+                    courses: [],
+                    subcategories: new Map()
+                });
+            }
+
+            const normalizedCourse = {
+                id: Number(course.id),
+                course_code: course.course_code || course.course_shortname || `COURSE-${course.id}`,
+                course_title: course.course_title,
+                description: course.description || '',
+                startdate: Number(course.startdate || 0),
+                enddate: Number(course.enddate || 0),
+                category_id: courseCategoryId,
+                category_name: course.category_name || ''
+            };
+
+            if (!subcategory) {
+                hierarchy.get(topCategory.id).courses.push(normalizedCourse);
+                continue;
+            }
+
+            const topBucket = hierarchy.get(topCategory.id);
+            if (!topBucket.subcategories.has(subcategory.id)) {
+                topBucket.subcategories.set(subcategory.id, {
+                    id: subcategory.id,
+                    name: subcategory.name,
+                    courses: []
+                });
+            }
+
+            topBucket.subcategories.get(subcategory.id).courses.push(normalizedCourse);
+        }
+
+        const categories = Array.from(hierarchy.values())
+            .map((category) => ({
+                id: category.id,
+                name: category.name,
+                courses: category.courses,
+                subcategories: Array.from(category.subcategories.values())
+                    .sort((a, b) => String(a.name).localeCompare(String(b.name)))
+            }))
+            .sort((a, b) => String(a.name).localeCompare(String(b.name)));
+
+        return res.json({
+            success: true,
+            message: 'Course catalog loaded',
+            data: {
+                categories,
+                total_courses: courseRows.length
+            },
+            source: 'moodle-db'
+        });
+    } catch (error) {
+        console.error('Error fetching course catalog:', error.message);
+        return res.status(500).json({
+            success: false,
+            message: 'Failed to fetch course catalog',
             error: error.message
         });
     }
@@ -2536,6 +2725,59 @@ function extractProgrammeCode(courseCode) {
     return programmeMatch ? programmeMatch[1] : null;
 }
 
+function extractYearNumberFromCourseCode(courseCode) {
+    const match = String(courseCode || '').toUpperCase().match(/-Y(\d+)(?:-|$)/);
+    return match ? Number(match[1]) : null;
+}
+
+function extractSemesterNumberFromCourseCode(courseCode) {
+    const match = String(courseCode || '').toUpperCase().match(/-S(\d+)(?:-|$)/);
+    return match ? Number(match[1]) : null;
+}
+
+function isCourseCompletedByUser(completedCourseIds, courseId) {
+    return completedCourseIds.has(Number(courseId));
+}
+
+function isYearUnlocked(course, allProgrammeCourses, completedCourseIds) {
+    const targetYear = extractYearNumberFromCourseCode(course.course_code);
+    if (!targetYear || targetYear <= 1) {
+        return true;
+    }
+
+    const prerequisiteCourses = allProgrammeCourses.filter((candidate) => {
+        const year = extractYearNumberFromCourseCode(candidate.course_code);
+        return year && year < targetYear;
+    });
+
+    if (prerequisiteCourses.length === 0) {
+        return true;
+    }
+
+    return prerequisiteCourses.every((prereq) => isCourseCompletedByUser(completedCourseIds, prereq.id));
+}
+
+async function getCompletedCourseIdsByEmail(email, courseIds) {
+    const ids = Array.from(new Set((courseIds || []).map((id) => Number(id)).filter(Boolean)));
+    if (!email || ids.length === 0) {
+        return new Set();
+    }
+
+    const placeholders = ids.map(() => '?').join(', ');
+    const [rows] = await moodleDbPool.query(
+        `SELECT cc.course
+         FROM mdl_course_completions cc
+         INNER JOIN mdl_user u ON u.id = cc.userid
+         WHERE u.email = ?
+           AND cc.timecompleted IS NOT NULL
+           AND cc.timecompleted > 0
+           AND cc.course IN (${placeholders})`,
+        [email, ...ids]
+    );
+
+    return new Set(rows.map((row) => Number(row.course)));
+}
+
 async function getMoodleUserIdByEmail(email) {
     const normalizedEmail = String(email || '').trim();
     if (!normalizedEmail) {
@@ -2855,6 +3097,133 @@ async function getProgrammeModuleCourses(programmeCode) {
     return allCourses;
 }
 
+async function enforceProgrammeProgressionLocks(email, programmeCode) {
+    const normalizedProgrammeCode = String(programmeCode || '').trim().toUpperCase();
+    if (!email || !normalizedProgrammeCode) {
+        return {
+            success: false,
+            message: 'Missing email or programme code for progression enforcement'
+        };
+    }
+
+    const moodleUserId = await getMoodleUserIdByEmail(email);
+    if (!moodleUserId) {
+        return { success: false, message: 'User not found in Moodle' };
+    }
+
+    const programmeCourses = await getProgrammeModuleCourses(normalizedProgrammeCode);
+    if (programmeCourses.length === 0) {
+        return {
+            success: true,
+            message: 'No programme module courses found for progression enforcement',
+            lockedCourses: 0,
+            unlockedCourses: 0,
+            updatedRows: 0
+        };
+    }
+
+    const normalizedProgrammeCourses = programmeCourses.map((course) => ({
+        id: Number(course.id),
+        course_code: course.idnumber || course.shortname || ''
+    }));
+
+    const courseIds = normalizedProgrammeCourses.map((course) => course.id);
+    const completedCourseIds = await getCompletedCourseIdsByEmail(email, courseIds);
+    const manualEnrolRows = await getManualEnrolmentRows(courseIds);
+    const enrolByCourseId = new Map(manualEnrolRows.map((row) => [Number(row.courseid), Number(row.id)]));
+
+    if (manualEnrolRows.length === 0) {
+        return {
+            success: true,
+            message: 'No manual enrolment rows found while enforcing progression',
+            lockedCourses: 0,
+            unlockedCourses: 0,
+            updatedRows: 0
+        };
+    }
+
+    const enrolIds = manualEnrolRows.map((row) => Number(row.id));
+    const enrolPlaceholders = enrolIds.map(() => '?').join(', ');
+    const [userEnrolRows] = await moodleDbPool.query(
+        `SELECT enrolid, status
+         FROM mdl_user_enrolments
+         WHERE userid = ?
+           AND enrolid IN (${enrolPlaceholders})`,
+        [moodleUserId, ...enrolIds]
+    );
+
+    const statusByEnrolId = new Map(userEnrolRows.map((row) => [Number(row.enrolid), Number(row.status)]));
+    const now = Math.floor(Date.now() / 1000);
+    const updates = [];
+    let lockedCourses = 0;
+    let unlockedCourses = 0;
+
+    for (const course of normalizedProgrammeCourses) {
+        const enrolId = enrolByCourseId.get(course.id);
+        if (!enrolId || !statusByEnrolId.has(enrolId)) {
+            continue;
+        }
+
+        const unlocked = isYearUnlocked(course, normalizedProgrammeCourses, completedCourseIds);
+        if (unlocked) {
+            unlockedCourses += 1;
+        } else {
+            lockedCourses += 1;
+        }
+
+        const targetStatus = unlocked ? 0 : 1;
+        const currentStatus = Number(statusByEnrolId.get(enrolId));
+        if (currentStatus !== targetStatus) {
+            updates.push({ enrolId, targetStatus });
+        }
+    }
+
+    if (updates.length > 0) {
+        const connection = await moodleDbPool.getConnection();
+        try {
+            await connection.beginTransaction();
+            for (const update of updates) {
+                await connection.query(
+                    `UPDATE mdl_user_enrolments
+                     SET status = ?,
+                         timemodified = ?,
+                         modifierid = 0,
+                         timeend = CASE
+                            WHEN ? = 1 AND (timeend = 0 OR timeend > ?) THEN ?
+                            WHEN ? = 0 THEN 0
+                            ELSE timeend
+                         END
+                     WHERE userid = ? AND enrolid = ?`,
+                    [
+                        update.targetStatus,
+                        now,
+                        update.targetStatus,
+                        now,
+                        now,
+                        update.targetStatus,
+                        moodleUserId,
+                        update.enrolId
+                    ]
+                );
+            }
+            await connection.commit();
+        } catch (error) {
+            await connection.rollback();
+            throw error;
+        } finally {
+            connection.release();
+        }
+    }
+
+    return {
+        success: true,
+        message: `Progression enforced for ${normalizedProgrammeCode}`,
+        lockedCourses,
+        unlockedCourses,
+        updatedRows: updates.length
+    };
+}
+
 function courseBelongsToProgramme(courseCode, programmeCode) {
     const normalizedCourseCode = String(courseCode || '').trim().toUpperCase();
     const normalizedProgrammeCode = String(programmeCode || '').trim().toUpperCase();
@@ -3134,13 +3503,21 @@ async function enrollStudentInProgrammeCourses(email, firstName, lastName, infoC
             }
         );
 
+        let progressionResult = null;
+        try {
+            progressionResult = await enforceProgrammeProgressionLocks(email, programmeCode);
+        } catch (progressionError) {
+            console.warn('[PROG ENROLL PROGRESSION WARNING]', progressionError.message);
+        }
+
         console.log(`[PROG ENROLL] Student ${email} successfully enrolled in ${allCourses.length} courses`);
         return {
             success: true,
             message: `Enrolled in ${allCourses.length} programme courses`,
             courseCount: allCourses.length,
             moodleUserId,
-            enrolledCourses: allCourses.map(c => ({ id: c.id, name: c.fullname }))
+            enrolledCourses: allCourses.map(c => ({ id: c.id, name: c.fullname })),
+            progression: progressionResult
         };
 
     } catch (error) {
@@ -3149,9 +3526,16 @@ async function enrollStudentInProgrammeCourses(email, firstName, lastName, infoC
             const programmeCode = extractProgrammeCode(infoCourseCode);
             const allCourses = await getProgrammeModuleCourses(programmeCode);
             const fallbackResult = await fallbackEnrollStudentInCourseIds(email, allCourses.map((course) => course.id));
+            let progressionResult = null;
+            try {
+                progressionResult = await enforceProgrammeProgressionLocks(email, programmeCode);
+            } catch (progressionError) {
+                console.warn('[PROG ENROLL FALLBACK PROGRESSION WARNING]', progressionError.message);
+            }
             return {
                 ...fallbackResult,
-                enrolledCourses: allCourses.map((course) => ({ id: course.id, name: course.fullname }))
+                enrolledCourses: allCourses.map((course) => ({ id: course.id, name: course.fullname })),
+                progression: progressionResult
             };
         } catch (fallbackError) {
             console.error('[PROG ENROLL FALLBACK ERROR]', fallbackError.message);
@@ -4011,6 +4395,7 @@ router.post('/sync-moodle-programme', async (req, res) => {
         const unenrollmentResult = await unenrollStudentFromCourseIds(email, coursesToRemove.map((course) => course.id));
 
         let reenrollmentResult;
+        let progressionResult = null;
         if (String(application.course_code || '').toUpperCase().includes('-INFO')) {
             reenrollmentResult = await enrollStudentInProgrammeCourses(
                 application.email,
@@ -4018,6 +4403,11 @@ router.post('/sync-moodle-programme', async (req, res) => {
                 application.last_name,
                 application.course_code
             );
+            try {
+                progressionResult = await enforceProgrammeProgressionLocks(application.email, currentProgrammeCode);
+            } catch (progressionError) {
+                console.warn('[SYNC PROGRESSION WARNING]', progressionError.message);
+            }
         } else {
             reenrollmentResult = await enrollStudentInMoodle(
                 application.email,
@@ -4043,6 +4433,7 @@ router.post('/sync-moodle-programme', async (req, res) => {
                 removed_courses: coursesToRemove,
                 moodle_unenrollment: unenrollmentResult,
                 moodle_reenrollment: reenrollmentResult,
+                progression: progressionResult,
                 enrolments_before: enrolledCoursesBefore,
                 enrolments_after: enrolledCoursesAfter
             }

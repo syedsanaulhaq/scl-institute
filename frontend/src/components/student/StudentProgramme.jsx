@@ -18,6 +18,20 @@ const belongsToProgramme = (course, programmeCode) => {
     return courseCode === `${programmeCode}-INFO` || courseCode.startsWith(`${programmeCode}-`);
 };
 
+const extractProgrammeKey = (courseCode) => {
+    const normalized = String(courseCode || '').trim().toUpperCase();
+    if (!normalized) return '';
+
+    const infoMatch = normalized.match(/^(.+)-INFO$/);
+    if (infoMatch) return infoMatch[1];
+
+    const yearMatch = normalized.match(/^(.+)-Y\d+(?:-S\d+.*)?$/);
+    if (yearMatch) return yearMatch[1];
+
+    const fallback = normalized.match(/^([A-Z]+-\d+)/);
+    return fallback ? fallback[1] : normalized;
+};
+
 const StudentProgramme = ({ user }) => {
     const [programmeData, setProgrammeData] = useState(null);
     const [courseModules, setCourseModules] = useState([]);
@@ -30,7 +44,26 @@ const StudentProgramme = ({ user }) => {
     const [ssoLoading, setSsoLoading] = useState(false);
     const [ssoError, setSsoError] = useState('');
     const [expandedSections, setExpandedSections] = useState({});
+    const [catalogCategories, setCatalogCategories] = useState([]);
+    const [catalogLoading, setCatalogLoading] = useState(false);
+    const [catalogError, setCatalogError] = useState('');
+    const [filterCategory, setFilterCategory] = useState('');
+    const [filterProgram, setFilterProgram] = useState('');
+    const [filterYear, setFilterYear] = useState('');
+    const [filterSemester, setFilterSemester] = useState('');
     const outcomesRef = React.useRef(null);
+
+    // Extract year from course code (e.g., "Y1" from "DEG-001-Y1-S1-C1")
+    const extractYear = (courseCode) => {
+        const match = String(courseCode || '').match(/Y(\d+)/);
+        return match ? `Year ${match[1]}` : null;
+    };
+
+    // Extract semester from course code (e.g., "S1" from "DEG-001-Y1-S1-C1")
+    const extractSemester = (courseCode) => {
+        const match = String(courseCode || '').match(/S(\d+)/);
+        return match ? `Semester ${match[1]}` : null;
+    };
 
     const toggleSection = (index) => {
         setExpandedSections(prev => ({
@@ -41,11 +74,14 @@ const StudentProgramme = ({ user }) => {
 
     useEffect(() => {
         fetchProgrammeData();
+        fetchCourseCatalog();
     }, [user]);
 
     useEffect(() => {
         if (registeredCourses.length > 0) {
-            setSelectedCourseId(String(registeredCourses[0].moodle_course_id || registeredCourses[0].id));
+            const firstUnlocked = registeredCourses.find((course) => !course.isLocked);
+            const preferredCourse = firstUnlocked || registeredCourses[0];
+            setSelectedCourseId(String(preferredCourse.moodle_course_id || preferredCourse.id));
         } else {
             setSelectedCourseId('');
         }
@@ -53,11 +89,14 @@ const StudentProgramme = ({ user }) => {
 
     // Fetch Moodle sections/modules when selected course changes
     useEffect(() => {
-        if (selectedCourseId) {
+        const selected = registeredCourses.find(
+            (course) => String(course.moodle_course_id || course.id) === String(selectedCourseId)
+        );
+
+        if (selectedCourseId && selected && !selected.isLocked) {
             fetchCourseSections();
         } else {
             setCourseModules([]);
-            setProgrammeData(null);
         }
     }, [selectedCourseId, registeredCourses]);
 
@@ -138,6 +177,21 @@ const StudentProgramme = ({ user }) => {
         }
     };
 
+    const fetchCourseCatalog = async () => {
+        try {
+            setCatalogLoading(true);
+            setCatalogError('');
+            const response = await axios.get(`${API_URL}/students/course-catalog`);
+            const categories = response.data?.data?.categories || [];
+            setCatalogCategories(categories);
+        } catch (err) {
+            console.error('Error fetching course catalog:', err);
+            setCatalogError('Failed to load course catalog');
+        } finally {
+            setCatalogLoading(false);
+        }
+    };
+
     const handleAccessLMS = async (courseId = null) => {
         try {
             setSsoLoading(true);
@@ -167,6 +221,28 @@ const StudentProgramme = ({ user }) => {
         (course) => String(course.moodle_course_id || course.id) === String(selectedCourseId)
     );
 
+    const isProgressionBlocked = (course) => {
+        if (!course) return false;
+
+        if (course.isLocked) return true;
+        if (course.hasActiveEnrollment === false) return true;
+
+        const selectedYear = Number(course.year_number || extractYear(course.course_code)?.replace('Year ', '') || 0);
+        if (!selectedYear || selectedYear <= 1) return false;
+
+        const programmeKey = extractProgrammeKey(course.course_code);
+        const lowerYearCourses = registeredCourses.filter((candidate) => {
+            const sameProgramme = extractProgrammeKey(candidate.course_code) === programmeKey;
+            const candidateYear = Number(candidate.year_number || extractYear(candidate.course_code)?.replace('Year ', '') || 0);
+            return sameProgramme && candidateYear > 0 && candidateYear < selectedYear;
+        });
+
+        if (lowerYearCourses.length === 0) return false;
+        return lowerYearCourses.some((candidate) => !candidate.isCompleted);
+    };
+
+    const selectedCourseBlocked = isProgressionBlocked(selectedCourse);
+
     if (loading) {
         return <div className="p-8 text-center">Loading programme details...</div>;
     }
@@ -187,22 +263,213 @@ const StudentProgramme = ({ user }) => {
 
             {registeredCourses.length > 0 && (
                 <div className="bg-white rounded-lg shadow p-6 mb-8">
-                    <h2 className="text-2xl font-bold text-gray-900 mb-4">Select Programme Course</h2>
-                    <label htmlFor="programme-course-select" className="block text-sm font-medium text-gray-700 mb-2">
-                        Registered Courses
-                    </label>
-                    <select
-                        id="programme-course-select"
-                        value={selectedCourseId}
-                        onChange={(e) => setSelectedCourseId(e.target.value)}
-                        className="w-full md:w-2/3 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                        {registeredCourses.map((course) => (
-                            <option key={course.id} value={String(course.moodle_course_id || course.id)}>
-                                {course.course_title} ({course.course_code || `COURSE-${course.id}`})
-                            </option>
-                        ))}
-                    </select>
+                    <h2 className="text-2xl font-bold text-gray-900 mb-4">Registered Courses</h2>
+                    
+                    {catalogLoading ? (
+                        <div className="text-sm text-gray-600">Loading course filters...</div>
+                    ) : catalogError ? (
+                        <div className="p-3 bg-red-50 text-red-700 border border-red-200 rounded-lg text-sm">
+                            {catalogError}
+                        </div>
+                    ) : (
+                        <>
+                            {/* Compute available categories (only those with registered courses) */}
+                            {(() => {
+                                const availableCategories = catalogCategories.filter((category) => {
+                                    const hasRegisteredCourse = registeredCourses.some((rc) => 
+                                        (category.courses || []).some((c) => String(c.id) === String(rc.moodle_course_id || rc.id)) ||
+                                        (category.subcategories || []).some((sub) => 
+                                            (sub.courses || []).some((c) => String(c.id) === String(rc.moodle_course_id || rc.id))
+                                        )
+                                    );
+                                    return hasRegisteredCourse;
+                                });
+
+                                // Get available programs for selected category
+                                const selectedCategoryObj = availableCategories.find((c) => String(c.id) === filterCategory);
+                                const availablePrograms = selectedCategoryObj?.subcategories?.filter((prog) => {
+                                    const hasRegisteredCourse = registeredCourses.some((rc) =>
+                                        (prog.courses || []).some((c) => String(c.id) === String(rc.moodle_course_id || rc.id))
+                                    );
+                                    return hasRegisteredCourse;
+                                }) || [];
+
+                                // Get courses for selected program
+                                const selectedProgram = availablePrograms.find((p) => String(p.id) === filterProgram);
+                                const coursesInProgram = selectedProgram?.courses || [];
+
+                                // Get unique years and semesters from filtered courses
+                                const uniqueYears = [...new Set(
+                                    coursesInProgram
+                                        .filter((c) => registeredCourses.some((rc) => String(rc.moodle_course_id || rc.id) === String(c.id)))
+                                        .map((c) => extractYear(c.course_code))
+                                        .filter(Boolean)
+                                )].sort();
+
+                                const uniqueSemesters = [...new Set(
+                                    coursesInProgram
+                                        .filter((c) => {
+                                            if (!filterYear) return false;
+                                            const courseYear = extractYear(c.course_code);
+                                            return registeredCourses.some((rc) => String(rc.moodle_course_id || rc.id) === String(c.id)) && courseYear === filterYear;
+                                        })
+                                        .map((c) => extractSemester(c.course_code))
+                                        .filter(Boolean)
+                                )].sort();
+
+                                // Get courses matching all filters
+                                const filteredCourses = registeredCourses.filter((course) => {
+                                    const courseYear = extractYear(course.course_code);
+                                    const courseSemester = extractSemester(course.course_code);
+
+                                    if (filterCategory) {
+                                        const inCategory = 
+                                            (selectedCategoryObj?.courses || []).some((c) => String(c.id) === String(course.moodle_course_id || course.id)) ||
+                                            (selectedCategoryObj?.subcategories || []).some((sub) => 
+                                                (sub.courses || []).some((c) => String(c.id) === String(course.moodle_course_id || course.id))
+                                            );
+                                        if (!inCategory) return false;
+                                    }
+
+                                    if (filterProgram) {
+                                        const inProgram = (selectedProgram?.courses || []).some((c) => String(c.id) === String(course.moodle_course_id || course.id));
+                                        if (!inProgram) return false;
+                                    }
+
+                                    if (filterYear && courseYear !== filterYear) return false;
+                                    if (filterSemester && courseSemester !== filterSemester) return false;
+
+                                    return true;
+                                });
+
+                                return (
+                                    <>
+                                        {/* Cascading Filter Dropdowns */}
+                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                                            {/* Category */}
+                                            <div>
+                                                <label htmlFor="category-filter" className="block text-sm font-medium text-gray-700 mb-2">
+                                                    Category
+                                                </label>
+                                                <select
+                                                    id="category-filter"
+                                                    value={filterCategory}
+                                                    onChange={(e) => {
+                                                        setFilterCategory(e.target.value);
+                                                        setFilterProgram('');
+                                                        setFilterYear('');
+                                                        setFilterSemester('');
+                                                    }}
+                                                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                >
+                                                    <option value="">Select Category</option>
+                                                    {availableCategories.map((category) => (
+                                                        <option key={category.id} value={String(category.id)}>
+                                                            {category.name}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            </div>
+
+                                            {/* Program */}
+                                            <div>
+                                                <label htmlFor="program-filter" className="block text-sm font-medium text-gray-700 mb-2">
+                                                    Program
+                                                </label>
+                                                <select
+                                                    id="program-filter"
+                                                    value={filterProgram}
+                                                    onChange={(e) => {
+                                                        setFilterProgram(e.target.value);
+                                                        setFilterYear('');
+                                                        setFilterSemester('');
+                                                    }}
+                                                    disabled={!filterCategory}
+                                                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                                                >
+                                                    <option value="">Select Program</option>
+                                                    {availablePrograms.map((program) => (
+                                                        <option key={program.id} value={String(program.id)}>
+                                                            {program.name}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            </div>
+
+                                            {/* Year */}
+                                            <div>
+                                                <label htmlFor="year-filter" className="block text-sm font-medium text-gray-700 mb-2">
+                                                    Year
+                                                </label>
+                                                <select
+                                                    id="year-filter"
+                                                    value={filterYear}
+                                                    onChange={(e) => {
+                                                        setFilterYear(e.target.value);
+                                                        setFilterSemester('');
+                                                    }}
+                                                    disabled={!filterProgram}
+                                                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                                                >
+                                                    <option value="">Select Year</option>
+                                                    {uniqueYears.map((year) => (
+                                                        <option key={year} value={year}>
+                                                            {year}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            </div>
+
+                                            {/* Semester */}
+                                            <div>
+                                                <label htmlFor="semester-filter" className="block text-sm font-medium text-gray-700 mb-2">
+                                                    Semester
+                                                </label>
+                                                <select
+                                                    id="semester-filter"
+                                                    value={filterSemester}
+                                                    onChange={(e) => setFilterSemester(e.target.value)}
+                                                    disabled={!filterYear}
+                                                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                                                >
+                                                    <option value="">Select Semester</option>
+                                                    {uniqueSemesters.map((semester) => (
+                                                        <option key={semester} value={semester}>
+                                                            {semester}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                        </div>
+
+                                        {/* Courses Dropdown */}
+                                        <div>
+                                            <label htmlFor="courses-select" className="block text-sm font-medium text-gray-700 mb-2">
+                                                Courses
+                                            </label>
+                                            <select
+                                                id="courses-select"
+                                                value={selectedCourseId}
+                                                onChange={(e) => setSelectedCourseId(e.target.value)}
+                                                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            >
+                                                <option value="">Select a course...</option>
+                                                {filteredCourses.map((course) => (
+                                                    <option
+                                                        key={course.id}
+                                                        value={String(course.moodle_course_id || course.id)}
+                                                    >
+                                                        {course.course_title} ({course.course_code || `COURSE-${course.id}`})
+                                                        {course.isLocked ? ' - Locked' : ''}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    </>
+                                );
+                            })()}
+                        </>
+                    )}
                 </div>
             )}
 
@@ -242,6 +509,12 @@ const StudentProgramme = ({ user }) => {
             {ssoError && (
                 <div className="mb-6 p-3 bg-red-50 text-red-700 border border-red-200 rounded-lg text-sm">
                     {ssoError}
+                </div>
+            )}
+
+            {(selectedCourse?.isLocked || selectedCourseBlocked) && (
+                <div className="mb-6 p-3 bg-amber-50 text-amber-800 border border-amber-200 rounded-lg text-sm">
+                    {selectedCourse?.lockReason || 'This course is locked until previous year requirements are completed.'}
                 </div>
             )}
 
@@ -310,10 +583,16 @@ const StudentProgramme = ({ user }) => {
             <div className="flex gap-3 mb-8">
                 <button
                     onClick={() => handleAccessLMS(selectedCourse?.moodle_course_id || selectedCourse?.id || null)}
-                    disabled={ssoLoading}
+                    disabled={ssoLoading || Boolean(selectedCourseBlocked)}
                     className="px-4 py-2 bg-blue-600 text-white rounded text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-60"
                 >
-                    {ssoLoading ? 'Connecting...' : selectedCourse ? 'Open Selected Course in Moodle' : 'Open in Moodle'}
+                    {ssoLoading
+                        ? 'Connecting...'
+                        : selectedCourseBlocked
+                            ? 'Course Locked Until Previous Year Completion'
+                            : selectedCourse
+                                ? 'Open Selected Course in Moodle'
+                                : 'Open in Moodle'}
                 </button>
             </div>
         </div>
