@@ -263,7 +263,6 @@ CREATE TABLE courses (
     INDEX idx_course_status (course_status)
 );
 
--- Application statistics and reporting
 CREATE TABLE application_stats (
     id INT PRIMARY KEY AUTO_INCREMENT,
     date_recorded DATE NOT NULL,

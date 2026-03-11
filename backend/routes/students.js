@@ -1999,14 +1999,15 @@ router.post('/applications/:id/review-decision', async (req, res) => {
 
         // Auto-create student user account for accepted/conditional offers
         let createdUser = null;
+        let cohortAssignment = null;
         if (newStatus === 'accepted' || newStatus === 'conditional_accept') {
             const [appRows] = await db.execute(
-                'SELECT email, first_name, last_name, course_title, course_code FROM student_applications WHERE id = ?',
+                'SELECT id, email, first_name, last_name, course_title, course_code, intake_start_date, application_status FROM student_applications WHERE id = ?',
                 [id]
             );
 
             if (appRows.length > 0) {
-                const { first_name, last_name, course_title, course_code } = appRows[0];
+                const { first_name, last_name, course_title, course_code, intake_start_date, application_status } = appRows[0];
                 email = appRows[0].email;
                 const [userRows] = await db.execute(
                     'SELECT id, role FROM users WHERE email = ?',
@@ -2037,6 +2038,24 @@ router.post('/applications/:id/review-decision', async (req, res) => {
                         tempPassword = userDetails[0].password;
                     }
                     console.log(`[STUDENT USER] User already exists for ${email} (Application ${id})`);
+                }
+
+                // Assign student to Moodle cohort based on intake
+                try {
+                    const cohortAssignmentResult = await assignStudentToMoodleCohort(
+                        email,
+                        first_name,
+                        last_name,
+                        course_code,
+                        intake_start_date
+                    );
+                    if (cohortAssignmentResult.success) {
+                        console.log(`[MOODLE COHORT] ${cohortAssignmentResult.message}`);
+                    } else {
+                        console.warn(`[MOODLE COHORT WARNING] ${cohortAssignmentResult.message}`);
+                    }
+                } catch (cohortError) {
+                    console.warn('[MOODLE COHORT ASSIGNMENT WARNING]', cohortError.message);
                 }
 
                 // Enroll student in Moodle course if accepted
@@ -2269,6 +2288,7 @@ SCL Institute Admissions Team
                 reviewer: reviewer_name,
                 is_update: existingReviews.length > 0,
                 created_user: createdUser,
+                cohort_assignment: cohortAssignment,
                 student_credentials: newStatus === 'accepted' ? {
                     email: email,
                     temporary_password: tempPassword,
@@ -2723,6 +2743,141 @@ function extractProgrammeCode(courseCode) {
     const normalizedCode = String(courseCode || '').trim();
     const programmeMatch = normalizedCode.match(/^([A-Z]+-\d+)(?:-INFO)?$/i);
     return programmeMatch ? programmeMatch[1] : null;
+}
+
+// Assign student to Moodle cohort based on intake
+async function assignStudentToMoodleCohort(email, firstName, lastName, programmeCode, intakeStartDate) {
+    try {
+        if (!email || !programmeCode || !intakeStartDate) {
+            return {
+                success: false,
+                message: 'Missing email, programme code, or intake date for cohort assignment'
+            };
+        }
+
+        // Get Moodle user ID
+        const moodleUserId = await getMoodleUserIdByEmail(email);
+        if (!moodleUserId) {
+            return { success: false, message: 'User not found in Moodle' };
+        }
+
+        // Derive cohort name from intake date (e.g., "2026/2027" cohort for intake in Aug 2026)
+        const intakeDate = new Date(intakeStartDate);
+        const intakeMonth = intakeDate.getMonth() + 1;
+        const intakeYear = intakeDate.getFullYear();
+        const cohortYear = intakeMonth >= 8 ? intakeYear : intakeYear - 1;
+        const cohortLabel = `${programmeCode}-${cohortYear}-${cohortYear + 1}`;
+        const cohortDescription = `${programmeCode} Cohort ${cohortYear}/${cohortYear + 1}`;
+
+        // Create or get cohort in Moodle (via REST API)
+        const axios = require('axios');
+        const moodleToken = process.env.MOODLE_TOKEN || 'e86dd021aaa42f78114e6c67cc9d8ff1';
+        const moodleUrl = process.env.MOODLE_INTERNAL_URL || 'http://scli-moodle-dev:8080';
+
+        try {
+            // Try to create cohort (will fail if exists, but idnumber is unique)
+            await axios.post(
+                `${moodleUrl}/webservice/rest/server.php`,
+                {
+                    wstoken: moodleToken,
+                    wsfunction: 'core_cohort_create_cohorts',
+                    cohorts: [{
+                        contextid: 1, // System context
+                        name: cohortDescription,
+                        idnumber: cohortLabel,
+                        description: `${programmeCode} cohort for intake year ${cohortYear}`
+                    }],
+                    moodlewsrestformat: 'json'
+                }
+            );
+            console.log(`[MOODLE COHORT] Created cohort ${cohortLabel}`);
+        } catch (cohortCreateErr) {
+            console.log(`[MOODLE COHORT] Cohort ${cohortLabel} may already exist`);
+        }
+
+        // Get cohort ID by idnumber
+        let cohortId = null;
+        try {
+            const cohortResponse = await axios.post(
+                `${moodleUrl}/webservice/rest/server.php`,
+                {
+                    wstoken: moodleToken,
+                    wsfunction: 'core_cohort_get_cohorts',
+                    moodlewsrestformat: 'json'
+                }
+            );
+
+            const cohort = (cohortResponse.data || []).find(c => c.idnumber === cohortLabel);
+            if (cohort) {
+                cohortId = cohort.id;
+            }
+        } catch (getCohortErr) {
+            console.warn('[MOODLE COHORT GET] Error fetching cohorts via REST, trying DB fallback');
+        }
+
+        // Fallback: get cohort from Moodle DB
+        if (!cohortId) {
+            const [cohortRows] = await moodleDbPool.execute(
+                `SELECT id FROM mdl_cohort WHERE idnumber = ? LIMIT 1`,
+                [cohortLabel]
+            );
+            if (cohortRows.length > 0) {
+                cohortId = cohortRows[0].id;
+            }
+        }
+
+        if (!cohortId) {
+            return {
+                success: false,
+                message: `Cohort ${cohortLabel} not found in Moodle`
+            };
+        }
+
+        // Add member to cohort (via REST if possible, else DB)
+        try {
+            await axios.post(
+                `${moodleUrl}/webservice/rest/server.php`,
+                {
+                    wstoken: moodleToken,
+                    wsfunction: 'core_cohort_add_cohort_members',
+                    members: [{
+                        cohortid: cohortId,
+                        userid: moodleUserId
+                    }],
+                    moodlewsrestformat: 'json'
+                }
+            );
+            console.log(`[MOODLE COHORT] Added ${email} to cohort ${cohortLabel}`);
+        } catch (addMemberErr) {
+            console.log(`[MOODLE COHORT] Member add via REST failed, trying DB fallback`);
+
+            // Fallback: insert into mdl_cohort_members directly
+            const now = Math.floor(Date.now() / 1000);
+            await moodleDbPool.execute(
+                `INSERT INTO mdl_cohort_members (cohortid, userid, timeadded)
+                 VALUES (?, ?, ?)
+                 ON DUPLICATE KEY UPDATE timeadded = VALUES(timeadded)`,
+                [cohortId, moodleUserId, now]
+            );
+            console.log(`[MOODLE COHORT DB] Added ${email} to cohort ${cohortLabel} via DB fallback`);
+        }
+
+        return {
+            success: true,
+            message: `Assigned ${email} to Moodle cohort ${cohortLabel}`,
+            data: {
+                cohortLabel,
+                cohortId,
+                moodleUserId
+            }
+        };
+    } catch (error) {
+        console.error('[COHORT ASSIGNMENT ERROR]', error.message);
+        return {
+            success: false,
+            message: `Cohort assignment failed: ${error.message}`
+        };
+    }
 }
 
 function extractYearNumberFromCourseCode(courseCode) {
@@ -4373,7 +4528,7 @@ router.post('/sync-moodle-programme', async (req, res) => {
         }
 
         const [apps] = await db.execute(`
-            SELECT id, first_name, last_name, email, course_title, course_code, application_status, created_at
+            SELECT id, first_name, last_name, email, course_title, course_code, intake_start_date, application_status, created_at
             FROM student_applications
             WHERE email = ? AND application_status = 'accepted' AND is_deleted = FALSE
             ORDER BY created_at DESC
