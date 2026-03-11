@@ -74,7 +74,7 @@ const StudentApplication = () => {
         const fetchCourses = async () => {
             try {
                 setCoursesLoading(true);
-                const response = await axios.get(`${API_URL}/students/courses`);
+                const response = await axios.get(`${API_URL}/students/courses?scope=admissions&activeOnly=true`);
                 setCourses(response.data?.data || []);
             } catch (err) {
                 console.error('Error fetching courses:', err);

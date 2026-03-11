@@ -32,13 +32,13 @@ const StudentPortalDashboard = ({ user }) => {
     const fetchStudentData = async () => {
         try {
             setLoading(true);
-            // Fetch student's application data
-            const response = await axios.get(`${API_URL}/students/applications`);
+            // Fetch student's latest accepted application directly
+            const response = await axios.get(`${API_URL}/students/my-applications`, {
+                params: { email: user.email }
+            });
             if (response.data?.success) {
                 const apps = response.data.data?.applications || [];
-                // Find application for current user's email
-                const studentApp = apps.find(app => app.email === user.email);
-                setStudentData(studentApp);
+                setStudentData(apps[0] || null);
             }
         } catch (error) {
             console.error('Error fetching student data:', error);

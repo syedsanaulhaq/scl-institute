@@ -66,11 +66,12 @@ const StudentProfile = ({ user }) => {
     const fetchStudentData = async () => {
         try {
             setLoading(true);
-            const response = await axios.get(`${API_URL}/students/applications`);
+            const response = await axios.get(`${API_URL}/students/my-applications`, {
+                params: { email: user?.email }
+            });
             if (response.data?.success) {
                 const apps = response.data.data?.applications || [];
-                const studentApp = apps.find(app => app.email === user?.email);
-                setStudentData(studentApp || apps[0] || null);
+                setStudentData(apps[0] || null);
             }
         } catch (error) {
             console.error('Error fetching student data:', error);

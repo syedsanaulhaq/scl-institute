@@ -4,11 +4,19 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Upload, Calendar, User, GraduationCap, FileText, Shield, CheckCircle, AlertCircle, Download, X, FileUp, ChevronDown, ChevronRight } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
+const PROGRAMME_SWITCH_CONFIRMATION_PHRASE = 'CONFIRM PROGRAMME SWITCH';
+const PROGRAMME_SWITCH_CONFIRMATION_ALIASES = [
+  PROGRAMME_SWITCH_CONFIRMATION_PHRASE,
+  'CONFIRM PROGRAMME SWTICH'
+];
 
 const StudentAdmissionForm = ({ onSubmitSuccess, isEditMode = false }) => {
   const navigate = useNavigate();
   const { id: applicationId } = useParams();
   const [activeSection, setActiveSection] = useState(1);
+  const [applicationStatus, setApplicationStatus] = useState('');
+  const [originalCourseCode, setOriginalCourseCode] = useState('');
+  const [originalCourseTitle, setOriginalCourseTitle] = useState('');
   const [csvModalOpen, setCsvModalOpen] = useState(false);
   const [csvFile, setCsvFile] = useState(null);
   const [csvPreviewData, setCsvPreviewData] = useState([]);
@@ -16,6 +24,9 @@ const StudentAdmissionForm = ({ onSubmitSuccess, isEditMode = false }) => {
   const [submitStatus, setSubmitStatus] = useState({ type: '', message: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoadingApplication, setIsLoadingApplication] = useState(isEditMode);
+  const [courseChangeConfirmationOpen, setCourseChangeConfirmationOpen] = useState(false);
+  const [courseChangeConfirmationText, setCourseChangeConfirmationText] = useState('');
+  const [confirmedProgrammeSwitchCode, setConfirmedProgrammeSwitchCode] = useState('');
   const [courses, setCourses] = useState([]);
   const [loadingCourses, setLoadingCourses] = useState(true);
   const [formData, setFormData] = useState({
@@ -91,9 +102,9 @@ const StudentAdmissionForm = ({ onSubmitSuccess, isEditMode = false }) => {
   useEffect(() => {
     const fetchCourses = async () => {
       try {
-        console.log('🔄 Fetching courses from API:', `${API_URL}/students/courses`);
+        console.log('🔄 Fetching courses from API:', `${API_URL}/students/courses?scope=admissions&activeOnly=true`);
         setLoadingCourses(true);
-        const response = await axios.get(`${API_URL}/students/courses`);
+        const response = await axios.get(`${API_URL}/students/courses?scope=admissions&activeOnly=true`);
         console.log('✅ API Response:', response.data);
         if (response.data.success) {
           setCourses(response.data.data);
@@ -131,6 +142,9 @@ const StudentAdmissionForm = ({ onSubmitSuccess, isEditMode = false }) => {
         if (response.data?.success && response.data?.data?.application) {
           const app = response.data.data.application;
           console.log('✅ Application loaded:', app);
+          setApplicationStatus(app.application_status || '');
+          setOriginalCourseCode(app.course_code || '');
+          setOriginalCourseTitle(app.course_title || '');
           
           // Populate form with existing data
           // Format dates from ISO format to yyyy-MM-dd for input fields
@@ -258,6 +272,10 @@ const StudentAdmissionForm = ({ onSubmitSuccess, isEditMode = false }) => {
   };
 
   const handleInputChange = (field, value) => {
+    if ((field === 'courseTitle' || field === 'courseCode') && confirmedProgrammeSwitchCode) {
+      setConfirmedProgrammeSwitchCode('');
+    }
+
     setFormData(prev => ({
       ...prev,
       [field]: value
@@ -275,6 +293,22 @@ const StudentAdmissionForm = ({ onSubmitSuccess, isEditMode = false }) => {
       }
     }
   };
+
+  const isAcceptedProgrammeSwitch = () => Boolean(
+    isEditMode &&
+    applicationStatus === 'accepted' &&
+    originalCourseCode &&
+    formData.courseCode &&
+    originalCourseCode !== formData.courseCode
+  );
+
+  const normalizeProgrammeSwitchConfirmation = (value) =>
+    String(value || '').trim().replace(/\s+/g, ' ').toUpperCase();
+
+  const isProgrammeSwitchConfirmationValid =
+    PROGRAMME_SWITCH_CONFIRMATION_ALIASES.includes(
+      normalizeProgrammeSwitchConfirmation(courseChangeConfirmationText)
+    );
 
   const toggleSection = (sectionId) => {
     setActiveSection(activeSection === sectionId ? null : sectionId);
@@ -867,9 +901,96 @@ const StudentAdmissionForm = ({ onSubmitSuccess, isEditMode = false }) => {
     return 'CPD';
   };
 
+  const submitApplicationRequest = async () => {
+    const formDataWithFiles = new FormData();
+
+    formDataWithFiles.append('first_name', formData.firstName);
+    formDataWithFiles.append('middle_names', formData.middleNames);
+    formDataWithFiles.append('last_name', formData.lastName);
+    formDataWithFiles.append('date_of_birth', formData.dateOfBirth);
+    formDataWithFiles.append('gender', formData.gender);
+    formDataWithFiles.append('nationality', formData.nationality);
+    formDataWithFiles.append('email', formData.email);
+    formDataWithFiles.append('contact_number', formData.contactNumber);
+    formDataWithFiles.append('address_line1', formData.addressLine1);
+    formDataWithFiles.append('address_line2', formData.addressLine2);
+    formDataWithFiles.append('town_city', formData.townCity);
+    formDataWithFiles.append('postcode', formData.postcode);
+    formDataWithFiles.append('country_of_residence', formData.countryOfResidence);
+
+    formDataWithFiles.append('course_title', formData.courseTitle);
+    formDataWithFiles.append('course_code', formData.courseCode);
+    formDataWithFiles.append('course_type', normalizeCourseType(formData.courseType));
+    formDataWithFiles.append('mode_of_study', formData.modeOfStudy);
+    formDataWithFiles.append('intake_start_date', formData.intakeStartDate);
+    formDataWithFiles.append('entry_route', formData.entryRoute);
+
+    formDataWithFiles.append('highest_qualification', formData.highestQualification);
+    formDataWithFiles.append('institution_name', formData.institutionName);
+    formDataWithFiles.append('year_completed', formData.yearCompleted);
+    formDataWithFiles.append('relevant_work_experience', formData.workExperience);
+    formDataWithFiles.append('english_proficiency', formData.englishProficiency);
+    formDataWithFiles.append('english_score', formData.englishScore);
+
+    formDataWithFiles.append('has_disabilities_support_needs', formData.hasDisabilities === 'yes');
+    formDataWithFiles.append('disability_support_details', formData.disabilityDetails);
+
+    formDataWithFiles.append('consent_gdpr', formData.consentGdpr);
+    formDataWithFiles.append('consent_data_sharing', formData.consentDataSharing);
+    formDataWithFiles.append('consent_marketing', formData.consentMarketing);
+    formDataWithFiles.append('declaration_truth', formData.declarationTruth);
+    formDataWithFiles.append('digital_signature', formData.digitalSignature);
+    formDataWithFiles.append('declaration_date', formData.declarationDate || new Date().toISOString().split('T')[0]);
+
+    if (isAcceptedProgrammeSwitch()) {
+      formDataWithFiles.append('course_change_confirmed', 'true');
+      formDataWithFiles.append('course_change_confirmation_text', courseChangeConfirmationText.trim());
+    }
+
+    const documentFieldMap = {
+      'Passport / ID': 'passport_id',
+      'Academic Certificates': 'academic_certificates',
+      'Academic Transcripts': 'academic_transcripts',
+      'English Language Certificate': 'english_certificate',
+      'CV / Resume': 'cv_resume',
+      'Work Reference': 'work_reference',
+      'Proof of Address': 'proof_of_address',
+      'Visa / Immigration Document': 'visa_immigration'
+    };
+
+    if (formData.uploadedDocuments) {
+      Object.keys(formData.uploadedDocuments).forEach(docType => {
+        const files = formData.uploadedDocuments[docType];
+        if (Array.isArray(files) && files.length > 0) {
+          const fieldName = documentFieldMap[docType] || docType;
+          files.forEach((file, idx) => {
+            formDataWithFiles.append(fieldName, file, file.name);
+            console.log(`📎 Adding file: ${fieldName} (${idx + 1}/${files.length}) = ${file.name}`);
+          });
+        }
+      });
+    }
+
+    console.log('📤 Submitting application with FormData...');
+
+    return isEditMode
+      ? axios.put(`${API_URL}/students/applications/${applicationId}`, formDataWithFiles, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        })
+      : axios.post(`${API_URL}/students/applications`, formDataWithFiles, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
+  };
+
   const handleSubmitApplication = async () => {
     if (!canProceed()) {
       setSubmitStatus({ type: 'error', message: 'Please complete all required fields before submitting.' });
+      return;
+    }
+
+    if (isAcceptedProgrammeSwitch() && confirmedProgrammeSwitchCode !== formData.courseCode) {
+      setCourseChangeConfirmationText('');
+      setCourseChangeConfirmationOpen(true);
       return;
     }
 
@@ -877,89 +998,7 @@ const StudentAdmissionForm = ({ onSubmitSuccess, isEditMode = false }) => {
       setIsSubmitting(true);
       setSubmitStatus({ type: 'loading', message: 'Submitting application...' });
 
-      // Create FormData for file uploads
-      const formDataWithFiles = new FormData();
-      
-      // Add all form fields
-      formDataWithFiles.append('first_name', formData.firstName);
-      formDataWithFiles.append('middle_names', formData.middleNames);
-      formDataWithFiles.append('last_name', formData.lastName);
-      formDataWithFiles.append('date_of_birth', formData.dateOfBirth);
-      formDataWithFiles.append('gender', formData.gender);
-      formDataWithFiles.append('nationality', formData.nationality);
-      formDataWithFiles.append('email', formData.email);
-      formDataWithFiles.append('contact_number', formData.contactNumber);
-      formDataWithFiles.append('address_line1', formData.addressLine1);
-      formDataWithFiles.append('address_line2', formData.addressLine2);
-      formDataWithFiles.append('town_city', formData.townCity);
-      formDataWithFiles.append('postcode', formData.postcode);
-      formDataWithFiles.append('country_of_residence', formData.countryOfResidence);
-
-      // Course Selection
-      formDataWithFiles.append('course_title', formData.courseTitle);
-      formDataWithFiles.append('course_code', formData.courseCode);
-      formDataWithFiles.append('course_type', normalizeCourseType(formData.courseType));
-      formDataWithFiles.append('mode_of_study', formData.modeOfStudy);
-      formDataWithFiles.append('intake_start_date', formData.intakeStartDate);
-      formDataWithFiles.append('entry_route', formData.entryRoute);
-
-      // Academic Background
-      formDataWithFiles.append('highest_qualification', formData.highestQualification);
-      formDataWithFiles.append('institution_name', formData.institutionName);
-      formDataWithFiles.append('year_completed', formData.yearCompleted);
-      formDataWithFiles.append('relevant_work_experience', formData.workExperience);
-      formDataWithFiles.append('english_proficiency', formData.englishProficiency);
-      formDataWithFiles.append('english_score', formData.englishScore);
-
-      // Support Requirements
-      formDataWithFiles.append('has_disabilities_support_needs', formData.hasDisabilities === 'yes');
-      formDataWithFiles.append('disability_support_details', formData.disabilityDetails);
-
-      // Consents & Declaration
-      formDataWithFiles.append('consent_gdpr', formData.consentGdpr);
-      formDataWithFiles.append('consent_data_sharing', formData.consentDataSharing);
-      formDataWithFiles.append('consent_marketing', formData.consentMarketing);
-      formDataWithFiles.append('declaration_truth', formData.declarationTruth);
-      formDataWithFiles.append('digital_signature', formData.digitalSignature);
-      formDataWithFiles.append('declaration_date', formData.declarationDate || new Date().toISOString().split('T')[0]);
-
-      // Map document types to backend field names
-      const documentFieldMap = {
-        'Passport / ID': 'passport_id',
-        'Academic Certificates': 'academic_certificates',
-        'Academic Transcripts': 'academic_transcripts',
-        'English Language Certificate': 'english_certificate',
-        'CV / Resume': 'cv_resume',
-        'Work Reference': 'work_reference',
-        'Proof of Address': 'proof_of_address',
-        'Visa / Immigration Document': 'visa_immigration'
-      };
-
-      // Add file uploads with correct field names (supports multiple files per field)
-      if (formData.uploadedDocuments) {
-        Object.keys(formData.uploadedDocuments).forEach(docType => {
-          const files = formData.uploadedDocuments[docType];
-          if (Array.isArray(files) && files.length > 0) {
-            const fieldName = documentFieldMap[docType] || docType;
-            // Append all files for this document type
-            files.forEach((file, idx) => {
-              formDataWithFiles.append(fieldName, file, file.name);
-              console.log(`📎 Adding file: ${fieldName} (${idx + 1}/${files.length}) = ${file.name}`);
-            });
-          }
-        });
-      }
-
-      console.log('📤 Submitting application with FormData...');
-      
-      // Use PUT for edit mode, POST for create
-      const response = isEditMode 
-        ? await axios.put(`${API_URL}/students/applications/${applicationId}`, formDataWithFiles, {
-            headers: { 'Content-Type': 'multipart/form-data' }
-          })
-        : await axios.post(`${API_URL}/students/applications`, formDataWithFiles, {
-            headers: { 'Content-Type': 'multipart/form-data' }
-          });
+      const response = await submitApplicationRequest();
 
       if (response.data?.success) {
         const reference = response.data?.data?.application_reference || response.data?.application_reference || 'N/A';
@@ -974,6 +1013,55 @@ const StudentAdmissionForm = ({ onSubmitSuccess, isEditMode = false }) => {
           onSubmitSuccess(reference);
         }
         // Redirect to applications list
+        setTimeout(() => {
+          navigate(`/applications?highlight=${reference || appId}`);
+        }, 1000);
+      } else {
+        setSubmitStatus({
+          type: 'error',
+          message: response.data?.message || 'Submission failed. Please try again.'
+        });
+      }
+    } catch (error) {
+      setSubmitStatus({
+        type: 'error',
+        message: error?.response?.data?.message || 'Submission failed. Please try again.'
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleConfirmProgrammeSwitch = async () => {
+    if (!isProgrammeSwitchConfirmationValid) {
+      setSubmitStatus({
+        type: 'error',
+        message: `Type ${PROGRAMME_SWITCH_CONFIRMATION_PHRASE} to confirm the programme switch.`
+      });
+      return;
+    }
+
+    setConfirmedProgrammeSwitchCode(formData.courseCode);
+    setCourseChangeConfirmationOpen(false);
+
+    try {
+      setIsSubmitting(true);
+      setSubmitStatus({ type: 'loading', message: 'Submitting application...' });
+
+      const response = await submitApplicationRequest();
+
+      if (response.data?.success) {
+        const reference = response.data?.data?.application_reference || response.data?.application_reference || 'N/A';
+        const appId = response.data?.data?.application_id || applicationId;
+        const successMsg = isEditMode ? 'Application updated successfully' : 'Application submitted successfully';
+        console.log(`✅ ${successMsg}: Reference=${reference}, ID=${appId}`);
+        setSubmitStatus({
+          type: 'success',
+          message: `${successMsg}. Redirecting...`
+        });
+        if (onSubmitSuccess) {
+          onSubmitSuccess(reference);
+        }
         setTimeout(() => {
           navigate(`/applications?highlight=${reference || appId}`);
         }, 1000);
@@ -1272,6 +1360,61 @@ const StudentAdmissionForm = ({ onSubmitSuccess, isEditMode = false }) => {
         </div>
       </div>
       
+      {courseChangeConfirmationOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+          <div className="w-full max-w-xl rounded-xl bg-white shadow-xl">
+            <div className="border-b border-red-100 px-6 py-4">
+              <h2 className="text-lg font-semibold text-gray-900">Confirm Programme Switch</h2>
+              <p className="mt-1 text-sm text-gray-600">
+                You are changing this accepted application from {originalCourseTitle || originalCourseCode} to {formData.courseTitle || formData.courseCode}.
+              </p>
+            </div>
+            <div className="space-y-4 px-6 py-5">
+              <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+                All enrolments from the previous programme will be removed. Access to other courses and related programme data may be lost. Be careful before continuing.
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Type {PROGRAMME_SWITCH_CONFIRMATION_PHRASE} to continue
+                </label>
+                <input
+                  type="text"
+                  value={courseChangeConfirmationText}
+                  onChange={(e) => {
+                    setCourseChangeConfirmationText(e.target.value);
+                    if (submitStatus.type === 'error') {
+                      setSubmitStatus({ type: '', message: '' });
+                    }
+                  }}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                  placeholder={PROGRAMME_SWITCH_CONFIRMATION_PHRASE}
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 border-t border-gray-200 px-6 py-4">
+              <button
+                type="button"
+                onClick={() => {
+                  setCourseChangeConfirmationOpen(false);
+                  setCourseChangeConfirmationText('');
+                }}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmProgrammeSwitch}
+                disabled={!isProgrammeSwitchConfirmationValid || isSubmitting}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Confirm Switch
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* CSV Import Modal */}
 
     </div>

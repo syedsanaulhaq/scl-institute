@@ -15,6 +15,15 @@ const NodeCache = require('node-cache');
 const router = express.Router();
 const { sendStudentWelcomeEmail, sendConditionalApprovalEmail } = require('../utils/emailService');
 const { storeNotification } = require('./notifications');
+const PROGRAMME_SWITCH_CONFIRMATION_PHRASE = 'CONFIRM PROGRAMME SWITCH';
+const PROGRAMME_SWITCH_CONFIRMATION_ALIASES = [
+    PROGRAMME_SWITCH_CONFIRMATION_PHRASE,
+    'CONFIRM PROGRAMME SWTICH'
+];
+
+function normalizeProgrammeSwitchConfirmation(value) {
+    return String(value || '').trim().replace(/\s+/g, ' ').toUpperCase();
+}
 
 // Cache for programme data (TTL: 15 minutes)
 const programmeCache = new NodeCache({ stdTTL: 900, checkperiod: 120 });
@@ -382,6 +391,30 @@ router.get('/moodle-course/:courseId/sections', async (req, res) => {
 // ===============================================
 router.get('/courses', async (req, res) => {
     try {
+        const scope = String(req.query.scope || '').toLowerCase();
+        const admissionsScope = scope === 'admissions';
+        const activeOnlyParam = String(req.query.activeOnly || (admissionsScope ? 'true' : 'false')).toLowerCase();
+        const activeOnly = activeOnlyParam === 'true' || activeOnlyParam === '1' || activeOnlyParam === 'yes';
+        const nowUnix = Math.floor(Date.now() / 1000);
+
+        const isProgrammeLevelCourse = (course) => {
+            const code = String(course.course_code || '').trim();
+            const title = String(course.course_title || '').toLowerCase();
+            const codeUpper = code.toUpperCase();
+
+            // Exclude module-like codes (e.g. DEG-001-Y0-S1-C1) and info-only admin wrappers.
+            const looksLikeModuleCode = /-Y\d+(-S\d+)?(-C\d+)?$/i.test(codeUpper);
+            const looksLikeInfoCourse = /-INFO$/i.test(codeUpper) || title.includes('programme information');
+
+            return !looksLikeModuleCode && !looksLikeInfoCourse;
+        };
+
+        const isInfoProgrammeCourse = (course) => {
+            const code = String(course.course_code || '').trim();
+            const title = String(course.course_title || '').toLowerCase();
+            return /-INFO$/i.test(code) || title.includes('programme information');
+        };
+
         // Try to fetch from Moodle database first
         let moodleCourses = [];
         try {
@@ -393,9 +426,12 @@ router.get('/courses', async (req, res) => {
                     c.shortname as course_shortname,
                     c.fullname as course_title,
                     COALESCE(cc.name, 'General') as course_type,
+                    cc.depth as category_depth,
                     c.summary as description,
                     c.category,
                     c.visible,
+                    c.startdate,
+                    c.enddate,
                     c.timecreated,
                     c.timemodified
                 FROM mdl_course c
@@ -409,12 +445,38 @@ router.get('/courses', async (req, res) => {
                 course_code: course.course_code || course.course_shortname || `COURSE-${course.id}`,
                 course_title: course.course_title,
                 course_type: course.course_type,
+                category_depth: Number(course.category_depth || 0),
                 department: 'General',
                 description: course.description || course.course_title,
                 duration_months: 12,
                 awarding_body: 'SCL Institute',
-                moodle_course_id: course.id
+                moodle_course_id: course.id,
+                is_active: Number(course.visible || 0) === 1 && (Number(course.enddate || 0) === 0 || Number(course.enddate || 0) >= nowUnix)
             }));
+
+            if (admissionsScope) {
+                const infoCourses = moodleCourses.filter(isInfoProgrammeCourse);
+                if (infoCourses.length > 0) {
+                    moodleCourses = infoCourses;
+                }
+            }
+
+            if (admissionsScope) {
+                moodleCourses = moodleCourses.filter((course) => {
+                    const depth = Number(course.category_depth || 0);
+                    // Admissions should show programme-level courses only (typically depth 2).
+                    if (depth > 2) {
+                        return false;
+                    }
+                    return isInfoProgrammeCourse(course) || isProgrammeLevelCourse(course);
+                });
+            }
+
+            if (activeOnly) {
+                moodleCourses = moodleCourses.filter((course) => course.is_active === true);
+            }
+
+            moodleCourses = moodleCourses.map(({ category_depth, ...course }) => course);
 
             if (moodleCourses.length > 0) {
                 console.log(`Γ£ô Fetched ${moodleCourses.length} courses from Moodle database`);
@@ -432,7 +494,7 @@ router.get('/courses', async (req, res) => {
 
         // Fallback to SCL Institute database courses
         console.log('Using SCL Institute database courses as fallback');
-        const [courses] = await db.execute(`
+        const fallbackQuery = `
             SELECT 
                 id,
                 course_code,
@@ -445,16 +507,43 @@ router.get('/courses', async (req, res) => {
                 part_time_available,
                 online_available,
                 blended_available,
-                awarding_body
+                awarding_body,
+                course_status
             FROM courses 
-            WHERE course_status = 'active'
+            ${activeOnly ? "WHERE course_status = 'active'" : ''}
             ORDER BY course_title
-        `);
+        `;
+        const [courses] = await db.execute(fallbackQuery);
+
+        const normalizedCourses = courses.map((course) => ({
+            ...course,
+            is_active: String(course.course_status || '').toLowerCase() === 'active'
+        }));
+
+        let scopedCourses = normalizedCourses;
+        if (admissionsScope) {
+            const infoCourses = normalizedCourses.filter(isInfoProgrammeCourse);
+            scopedCourses = infoCourses.length > 0
+                ? infoCourses
+                : normalizedCourses.filter(isProgrammeLevelCourse);
+
+            scopedCourses = scopedCourses.sort((a, b) => {
+                const aCode = String(a.course_code || '').toUpperCase();
+                const bCode = String(b.course_code || '').toUpperCase();
+                if (aCode && bCode) {
+                    return aCode.localeCompare(bCode);
+                }
+                if (aCode) return -1;
+                if (bCode) return 1;
+
+                return String(a.course_title || '').localeCompare(String(b.course_title || ''));
+            });
+        }
 
         res.json({
             success: true,
-            message: `Fetched ${courses.length} courses from SCL Institute database`,
-            data: courses,
+            message: `Fetched ${scopedCourses.length} courses from SCL Institute database`,
+            data: scopedCourses,
             source: 'scl-database'
         });
     } catch (error) {
@@ -510,6 +599,8 @@ router.post('/applications', upload.fields([
             mode_of_study,
             intake_start_date,
             entry_route,
+            course_change_confirmed,
+            course_change_confirmation_text,
             
             // Academic Background
             highest_qualification,
@@ -774,6 +865,8 @@ router.put('/applications/:id', upload.fields([
             mode_of_study,
             intake_start_date,
             entry_route,
+            course_change_confirmed,
+            course_change_confirmation_text,
             
             // Academic Background
             highest_qualification,
@@ -798,7 +891,7 @@ router.put('/applications/:id', upload.fields([
 
         // Validate application exists
         const [existingApp] = await connection.execute(
-            'SELECT id, application_reference FROM student_applications WHERE id = ?',
+            'SELECT id, application_reference, application_status, course_code, email, first_name, last_name FROM student_applications WHERE id = ?',
             [id]
         );
 
@@ -807,6 +900,23 @@ router.put('/applications/:id', upload.fields([
                 success: false,
                 message: 'Application not found'
             });
+        }
+
+        const previousApplication = existingApp[0];
+        const courseCodeChanged = String(previousApplication.course_code || '') !== String(course_code || '');
+        const shouldReenroll = previousApplication.application_status === 'accepted' && courseCodeChanged && course_code;
+
+        if (shouldReenroll) {
+            const confirmationAccepted = String(course_change_confirmed || '').toLowerCase() === 'true';
+            const confirmationText = normalizeProgrammeSwitchConfirmation(course_change_confirmation_text);
+
+            if (!confirmationAccepted || !PROGRAMME_SWITCH_CONFIRMATION_ALIASES.includes(confirmationText)) {
+                await connection.rollback();
+                return res.status(400).json({
+                    success: false,
+                    message: 'Programme switch confirmation is required before changing an accepted application. This change removes previous course access and related programme data.'
+                });
+            }
         }
 
         // Helper to convert empty strings to null
@@ -913,6 +1023,53 @@ router.put('/applications/:id', upload.fields([
 
         await connection.commit();
 
+        let moodleUnenrollment = null;
+        let moodleReenrollment = null;
+        if (shouldReenroll) {
+            const previousCourseCode = String(previousApplication.course_code || '');
+            if (previousCourseCode) {
+                if (previousCourseCode.toUpperCase().includes('-INFO')) {
+                    moodleUnenrollment = await unenrollStudentFromProgrammeCourses(
+                        email || previousApplication.email,
+                        previousCourseCode
+                    );
+                } else {
+                    moodleUnenrollment = await unenrollStudentFromSingleCourse(
+                        email || previousApplication.email,
+                        previousCourseCode
+                    );
+                }
+
+                if (moodleUnenrollment?.success) {
+                    console.log(`[APPLICATION UPDATE] Removed application ${id} from ${previousCourseCode}`);
+                } else {
+                    console.warn(`[APPLICATION UPDATE] Unenrollment warning for application ${id}: ${moodleUnenrollment?.message || 'Unknown error'}`);
+                }
+            }
+
+            if (String(course_code).toUpperCase().includes('-INFO')) {
+                moodleReenrollment = await enrollStudentInProgrammeCourses(
+                    email || previousApplication.email,
+                    first_name || previousApplication.first_name,
+                    last_name || previousApplication.last_name,
+                    course_code
+                );
+            } else {
+                moodleReenrollment = await enrollStudentInMoodle(
+                    email || previousApplication.email,
+                    first_name || previousApplication.first_name,
+                    last_name || previousApplication.last_name,
+                    course_code
+                );
+            }
+
+            if (moodleReenrollment?.success) {
+                console.log(`[APPLICATION UPDATE] Re-enrolled application ${id} to ${course_code}`);
+            } else {
+                console.warn(`[APPLICATION UPDATE] Re-enrollment warning for application ${id}: ${moodleReenrollment?.message || 'Unknown error'}`);
+            }
+        }
+
         // Get the updated application
         const [updatedApp] = await connection.execute(
             'SELECT id, application_reference, email, first_name, last_name FROM student_applications WHERE id = ?',
@@ -921,13 +1078,17 @@ router.put('/applications/:id', upload.fields([
 
         res.status(200).json({
             success: true,
-            message: 'Application updated successfully',
+            message: shouldReenroll
+                ? 'Application updated successfully and Moodle re-enrolment triggered'
+                : 'Application updated successfully',
             data: {
                 application_id: updatedApp[0].id,
                 application_reference: updatedApp[0].application_reference,
                 email: updatedApp[0].email,
                 name: `${updatedApp[0].first_name} ${updatedApp[0].last_name}`,
-                status: 'submitted'
+                status: 'submitted',
+                moodle_unenrollment: moodleUnenrollment,
+                moodle_reenrollment: moodleReenrollment
             }
         });
 
@@ -1692,16 +1853,32 @@ router.post('/applications/:id/review-decision', async (req, res) => {
                 // Enroll student in Moodle course if accepted
                 let moodleResult = null;
                 if (newStatus === 'accepted') {
-                    moodleResult = await enrollStudentInMoodle(
-                        email,
-                        first_name,
-                        last_name,
-                        course_code
-                    );
-                    if (moodleResult.success) {
-                        console.log(`[MOODLE] Student ${email} enrolled successfully`);
+                    // Use programme-wide enrolment for INFO courses
+                    if (course_code && course_code.toUpperCase().includes('-INFO')) {
+                        moodleResult = await enrollStudentInProgrammeCourses(
+                            email,
+                            first_name,
+                            last_name,
+                            course_code
+                        );
+                        if (moodleResult.success) {
+                            console.log(`[MOODLE] Student ${email} enrolled in ${moodleResult.courseCount} programme courses`);
+                        } else {
+                            console.warn(`[MOODLE] Programme enrollment warning for ${email}: ${moodleResult.message}`);
+                        }
                     } else {
-                        console.warn(`[MOODLE] Enrollment warning for ${email}: ${moodleResult.message}`);
+                        // Fallback: single course enrolment
+                        moodleResult = await enrollStudentInMoodle(
+                            email,
+                            first_name,
+                            last_name,
+                            course_code
+                        );
+                        if (moodleResult.success) {
+                            console.log(`[MOODLE] Student ${email} enrolled successfully`);
+                        } else {
+                            console.warn(`[MOODLE] Enrollment warning for ${email}: ${moodleResult.message}`);
+                        }
                     }
                 }
 
@@ -2353,6 +2530,639 @@ router.get('/applications/:id/induction', async (req, res) => {
     }
 });
 
+function extractProgrammeCode(courseCode) {
+    const normalizedCode = String(courseCode || '').trim();
+    const programmeMatch = normalizedCode.match(/^([A-Z]+-\d+)(?:-INFO)?$/i);
+    return programmeMatch ? programmeMatch[1] : null;
+}
+
+async function getMoodleUserIdByEmail(email) {
+    const normalizedEmail = String(email || '').trim();
+    if (!normalizedEmail) {
+        return null;
+    }
+
+    try {
+        const axios = require('axios');
+        const moodleToken = process.env.MOODLE_TOKEN || 'e86dd021aaa42f78114e6c67cc9d8ff1';
+        const moodleUrl = process.env.MOODLE_INTERNAL_URL || 'http://scli-moodle-dev:8080';
+
+        const userSearchResponse = await axios.post(
+            `${moodleUrl}/webservice/rest/server.php`,
+            {
+                wstoken: moodleToken,
+                wsfunction: 'core_user_get_users',
+                criteria: [{ key: 'email', value: normalizedEmail }],
+                moodlewsrestformat: 'json'
+            }
+        );
+
+        const users = userSearchResponse.data?.users || [];
+        if (users.length > 0) {
+            return users[0].id;
+        }
+    } catch (error) {
+        console.warn('[MOODLE USER LOOKUP FALLBACK]', error.message);
+    }
+
+    const [users] = await moodleDbPool.execute(
+        'SELECT id FROM mdl_user WHERE email = ? LIMIT 1',
+        [normalizedEmail]
+    );
+
+    return users.length > 0 ? Number(users[0].id) : null;
+}
+
+async function getMoodleCourseByCode(courseCode) {
+    const normalizedCode = String(courseCode || '').trim();
+    if (!normalizedCode) {
+        return null;
+    }
+
+    const [matchingCourses] = await moodleDbPool.query(`
+        SELECT id, idnumber, shortname, fullname
+        FROM mdl_course
+        WHERE id > 1 AND (
+            idnumber = ? OR shortname = ? OR fullname LIKE CONCAT('%', ?, '%')
+        )
+        ORDER BY CASE WHEN idnumber = ? THEN 0 WHEN shortname = ? THEN 1 ELSE 2 END, id ASC
+        LIMIT 1
+    `, [normalizedCode, normalizedCode, normalizedCode, normalizedCode, normalizedCode]);
+
+    return matchingCourses.length > 0 ? matchingCourses[0] : null;
+}
+
+async function getManualEnrolmentRows(courseIds) {
+    const ids = Array.from(new Set((courseIds || []).map((id) => Number(id)).filter(Boolean)));
+    if (ids.length === 0) {
+        return [];
+    }
+
+    const placeholders = ids.map(() => '?').join(', ');
+    const [rows] = await moodleDbPool.query(`
+        SELECT id, courseid, enrol, status, roleid
+        FROM mdl_enrol
+        WHERE enrol = 'manual'
+          AND courseid IN (${placeholders})
+        ORDER BY courseid ASC, status ASC, id ASC
+    `, ids);
+
+    const rowsByCourse = new Map();
+    for (const row of rows) {
+        if (!rowsByCourse.has(Number(row.courseid))) {
+            rowsByCourse.set(Number(row.courseid), row);
+        }
+    }
+
+    return ids.map((courseId) => rowsByCourse.get(courseId)).filter(Boolean);
+}
+
+async function getCourseContextRows(courseIds) {
+    const ids = Array.from(new Set((courseIds || []).map((id) => Number(id)).filter(Boolean)));
+    if (ids.length === 0) {
+        return [];
+    }
+
+    const placeholders = ids.map(() => '?').join(', ');
+    const [rows] = await moodleDbPool.query(`
+        SELECT id, instanceid
+        FROM mdl_context
+        WHERE contextlevel = 50
+          AND instanceid IN (${placeholders})
+    `, ids);
+
+    return rows;
+}
+
+async function fallbackUnenrollStudentFromCourseIds(email, courseIds) {
+    const ids = Array.from(new Set((courseIds || []).map((id) => Number(id)).filter(Boolean)));
+    if (ids.length === 0) {
+        return { success: true, message: 'No Moodle courses to cancel', courseCount: 0, method: 'db-fallback' };
+    }
+
+    const moodleUserId = await getMoodleUserIdByEmail(email);
+    if (!moodleUserId) {
+        return { success: false, message: 'User not found in Moodle' };
+    }
+
+    const manualEnrolRows = await getManualEnrolmentRows(ids);
+    if (manualEnrolRows.length === 0) {
+        return {
+            success: true,
+            message: 'No manual enrolment instances found for cancellation',
+            courseCount: 0,
+            method: 'db-fallback'
+        };
+    }
+
+    const enrolIds = manualEnrolRows.map((row) => Number(row.id));
+    const now = Math.floor(Date.now() / 1000);
+    const connection = await moodleDbPool.getConnection();
+
+    try {
+        await connection.beginTransaction();
+
+        const enrolPlaceholders = enrolIds.map(() => '?').join(', ');
+        const [existingEnrolments] = await connection.query(
+            `SELECT enrolid
+             FROM mdl_user_enrolments
+             WHERE userid = ?
+               AND enrolid IN (${enrolPlaceholders})`,
+            [moodleUserId, ...enrolIds]
+        );
+
+        const existingEnrolIds = existingEnrolments.map((row) => Number(row.enrolid));
+        if (existingEnrolIds.length === 0) {
+            await connection.commit();
+            return {
+                success: true,
+                message: 'No active Moodle enrolment records found to cancel',
+                courseCount: 0,
+                method: 'db-fallback'
+            };
+        }
+
+        const existingEnrolPlaceholders = existingEnrolIds.map(() => '?').join(', ');
+        await connection.query(
+            `UPDATE mdl_user_enrolments
+             SET status = 1,
+                 timeend = CASE WHEN timeend = 0 OR timeend > ? THEN ? ELSE timeend END,
+                 modifierid = 0,
+                 timemodified = ?
+             WHERE userid = ?
+               AND enrolid IN (${existingEnrolPlaceholders})`,
+            [now, now, now, moodleUserId, ...existingEnrolIds]
+        );
+
+        await connection.commit();
+        console.log(`[MOODLE DB SUSPEND] Suspended ${email} in ${existingEnrolIds.length} course(s) at ${now}`);
+
+        return {
+            success: true,
+            message: `Cancelled registration in ${existingEnrolIds.length} Moodle course(s) via DB fallback`,
+            courseCount: existingEnrolIds.length,
+            method: 'db-fallback'
+        };
+    } catch (error) {
+        await connection.rollback();
+        throw error;
+    } finally {
+        connection.release();
+    }
+}
+
+async function fallbackEnrollStudentInCourseIds(email, courseIds) {
+    const ids = Array.from(new Set((courseIds || []).map((id) => Number(id)).filter(Boolean)));
+    if (ids.length === 0) {
+        return { success: false, message: 'No Moodle courses supplied for enrolment' };
+    }
+
+    const moodleUserId = await getMoodleUserIdByEmail(email);
+    if (!moodleUserId) {
+        return { success: false, message: 'User not found in Moodle' };
+    }
+
+    const manualEnrolRows = await getManualEnrolmentRows(ids);
+    if (manualEnrolRows.length === 0) {
+        return { success: false, message: 'No manual enrolment instances found for these courses' };
+    }
+
+    const contextRows = await getCourseContextRows(manualEnrolRows.map((row) => row.courseid));
+    const contextByCourseId = new Map(contextRows.map((row) => [Number(row.instanceid), Number(row.id)]));
+    const enrolIds = manualEnrolRows.map((row) => Number(row.id));
+    const contextIds = Array.from(new Set(manualEnrolRows.map((row) => contextByCourseId.get(Number(row.courseid))).filter(Boolean)));
+    const now = Math.floor(Date.now() / 1000);
+    const connection = await moodleDbPool.getConnection();
+
+    try {
+        await connection.beginTransaction();
+
+        const enrolPlaceholders = enrolIds.map(() => '?').join(', ');
+        const [existingEnrolments] = await connection.query(
+            `SELECT enrolid
+             FROM mdl_user_enrolments
+             WHERE userid = ?
+               AND enrolid IN (${enrolPlaceholders})`,
+            [moodleUserId, ...enrolIds]
+        );
+        const existingEnrolIds = new Set(existingEnrolments.map((row) => Number(row.enrolid)));
+
+        for (const enrolRow of manualEnrolRows) {
+            const enrolId = Number(enrolRow.id);
+            if (existingEnrolIds.has(enrolId)) {
+                await connection.query(
+                    `UPDATE mdl_user_enrolments
+                     SET status = 0,
+                         timestart = CASE WHEN timestart = 0 THEN ? ELSE timestart END,
+                         timeend = 0,
+                         modifierid = 0,
+                         timemodified = ?
+                     WHERE userid = ? AND enrolid = ?`,
+                    [now, now, moodleUserId, enrolId]
+                );
+            } else {
+                await connection.query(
+                    `INSERT INTO mdl_user_enrolments
+                        (status, enrolid, userid, timestart, timeend, modifierid, timecreated, timemodified)
+                     VALUES (0, ?, ?, ?, 0, 0, ?, ?)`,
+                    [enrolId, moodleUserId, now, now, now]
+                );
+            }
+        }
+
+        if (contextIds.length > 0) {
+            const contextPlaceholders = contextIds.map(() => '?').join(', ');
+            const [existingAssignments] = await connection.query(
+                `SELECT contextid
+                 FROM mdl_role_assignments
+                 WHERE userid = ?
+                   AND roleid = 5
+                   AND contextid IN (${contextPlaceholders})`,
+                [moodleUserId, ...contextIds]
+            );
+            const existingContextIds = new Set(existingAssignments.map((row) => Number(row.contextid)));
+
+            for (const courseId of ids) {
+                const contextId = contextByCourseId.get(courseId);
+                if (!contextId || existingContextIds.has(contextId)) {
+                    continue;
+                }
+
+                await connection.query(
+                    `INSERT INTO mdl_role_assignments
+                        (roleid, contextid, userid, timemodified, modifierid, component, itemid, sortorder)
+                     VALUES (5, ?, ?, ?, 0, '', 0, 0)`,
+                    [contextId, moodleUserId, now]
+                );
+            }
+        }
+
+        await connection.commit();
+        console.log(`[MOODLE DB ENROLL] Enrolled ${email} in ${manualEnrolRows.length} course(s) at ${now}`);
+
+        return {
+            success: true,
+            message: `Enrolled in ${manualEnrolRows.length} Moodle course(s) via DB fallback`,
+            courseCount: manualEnrolRows.length,
+            moodleUserId,
+            method: 'db-fallback'
+        };
+    } catch (error) {
+        await connection.rollback();
+        throw error;
+    } finally {
+        connection.release();
+    }
+}
+
+async function getProgrammeModuleCourses(programmeCode) {
+    const [allCourses] = await moodleDbPool.query(`
+        SELECT DISTINCT
+            c.id,
+            c.idnumber,
+            c.shortname,
+            c.fullname,
+            c.category,
+            cc.name as cat_name,
+            cc.depth as cat_depth
+        FROM mdl_course c
+        LEFT JOIN mdl_course_categories cc ON c.category = cc.id
+        WHERE c.id > 1 AND c.visible = 1
+            AND (
+                c.idnumber LIKE CONCAT(?, '%')
+                OR c.shortname LIKE CONCAT(?, '%')
+            )
+            AND (
+                c.idnumber NOT LIKE '%-INFO%'
+                OR c.idnumber IS NULL
+            )
+        ORDER BY
+            CASE
+                WHEN c.idnumber REGEXP '-Y0-' THEN 0
+                WHEN c.idnumber REGEXP '-Y1-' THEN 1
+                WHEN c.idnumber REGEXP '-Y2-' THEN 2
+                WHEN c.idnumber REGEXP '-Y3-' THEN 3
+                ELSE 4
+            END,
+            CASE
+                WHEN c.idnumber REGEXP '-S1' THEN 0
+                WHEN c.idnumber REGEXP '-S2' THEN 1
+                ELSE 2
+            END,
+            c.fullname ASC
+    `, [programmeCode, programmeCode]);
+
+    return allCourses;
+}
+
+function courseBelongsToProgramme(courseCode, programmeCode) {
+    const normalizedCourseCode = String(courseCode || '').trim().toUpperCase();
+    const normalizedProgrammeCode = String(programmeCode || '').trim().toUpperCase();
+
+    if (!normalizedCourseCode || !normalizedProgrammeCode) {
+        return false;
+    }
+
+    return normalizedCourseCode === `${normalizedProgrammeCode}-INFO` || normalizedCourseCode.startsWith(`${normalizedProgrammeCode}-`);
+}
+
+async function getStudentEnrolledMoodleCourses(email) {
+    const [enrolledRows] = await moodleDbPool.execute(`
+        SELECT DISTINCT
+            c.id,
+            c.idnumber AS course_code,
+            c.shortname AS course_shortname,
+            c.fullname AS course_title,
+            COALESCE(cc.name, 'General') AS course_type,
+            c.summary AS description
+        FROM mdl_user u
+        INNER JOIN mdl_user_enrolments ue ON ue.userid = u.id AND ue.status = 0
+        INNER JOIN mdl_enrol e ON e.id = ue.enrolid AND e.status = 0
+        INNER JOIN mdl_course c ON c.id = e.courseid
+        LEFT JOIN mdl_course_categories cc ON c.category = cc.id
+        WHERE u.email = ?
+          AND c.id > 1
+          AND c.visible = 1
+        ORDER BY c.fullname ASC
+    `, [email]);
+
+    return enrolledRows.map((course) => ({
+        id: Number(course.id),
+        course_code: course.course_code || course.course_shortname || `COURSE-${course.id}`,
+        course_title: course.course_title,
+        course_type: course.course_type,
+        description: course.description || course.course_title
+    }));
+}
+
+async function unenrollStudentFromCourseIds(email, courseIds) {
+    try {
+        const ids = Array.from(new Set((courseIds || []).map((id) => Number(id)).filter(Boolean)));
+        if (ids.length === 0) {
+            return { success: true, message: 'No Moodle courses to cancel', courseCount: 0 };
+        }
+
+        const axios = require('axios');
+        const moodleToken = process.env.MOODLE_TOKEN || 'e86dd021aaa42f78114e6c67cc9d8ff1';
+        const moodleUrl = process.env.MOODLE_INTERNAL_URL || 'http://scli-moodle-dev:8080';
+        const moodleUserId = await getMoodleUserIdByEmail(email);
+
+        if (!moodleUserId) {
+            return { success: false, message: 'User not found in Moodle' };
+        }
+
+        await axios.post(
+            `${moodleUrl}/webservice/rest/server.php`,
+            {
+                wstoken: moodleToken,
+                wsfunction: 'enrol_manual_enrol_users',
+                enrolments: ids.map((courseId) => ({
+                    userid: moodleUserId,
+                    courseid: courseId,
+                    roleid: 5,
+                    status: 1
+                })),
+                moodlewsrestformat: 'json'
+            }
+        );
+
+        return {
+            success: true,
+            message: `Cancelled registration in ${ids.length} Moodle course(s)`,
+            courseCount: ids.length
+        };
+    } catch (error) {
+        console.error('[COURSE BATCH UNENROLL ERROR]', error.message);
+        try {
+            return await fallbackUnenrollStudentFromCourseIds(email, courseIds);
+        } catch (fallbackError) {
+            console.error('[COURSE BATCH UNENROLL FALLBACK ERROR]', fallbackError.message);
+            return {
+                success: false,
+                message: `Batch unenrolment failed: ${error.message}. DB fallback failed: ${fallbackError.message}`
+            };
+        }
+    }
+}
+
+async function unenrollStudentFromProgrammeCourses(email, infoCourseCode) {
+    try {
+        const axios = require('axios');
+        const moodleToken = process.env.MOODLE_TOKEN || 'e86dd021aaa42f78114e6c67cc9d8ff1';
+        const moodleUrl = process.env.MOODLE_INTERNAL_URL || 'http://scli-moodle-dev:8080';
+
+        const programmeCode = extractProgrammeCode(infoCourseCode);
+        if (!programmeCode) {
+            return { success: false, message: 'Invalid programme code format' };
+        }
+
+        const moodleUserId = await getMoodleUserIdByEmail(email);
+        if (!moodleUserId) {
+            return { success: false, message: 'User not found in Moodle' };
+        }
+
+        const allCourses = await getProgrammeModuleCourses(programmeCode);
+        if (allCourses.length === 0) {
+            return { success: true, message: 'No old programme module courses found', courseCount: 0 };
+        }
+
+        await axios.post(
+            `${moodleUrl}/webservice/rest/server.php`,
+            {
+                wstoken: moodleToken,
+                wsfunction: 'enrol_manual_enrol_users',
+                enrolments: allCourses.map((course) => ({
+                    userid: moodleUserId,
+                    courseid: course.id,
+                    roleid: 5,
+                    status: 1
+                })),
+                moodlewsrestformat: 'json'
+            }
+        );
+
+        console.log(`[PROG SUSPEND] Student ${email} registration cancelled in ${allCourses.length} courses for ${programmeCode}`);
+        return {
+            success: true,
+            message: `Cancelled registration in ${allCourses.length} programme courses`,
+            courseCount: allCourses.length
+        };
+    } catch (error) {
+        console.error('[PROG UNENROLL ERROR]', error.message);
+        try {
+            const allCourses = await getProgrammeModuleCourses(extractProgrammeCode(infoCourseCode));
+            return await fallbackUnenrollStudentFromCourseIds(email, allCourses.map((course) => course.id));
+        } catch (fallbackError) {
+            console.error('[PROG UNENROLL FALLBACK ERROR]', fallbackError.message);
+            return {
+                success: false,
+                message: `Programme unenrolment failed: ${error.message}. DB fallback failed: ${fallbackError.message}`
+            };
+        }
+    }
+}
+
+async function unenrollStudentFromSingleCourse(email, courseCode) {
+    try {
+        const axios = require('axios');
+        const moodleToken = process.env.MOODLE_TOKEN || 'e86dd021aaa42f78114e6c67cc9d8ff1';
+        const moodleUrl = process.env.MOODLE_INTERNAL_URL || 'http://scli-moodle-dev:8080';
+
+        const moodleUserId = await getMoodleUserIdByEmail(email);
+        if (!moodleUserId) {
+            return { success: false, message: 'User not found in Moodle' };
+        }
+
+        const matchingCourse = await getMoodleCourseByCode(courseCode);
+
+        if (!matchingCourse) {
+            return { success: true, message: 'No old course found to unenrol' };
+        }
+
+        await axios.post(
+            `${moodleUrl}/webservice/rest/server.php`,
+            {
+                wstoken: moodleToken,
+                wsfunction: 'enrol_manual_enrol_users',
+                enrolments: [{
+                    userid: moodleUserId,
+                    courseid: matchingCourse.id,
+                    roleid: 5,
+                    status: 1
+                }],
+                moodlewsrestformat: 'json'
+            }
+        );
+
+        console.log(`[COURSE SUSPEND] Student ${email} registration cancelled in ${matchingCourse.fullname}`);
+        return { success: true, message: `Cancelled registration in ${matchingCourse.fullname}` };
+    } catch (error) {
+        console.error('[COURSE UNENROLL ERROR]', error.message);
+        try {
+            const matchingCourse = await getMoodleCourseByCode(courseCode);
+            if (!matchingCourse) {
+                return { success: true, message: 'No old course found to unenrol' };
+            }
+
+            const fallbackResult = await fallbackUnenrollStudentFromCourseIds(email, [matchingCourse.id]);
+            return {
+                ...fallbackResult,
+                message: fallbackResult.success ? `Cancelled registration in ${matchingCourse.fullname} via DB fallback` : fallbackResult.message
+            };
+        } catch (fallbackError) {
+            console.error('[COURSE UNENROLL FALLBACK ERROR]', fallbackError.message);
+            return {
+                success: false,
+                message: `Course unenrolment failed: ${error.message}. DB fallback failed: ${fallbackError.message}`
+            };
+        }
+    }
+}
+
+// Helper function to enroll student in ALL module courses of their programme
+async function enrollStudentInProgrammeCourses(email, firstName, lastName, infoCourseCode) {
+    try {
+        const axios = require('axios');
+        const moodleToken = process.env.MOODLE_TOKEN || 'e86dd021aaa42f78114e6c67cc9d8ff1';
+        const moodleUrl = process.env.MOODLE_INTERNAL_URL || 'http://scli-moodle-dev:8080';
+
+        console.log(`[PROG ENROLL] Attempting to enrol ${email} in all courses for programme: ${infoCourseCode}`);
+
+        // Step 1: Extract programme code from INFO course code (e.g., DEG-001-INFO → DEG-001)
+        const programmeCode = extractProgrammeCode(infoCourseCode);
+        if (!programmeCode) {
+            console.warn(`[PROG ENROLL] Could not extract programme code from: ${infoCourseCode}`);
+            return { success: false, message: 'Invalid programme code format' };
+        }
+
+        // Step 2: Use direct DB to find all courses under this programme's category hierarchy
+        const allCourses = await getProgrammeModuleCourses(programmeCode);
+
+        console.log(`[PROG ENROLL] Found ${allCourses.length} module courses for programme ${programmeCode}`);
+
+        if (allCourses.length === 0) {
+            return { success: false, message: 'No module courses found for this programme' };
+        }
+
+        // Step 3: Create user in Moodle if not exists
+        try {
+            await axios.post(
+                `${moodleUrl}/webservice/rest/server.php`,
+                {
+                    wstoken: moodleToken,
+                    wsfunction: 'core_user_create_users',
+                    users: [
+                        {
+                            username: email,
+                            password: require('crypto').randomBytes(6).toString('hex'),
+                            firstname: firstName,
+                            lastname: lastName,
+                            email: email,
+                            preferences: [{ type: 'auth_forcepasswordchange', value: '1' }]
+                        }
+                    ],
+                    moodlewsrestformat: 'json'
+                }
+            );
+            console.log(`[PROG ENROLL] User created/verified in Moodle for ${email}`);
+        } catch (userCreateError) {
+            console.log(`[PROG ENROLL] User ${email} already exists (or creation skipped)`);
+        }
+
+        // Step 4: Get user ID from Moodle
+        const moodleUserId = await getMoodleUserIdByEmail(email);
+        if (!moodleUserId) {
+            return { success: false, message: 'User not found in Moodle' };
+        }
+
+        console.log(`[PROG ENROLL] Moodle user ID: ${moodleUserId}`);
+
+        // Step 5: Bulk enrol user in all module courses
+        const enrollmentsBatch = allCourses.map(course => ({
+            userid: moodleUserId,
+            courseid: course.id,
+            roleid: 5  // 5 = Student role
+        }));
+
+        const enrollResponse = await axios.post(
+            `${moodleUrl}/webservice/rest/server.php`,
+            {
+                wstoken: moodleToken,
+                wsfunction: 'enrol_manual_enrol_users',
+                enrolments: enrollmentsBatch,
+                moodlewsrestformat: 'json'
+            }
+        );
+
+        console.log(`[PROG ENROLL] Student ${email} successfully enrolled in ${allCourses.length} courses`);
+        return {
+            success: true,
+            message: `Enrolled in ${allCourses.length} programme courses`,
+            courseCount: allCourses.length,
+            moodleUserId,
+            enrolledCourses: allCourses.map(c => ({ id: c.id, name: c.fullname }))
+        };
+
+    } catch (error) {
+        console.error('[PROG ENROLL ERROR]', error.message);
+        try {
+            const programmeCode = extractProgrammeCode(infoCourseCode);
+            const allCourses = await getProgrammeModuleCourses(programmeCode);
+            const fallbackResult = await fallbackEnrollStudentInCourseIds(email, allCourses.map((course) => course.id));
+            return {
+                ...fallbackResult,
+                enrolledCourses: allCourses.map((course) => ({ id: course.id, name: course.fullname }))
+            };
+        } catch (fallbackError) {
+            console.error('[PROG ENROLL FALLBACK ERROR]', fallbackError.message);
+            return {
+                success: false,
+                message: `Programme enrolment failed: ${error.message}. DB fallback failed: ${fallbackError.message}`
+            };
+        }
+    }
+}
+
 // Helper function to enroll student in Moodle course
 async function enrollStudentInMoodle(email, firstName, lastName, courseCode) {
     try {
@@ -2360,24 +3170,28 @@ async function enrollStudentInMoodle(email, firstName, lastName, courseCode) {
         const moodleToken = process.env.MOODLE_TOKEN || 'e86dd021aaa42f78114e6c67cc9d8ff1';
         const moodleUrl = process.env.MOODLE_INTERNAL_URL || 'http://scli-moodle-dev:8080';
 
-        // Step 1: Get all courses to find matching course
-        const coursesResponse = await axios.get(
-            `${moodleUrl}/webservice/rest/server.php`,
-            {
-                params: {
-                    wstoken: moodleToken,
-                    wsfunction: 'core_course_get_courses',
-                    moodlewsrestformat: 'json'
-                }
-            }
-        );
+        let targetCourse = await getMoodleCourseByCode(courseCode);
 
-        const courses = coursesResponse.data || [];
-        const targetCourse = courses.find(c => 
-            c.idnumber === courseCode || 
-            c.shortname === courseCode ||
-            c.fullname?.includes(courseCode)
-        );
+        // Step 1: Get all courses to find matching course
+        if (!targetCourse) {
+            const coursesResponse = await axios.get(
+                `${moodleUrl}/webservice/rest/server.php`,
+                {
+                    params: {
+                        wstoken: moodleToken,
+                        wsfunction: 'core_course_get_courses',
+                        moodlewsrestformat: 'json'
+                    }
+                }
+            );
+
+            const courses = coursesResponse.data || [];
+            targetCourse = courses.find(c => 
+                c.idnumber === courseCode || 
+                c.shortname === courseCode ||
+                c.fullname?.includes(courseCode)
+            );
+        }
 
         if (!targetCourse) {
             console.log(`[MOODLE] No course found for code: ${courseCode}`);
@@ -2470,10 +3284,28 @@ async function enrollStudentInMoodle(email, firstName, lastName, courseCode) {
 
     } catch (error) {
         console.error('[MOODLE ENROLL ERROR]', error.message);
-        return { 
-            success: false, 
-            message: `Moodle enrollment failed: ${error.message}` 
-        };
+        try {
+            const targetCourse = await getMoodleCourseByCode(courseCode);
+            if (!targetCourse) {
+                return {
+                    success: false,
+                    message: `Moodle enrollment failed: ${error.message}`
+                };
+            }
+
+            const fallbackResult = await fallbackEnrollStudentInCourseIds(email, [targetCourse.id]);
+            return {
+                ...fallbackResult,
+                message: fallbackResult.success ? `Enrolled in ${targetCourse.fullname} via DB fallback` : fallbackResult.message,
+                moodleCourseId: targetCourse.id
+            };
+        } catch (fallbackError) {
+            console.error('[MOODLE ENROLL FALLBACK ERROR]', fallbackError.message);
+            return { 
+                success: false, 
+                message: `Moodle enrollment failed: ${error.message}. DB fallback failed: ${fallbackError.message}` 
+            };
+        }
     }
 }
 
@@ -2526,16 +3358,28 @@ router.post('/bulk-approve', async (req, res) => {
 
                 console.log(`[BULK APPROVE] Application ${appId}: User created with credentials`);
 
-                // Enroll in Moodle course
-                const moodleEnroll = await enrollStudentInMoodle(
-                    app.email,
-                    app.first_name,
-                    app.last_name,
-                    app.course_code
-                );
+                // Enroll in Moodle course - use programme-wide enrolment for INFO courses
+                let moodleEnroll;
+                if (app.course_code && app.course_code.toUpperCase().includes('-INFO')) {
+                    // Enrol in all programme courses
+                    moodleEnroll = await enrollStudentInProgrammeCourses(
+                        app.email,
+                        app.first_name,
+                        app.last_name,
+                        app.course_code
+                    );
+                } else {
+                    // Fallback: enrol in single course
+                    moodleEnroll = await enrollStudentInMoodle(
+                        app.email,
+                        app.first_name,
+                        app.last_name,
+                        app.course_code
+                    );
+                }
 
                 if (moodleEnroll.success) {
-                    console.log(`[BULK APPROVE] Application ${appId}: Enrolled in Moodle`);
+                    console.log(`[BULK APPROVE] Application ${appId}: Enrolled in Moodle (${moodleEnroll.courseCount || 1} course(s))`);
                 } else {
                     console.warn(`[BULK APPROVE] Application ${appId}: Moodle enrollment warning - ${moodleEnroll.message}`);
                 }
@@ -3127,6 +3971,87 @@ router.post('/enroll-moodle', async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Failed to enroll student',
+            error: error.message
+        });
+    }
+});
+
+// Sync student's live Moodle enrolments to current accepted SCL programme
+router.post('/sync-moodle-programme', async (req, res) => {
+    try {
+        const { email } = req.body;
+
+        if (!email) {
+            return res.status(400).json({
+                success: false,
+                message: 'Email is required'
+            });
+        }
+
+        const [apps] = await db.execute(`
+            SELECT id, first_name, last_name, email, course_title, course_code, application_status, created_at
+            FROM student_applications
+            WHERE email = ? AND application_status = 'accepted' AND is_deleted = FALSE
+            ORDER BY created_at DESC
+            LIMIT 1
+        `, [email]);
+
+        if (apps.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'No accepted application found for this student'
+            });
+        }
+
+        const application = apps[0];
+        const currentProgrammeCode = extractProgrammeCode(application.course_code) || String(application.course_code || '').trim().toUpperCase();
+        const enrolledCoursesBefore = await getStudentEnrolledMoodleCourses(email);
+
+        const coursesToRemove = enrolledCoursesBefore.filter((course) => !courseBelongsToProgramme(course.course_code, currentProgrammeCode));
+        const unenrollmentResult = await unenrollStudentFromCourseIds(email, coursesToRemove.map((course) => course.id));
+
+        let reenrollmentResult;
+        if (String(application.course_code || '').toUpperCase().includes('-INFO')) {
+            reenrollmentResult = await enrollStudentInProgrammeCourses(
+                application.email,
+                application.first_name,
+                application.last_name,
+                application.course_code
+            );
+        } else {
+            reenrollmentResult = await enrollStudentInMoodle(
+                application.email,
+                application.first_name,
+                application.last_name,
+                application.course_code
+            );
+        }
+
+        const enrolledCoursesAfter = await getStudentEnrolledMoodleCourses(email);
+
+        res.json({
+            success: true,
+            message: 'Moodle programme sync completed',
+            data: {
+                application: {
+                    id: application.id,
+                    email: application.email,
+                    course_title: application.course_title,
+                    course_code: application.course_code
+                },
+                current_programme_code: currentProgrammeCode,
+                removed_courses: coursesToRemove,
+                moodle_unenrollment: unenrollmentResult,
+                moodle_reenrollment: reenrollmentResult,
+                enrolments_before: enrolledCoursesBefore,
+                enrolments_after: enrolledCoursesAfter
+            }
+        });
+    } catch (error) {
+        console.error('Error syncing Moodle programme:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to sync Moodle programme',
             error: error.message
         });
     }

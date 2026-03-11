@@ -4,6 +4,20 @@ import axios from 'axios';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
 
+const extractProgrammeCode = (courseCode) => {
+    const match = String(courseCode || '').trim().match(/^([A-Z]+-\d+)(?:-INFO)?$/i);
+    return match ? match[1].toUpperCase() : '';
+};
+
+const belongsToProgramme = (course, programmeCode) => {
+    if (!programmeCode) return true;
+
+    const courseCode = String(course?.course_code || '').toUpperCase();
+    if (!courseCode) return false;
+
+    return courseCode === `${programmeCode}-INFO` || courseCode.startsWith(`${programmeCode}-`);
+};
+
 const StudentProgramme = ({ user }) => {
     const [programmeData, setProgrammeData] = useState(null);
     const [courseModules, setCourseModules] = useState([]);
@@ -79,12 +93,6 @@ const StudentProgramme = ({ user }) => {
             setError('');
             setProgrammeWarning('');
 
-            const registeredCoursesResponse = await axios.get(`${API_URL}/students/my-moodle-courses`, {
-                params: { email: user.email }
-            });
-            const myStudentCourses = (registeredCoursesResponse.data?.data || []).filter((course) => course.isStudentEnrolled);
-            setRegisteredCourses(myStudentCourses);
-
             // Get student's accepted application directly by email (more efficient)
             const appsResponse = await axios.get(`${API_URL}/students/my-applications`, {
                 params: { email: user.email }
@@ -95,6 +103,16 @@ const StudentProgramme = ({ user }) => {
                 const studentApp = apps[0]; // Get first accepted application
                 
                 if (studentApp) {
+                    const currentProgrammeCode = extractProgrammeCode(studentApp.course_code);
+
+                    const registeredCoursesResponse = await axios.get(`${API_URL}/students/my-moodle-courses`, {
+                        params: { email: user.email }
+                    });
+                    const myStudentCourses = (registeredCoursesResponse.data?.data || []).filter(
+                        (course) => course.isStudentEnrolled && belongsToProgramme(course, currentProgrammeCode)
+                    );
+                    setRegisteredCourses(myStudentCourses);
+
                     // Then fetch the programme details from Moodle
                     const progResponse = await axios.get(`${API_URL}/students/programme/${studentApp.id}`);
                     if (progResponse.data?.success) {
@@ -108,6 +126,7 @@ const StudentProgramme = ({ user }) => {
                         setLearningOutcomes(outcomes || []);
                     }
                 } else {
+                    setRegisteredCourses([]);
                     setProgrammeWarning('No accepted application found. Showing your registered Moodle courses below.');
                 }
             }
