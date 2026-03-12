@@ -589,8 +589,9 @@ function buildRoleContext(roleValue, roleData = null) {
         }
     }
 
-    // Check for system-level management access
+    // System assignments are ideal, but local/seeded management roles must still grant access.
     const hasSystemManagement = systemRoles.some((role) => managementRoles.has(role));
+    const hasManagement = roles.some((role) => managementRoles.has(role));
 
     return {
         primaryRole,
@@ -599,10 +600,10 @@ function buildRoleContext(roleValue, roleData = null) {
         systemRoles,
         courseRoles,
         hasSystemManagement,
-        hasManagement: roles.some((role) => managementRoles.has(role)),
+        hasManagement,
         hasTeaching: roles.some((role) => teachingRoles.has(role)),
         hasStudent: roles.some((role) => learningRoles.has(role)),
-        canAccessManagementPortal: hasSystemManagement,
+        canAccessManagementPortal: hasSystemManagement || hasManagement,
         canAccessStudentPortal: roles.some((role) => learningRoles.has(role) || teachingRoles.has(role))
     };
 }
