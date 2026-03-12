@@ -32,7 +32,8 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
     const location = useLocation();
     const [loading, setLoading] = useState(false);
     const roleContext = getRoleContext(user);
-    const { canAccessStudentPortal, canAccessManagementPortal, hasTeaching } = roleContext;
+    const { canAccessStudentPortal, canAccessManagementPortal, hasTeaching, hasManagement } = roleContext;
+    const isManagementUser = Boolean(canAccessManagementPortal || hasManagement);
     const [activeSectionTitle, setActiveSectionTitle] = useState(() => {
         if (canAccessManagementPortal) return 'Manager Menu';
         if (canAccessStudentPortal) return 'Student Menu';
@@ -83,7 +84,7 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
         ]
         : [];
 
-    const studentMenuItems = canAccessStudentPortal
+    const studentMenuItems = (canAccessStudentPortal || isManagementUser)
         ? [
             { name: 'Dashboard', icon: LayoutDashboard, path: '/student/dashboard' },
             { name: 'Portal Home', icon: BookOpen, path: '/student/portal' },
@@ -144,7 +145,7 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
         ]
         : [];
 
-    const teacherMenuItems = hasTeaching
+    const teacherMenuItems = (hasTeaching || isManagementUser)
         ? [
             { name: 'Dashboard', icon: LayoutDashboard, path: '/teacher/dashboard' },
             { name: 'My Teaching Programme', icon: BookOpen, path: '/teacher/programme' },
@@ -161,7 +162,7 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
         ]
         : [];
 
-    const generalMenuItems = (!canAccessStudentPortal && !hasTeaching && !canAccessManagementPortal)
+    const generalMenuItems = (!canAccessStudentPortal && !hasTeaching && !canAccessManagementPortal && !isManagementUser)
         ? [{ name: 'Access Moodle LMS', icon: GraduationCap, isSSO: true }]
         : [];
 
