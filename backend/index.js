@@ -93,6 +93,77 @@ async function initDB() {
                 INDEX idx_expires_at (expires_at)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
         `);
+        await connection.query(`
+            CREATE TABLE IF NOT EXISTS course_change_requests (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                application_id INT NOT NULL,
+                student_id INT NULL,
+                student_name VARCHAR(255) NULL,
+                course_title VARCHAR(255) NULL,
+                course_start_date DATE NULL,
+                current_study_mode VARCHAR(50) NULL,
+                type_of_request VARCHAR(50) NOT NULL,
+                effective_date DATE NOT NULL,
+                justification TEXT NULL,
+                supporting_document VARCHAR(500) NULL,
+                policy_confirmation TINYINT(1) DEFAULT 0,
+                digital_signature VARCHAR(255) NULL,
+                request_date DATE NULL,
+                decision VARCHAR(100) NULL,
+                reviewed_by VARCHAR(255) NULL,
+                review_date DATETIME NULL,
+                rejection_reason TEXT NULL,
+                committee_comments TEXT NULL,
+                final_decision_confirmation TINYINT(1) DEFAULT 0,
+                new_course_code VARCHAR(50) NULL,
+                new_course_title VARCHAR(255) NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                INDEX idx_course_change_application (application_id),
+                INDEX idx_course_change_type (type_of_request),
+                INDEX idx_course_change_decision (decision),
+                INDEX idx_course_change_created_at (created_at)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        `);
+        await connection.query(`
+            CREATE TABLE IF NOT EXISTS student_programme_registrations (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                application_id INT NOT NULL,
+                student_email VARCHAR(255) NOT NULL,
+                programme_code VARCHAR(50) NOT NULL,
+                programme_title VARCHAR(255) NULL,
+                status ENUM('active', 'completed', 'transferred_out', 'withdrawn', 'rejected') DEFAULT 'active',
+                source VARCHAR(50) DEFAULT 'admission_decision',
+                course_change_request_id INT NULL,
+                notes TEXT NULL,
+                started_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                ended_at DATETIME NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                INDEX idx_registration_application (application_id),
+                INDEX idx_registration_email_status (student_email, status),
+                INDEX idx_registration_programme_status (programme_code, status),
+                INDEX idx_registration_started (started_at)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        `);
+
+        // Safe column additions - ignore errors if columns already exist
+        const safeAddColumn = async (table, col, def) => {
+            try { await connection.query(`ALTER TABLE ${table} ADD COLUMN ${col} ${def}`); } catch(e) { /* column likely exists */ }
+        };
+        await safeAddColumn('course_change_requests', 'decision', 'VARCHAR(100) NULL');
+        await safeAddColumn('course_change_requests', 'reviewed_by', 'VARCHAR(255) NULL');
+        await safeAddColumn('course_change_requests', 'review_date', 'DATETIME NULL');
+        await safeAddColumn('course_change_requests', 'rejection_reason', 'TEXT NULL');
+        await safeAddColumn('course_change_requests', 'committee_comments', 'TEXT NULL');
+        await safeAddColumn('course_change_requests', 'final_decision_confirmation', 'TINYINT(1) DEFAULT 0');
+        await safeAddColumn('course_change_requests', 'new_course_code', 'VARCHAR(50) NULL');
+        await safeAddColumn('course_change_requests', 'new_course_title', 'VARCHAR(255) NULL');
+        await safeAddColumn('student_programme_registrations', 'source', "VARCHAR(50) DEFAULT 'admission_decision'");
+        await safeAddColumn('student_programme_registrations', 'course_change_request_id', 'INT NULL');
+        await safeAddColumn('student_programme_registrations', 'notes', 'TEXT NULL');
+        await safeAddColumn('student_programme_registrations', 'started_at', 'DATETIME DEFAULT CURRENT_TIMESTAMP');
+        await safeAddColumn('student_programme_registrations', 'ended_at', 'DATETIME NULL');
         console.log("[DB] Tables initialized");
         connection.release();
     } catch (err) {

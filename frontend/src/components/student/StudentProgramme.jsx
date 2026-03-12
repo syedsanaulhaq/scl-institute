@@ -228,17 +228,31 @@ const StudentProgramme = ({ user }) => {
         if (course.hasActiveEnrollment === false) return true;
 
         const selectedYear = Number(course.year_number || extractYear(course.course_code)?.replace('Year ', '') || 0);
-        if (!selectedYear || selectedYear <= 1) return false;
-
+        const selectedSemester = Number(course.semester_number || extractSemester(course.course_code)?.replace('Semester ', '') || 0);
         const programmeKey = extractProgrammeKey(course.course_code);
-        const lowerYearCourses = registeredCourses.filter((candidate) => {
-            const sameProgramme = extractProgrammeKey(candidate.course_code) === programmeKey;
-            const candidateYear = Number(candidate.year_number || extractYear(candidate.course_code)?.replace('Year ', '') || 0);
-            return sameProgramme && candidateYear > 0 && candidateYear < selectedYear;
-        });
 
-        if (lowerYearCourses.length === 0) return false;
-        return lowerYearCourses.some((candidate) => !candidate.isCompleted);
+        // Check year-level progression: all lower year courses must be completed
+        if (selectedYear > 1) {
+            const lowerYearCourses = registeredCourses.filter((candidate) => {
+                const sameProgramme = extractProgrammeKey(candidate.course_code) === programmeKey;
+                const candidateYear = Number(candidate.year_number || extractYear(candidate.course_code)?.replace('Year ', '') || 0);
+                return sameProgramme && candidateYear > 0 && candidateYear < selectedYear;
+            });
+            if (lowerYearCourses.length > 0 && lowerYearCourses.some((c) => !c.isCompleted)) return true;
+        }
+
+        // Check semester-level progression within the same year
+        if (selectedSemester > 1) {
+            const lowerSemesterCourses = registeredCourses.filter((candidate) => {
+                const sameProgramme = extractProgrammeKey(candidate.course_code) === programmeKey;
+                const candidateYear = Number(candidate.year_number || extractYear(candidate.course_code)?.replace('Year ', '') || 0);
+                const candidateSemester = Number(candidate.semester_number || extractSemester(candidate.course_code)?.replace('Semester ', '') || 0);
+                return sameProgramme && candidateYear === selectedYear && candidateSemester > 0 && candidateSemester < selectedSemester;
+            });
+            if (lowerSemesterCourses.length > 0 && lowerSemesterCourses.some((c) => !c.isCompleted)) return true;
+        }
+
+        return false;
     };
 
     const selectedCourseBlocked = isProgressionBlocked(selectedCourse);

@@ -38,6 +38,7 @@ import CourseAccreditationsDetail from './pages/CourseAccreditationsDetail';
 import CourseAccreditationsView from './pages/CourseAccreditationsView';
 import CourseInductions from './pages/CourseInductions';
 import CourseInductionsDetail from './pages/CourseInductionsDetail';
+import ManagerCourseChangeRequests from './components/ManagerCourseChangeRequests';
 import { getRoleContext } from './utils/roleAccess';
 
 function App() {
@@ -454,6 +455,15 @@ function App() {
                     user && canAccessManagementPortal ? (
                         <Layout user={user} onLogout={handleLogout}>
                             <StudentReport />
+                        </Layout>
+                    ) : (
+                        <LoginPage onLoginSuccess={handleLoginSuccess} />
+                    )
+                } />
+                <Route path="/course-change-requests" element={
+                    user && canAccessManagementPortal ? (
+                        <Layout user={user} onLogout={handleLogout}>
+                            <ManagerCourseChangeRequests />
                         </Layout>
                     ) : (
                         <LoginPage onLoginSuccess={handleLoginSuccess} />

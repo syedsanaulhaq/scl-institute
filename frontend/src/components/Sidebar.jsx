@@ -73,6 +73,7 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
                     { name: 'Applications', icon: BarChart3, path: '/applications' },
                     { name: 'New Admission', icon: UserPlus, path: '/student-application' },
                     { name: 'Applicants List', icon: UserCheck, path: '/applicants' },
+                    { name: 'Course Changes', icon: ClipboardList, path: '/course-change-requests' },
                     { name: 'Reports', icon: FileText, path: '/applications-report' }
                 ]
             },

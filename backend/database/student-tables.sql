@@ -263,6 +263,57 @@ CREATE TABLE courses (
     INDEX idx_course_status (course_status)
 );
 
+CREATE TABLE course_change_requests (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    application_id INT NOT NULL,
+    student_id INT,
+    student_name VARCHAR(255),
+    course_title VARCHAR(255),
+    course_start_date DATE,
+    current_study_mode VARCHAR(50),
+    type_of_request ENUM('Deferral', 'Withdrawal', 'Transfer') NOT NULL,
+    effective_date DATE NOT NULL,
+    justification TEXT,
+    supporting_document VARCHAR(500),
+    policy_confirmation BOOLEAN DEFAULT FALSE,
+    digital_signature VARCHAR(255),
+    request_date DATE,
+    decision VARCHAR(100),
+    reviewed_by VARCHAR(255),
+    review_date DATETIME,
+    rejection_reason TEXT,
+    committee_comments TEXT,
+    final_decision_confirmation BOOLEAN DEFAULT FALSE,
+    new_course_code VARCHAR(50),
+    new_course_title VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_course_change_application (application_id),
+    INDEX idx_course_change_type (type_of_request),
+    INDEX idx_course_change_decision (decision),
+    INDEX idx_course_change_created_at (created_at)
+);
+
+CREATE TABLE student_programme_registrations (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    application_id INT NOT NULL,
+    student_email VARCHAR(255) NOT NULL,
+    programme_code VARCHAR(50) NOT NULL,
+    programme_title VARCHAR(255),
+    status ENUM('active', 'completed', 'transferred_out', 'withdrawn', 'rejected') DEFAULT 'active',
+    source VARCHAR(50) DEFAULT 'admission_decision',
+    course_change_request_id INT,
+    notes TEXT,
+    started_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    ended_at DATETIME,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_registration_application (application_id),
+    INDEX idx_registration_email_status (student_email, status),
+    INDEX idx_registration_programme_status (programme_code, status),
+    INDEX idx_registration_started (started_at)
+);
+
 CREATE TABLE application_stats (
     id INT PRIMARY KEY AUTO_INCREMENT,
     date_recorded DATE NOT NULL,

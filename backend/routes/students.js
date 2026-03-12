@@ -276,15 +276,16 @@ router.get('/my-moodle-courses', async (req, res) => {
             const programmeMatch = String(normalizedCode).toUpperCase().match(/^([A-Z]+-\d+)-/);
             const programmeCode = programmeMatch ? programmeMatch[1] : null;
             const programmeCourses = programmeCode ? groupedByProgramme.get(programmeCode) || [] : [];
-            const progressionUnlocked = isYearUnlocked(
+            const progressionResult = isYearUnlocked(
                 { id, course_code: normalizedCode },
                 programmeCourses,
                 completedCourseIds
             );
+            const progressionUnlocked = progressionResult.unlocked !== false;
             const enrolmentStatus = Number(course.enrolment_status || 0);
             const isLocked = !progressionUnlocked || enrolmentStatus !== 0;
             const lockReason = !progressionUnlocked
-                ? `Locked: complete all previous years before Year ${yearNumber}`
+                ? (progressionResult.reason || `Locked: complete all previous courses before this one`)
                 : enrolmentStatus !== 0
                     ? 'Registration is currently suspended'
                     : null;
@@ -327,6 +328,13 @@ router.get('/my-moodle-courses', async (req, res) => {
         const courses = Array.from(byCourseId.values()).sort((a, b) =>
             String(a.course_title || '').localeCompare(String(b.course_title || ''))
         );
+
+        // Sync Moodle enrollment status (suspend locked, activate unlocked) in background
+        for (const [programmeCode] of groupedByProgramme) {
+            enforceProgrammeProgressionLocks(email, programmeCode).catch(err => {
+                console.warn(`[PROGRESSION SYNC] Failed for ${programmeCode}:`, err.message);
+            });
+        }
 
         return res.json({
             success: true,
@@ -1962,7 +1970,8 @@ router.post('/applications/:id/review-decision', async (req, res) => {
             detailed_comments,
             committee_chair_name,
             final_decision_date,
-            final_decision_confirmation
+            final_decision_confirmation,
+            remove_all_moodle_memberships
         } = req.body;
 
         // Initialize variables for scope
@@ -2000,6 +2009,7 @@ router.post('/applications/:id/review-decision', async (req, res) => {
         // Auto-create student user account for accepted/conditional offers
         let createdUser = null;
         let cohortAssignment = null;
+        let moodleCleanup = null;
         if (newStatus === 'accepted' || newStatus === 'conditional_accept') {
             const [appRows] = await db.execute(
                 'SELECT id, email, first_name, last_name, course_title, course_code, intake_start_date, application_status FROM student_applications WHERE id = ?',
@@ -2042,11 +2052,13 @@ router.post('/applications/:id/review-decision', async (req, res) => {
 
                 // Assign student to Moodle cohort based on intake
                 try {
+                    const cohortProgrammeCode = extractProgrammeCode(course_code)
+                        || String(course_code || '').trim().toUpperCase();
                     const cohortAssignmentResult = await assignStudentToMoodleCohort(
                         email,
                         first_name,
                         last_name,
-                        course_code,
+                        cohortProgrammeCode,
                         intake_start_date
                     );
                     if (cohortAssignmentResult.success) {
@@ -2060,6 +2072,7 @@ router.post('/applications/:id/review-decision', async (req, res) => {
 
                 // Enroll student in Moodle course if accepted
                 let moodleResult = null;
+                let moodleSingleProgrammeCleanup = null;
                 if (newStatus === 'accepted') {
                     // Use programme-wide enrolment for INFO courses
                     if (course_code && course_code.toUpperCase().includes('-INFO')) {
@@ -2088,6 +2101,55 @@ router.post('/applications/:id/review-decision', async (req, res) => {
                             console.warn(`[MOODLE] Enrollment warning for ${email}: ${moodleResult.message}`);
                         }
                     }
+
+                    // Enforce single active programme in Moodle by removing other programme memberships.
+                    try {
+                        const currentProgrammeCode = extractProgrammeCode(course_code)
+                            || String(course_code || '').trim().toUpperCase();
+                        const allEnrolments = await getStudentAllMoodleEnrolments(email);
+                        const otherProgrammeCourses = allEnrolments.filter((course) => {
+                            const programmeCode = extractProgrammeCode(course.course_code || '');
+                            return programmeCode && programmeCode !== currentProgrammeCode;
+                        });
+
+                        const unenrollOtherResult = await hardUnenrollStudentFromCourseIds(
+                            email,
+                            otherProgrammeCourses.map((course) => course.id)
+                        );
+                        const removeOtherCohortsResult = await removeStudentFromNonProgrammeMoodleCohorts(email, currentProgrammeCode);
+
+                        moodleSingleProgrammeCleanup = {
+                            current_programme_code: currentProgrammeCode,
+                            removed_other_programme_course_count: otherProgrammeCourses.length,
+                            removed_other_programme_courses: otherProgrammeCourses,
+                            other_programme_unenrollment: unenrollOtherResult,
+                            other_programme_cohort_cleanup: removeOtherCohortsResult
+                        };
+
+                        console.log(`[MOODLE SINGLE PROGRAMME] Removed ${otherProgrammeCourses.length} non-current programme course enrolment(s) for ${email}`);
+                    } catch (singleProgrammeError) {
+                        console.warn('[MOODLE SINGLE PROGRAMME WARNING]', singleProgrammeError.message);
+                    }
+                }
+
+                // Keep exactly one active SCL programme registration for accepted/conditional statuses.
+                try {
+                    const registrationResult = await setSingleActiveProgrammeRegistration({
+                        applicationId: id,
+                        email,
+                        courseCode: course_code,
+                        courseTitle: course_title,
+                        source: 'admission_decision',
+                        notes: newStatus === 'conditional_accept'
+                            ? 'Activated from conditional decision'
+                            : 'Activated from acceptance decision'
+                    });
+
+                    if (!registrationResult.success) {
+                        console.warn('[SCL REGISTRATION WARNING]', registrationResult.message);
+                    }
+                } catch (registrationError) {
+                    console.warn('[SCL REGISTRATION ERROR]', registrationError.message);
                 }
 
                 // Send welcome email for accepted students
@@ -2131,6 +2193,7 @@ Note: Please change your password after first login.
                                 password: tempPassword
                             },
                             moodle_enrollment: moodleResult?.success || false,
+                            moodle_single_programme_cleanup: moodleSingleProgrammeCleanup,
                             portal_url: 'http://localhost:3000/student/login',
                             moodle_url: 'http://localhost:9090'
                         }
@@ -2190,6 +2253,65 @@ SCL Institute Admissions Team
                         }
                     );
                     console.log(`[NOTIFICATION] Conditional offer notification stored for ${email}`);
+                }
+            }
+        } else if (newStatus === 'rejected') {
+            const [appRows] = await db.execute(
+                'SELECT id, email, course_code FROM student_applications WHERE id = ? LIMIT 1',
+                [id]
+            );
+
+            if (appRows.length > 0) {
+                const application = appRows[0];
+                email = application.email;
+                const programmeCode = extractProgrammeCode(application.course_code)
+                    || String(application.course_code || '').trim().toUpperCase();
+
+                const removeAllMemberships = Boolean(remove_all_moodle_memberships);
+                const coursesToRemove = removeAllMemberships
+                    ? await getStudentAllMoodleEnrolments(email)
+                    : await getStudentProgrammeMoodleEnrolments(email, programmeCode);
+
+                const unenrollmentResult = await hardUnenrollStudentFromCourseIds(
+                    email,
+                    coursesToRemove.map((course) => course.id)
+                );
+
+                const cohortRemovalResult = removeAllMemberships
+                    ? await removeStudentFromAllMoodleCohorts(email)
+                    : await removeStudentFromMoodleProgrammeCohorts(email, programmeCode);
+
+                try {
+                    const registrationCloseResult = await closeActiveProgrammeRegistrationAsRejected({
+                        applicationId: id,
+                        email,
+                        courseCode: application.course_code,
+                        notes: 'Closed from rejection decision'
+                    });
+                    if (!registrationCloseResult.success) {
+                        console.warn('[SCL REJECTION REGISTRATION WARNING]', registrationCloseResult.message);
+                    }
+                } catch (registrationCloseError) {
+                    console.warn('[SCL REJECTION REGISTRATION ERROR]', registrationCloseError.message);
+                }
+
+                moodleCleanup = {
+                    scope: removeAllMemberships ? 'all' : 'programme',
+                    programme_code: programmeCode,
+                    removed_course_count: coursesToRemove.length,
+                    removed_courses: coursesToRemove,
+                    unenrollment: unenrollmentResult,
+                    cohort_removal: cohortRemovalResult
+                };
+
+                if (unenrollmentResult.success) {
+                    console.log(`[MOODLE CLEANUP] Removed ${coursesToRemove.length} Moodle course enrolment(s) for ${email} (scope=${moodleCleanup.scope})`);
+                } else {
+                    console.warn(`[MOODLE CLEANUP WARNING] ${unenrollmentResult.message}`);
+                }
+
+                if (!cohortRemovalResult.success) {
+                    console.warn(`[MOODLE COHORT CLEANUP WARNING] ${cohortRemovalResult.message}`);
                 }
             }
         }
@@ -2289,6 +2411,7 @@ SCL Institute Admissions Team
                 is_update: existingReviews.length > 0,
                 created_user: createdUser,
                 cohort_assignment: cohortAssignment,
+                moodle_cleanup: moodleCleanup,
                 student_credentials: newStatus === 'accepted' ? {
                     email: email,
                     temporary_password: tempPassword,
@@ -2745,6 +2868,172 @@ function extractProgrammeCode(courseCode) {
     return programmeMatch ? programmeMatch[1] : null;
 }
 
+async function setSingleActiveProgrammeRegistration({
+    applicationId,
+    email,
+    courseCode,
+    courseTitle,
+    source = 'admission_decision',
+    courseChangeRequestId = null,
+    notes = null
+}) {
+    const normalizedEmail = String(email || '').trim().toLowerCase();
+    const normalizedProgrammeCode = extractProgrammeCode(courseCode)
+        || String(courseCode || '').trim().toUpperCase();
+
+    if (!applicationId || !normalizedEmail || !normalizedProgrammeCode) {
+        return {
+            success: false,
+            message: 'Missing application, email, or programme code for registration sync'
+        };
+    }
+
+    const connection = await db.getConnection();
+    try {
+        await connection.beginTransaction();
+
+        await connection.execute(
+            `UPDATE student_programme_registrations
+             SET status = 'transferred_out',
+                 ended_at = COALESCE(ended_at, NOW()),
+                 notes = COALESCE(notes, 'Closed by programme activation'),
+                 updated_at = CURRENT_TIMESTAMP
+             WHERE student_email = ?
+               AND status = 'active'
+               AND programme_code <> ?`,
+            [normalizedEmail, normalizedProgrammeCode]
+        );
+
+        const [activeRows] = await connection.execute(
+            `SELECT id
+             FROM student_programme_registrations
+             WHERE student_email = ?
+               AND programme_code = ?
+               AND status = 'active'
+             LIMIT 1`,
+            [normalizedEmail, normalizedProgrammeCode]
+        );
+
+        if (activeRows.length === 0) {
+            await connection.execute(
+                `INSERT INTO student_programme_registrations
+                    (application_id, student_email, programme_code, programme_title, status, source, course_change_request_id, notes, started_at)
+                 VALUES (?, ?, ?, ?, 'active', ?, ?, ?, NOW())`,
+                [
+                    Number(applicationId),
+                    normalizedEmail,
+                    normalizedProgrammeCode,
+                    courseTitle || null,
+                    source,
+                    courseChangeRequestId,
+                    notes
+                ]
+            );
+        } else {
+            await connection.execute(
+                `UPDATE student_programme_registrations
+                 SET application_id = ?,
+                     programme_title = COALESCE(?, programme_title),
+                     source = ?,
+                     course_change_request_id = ?,
+                     notes = COALESCE(?, notes),
+                     ended_at = NULL,
+                     updated_at = CURRENT_TIMESTAMP
+                 WHERE id = ?`,
+                [
+                    Number(applicationId),
+                    courseTitle || null,
+                    source,
+                    courseChangeRequestId,
+                    notes,
+                    activeRows[0].id
+                ]
+            );
+        }
+
+        await connection.commit();
+        return {
+            success: true,
+            message: `Active programme set to ${normalizedProgrammeCode}`,
+            data: {
+                applicationId: Number(applicationId),
+                email: normalizedEmail,
+                programmeCode: normalizedProgrammeCode
+            }
+        };
+    } catch (error) {
+        await connection.rollback();
+        return {
+            success: false,
+            message: `Registration sync failed: ${error.message}`
+        };
+    } finally {
+        connection.release();
+    }
+}
+
+async function closeActiveProgrammeRegistrationAsRejected({ applicationId, email, courseCode, notes = null }) {
+    const normalizedEmail = String(email || '').trim().toLowerCase();
+    const normalizedProgrammeCode = extractProgrammeCode(courseCode)
+        || String(courseCode || '').trim().toUpperCase();
+
+    if (!applicationId || !normalizedEmail || !normalizedProgrammeCode) {
+        return {
+            success: false,
+            message: 'Missing application, email, or programme code for rejection sync'
+        };
+    }
+
+    const connection = await db.getConnection();
+    try {
+        await connection.beginTransaction();
+
+        const [activeRows] = await connection.execute(
+            `SELECT id
+             FROM student_programme_registrations
+             WHERE student_email = ?
+               AND programme_code = ?
+               AND status = 'active'`,
+            [normalizedEmail, normalizedProgrammeCode]
+        );
+
+        if (activeRows.length > 0) {
+            await connection.execute(
+                `UPDATE student_programme_registrations
+                 SET status = 'rejected',
+                     ended_at = COALESCE(ended_at, NOW()),
+                     notes = COALESCE(?, notes),
+                     updated_at = CURRENT_TIMESTAMP
+                 WHERE student_email = ?
+                   AND programme_code = ?
+                   AND status = 'active'`,
+                [notes, normalizedEmail, normalizedProgrammeCode]
+            );
+        } else {
+            await connection.execute(
+                `INSERT INTO student_programme_registrations
+                    (application_id, student_email, programme_code, status, source, notes, started_at, ended_at)
+                 VALUES (?, ?, ?, 'rejected', 'admission_decision', ?, NOW(), NOW())`,
+                [Number(applicationId), normalizedEmail, normalizedProgrammeCode, notes]
+            );
+        }
+
+        await connection.commit();
+        return {
+            success: true,
+            message: `Marked ${normalizedProgrammeCode} as rejected for ${normalizedEmail}`
+        };
+    } catch (error) {
+        await connection.rollback();
+        return {
+            success: false,
+            message: `Rejection registration sync failed: ${error.message}`
+        };
+    } finally {
+        connection.release();
+    }
+}
+
 // Assign student to Moodle cohort based on intake
 async function assignStudentToMoodleCohort(email, firstName, lastName, programmeCode, intakeStartDate) {
     try {
@@ -2826,6 +3115,40 @@ async function assignStudentToMoodleCohort(email, firstName, lastName, programme
             }
         }
 
+        // Final fallback: create cohort directly in Moodle DB if still missing.
+        if (!cohortId) {
+            const now = Math.floor(Date.now() / 1000);
+            await moodleDbPool.execute(
+                `INSERT INTO mdl_cohort
+                    (contextid, name, idnumber, description, descriptionformat, visible, component, timecreated, timemodified)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 ON DUPLICATE KEY UPDATE
+                    name = VALUES(name),
+                    description = VALUES(description),
+                    timemodified = VALUES(timemodified)`,
+                [
+                    1,
+                    cohortDescription,
+                    cohortLabel,
+                    `${programmeCode} cohort for intake year ${cohortYear}`,
+                    1,
+                    1,
+                    '',
+                    now,
+                    now
+                ]
+            );
+
+            const [cohortRowsAfterCreate] = await moodleDbPool.execute(
+                `SELECT id FROM mdl_cohort WHERE idnumber = ? LIMIT 1`,
+                [cohortLabel]
+            );
+            if (cohortRowsAfterCreate.length > 0) {
+                cohortId = cohortRowsAfterCreate[0].id;
+                console.log(`[MOODLE COHORT DB] Created/found cohort ${cohortLabel} via DB fallback`);
+            }
+        }
+
         if (!cohortId) {
             return {
                 success: false,
@@ -2880,6 +3203,203 @@ async function assignStudentToMoodleCohort(email, firstName, lastName, programme
     }
 }
 
+async function removeStudentFromMoodleProgrammeCohorts(email, programmeCode) {
+    try {
+        const normalizedProgrammeCode = String(programmeCode || '').trim().toUpperCase();
+        if (!email || !normalizedProgrammeCode) {
+            return {
+                success: false,
+                message: 'Missing email or programme code for cohort removal'
+            };
+        }
+
+        const moodleUserId = await getMoodleUserIdByEmail(email);
+        if (!moodleUserId) {
+            return { success: true, message: 'User not found in Moodle; no cohort memberships removed', removedCount: 0 };
+        }
+
+        const [cohortRows] = await moodleDbPool.execute(
+            `SELECT c.id
+             FROM mdl_cohort_members cm
+             INNER JOIN mdl_cohort c ON c.id = cm.cohortid
+             WHERE cm.userid = ? AND c.idnumber LIKE ?`,
+            [moodleUserId, `${normalizedProgrammeCode}-%`]
+        );
+
+        if (cohortRows.length === 0) {
+            return { success: true, message: 'No Moodle cohort memberships found for this programme', removedCount: 0 };
+        }
+
+        const cohortIds = cohortRows.map((row) => Number(row.id)).filter(Boolean);
+        const axios = require('axios');
+        const moodleToken = process.env.MOODLE_TOKEN || 'e86dd021aaa42f78114e6c67cc9d8ff1';
+        const moodleUrl = process.env.MOODLE_INTERNAL_URL || 'http://scli-moodle-dev:8080';
+
+        try {
+            await axios.post(
+                `${moodleUrl}/webservice/rest/server.php`,
+                {
+                    wstoken: moodleToken,
+                    wsfunction: 'core_cohort_delete_cohort_members',
+                    members: cohortIds.map((cohortId) => ({
+                        cohortid: cohortId,
+                        userid: moodleUserId
+                    })),
+                    moodlewsrestformat: 'json'
+                }
+            );
+        } catch (apiError) {
+            const placeholders = cohortIds.map(() => '?').join(', ');
+            await moodleDbPool.execute(
+                `DELETE FROM mdl_cohort_members
+                 WHERE userid = ? AND cohortid IN (${placeholders})`,
+                [moodleUserId, ...cohortIds]
+            );
+        }
+
+        return {
+            success: true,
+            message: `Removed ${cohortIds.length} Moodle cohort membership(s) for ${normalizedProgrammeCode}`,
+            removedCount: cohortIds.length
+        };
+    } catch (error) {
+        console.error('[MOODLE COHORT REMOVE ERROR]', error.message);
+        return {
+            success: false,
+            message: `Failed to remove Moodle cohort memberships: ${error.message}`
+        };
+    }
+}
+
+async function removeStudentFromAllMoodleCohorts(email) {
+    try {
+        if (!email) {
+            return {
+                success: false,
+                message: 'Missing email for cohort removal'
+            };
+        }
+
+        const moodleUserId = await getMoodleUserIdByEmail(email);
+        if (!moodleUserId) {
+            return { success: true, message: 'User not found in Moodle; no cohort memberships removed', removedCount: 0 };
+        }
+
+        const [cohortRows] = await moodleDbPool.execute(
+            `SELECT cohortid FROM mdl_cohort_members WHERE userid = ?`,
+            [moodleUserId]
+        );
+
+        if (cohortRows.length === 0) {
+            return { success: true, message: 'No Moodle cohort memberships found', removedCount: 0 };
+        }
+
+        const cohortIds = cohortRows.map((row) => Number(row.cohortid)).filter(Boolean);
+        const axios = require('axios');
+        const moodleToken = process.env.MOODLE_TOKEN || 'e86dd021aaa42f78114e6c67cc9d8ff1';
+        const moodleUrl = process.env.MOODLE_INTERNAL_URL || 'http://scli-moodle-dev:8080';
+
+        try {
+            await axios.post(
+                `${moodleUrl}/webservice/rest/server.php`,
+                {
+                    wstoken: moodleToken,
+                    wsfunction: 'core_cohort_delete_cohort_members',
+                    members: cohortIds.map((cohortId) => ({
+                        cohortid: cohortId,
+                        userid: moodleUserId
+                    })),
+                    moodlewsrestformat: 'json'
+                }
+            );
+        } catch (apiError) {
+            await moodleDbPool.execute(
+                `DELETE FROM mdl_cohort_members WHERE userid = ?`,
+                [moodleUserId]
+            );
+        }
+
+        return {
+            success: true,
+            message: `Removed ${cohortIds.length} Moodle cohort membership(s)`,
+            removedCount: cohortIds.length
+        };
+    } catch (error) {
+        console.error('[MOODLE COHORT REMOVE ALL ERROR]', error.message);
+        return {
+            success: false,
+            message: `Failed to remove Moodle cohort memberships: ${error.message}`
+        };
+    }
+}
+
+async function removeStudentFromNonProgrammeMoodleCohorts(email, currentProgrammeCode) {
+    const normalizedCurrentProgrammeCode = String(currentProgrammeCode || '').trim().toUpperCase();
+    if (!email || !normalizedCurrentProgrammeCode) {
+        return {
+            success: false,
+            message: 'Missing email or current programme code for cohort cleanup'
+        };
+    }
+
+    const moodleUserId = await getMoodleUserIdByEmail(email);
+    if (!moodleUserId) {
+        return { success: true, message: 'User not found in Moodle; no cohort memberships removed', removedCount: 0 };
+    }
+
+    const [cohortRows] = await moodleDbPool.execute(
+        `SELECT c.id, c.idnumber
+         FROM mdl_cohort_members cm
+         INNER JOIN mdl_cohort c ON c.id = cm.cohortid
+         WHERE cm.userid = ?`,
+        [moodleUserId]
+    );
+
+    const removeCohortIds = cohortRows
+        .filter((row) => {
+            const memberProgrammeCode = extractProgrammeCode(row.idnumber || '');
+            return memberProgrammeCode && memberProgrammeCode !== normalizedCurrentProgrammeCode;
+        })
+        .map((row) => Number(row.id))
+        .filter(Boolean);
+
+    if (removeCohortIds.length === 0) {
+        return { success: true, message: 'No non-current programme cohort memberships found', removedCount: 0 };
+    }
+
+    try {
+        const axios = require('axios');
+        const moodleToken = process.env.MOODLE_TOKEN || 'e86dd021aaa42f78114e6c67cc9d8ff1';
+        const moodleUrl = process.env.MOODLE_INTERNAL_URL || 'http://scli-moodle-dev:8080';
+
+        await axios.post(
+            `${moodleUrl}/webservice/rest/server.php`,
+            {
+                wstoken: moodleToken,
+                wsfunction: 'core_cohort_delete_cohort_members',
+                members: removeCohortIds.map((cohortId) => ({
+                    cohortid: cohortId,
+                    userid: moodleUserId
+                })),
+                moodlewsrestformat: 'json'
+            }
+        );
+    } catch (apiError) {
+        const placeholders = removeCohortIds.map(() => '?').join(', ');
+        await moodleDbPool.execute(
+            `DELETE FROM mdl_cohort_members
+             WHERE userid = ? AND cohortid IN (${placeholders})`,
+            [moodleUserId, ...removeCohortIds]
+        );
+    }
+
+    return {
+        success: true,
+        message: `Removed ${removeCohortIds.length} non-current programme cohort membership(s)`,
+        removedCount: removeCohortIds.length
+    };
+}
+
 function extractYearNumberFromCourseCode(courseCode) {
     const match = String(courseCode || '').toUpperCase().match(/-Y(\d+)(?:-|$)/);
     return match ? Number(match[1]) : null;
@@ -2896,20 +3416,71 @@ function isCourseCompletedByUser(completedCourseIds, courseId) {
 
 function isYearUnlocked(course, allProgrammeCourses, completedCourseIds) {
     const targetYear = extractYearNumberFromCourseCode(course.course_code);
-    if (!targetYear || targetYear <= 1) {
-        return true;
+    const targetSemester = extractSemesterNumberFromCourseCode(course.course_code);
+
+    // Year 0: no year-level prerequisite, but still enforce semester progression
+    if (targetYear === 0) {
+        if (targetSemester && targetSemester > 1) {
+            const prereqSemesterCourses = allProgrammeCourses.filter((candidate) => {
+                const cYear = extractYearNumberFromCourseCode(candidate.course_code);
+                const cSem = extractSemesterNumberFromCourseCode(candidate.course_code);
+                return cYear === 0 && cSem && cSem < targetSemester;
+            });
+            if (prereqSemesterCourses.length > 0 && !prereqSemesterCourses.every((p) => isCourseCompletedByUser(completedCourseIds, p.id))) {
+                return { unlocked: false, reason: `Locked: complete all Semester ${targetSemester - 1} courses before Semester ${targetSemester}` };
+            }
+        }
+        return { unlocked: true };
     }
 
-    const prerequisiteCourses = allProgrammeCourses.filter((candidate) => {
+    // Year 1: check if Year 0 courses exist and must be completed first
+    if (!targetYear || targetYear <= 1) {
+        // Check if there are Year 0 courses that need completion
+        if (targetYear === 1) {
+            const year0Courses = allProgrammeCourses.filter((candidate) => {
+                return extractYearNumberFromCourseCode(candidate.course_code) === 0;
+            });
+            if (year0Courses.length > 0 && !year0Courses.every((p) => isCourseCompletedByUser(completedCourseIds, p.id))) {
+                return { unlocked: false, reason: `Locked: complete all Year 0 (Foundation) courses before Year 1` };
+            }
+        }
+        // If this course has a semester, check semester progression within Year 1
+        if (targetSemester && targetSemester > 1) {
+            const prereqSemesterCourses = allProgrammeCourses.filter((candidate) => {
+                const cYear = extractYearNumberFromCourseCode(candidate.course_code);
+                const cSem = extractSemesterNumberFromCourseCode(candidate.course_code);
+                return cYear === targetYear && cSem && cSem < targetSemester;
+            });
+            if (prereqSemesterCourses.length > 0 && !prereqSemesterCourses.every((p) => isCourseCompletedByUser(completedCourseIds, p.id))) {
+                return { unlocked: false, reason: `Locked: complete all Semester ${targetSemester - 1} courses before Semester ${targetSemester}` };
+            }
+        }
+        return { unlocked: true };
+    }
+
+    // For Year 2+, first check all previous year courses are completed
+    const previousYearCourses = allProgrammeCourses.filter((candidate) => {
         const year = extractYearNumberFromCourseCode(candidate.course_code);
-        return year && year < targetYear;
+        return year !== null && year !== undefined && year < targetYear;
     });
 
-    if (prerequisiteCourses.length === 0) {
-        return true;
+    if (previousYearCourses.length > 0 && !previousYearCourses.every((prereq) => isCourseCompletedByUser(completedCourseIds, prereq.id))) {
+        return { unlocked: false, reason: `Locked: complete all previous year courses before Year ${targetYear}` };
     }
 
-    return prerequisiteCourses.every((prereq) => isCourseCompletedByUser(completedCourseIds, prereq.id));
+    // Within the same year, check semester progression
+    if (targetSemester && targetSemester > 1) {
+        const prereqSemesterCourses = allProgrammeCourses.filter((candidate) => {
+            const cYear = extractYearNumberFromCourseCode(candidate.course_code);
+            const cSem = extractSemesterNumberFromCourseCode(candidate.course_code);
+            return cYear === targetYear && cSem && cSem < targetSemester;
+        });
+        if (prereqSemesterCourses.length > 0 && !prereqSemesterCourses.every((p) => isCourseCompletedByUser(completedCourseIds, p.id))) {
+            return { unlocked: false, reason: `Locked: complete all Semester ${targetSemester - 1} courses before Semester ${targetSemester}` };
+        }
+    }
+
+    return { unlocked: true };
 }
 
 async function getCompletedCourseIdsByEmail(email, courseIds) {
@@ -3105,6 +3676,69 @@ async function fallbackUnenrollStudentFromCourseIds(email, courseIds) {
         throw error;
     } finally {
         connection.release();
+    }
+}
+
+async function hardUnenrollStudentFromCourseIds(email, courseIds) {
+    const ids = Array.from(new Set((courseIds || []).map((id) => Number(id)).filter(Boolean)));
+    if (ids.length === 0) {
+        return { success: true, message: 'No Moodle courses to remove', courseCount: 0, method: 'hard-unenrol' };
+    }
+
+    const moodleUserId = await getMoodleUserIdByEmail(email);
+    if (!moodleUserId) {
+        return { success: false, message: 'User not found in Moodle' };
+    }
+
+    try {
+        const axios = require('axios');
+        const moodleToken = process.env.MOODLE_TOKEN || 'e86dd021aaa42f78114e6c67cc9d8ff1';
+        const moodleUrl = process.env.MOODLE_INTERNAL_URL || 'http://scli-moodle-dev:8080';
+
+        await axios.post(
+            `${moodleUrl}/webservice/rest/server.php`,
+            {
+                wstoken: moodleToken,
+                wsfunction: 'enrol_manual_unenrol_users',
+                enrolments: ids.map((courseId) => ({
+                    userid: moodleUserId,
+                    courseid: courseId
+                })),
+                moodlewsrestformat: 'json'
+            }
+        );
+
+        return {
+            success: true,
+            message: `Removed student from ${ids.length} Moodle course(s)`,
+            courseCount: ids.length,
+            method: 'hard-unenrol-api'
+        };
+    } catch (apiError) {
+        const manualEnrolRows = await getManualEnrolmentRows(ids);
+        if (manualEnrolRows.length === 0) {
+            return {
+                success: true,
+                message: 'No manual enrolment instances found for removal',
+                courseCount: 0,
+                method: 'hard-unenrol-db'
+            };
+        }
+
+        const enrolIds = manualEnrolRows.map((row) => Number(row.id));
+        const placeholders = enrolIds.map(() => '?').join(', ');
+        const [result] = await moodleDbPool.execute(
+            `DELETE FROM mdl_user_enrolments
+             WHERE userid = ? AND enrolid IN (${placeholders})`,
+            [moodleUserId, ...enrolIds]
+        );
+
+        return {
+            success: true,
+            message: `Removed student from ${result.affectedRows || 0} Moodle enrolment record(s) via DB fallback`,
+            courseCount: result.affectedRows || 0,
+            method: 'hard-unenrol-db'
+        };
     }
 }
 
@@ -3319,7 +3953,8 @@ async function enforceProgrammeProgressionLocks(email, programmeCode) {
             continue;
         }
 
-        const unlocked = isYearUnlocked(course, normalizedProgrammeCourses, completedCourseIds);
+        const progressionResult = isYearUnlocked(course, normalizedProgrammeCourses, completedCourseIds);
+        const unlocked = progressionResult.unlocked;
         if (unlocked) {
             unlockedCourses += 1;
         } else {
@@ -3416,6 +4051,68 @@ async function getStudentEnrolledMoodleCourses(email) {
         course_title: course.course_title,
         course_type: course.course_type,
         description: course.description || course.course_title
+    }));
+}
+
+async function getStudentAllMoodleEnrolments(email) {
+    if (!email) {
+        return [];
+    }
+
+    const [rows] = await moodleDbPool.execute(
+        `SELECT DISTINCT
+            c.id,
+            c.idnumber AS course_code,
+            c.shortname AS course_shortname,
+            c.fullname AS course_title,
+            ue.status AS enrol_status
+         FROM mdl_user u
+         INNER JOIN mdl_user_enrolments ue ON ue.userid = u.id
+         INNER JOIN mdl_enrol e ON e.id = ue.enrolid
+         INNER JOIN mdl_course c ON c.id = e.courseid
+         WHERE u.email = ?
+           AND c.id > 1
+         ORDER BY c.id`,
+        [email]
+    );
+
+    return rows.map((row) => ({
+        id: Number(row.id),
+        course_code: row.course_code || row.course_shortname || `COURSE-${row.id}`,
+        course_title: row.course_title,
+        enrol_status: Number(row.enrol_status)
+    }));
+}
+
+async function getStudentProgrammeMoodleEnrolments(email, programmeCode) {
+    const normalizedProgrammeCode = String(programmeCode || '').trim().toUpperCase();
+    if (!email || !normalizedProgrammeCode) {
+        return [];
+    }
+
+    const [rows] = await moodleDbPool.execute(
+        `SELECT DISTINCT
+            c.id,
+            c.idnumber AS course_code,
+            c.shortname AS course_shortname,
+            c.fullname AS course_title,
+            ue.status AS enrol_status
+         FROM mdl_user u
+         INNER JOIN mdl_user_enrolments ue ON ue.userid = u.id
+         INNER JOIN mdl_enrol e ON e.id = ue.enrolid
+         INNER JOIN mdl_course c ON c.id = e.courseid
+         WHERE u.email = ?
+           AND c.id > 1
+           AND (c.idnumber = ? OR c.idnumber LIKE CONCAT(?, '-%'))
+         ORDER BY c.id`,
+        [email, `${normalizedProgrammeCode}-INFO`, normalizedProgrammeCode]
+    );
+
+    return rows.map((row) => ({
+        id: Number(row.id),
+        course_code: row.course_code || row.course_shortname || `COURSE-${row.id}`,
+        course_title: row.course_title,
+        enrol_status: Number(row.enrol_status)
     }));
 }
 
@@ -5713,7 +6410,7 @@ router.post('/applications/:id/course-change-request', upload.single('supporting
 
         // Get application details
         const [apps] = await db.execute(
-            'SELECT id, first_name, last_name, course_title, programme_name, intake_start_date FROM student_applications WHERE id = ?',
+            'SELECT id, first_name, last_name, course_title, intake_start_date FROM student_applications WHERE id = ?',
             [id]
         );
 
@@ -5726,7 +6423,7 @@ router.post('/applications/:id/course-change-request', upload.single('supporting
 
         const app = apps[0];
         const studentName = `${app.first_name} ${app.last_name}`.trim();
-        const courseTitle = app.programme_name || app.course_title;
+        const courseTitle = app.course_title;
         const courseStartDate = app.intake_start_date;
         const supportingDocumentPath = file ? `/uploads/student-documents/${file.filename}` : null;
         const policyConfirmed = policy_confirmation === '1' || policy_confirmation === 'true' || policy_confirmation === true;
@@ -5745,7 +6442,7 @@ router.post('/applications/:id/course-change-request', upload.single('supporting
             ]
         );
 
-        console.log(`[COURSE CHANGE REQUEST] Application ${id}: ${type_of_request} request submitted by ${app.student_name}`);
+        console.log(`[COURSE CHANGE REQUEST] Application ${id}: ${type_of_request} request submitted by ${studentName}`);
 
         res.json({
             success: true,
@@ -5816,4 +6513,256 @@ router.get('/course-change-requests/:requestId', async (req, res) => {
     }
 });
 
+// Manager: get available programmes (the -INFO courses students enroll into)
+router.get('/programmes', async (req, res) => {
+    try {
+        const [rows] = await moodleDbPool.execute(
+            `SELECT id, idnumber AS course_code, fullname AS course_title, shortname
+             FROM mdl_course
+             WHERE idnumber LIKE '%-INFO'
+             ORDER BY fullname`
+        );
+        res.json({ success: true, data: rows });
+    } catch (error) {
+        console.error('Error fetching programmes:', error);
+        res.status(500).json({ success: false, message: 'Failed to fetch programmes' });
+    }
+});
+
+// Manager: get all course change requests (optional status filter)
+router.get('/course-change-requests', async (req, res) => {
+    try {
+        const { status } = req.query;
+        let query = `
+            SELECT
+                ccr.*,
+                sa.email,
+                sa.first_name,
+                sa.last_name,
+                sa.course_code AS current_course_code,
+                sa.course_title AS current_course_title,
+                sa.application_status
+            FROM course_change_requests ccr
+            LEFT JOIN student_applications sa ON sa.id = ccr.application_id
+        `;
+        const params = [];
+
+        if (status) {
+            if (String(status).toLowerCase() === 'pending') {
+                query += ' WHERE ccr.decision IS NULL OR ccr.decision = ?';
+                params.push('');
+            } else {
+                query += ' WHERE ccr.decision = ?';
+                params.push(status);
+            }
+        }
+
+        query += ' ORDER BY ccr.created_at DESC';
+
+        const [requests] = await db.execute(query, params);
+        res.json({
+            success: true,
+            data: requests
+        });
+    } catch (error) {
+        console.error('Error fetching all course change requests:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch course change requests',
+            error: error.message
+        });
+    }
+});
+
+// Manager: review course change request and apply transfer workflow
+router.post('/course-change-requests/:requestId/review', async (req, res) => {
+    try {
+        const { requestId } = req.params;
+        const {
+            decision,
+            reviewed_by,
+            committee_comments,
+            rejection_reason,
+            final_decision_confirmation,
+            new_course_code,
+            new_course_title,
+            apply_moodle_changes
+        } = req.body || {};
+
+        if (!decision) {
+            return res.status(400).json({
+                success: false,
+                message: 'Decision is required'
+            });
+        }
+
+        const [requestRows] = await db.execute(
+            `SELECT ccr.*, sa.email, sa.first_name, sa.last_name, sa.course_code, sa.course_title, sa.intake_start_date
+             FROM course_change_requests ccr
+             INNER JOIN student_applications sa ON sa.id = ccr.application_id
+             WHERE ccr.id = ?
+             LIMIT 1`,
+            [requestId]
+        );
+
+        if (!requestRows.length) {
+            return res.status(404).json({
+                success: false,
+                message: 'Course change request not found'
+            });
+        }
+
+        const requestRecord = requestRows[0];
+        const applyMoodleChanges = apply_moodle_changes !== false;
+
+        await db.execute(
+            `UPDATE course_change_requests
+             SET decision = ?,
+                 reviewed_by = ?,
+                 review_date = NOW(),
+                 rejection_reason = ?,
+                 committee_comments = ?,
+                 final_decision_confirmation = ?,
+                 new_course_code = ?,
+                 new_course_title = ?
+             WHERE id = ?`,
+            [
+                decision,
+                reviewed_by || 'Admissions Manager',
+                rejection_reason || null,
+                committee_comments || null,
+                final_decision_confirmation ? 1 : 0,
+                new_course_code ? String(new_course_code).trim().toUpperCase() : null,
+                new_course_title ? String(new_course_title).trim() : null,
+                requestId
+            ]
+        );
+
+        let transferResult = null;
+        if (String(requestRecord.type_of_request || '').toLowerCase() === 'transfer' && String(decision).startsWith('Approved')) {
+            const transferCourseCodeFromRequest = new_course_code || requestRecord.new_course_code;
+            const transferCourseTitleFromRequest = new_course_title || requestRecord.new_course_title;
+
+            if (!transferCourseCodeFromRequest) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'new_course_code is required for approved transfer requests'
+                });
+            }
+
+            const targetCourseCode = String(transferCourseCodeFromRequest).trim().toUpperCase();
+            let targetCourseTitle = String(transferCourseTitleFromRequest || '').trim();
+
+            if (!targetCourseTitle) {
+                const [courseRows] = await db.execute(
+                    'SELECT course_title FROM courses WHERE course_code = ? LIMIT 1',
+                    [targetCourseCode]
+                );
+                if (courseRows.length > 0) {
+                    targetCourseTitle = courseRows[0].course_title;
+                }
+            }
+
+            await db.execute(
+                `UPDATE student_applications
+                 SET course_code = ?,
+                     course_title = COALESCE(?, course_title),
+                     updated_at = CURRENT_TIMESTAMP
+                 WHERE id = ?`,
+                [targetCourseCode, targetCourseTitle || null, requestRecord.application_id]
+            );
+
+            const registrationSyncResult = await setSingleActiveProgrammeRegistration({
+                applicationId: requestRecord.application_id,
+                email: requestRecord.email,
+                courseCode: targetCourseCode,
+                courseTitle: targetCourseTitle || requestRecord.course_title,
+                source: 'course_change',
+                courseChangeRequestId: Number(requestId),
+                notes: `Transfer approved from ${requestRecord.course_code} to ${targetCourseCode}`
+            });
+            if (!registrationSyncResult.success) {
+                console.warn('[SCL TRANSFER REGISTRATION WARNING]', registrationSyncResult.message);
+            }
+
+            transferResult = {
+                updated_application_id: requestRecord.application_id,
+                previous_course_code: requestRecord.course_code,
+                new_course_code: targetCourseCode,
+                moodle_changes: null
+            };
+
+            if (applyMoodleChanges) {
+                const oldProgrammeCode = extractProgrammeCode(requestRecord.course_code)
+                    || String(requestRecord.course_code || '').trim().toUpperCase();
+                const newProgrammeCode = extractProgrammeCode(targetCourseCode)
+                    || String(targetCourseCode || '').trim().toUpperCase();
+
+                const oldProgrammeCourses = await getStudentProgrammeMoodleEnrolments(requestRecord.email, oldProgrammeCode);
+                const unenrollmentResult = await hardUnenrollStudentFromCourseIds(
+                    requestRecord.email,
+                    oldProgrammeCourses.map((course) => course.id)
+                );
+                const oldCohortRemoval = await removeStudentFromMoodleProgrammeCohorts(requestRecord.email, oldProgrammeCode);
+
+                let enrollmentResult;
+                let progressionResult = null;
+                if (targetCourseCode.includes('-INFO')) {
+                    enrollmentResult = await enrollStudentInProgrammeCourses(
+                        requestRecord.email,
+                        requestRecord.first_name,
+                        requestRecord.last_name,
+                        targetCourseCode
+                    );
+                    progressionResult = await enforceProgrammeProgressionLocks(requestRecord.email, newProgrammeCode);
+                } else {
+                    enrollmentResult = await enrollStudentInMoodle(
+                        requestRecord.email,
+                        requestRecord.first_name,
+                        requestRecord.last_name,
+                        targetCourseCode
+                    );
+                }
+
+                const newCohortAssignment = await assignStudentToMoodleCohort(
+                    requestRecord.email,
+                    requestRecord.first_name,
+                    requestRecord.last_name,
+                    newProgrammeCode,
+                    requestRecord.intake_start_date
+                );
+
+                transferResult.moodle_changes = {
+                    old_programme_code: oldProgrammeCode,
+                    removed_old_programme_courses: oldProgrammeCourses.length,
+                    old_programme_unenrollment: unenrollmentResult,
+                    old_programme_cohort_removal: oldCohortRemoval,
+                    new_programme_code: newProgrammeCode,
+                    new_programme_enrollment: enrollmentResult,
+                    new_programme_progression: progressionResult,
+                    new_programme_cohort_assignment: newCohortAssignment
+                };
+            }
+        }
+
+        res.json({
+            success: true,
+            message: 'Course change request reviewed successfully',
+            data: {
+                request_id: Number(requestId),
+                decision,
+                transfer: transferResult
+            }
+        });
+    } catch (error) {
+        console.error('Error reviewing course change request:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to review course change request',
+            error: error.message
+        });
+    }
+});
+
 module.exports = router;
+
