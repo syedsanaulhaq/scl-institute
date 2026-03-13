@@ -1206,15 +1206,36 @@ app.post('/api/sso/generate', async (req, res) => {
     const token = uuidv4();
     const firstname = user.first_name || 'SCL';
     const lastname = user.last_name || 'User';
-    // Keep SCL base role for SSO provisioning. Moodle/snapshot roles are used at login,
-    // but should not overwrite the role sent to Moodle for assignment during SSO.
-    const baseRole = user.role;
+
+    let ssoRole = user.role;
+    try {
+        const moodleRoleData = await getMoodleRolesByEmail(user.email, { preferSnapshot: false });
+        const mergedRoles = mergeRoles(user.role, moodleRoleData?.roles || [], {
+            forceManager: isProtectedManagementEmail(user.email)
+        });
+        const effectiveRoleContext = buildRoleContext(
+            mergedRoles.length ? mergedRoles.join(',') : user.role,
+            moodleRoleData?.roleData
+        );
+
+        // Protected admin accounts should always provision as Super Admin in Moodle SSO.
+        if (isProtectedManagementEmail(user.email)) {
+            ssoRole = 'Super Admin';
+        } else {
+            ssoRole = effectiveRoleContext.primaryRole || user.role;
+        }
+    } catch (roleErr) {
+        console.warn('[SSO] Could not derive merged role for token:', roleErr.message);
+        if (isProtectedManagementEmail(user.email)) {
+            ssoRole = 'Super Admin';
+        }
+    }
 
     try {
         console.log(`[SSO] Inserting token into DB...`);
         await pool.query(
             'INSERT INTO sso_tokens (token, email, firstname, lastname, role, redirect_url) VALUES (?, ?, ?, ?, ?, ?)',
-            [token, user.email, firstname, lastname, baseRole, redirect_url || null]
+            [token, user.email, firstname, lastname, ssoRole, redirect_url || null]
         );
         const moodleUrl = process.env.MOODLE_URL || 'http://localhost:8080';
         const redirectUrl = `${moodleUrl}/local/sclsso/login.php?token=${token}`;
