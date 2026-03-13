@@ -16,6 +16,8 @@
 )
 
 $ErrorActionPreference = "Stop"
+$sclDumpPath = $null
+$backupDir = $null
 
 function Write-Step {
 	param([string]$Message)
@@ -106,6 +108,41 @@ if (-not $NoDbPrompt -and -not $SyncSclDb -and -not $SyncMoodleDb) {
 	}
 }
 
+if ($SyncSclDb -or $SyncMoodleDb) {
+	Write-Step "Creating latest local backup set before deployment"
+	$ts = Get-Date -Format "yyyyMMdd_HHmmss"
+	$backupDir = Join-Path $RepoPath ("backups\local-sync-{0}" -f $ts)
+	New-Item -ItemType Directory -Path $backupDir -Force | Out-Null
+
+	if ($SyncSclDb) {
+		$sclDumpPath = Join-Path $backupDir ("{0}.sql" -f $SclDatabase)
+		docker exec $SclLocalMysqlContainer sh -lc "mysqldump -u$SclLocalMysqlUser -p$SclLocalMysqlPassword --single-transaction --quick --routines --triggers $SclDatabase" > $sclDumpPath
+		if ($LASTEXITCODE -ne 0 -or -not (Test-Path $sclDumpPath)) {
+			throw "Failed to create local SCL backup at $sclDumpPath"
+		}
+	}
+
+	if ($SyncMoodleDb) {
+		$sourceMoodleDump = $MoodleDumpPath
+		if ([string]::IsNullOrWhiteSpace($MoodleDumpPath)) {
+			$sourceMoodleDump = Join-Path $RepoPath "moodle-backup\moodle_backup.sql"
+		}
+
+		if (-not (Test-Path $sourceMoodleDump)) {
+			throw "Moodle dump file not found: $sourceMoodleDump"
+		}
+
+		$ext = [IO.Path]::GetExtension($sourceMoodleDump)
+		if ([string]::IsNullOrWhiteSpace($ext)) {
+			$ext = ".sql"
+		}
+		$MoodleDumpPath = Join-Path $backupDir ("moodle_backup{0}" -f $ext)
+		Copy-Item -Path $sourceMoodleDump -Destination $MoodleDumpPath -Force
+	}
+
+	Write-Step ("Local backup completed: {0}" -f $backupDir)
+}
+
 Write-Step "Fetching latest refs"
 Invoke-Git @("fetch", "origin")
 
@@ -130,11 +167,11 @@ if (-not $SkipBuild) {
 
 if ($SyncSclDb) {
 	Write-Step "Syncing SCL DB (local Docker -> production Docker MySQL)"
-	$ts = Get-Date -Format "yyyyMMdd_HHmmss"
-	$sclDumpPath = Join-Path $env:TEMP ("scl_sync_{0}.sql" -f $ts)
-
-	$sclDumpCmd = "docker exec $SclLocalMysqlContainer sh -lc `"mysqldump -u$SclLocalMysqlUser -p$SclLocalMysqlPassword --single-transaction --quick --routines --triggers $SclDatabase`" > `"$sclDumpPath`""
-	cmd /c $sclDumpCmd | Out-Null
+	if (-not $sclDumpPath) {
+		$ts = Get-Date -Format "yyyyMMdd_HHmmss"
+		$sclDumpPath = Join-Path $env:TEMP ("scl_sync_{0}.sql" -f $ts)
+		docker exec $SclLocalMysqlContainer sh -lc "mysqldump -u$SclLocalMysqlUser -p$SclLocalMysqlPassword --single-transaction --quick --routines --triggers $SclDatabase" > $sclDumpPath
+	}
 	if ($LASTEXITCODE -ne 0 -or -not (Test-Path $sclDumpPath)) {
 		throw "Failed to export local SCL DB from container '$SclLocalMysqlContainer'"
 	}
@@ -161,10 +198,6 @@ if ($SyncSclDb) {
 
 if ($SyncMoodleDb) {
 	Write-Step "Syncing Moodle DB (local dump -> production host MySQL)"
-	if ([string]::IsNullOrWhiteSpace($MoodleDumpPath)) {
-		$MoodleDumpPath = Join-Path $RepoPath "moodle-backup\moodle_backup.sql"
-	}
-
 	if (-not (Test-Path $MoodleDumpPath)) {
 		throw "Moodle dump file not found: $MoodleDumpPath"
 	}
