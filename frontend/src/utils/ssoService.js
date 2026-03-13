@@ -7,6 +7,38 @@
 import axios from 'axios';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
+const LMS_WINDOW_NAME = 'scl_moodle_window';
+
+let lmsWindowRef = null;
+
+const openOrReuseLmsWindow = (url, placeholderWindow = null) => {
+    try {
+        if (placeholderWindow && !placeholderWindow.closed) {
+            placeholderWindow.location.href = url;
+            placeholderWindow.focus();
+            lmsWindowRef = placeholderWindow;
+            return true;
+        }
+
+        if (lmsWindowRef && !lmsWindowRef.closed) {
+            lmsWindowRef.location.href = url;
+            lmsWindowRef.focus();
+            return true;
+        }
+
+        const newWindow = window.open(url, LMS_WINDOW_NAME);
+        if (!newWindow) {
+            return false;
+        }
+
+        lmsWindowRef = newWindow;
+        lmsWindowRef.focus();
+        return true;
+    } catch (err) {
+        console.error('[SSO] Failed to open/reuse LMS window:', err);
+        return false;
+    }
+};
 
 /**
  * Generate SSO token and return Moodle redirect URL
@@ -22,6 +54,7 @@ export const generateSSOToken = async (email, redirectTo = null) => {
 
         const response = await axios.post(`${API_URL}/sso/generate`, {
             email,
+            redirect_url: redirectTo,
             redirect_to: redirectTo
         });
 
@@ -59,12 +92,28 @@ export const openMoodleSSO = async (email, options = {}) => {
         redirectTo = null
     } = options;
 
+    let placeholderWindow = null;
+
     try {
+        if (newWindow) {
+            placeholderWindow = window.open('', LMS_WINDOW_NAME);
+            if (!placeholderWindow) {
+                const popupError = 'Popup blocked. Please allow popups for this site.';
+                onError?.(popupError);
+                return false;
+            }
+        }
+
         const result = await generateSSOToken(email, redirectTo);
         
         if (result.success) {
             if (newWindow) {
-                window.open(result.redirectUrl, '_blank', 'noopener,noreferrer');
+                const opened = openOrReuseLmsWindow(result.redirectUrl, placeholderWindow);
+                if (!opened) {
+                    const openError = 'Could not open Moodle window.';
+                    onError?.(openError);
+                    return false;
+                }
             } else {
                 window.location.href = result.redirectUrl;
             }
@@ -76,6 +125,9 @@ export const openMoodleSSO = async (email, options = {}) => {
             throw new Error(error);
         }
     } catch (err) {
+        if (placeholderWindow && !placeholderWindow.closed) {
+            placeholderWindow.close();
+        }
         const errorMessage = err.message || 'Failed to access Moodle LMS';
         onError?.(errorMessage);
         console.error('[SSO] Error:', errorMessage);

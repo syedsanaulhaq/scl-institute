@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { FileText, Upload, CheckCircle, Clock, AlertTriangle } from 'lucide-react';
 import axios from 'axios';
+import { openMoodleSSO } from '../../utils/ssoService';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
 
@@ -78,15 +79,9 @@ const StudentAssessments = ({ user }) => {
 
     const handleViewInMoodle = async (moodleUrl) => {
         try {
-            const ssoPayload = { email: user?.email };
-            if (moodleUrl) {
-                ssoPayload.redirect_to = moodleUrl;
-            }
-            
-            const response = await axios.post(`${API_URL}/sso/generate`, ssoPayload);
-            if (response.data?.success && response.data?.redirectUrl) {
-                window.open(response.data.redirectUrl, '_blank');
-            }
+            await openMoodleSSO(user?.email, {
+                redirectTo: moodleUrl || null
+            });
         } catch (err) {
             console.error('SSO Error:', err);
         }

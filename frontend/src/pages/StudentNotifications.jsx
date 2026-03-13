@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Bell, CheckCircle, AlertCircle, XCircle, Clock, Mail, ArrowLeft } from 'lucide-react';
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
+import { openMoodleSSO } from '../utils/ssoService';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
 
@@ -95,14 +96,11 @@ export default function NotificationsPage() {
             if (!email) return;
             setSsoLoading(true);
             setSsoError('');
-            const response = await axios.post(`${API_URL}/sso/generate`, {
-                email
+            const success = await openMoodleSSO(email, {
+                onError: (message) => setSsoError(message)
             });
-
-            if (response.data?.success && response.data?.redirectUrl) {
-                window.open(response.data.redirectUrl, '_blank', 'noopener,noreferrer');
-            } else {
-                setSsoError('Failed to generate SSO link');
+            if (!success) {
+                setSsoError((prev) => prev || 'Failed to generate SSO link');
             }
         } catch (err) {
             setSsoError(err.response?.data?.message || 'Failed to access Moodle');

@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import axios from 'axios';
 import {
     LayoutDashboard,
     GraduationCap,
@@ -24,8 +23,7 @@ import {
     DollarSign
 } from 'lucide-react';
 import { getRoleContext } from '../utils/roleAccess';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
+import { openMoodleSSO } from '../utils/ssoService';
 
 const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
     const navigate = useNavigate();
@@ -45,15 +43,7 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
     const handleAccessLMS = async () => {
         try {
             setLoading(true);
-            const response = await axios.post(`${API_URL}/sso/generate`, {
-                email: user.email
-            });
-
-            if (response.data.success) {
-                window.open(response.data.redirectUrl, '_blank', 'noopener,noreferrer');
-            } else {
-                console.error('Failed to generate SSO token');
-            }
+            await openMoodleSSO(user.email);
         } catch (err) {
             console.error('Failed to access LMS:', err);
         } finally {

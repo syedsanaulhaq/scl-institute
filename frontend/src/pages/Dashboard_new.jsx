@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { openMoodleSSO } from '../utils/ssoService';
 import {
     GraduationCap,
     Users,
@@ -99,14 +100,9 @@ const Dashboard = () => {
     const handleSSORedirect = async () => {
         if (user && user.email) {
             try {
-                const response = await axios.post(`${API_URL}/sso/generate`, {
-                    email: user.email
-                });
-                
-                if (response.data.success) {
-                    window.open(response.data.redirectUrl, '_blank');
-                } else {
-                    console.error('SSO generation failed:', response.data.message);
+                const success = await openMoodleSSO(user.email);
+                if (!success) {
+                    console.error('SSO generation failed');
                 }
             } catch (error) {
                 console.error('Error generating SSO token:', error);

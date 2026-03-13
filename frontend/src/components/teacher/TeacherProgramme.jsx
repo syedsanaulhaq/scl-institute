@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 import { BookOpen, GraduationCap, ExternalLink, Loader2 } from 'lucide-react';
+import { openMoodleSSO } from '../../utils/ssoService';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
 
@@ -41,16 +42,9 @@ const TeacherProgramme = ({ user }) => {
     const handleOpenCourseInMoodle = async (courseId) => {
         try {
             setSsoLoading(courseId);
-            // Generate SSO token with course-specific redirect URL
-            const response = await axios.post(`${API_URL}/sso/generate`, {
-                email: user.email,
-                redirect_url: `/course/view.php?id=${courseId}`
+            await openMoodleSSO(user.email, {
+                redirectTo: `/course/view.php?id=${courseId}`
             });
-
-            if (response.data?.success && response.data?.redirectUrl) {
-                // Open the SSO login URL that will redirect to the specific course
-                window.open(response.data.redirectUrl, '_blank', 'noopener,noreferrer');
-            }
         } catch (err) {
             console.error('Failed to open course in Moodle:', err);
         } finally {
