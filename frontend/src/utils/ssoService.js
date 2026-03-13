@@ -151,8 +151,27 @@ export const getMoodleUrl = () => {
 export const logoutMoodleSession = () => {
     try {
         const moodleUrl = getMoodleUrl();
+        const logoutUrl = `${moodleUrl}/login/logout.php`;
+
+        // Best-effort silent logout request (may be limited by cookie/CORS policy).
+        fetch(logoutUrl, {
+            method: 'GET',
+            mode: 'no-cors',
+            credentials: 'include'
+        }).catch(() => {});
+
         if (lmsWindowRef && !lmsWindowRef.closed) {
-            lmsWindowRef.location.href = `${moodleUrl}/login/logout.php`;
+            // Trigger Moodle logout in the opened LMS window, then close it.
+            lmsWindowRef.location.href = logoutUrl;
+            setTimeout(() => {
+                try {
+                    if (lmsWindowRef && !lmsWindowRef.closed) {
+                        lmsWindowRef.close();
+                    }
+                } catch {
+                    // Ignore close errors.
+                }
+            }, 300);
         }
         lmsWindowRef = null;
     } catch (err) {
