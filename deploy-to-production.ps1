@@ -5,6 +5,7 @@
 	[string]$RemoteRepoPath = "/root/scl-institute",
 	[string]$RemoteComposeFile = "docker-compose.prod.yml",
 	[switch]$SkipBuild,
+	[switch]$NoDbPrompt,
 	[switch]$SyncSclDb,
 	[switch]$SyncMoodleDb,
 	[string]$SclLocalMysqlContainer = "scli-mysql-dev",
@@ -78,7 +79,7 @@ if ($dirtyTracked) {
 }
 
 # Ask operator about DB sync unless explicit flags were passed.
-if (-not $SyncSclDb -and -not $SyncMoodleDb) {
+if (-not $NoDbPrompt -and -not $SyncSclDb -and -not $SyncMoodleDb) {
 	Write-Host ""
 	Write-Host "Database sync options:" -ForegroundColor Yellow
 	$sclAnswer = (Read-Host "Sync SCL DB to production? (y/N)").Trim().ToLower()
