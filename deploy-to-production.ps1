@@ -150,8 +150,8 @@ if ($SyncSclDb) {
 		throw "MYSQL_ROOT_PASSWORD contains a single quote, which this script currently does not support"
 	}
 	$pwdEscaped = $rootPwd
-	$sclRemoteSql = "docker exec scli-mysql-prod mysql -uroot -p'$pwdEscaped' -e \"DROP DATABASE IF EXISTS $SclDatabase;\"; " +
-					"docker exec scli-mysql-prod mysql -uroot -p'$pwdEscaped' -e \"CREATE DATABASE $SclDatabase CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;\"; " +
+	$sclRemoteSql = "docker exec scli-mysql-prod mysql -uroot -p'$pwdEscaped' -e 'DROP DATABASE IF EXISTS $SclDatabase;'; " +
+					"docker exec scli-mysql-prod mysql -uroot -p'$pwdEscaped' -e 'CREATE DATABASE $SclDatabase CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;'; " +
 					"docker exec -i scli-mysql-prod mysql -uroot -p'$pwdEscaped' $SclDatabase < /tmp/scl_sync.sql"
 	ssh "$RemoteUser@$RemoteHost" $sclRemoteSql
 	if ($LASTEXITCODE -ne 0) {
