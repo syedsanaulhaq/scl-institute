@@ -223,11 +223,21 @@ if (!$user = $DB->get_record('user', array('email' => $email, 'deleted' => 0))) 
     $user->username = $email; // Use email as username (must be unique)
     $user->firstname = $firstname;
     $user->lastname = $lastname;
+    $user->firstnamephonetic = '';
+    $user->lastnamephonetic = '';
+    $user->middlename = '';
+    $user->alternatename = '';
     $user->password = hash_internal_user_password('TempPassword123!'); // Generate random password hash
     $user->city = 'London';
     $user->country = 'GB';
     $user->lang = 'en';
     $user->timezone = 'Europe/London';
+    $user->picture = 0;
+    $user->firstaccess = 0;
+    $user->lastaccess = 0;
+    $user->lastlogin = 0;
+    $user->currentlogin = 0;
+    $user->lastip = '';
     $user->timecreated = time();
     $user->timemodified = time();
     
@@ -241,6 +251,10 @@ if (!$user = $DB->get_record('user', array('email' => $email, 'deleted' => 0))) 
     $DB->update_record('user', $user);
     error_log('[SSO] Existing user updated: ' . $email);
 }
+
+// Always re-fetch a complete user record before login. Moodle's
+// complete_user_login() and renderers expect many core fields to exist.
+$user = $DB->get_record('user', array('id' => $user->id), '*', MUST_EXIST);
 
 // Assign Moodle roles based on SCL roles
 assignMoodleRoles($user->id, $sclRole);
