@@ -93,20 +93,9 @@ if ($dirtyTracked) {
 	throw "You have uncommitted tracked changes on develop. Commit/stash first."
 }
 
-# Ask operator about DB sync unless explicit flags were passed.
-if (-not $NoDbPrompt -and -not $SyncSclDb -and -not $SyncMoodleDb) {
-	Write-Host ""
-	Write-Host "Database sync options:" -ForegroundColor Yellow
-	$sclAnswer = (Read-Host "Sync SCL DB to production? (y/N)").Trim().ToLower()
-	if ($sclAnswer -eq "y" -or $sclAnswer -eq "yes") {
-		$SyncSclDb = $true
-	}
-
-	$moodleAnswer = (Read-Host "Sync Moodle DB to production? (y/N)").Trim().ToLower()
-	if ($moodleAnswer -eq "y" -or $moodleAnswer -eq "yes") {
-		$SyncMoodleDb = $true
-	}
-}
+# Non-interactive behavior:
+# - Code deploy runs by default.
+# - DB sync runs only when -SyncSclDb and/or -SyncMoodleDb are passed.
 
 if ($SyncSclDb -or $SyncMoodleDb) {
 	Write-Step "Creating latest local backup set before deployment"
