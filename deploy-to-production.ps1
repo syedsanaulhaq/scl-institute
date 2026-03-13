@@ -174,7 +174,7 @@ if ($SyncMoodleDb) {
 
 	$moodleRemoteSql = @"
 mkdir -p /root/db-backups
-mysqldump -u moodleuser -pmoodlepass moodle > /root/db-backups/moodle_before_sync_$(date +%Y%m%d_%H%M%S).sql
+mysqldump -u moodleuser -pmoodlepass moodle > /root/db-backups/moodle_before_sync_`$(date +%Y%m%d_%H%M%S).sql
 mysql -u moodleuser -pmoodlepass -e "DROP DATABASE IF EXISTS moodle; CREATE DATABASE moodle CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
 "@
 
