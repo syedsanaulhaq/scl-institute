@@ -141,19 +141,16 @@ if ($SyncSclDb) {
 
 	Upload-FileToRemote -LocalPath $sclDumpPath -RemoteSpec ("{0}@{1}:/tmp/scl_sync.sql" -f $RemoteUser, $RemoteHost) -ErrorMessage "Failed to upload SCL DB dump"
 
-	$sclRemoteSql = @'
-set -e
-ROOTPWD=$(docker inspect --format '{{range .Config.Env}}{{println .}}{{end}}' scli-mysql-prod | awk -F= '/^MYSQL_ROOT_PASSWORD=/{print $2}')
-if [ -z "$ROOTPWD" ]; then
-  echo "Failed to detect MYSQL_ROOT_PASSWORD from scli-mysql-prod"
-  exit 1
-fi
-docker exec scli-mysql-prod mysql -uroot -p"$ROOTPWD" -e 'DROP DATABASE IF EXISTS __SCL_DB__;'
-docker exec scli-mysql-prod mysql -uroot -p"$ROOTPWD" -e 'CREATE DATABASE __SCL_DB__ CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;'
-docker exec -i scli-mysql-prod mysql -uroot -p"$ROOTPWD" __SCL_DB__ < /tmp/scl_sync.sql
-'@
-	$sclRemoteSql = $sclRemoteSql.Replace("__SCL_DB__", $SclDatabase)
-	$sclRemoteSql | ssh "$RemoteUser@$RemoteHost" "bash -s"
+	$rootPwd = ((ssh "$RemoteUser@$RemoteHost" "docker inspect --format '{{range .Config.Env}}{{println .}}{{end}}' scli-mysql-prod | grep '^MYSQL_ROOT_PASSWORD=' | cut -d= -f2") | Out-String).Trim()
+	if ([string]::IsNullOrWhiteSpace($rootPwd)) {
+		throw "Failed to detect MYSQL_ROOT_PASSWORD from scli-mysql-prod"
+	}
+
+	$pwdEscaped = $rootPwd.Replace("'", "'\"'\"'")
+	$sclRemoteSql = "docker exec scli-mysql-prod mysql -uroot -p'$pwdEscaped' -e \"DROP DATABASE IF EXISTS $SclDatabase;\"; " +
+					"docker exec scli-mysql-prod mysql -uroot -p'$pwdEscaped' -e \"CREATE DATABASE $SclDatabase CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;\"; " +
+					"docker exec -i scli-mysql-prod mysql -uroot -p'$pwdEscaped' $SclDatabase < /tmp/scl_sync.sql"
+	ssh "$RemoteUser@$RemoteHost" $sclRemoteSql
 	if ($LASTEXITCODE -ne 0) {
 		throw "Failed to import SCL DB on production"
 	}
