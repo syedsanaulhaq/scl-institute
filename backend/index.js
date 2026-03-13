@@ -1257,7 +1257,7 @@ app.get('/api/students/applications/:id/review', async (req, res) => {
     }
 });
 
-// Background role sync — every 10 minutes, refresh Moodle role snapshots for all users
+// Background role sync — every 5 minutes, refresh Moodle role snapshots for all users
 // so that Moodle admin changes (role/enrolment) propagate automatically without requiring re-login.
 setInterval(async () => {
     try {
@@ -1274,7 +1274,7 @@ setInterval(async () => {
     } catch (e) {
         console.error('[ROLE SYNC] Background sync error:', e.message);
     }
-}, 10 * 60 * 1000); // every 10 minutes
+}, 5 * 60 * 1000); // every 5 minutes
 
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`Backend running on port ${PORT}`);
