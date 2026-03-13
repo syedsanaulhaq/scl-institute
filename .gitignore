@@ -54,3 +54,11 @@ production-*.json
 backend/uploads/
 frontend/uploads/
 uploads/
+
+# Local scratch/ops files
+SCL_CLIENT_OVERVIEW.html
+SCL_SYSTEM_OVERVIEW.html
+dbhost
+dbname
+dbuser
+scripts/promote-develop-to-production.ps1
