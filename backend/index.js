@@ -649,6 +649,16 @@ function getRolePriority(role) {
     return priority[role] || 99;
 }
 
+function mergeRoles(localRoleValue, moodleRoles = []) {
+    const localRoles = parseRoleTokens(localRoleValue);
+    const remoteRoles = Array.isArray(moodleRoles)
+        ? moodleRoles.map((role) => normalizeRole(role)).filter(Boolean)
+        : [];
+
+    return [...new Set([...localRoles, ...remoteRoles])]
+        .sort((a, b) => getRolePriority(a) - getRolePriority(b));
+}
+
 async function callMoodle(wsfunction, params = {}) {
     const moodleBaseUrl = process.env.MOODLE_INTERNAL_URL || process.env.MOODLE_URL || 'http://localhost:9090';
     const moodleToken = process.env.MOODLE_TOKEN;
@@ -841,18 +851,34 @@ async function forceResyncRoleSnapshot({ email, moodleUserId = null }) {
         throw new Error('No Moodle roles found for user');
     }
 
+    // Preserve an existing local management role so periodic sync doesn't
+    // accidentally downgrade admins to course-only roles.
+    let effectiveRoles = fresh.roles;
+    try {
+        const [currentRows] = await pool.query('SELECT role FROM users WHERE email = ? LIMIT 1', [resolvedEmail]);
+        const currentRole = currentRows?.[0]?.role || null;
+        const currentRoleTokens = parseRoleTokens(currentRole);
+        const hasLocalManagementRole = currentRoleTokens.some((role) => managementRoles.has(role));
+
+        if (hasLocalManagementRole) {
+            effectiveRoles = mergeRoles(currentRole, fresh.roles);
+        }
+    } catch (e) {
+        console.warn('[SSO RESYNC] Could not read local role for merge:', e.message);
+    }
+
     // Ensure snapshot has a fresh timestamp even if resolver returned from fallback path.
     await upsertRoleSnapshot({
         email: resolvedEmail,
         moodleUserId: fresh.moodleUserId || moodleUserId || null,
-        roles: fresh.roles,
+        roles: effectiveRoles,
         roleData: fresh.roleData || null,
         source: `${fresh.source || 'moodle'}-resync`
     });
 
     // Keep local role roughly aligned for legacy readers.
     try {
-        const roleContext = buildRoleContext(fresh.roles.join(','), fresh.roleData || null);
+        const roleContext = buildRoleContext(effectiveRoles.join(','), fresh.roleData || null);
         const primaryRole = roleContext.primaryRole;
         if (primaryRole) {
             await pool.query('UPDATE users SET role = ? WHERE email = ?', [primaryRole, resolvedEmail]);
@@ -864,7 +890,7 @@ async function forceResyncRoleSnapshot({ email, moodleUserId = null }) {
     return {
         email: resolvedEmail,
         moodleUserId: fresh.moodleUserId || moodleUserId || null,
-        roles: fresh.roles,
+        roles: effectiveRoles,
         roleData: fresh.roleData || null,
         source: fresh.source || 'moodle'
     };
@@ -1026,7 +1052,8 @@ app.post('/api/login', async (req, res) => {
             const user = rows[0];
             const fullName = [user.first_name, user.last_name].filter(Boolean).join(' ').trim() || email;
             const moodleRoleData = await getMoodleRolesByEmail(user.email, { preferSnapshot: false });
-            const roleSeed = moodleRoleData?.roles?.length ? moodleRoleData.roles.join(',') : user.role;
+            const mergedRoles = mergeRoles(user.role, moodleRoleData?.roles || []);
+            const roleSeed = mergedRoles.length ? mergedRoles.join(',') : user.role;
             const roleContext = buildRoleContext(roleSeed, moodleRoleData?.roleData);
 
             // Student accounts must have at least one accepted application to sign in.
@@ -1084,7 +1111,8 @@ app.post('/api/v1/auth/login', async (req, res) => {
         if (rows.length > 0) {
             const user = rows[0];
             const moodleRoleData = await getMoodleRolesByEmail(user.email, { preferSnapshot: false });
-            const roleSeed = moodleRoleData?.roles?.length ? moodleRoleData.roles.join(',') : user.role;
+            const mergedRoles = mergeRoles(user.role, moodleRoleData?.roles || []);
+            const roleSeed = mergedRoles.length ? mergedRoles.join(',') : user.role;
             const roleContext = buildRoleContext(roleSeed, moodleRoleData?.roleData);
 
             // Student accounts must have at least one accepted application to sign in.
