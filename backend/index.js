@@ -562,6 +562,12 @@ const roleAliasMap = {
 const managementRoles = new Set(['admin', 'manager', 'coursecreator']);
 const teachingRoles = new Set(['editingteacher', 'teacher']);
 const learningRoles = new Set(['student']);
+const protectedManagementEmails = new Set(
+    String(process.env.PROTECTED_MANAGEMENT_EMAILS || 'admin@sclsandbox.xyz,admin@scl.com')
+        .split(',')
+        .map((entry) => entry.trim().toLowerCase())
+        .filter(Boolean)
+);
 
 function normalizeRole(role) {
     if (!role) {
@@ -649,11 +655,20 @@ function getRolePriority(role) {
     return priority[role] || 99;
 }
 
-function mergeRoles(localRoleValue, moodleRoles = []) {
+function isProtectedManagementEmail(email) {
+    return Boolean(email && protectedManagementEmails.has(String(email).trim().toLowerCase()));
+}
+
+function mergeRoles(localRoleValue, moodleRoles = [], options = {}) {
+    const forceManager = options.forceManager === true;
     const localRoles = parseRoleTokens(localRoleValue);
     const remoteRoles = Array.isArray(moodleRoles)
         ? moodleRoles.map((role) => normalizeRole(role)).filter(Boolean)
         : [];
+
+    if (forceManager) {
+        localRoles.push('manager');
+    }
 
     return [...new Set([...localRoles, ...remoteRoles])]
         .sort((a, b) => getRolePriority(a) - getRolePriority(b));
@@ -859,9 +874,10 @@ async function forceResyncRoleSnapshot({ email, moodleUserId = null }) {
         const currentRole = currentRows?.[0]?.role || null;
         const currentRoleTokens = parseRoleTokens(currentRole);
         const hasLocalManagementRole = currentRoleTokens.some((role) => managementRoles.has(role));
+        const protectedManagement = isProtectedManagementEmail(resolvedEmail);
 
-        if (hasLocalManagementRole) {
-            effectiveRoles = mergeRoles(currentRole, fresh.roles);
+        if (hasLocalManagementRole || protectedManagement) {
+            effectiveRoles = mergeRoles(currentRole, fresh.roles, { forceManager: protectedManagement });
         }
     } catch (e) {
         console.warn('[SSO RESYNC] Could not read local role for merge:', e.message);
@@ -1052,7 +1068,9 @@ app.post('/api/login', async (req, res) => {
             const user = rows[0];
             const fullName = [user.first_name, user.last_name].filter(Boolean).join(' ').trim() || email;
             const moodleRoleData = await getMoodleRolesByEmail(user.email, { preferSnapshot: false });
-            const mergedRoles = mergeRoles(user.role, moodleRoleData?.roles || []);
+            const mergedRoles = mergeRoles(user.role, moodleRoleData?.roles || [], {
+                forceManager: isProtectedManagementEmail(user.email)
+            });
             const roleSeed = mergedRoles.length ? mergedRoles.join(',') : user.role;
             const roleContext = buildRoleContext(roleSeed, moodleRoleData?.roleData);
 
@@ -1111,7 +1129,9 @@ app.post('/api/v1/auth/login', async (req, res) => {
         if (rows.length > 0) {
             const user = rows[0];
             const moodleRoleData = await getMoodleRolesByEmail(user.email, { preferSnapshot: false });
-            const mergedRoles = mergeRoles(user.role, moodleRoleData?.roles || []);
+            const mergedRoles = mergeRoles(user.role, moodleRoleData?.roles || [], {
+                forceManager: isProtectedManagementEmail(user.email)
+            });
             const roleSeed = mergedRoles.length ? mergedRoles.join(',') : user.role;
             const roleContext = buildRoleContext(roleSeed, moodleRoleData?.roleData);
 
