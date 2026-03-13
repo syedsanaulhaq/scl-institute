@@ -180,9 +180,10 @@ mysql -u moodleuser -pmoodlepass -e 'CREATE DATABASE moodle CHARACTER SET utf8mb
 "@
 
 	if ($remoteMoodleFile.EndsWith(".gz")) {
-		$moodleRemoteSql += "`ngunzip -c $remoteMoodleFile | mysql -u moodleuser -pmoodlepass moodle"
+		$moodleRemoteSql += "`ngunzip -c $remoteMoodleFile | mysql --binary-mode=1 -u moodleuser -pmoodlepass moodle"
 	} else {
-		$moodleRemoteSql += "`nmysql -u moodleuser -pmoodlepass moodle < $remoteMoodleFile"
+		$moodleRemoteSql += "`niconv -f UTF-16LE -t UTF-8 $remoteMoodleFile > /tmp/moodle_sync_utf8.sql 2>/dev/null || cp $remoteMoodleFile /tmp/moodle_sync_utf8.sql"
+		$moodleRemoteSql += "`nmysql --binary-mode=1 -u moodleuser -pmoodlepass moodle < /tmp/moodle_sync_utf8.sql"
 	}
 
 	ssh "$RemoteUser@$RemoteHost" $moodleRemoteSql
