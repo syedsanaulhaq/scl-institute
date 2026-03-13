@@ -703,7 +703,7 @@ async function upsertRoleSnapshot({ email, moodleUserId = null, roles = [], role
     }
 
     const rolesString = roles.join(',');
-    const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
 
     await pool.query(
         `INSERT INTO user_role_snapshots (email, moodle_user_id, roles, role_data, synced_at, expires_at, source)
@@ -780,6 +780,68 @@ async function getMoodleRolesFromDbByEmail(email) {
         moodleUserId,
         roles,
         roleData
+    };
+}
+
+async function getEmailFromMoodleUserId(moodleUserId) {
+    if (!moodleUserId) {
+        return null;
+    }
+
+    const [rows] = await moodlePool.query(
+        `SELECT email FROM ${moodleTablePrefix}user WHERE id = ? AND deleted = 0 LIMIT 1`,
+        [moodleUserId]
+    );
+
+    if (!Array.isArray(rows) || rows.length === 0) {
+        return null;
+    }
+
+    return rows[0].email || null;
+}
+
+async function forceResyncRoleSnapshot({ email, moodleUserId = null }) {
+    let resolvedEmail = email;
+
+    if (!resolvedEmail && moodleUserId) {
+        resolvedEmail = await getEmailFromMoodleUserId(moodleUserId);
+    }
+
+    if (!resolvedEmail) {
+        throw new Error('Unable to resolve email for resync');
+    }
+
+    const fresh = await getMoodleRolesByEmail(resolvedEmail, { preferSnapshot: false });
+    if (!fresh || !Array.isArray(fresh.roles) || fresh.roles.length === 0) {
+        throw new Error('No Moodle roles found for user');
+    }
+
+    // Ensure snapshot has a fresh timestamp even if resolver returned from fallback path.
+    await upsertRoleSnapshot({
+        email: resolvedEmail,
+        moodleUserId: fresh.moodleUserId || moodleUserId || null,
+        roles: fresh.roles,
+        roleData: fresh.roleData || null,
+        source: `${fresh.source || 'moodle'}-resync`
+    });
+
+    // Keep local role roughly aligned for legacy readers.
+    try {
+        const roleContext = buildRoleContext(fresh.roles.join(','), fresh.roleData || null);
+        const primaryRole = roleContext.primaryRole;
+        if (primaryRole) {
+            await pool.query('UPDATE users SET role = ? WHERE email = ?', [primaryRole, resolvedEmail]);
+        }
+    } catch (e) {
+        console.warn('[SSO RESYNC] Could not update users.role:', e.message);
+    }
+
+    return {
+        email: resolvedEmail,
+        moodleUserId: fresh.moodleUserId || moodleUserId || null,
+        roles: fresh.roles,
+        roleData: fresh.roleData || null,
+        source: fresh.source || 'moodle'
     };
 }
 
@@ -1092,7 +1154,7 @@ app.post('/api/sso/role-sync', async (req, res) => {
 
     try {
         const rolesString = Array.isArray(roles) ? roles.join(',') : String(roles);
-        const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes from now
+        const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
         
         await pool.query(`
             INSERT INTO user_role_snapshots (email, moodle_user_id, roles, role_data, synced_at, expires_at, source)
@@ -1194,6 +1256,25 @@ app.get('/api/students/applications/:id/review', async (req, res) => {
         });
     }
 });
+
+// Background role sync — every 10 minutes, refresh Moodle role snapshots for all users
+// so that Moodle admin changes (role/enrolment) propagate automatically without requiring re-login.
+setInterval(async () => {
+    try {
+        const [users] = await pool.query('SELECT email FROM users WHERE email IS NOT NULL AND email != ""');
+        console.log(`[ROLE SYNC] Background sync starting for ${users.length} users`);
+        for (const user of users) {
+            try {
+                await forceResyncRoleSnapshot({ email: user.email });
+            } catch (e) {
+                // ignore per-user errors (e.g. user not in Moodle)
+            }
+        }
+        console.log(`[ROLE SYNC] Background sync complete`);
+    } catch (e) {
+        console.error('[ROLE SYNC] Background sync error:', e.message);
+    }
+}, 10 * 60 * 1000); // every 10 minutes
 
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`Backend running on port ${PORT}`);

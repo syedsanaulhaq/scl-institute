@@ -33,6 +33,70 @@ const extractProgrammeKey = (courseCode) => {
     return fallback ? fallback[1] : normalized;
 };
 
+const mapCatalogCoursesToProgramme = (categories, studentApp) => {
+    const appTitle = String(studentApp?.course_title || '').trim().toLowerCase();
+    const appType = String(studentApp?.course_type || '').trim().toLowerCase();
+
+    const allEntries = [];
+
+    (categories || []).forEach((category) => {
+        const categoryName = String(category?.name || '');
+
+        (category?.courses || []).forEach((course) => {
+            allEntries.push({
+                ...course,
+                _categoryName: categoryName,
+                _programName: categoryName
+            });
+        });
+
+        (category?.subcategories || []).forEach((program) => {
+            (program?.courses || []).forEach((course) => {
+                allEntries.push({
+                    ...course,
+                    _categoryName: categoryName,
+                    _programName: String(program?.name || categoryName)
+                });
+            });
+        });
+    });
+
+    const byTitle = allEntries.filter((course) => {
+        if (!appTitle) return false;
+        const programName = String(course._programName || '').toLowerCase();
+        const courseTitle = String(course.course_title || course.fullname || course.name || '').toLowerCase();
+        return programName.includes(appTitle) || appTitle.includes(programName) || courseTitle.includes(appTitle);
+    });
+
+    const byType = allEntries.filter((course) => {
+        if (!appType) return false;
+        return String(course._categoryName || '').toLowerCase() === appType;
+    });
+
+    const picked = byTitle.length > 0 ? byTitle : (byType.length > 0 ? byType : allEntries);
+
+    const deduped = new Map();
+    picked.forEach((course) => {
+        const id = Number(course.id);
+        if (!Number.isFinite(id)) return;
+        if (deduped.has(id)) return;
+        deduped.set(id, {
+            id,
+            moodle_course_id: id,
+            course_title: course.course_title || course.fullname || course.name || `Course ${id}`,
+            course_code: course.course_code || course.idnumber || `COURSE-${id}`,
+            course_type: course._categoryName || studentApp?.course_type || 'General',
+            description: course.description || '',
+            programme_name: course._programName || '',
+            isStudentEnrolled: true,
+            hasTeachingRole: false,
+            fromCatalogueFallback: true
+        });
+    });
+
+    return Array.from(deduped.values());
+};
+
 const StudentProgramme = ({ user }) => {
     const [programmeData, setProgrammeData] = useState(null);
     const [courseModules, setCourseModules] = useState([]);
@@ -151,7 +215,17 @@ const StudentProgramme = ({ user }) => {
                     const myStudentCourses = (registeredCoursesResponse.data?.data || []).filter(
                         (course) => course.isStudentEnrolled && belongsToProgramme(course, currentProgrammeCode)
                     );
-                    setRegisteredCourses(myStudentCourses);
+
+                    if (myStudentCourses.length > 0) {
+                        setRegisteredCourses(myStudentCourses);
+                    } else {
+                        // Fallback to synced catalogue to keep full programme filters visible.
+                        const catalogResponse = await axios.get(`${API_URL}/students/course-catalog`);
+                        const categories = catalogResponse.data?.data?.categories || [];
+                        const fallbackCourses = mapCatalogCoursesToProgramme(categories, studentApp);
+                        setRegisteredCourses(fallbackCourses);
+                        setProgrammeWarning('Showing synced programme courses from catalogue because Moodle enrollment data is incomplete.');
+                    }
 
                     // Then fetch the programme details from Moodle
                     const progResponse = await axios.get(`${API_URL}/students/programme/${studentApp.id}`);
