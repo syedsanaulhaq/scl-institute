@@ -142,8 +142,8 @@ if ($SyncSclDb) {
 	Upload-FileToRemote -LocalPath $sclDumpPath -RemoteSpec ("{0}@{1}:/tmp/scl_sync.sql" -f $RemoteUser, $RemoteHost) -ErrorMessage "Failed to upload SCL DB dump"
 
 	$sclRemoteSql = @"
-docker exec scli-mysql-prod sh -lc 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysql -e "DROP DATABASE IF EXISTS $SclDatabase; CREATE DATABASE $SclDatabase CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"'
-cat /tmp/scl_sync.sql | docker exec -i scli-mysql-prod sh -lc 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysql $SclDatabase'
+docker exec scli-mysql-prod mysql -uroot -prootpassword -e "DROP DATABASE IF EXISTS $SclDatabase; CREATE DATABASE $SclDatabase CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+docker exec -i scli-mysql-prod mysql -uroot -prootpassword $SclDatabase < /tmp/scl_sync.sql
 "@
 	ssh "$RemoteUser@$RemoteHost" $sclRemoteSql
 	if ($LASTEXITCODE -ne 0) {
