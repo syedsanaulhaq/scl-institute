@@ -40,6 +40,7 @@ import CourseInductions from './pages/CourseInductions';
 import CourseInductionsDetail from './pages/CourseInductionsDetail';
 import ManagerCourseChangeRequests from './components/ManagerCourseChangeRequests';
 import { getRoleContext } from './utils/roleAccess';
+import { logoutMoodleSession } from './utils/ssoService';
 
 function App() {
     const [user, setUser] = useState(() => {
@@ -67,6 +68,7 @@ function App() {
     };
 
     const handleLogout = () => {
+        logoutMoodleSession();
         setUser(null);
         sessionStorage.removeItem('accessToken');
         sessionStorage.removeItem('user');

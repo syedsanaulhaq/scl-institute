@@ -144,6 +144,26 @@ export const getMoodleUrl = () => {
 };
 
 /**
+ * Log out the active Moodle SSO window when the SCL user logs out.
+ * Navigates the named Moodle window to Moodle's logout URL so the
+ * server-side Moodle session is also invalidated.
+ */
+export const logoutMoodleSession = () => {
+    try {
+        const moodleUrl = getMoodleUrl();
+        if (lmsWindowRef && !lmsWindowRef.closed) {
+            lmsWindowRef.location.href = `${moodleUrl}/login/logout.php`;
+        }
+        lmsWindowRef = null;
+    } catch (err) {
+        // Cross-origin errors can occur if the window has already navigated
+        // away; treat silently and clear the reference.
+        console.warn('[SSO] Could not log out Moodle window:', err);
+        lmsWindowRef = null;
+    }
+};
+
+/**
  * Get SSO button configuration
  * @returns {object} - Button styles and text
  */
