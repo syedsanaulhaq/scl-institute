@@ -126,10 +126,7 @@ if ($SyncSclDb) {
 		throw "Failed to export local SCL DB from container '$SclLocalMysqlContainer'"
 	}
 
-	cmd /c "type \"$sclDumpPath\" | ssh $RemoteUser@$RemoteHost \"cat > /tmp/scl_sync.sql\"" | Out-Null
-	if ($LASTEXITCODE -ne 0) {
-		throw "Failed to upload SCL DB dump"
-	}
+	Invoke-Checked -File "scp" -Args @("--", $sclDumpPath, "$RemoteUser@$RemoteHost:/tmp/scl_sync.sql") -ErrorMessage "Failed to upload SCL DB dump"
 
 	$sclRemoteSql = @"
 docker exec scli-mysql-prod sh -lc 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysql -e "DROP DATABASE IF EXISTS $SclDatabase; CREATE DATABASE $SclDatabase CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"'
@@ -152,10 +149,7 @@ if ($SyncMoodleDb) {
 	}
 
 	$remoteMoodleFile = if ($MoodleDumpPath.ToLower().EndsWith(".gz")) { "/tmp/moodle_sync.sql.gz" } else { "/tmp/moodle_sync.sql" }
-	cmd /c "type \"$MoodleDumpPath\" | ssh $RemoteUser@$RemoteHost \"cat > $remoteMoodleFile\"" | Out-Null
-	if ($LASTEXITCODE -ne 0) {
-		throw "Failed to upload Moodle DB dump"
-	}
+	Invoke-Checked -File "scp" -Args @("--", $MoodleDumpPath, "$RemoteUser@$RemoteHost:$remoteMoodleFile") -ErrorMessage "Failed to upload Moodle DB dump"
 
 	$moodleRemoteSql = @"
 mkdir -p /root/db-backups
