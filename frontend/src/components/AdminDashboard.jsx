@@ -39,6 +39,8 @@ const AdminDashboard = ({ user }) => {
         rejected: 0,
         conditionalAccept: 0
     });
+    const [syncingRoles, setSyncingRoles] = useState(false);
+    const [syncStatus, setSyncStatus] = useState(null);
 
     // Fetch applications on mount
     useEffect(() => {
@@ -221,6 +223,35 @@ const AdminDashboard = ({ user }) => {
         window.URL.revokeObjectURL(url);
     };
 
+    const handleManualRoleSync = async () => {
+        try {
+            setSyncingRoles(true);
+            setSyncStatus(null);
+
+            const token = localStorage.getItem('authToken') || sessionStorage.getItem('accessToken');
+            const headers = token ? { Authorization: token } : {};
+            const response = await axios.post(
+                `${API_URL}/admin/manual-role-sync`,
+                {},
+                { headers, withCredentials: true }
+            );
+
+            const result = response.data?.data;
+            setSyncStatus({
+                type: 'success',
+                message: `Role sync complete. Refreshed ${result?.successCount ?? 0} of ${result?.totalUsers ?? 0} users in ${((result?.durationMs ?? 0) / 1000).toFixed(1)}s.`
+            });
+        } catch (err) {
+            console.error('Error running manual role sync:', err);
+            setSyncStatus({
+                type: 'error',
+                message: err.response?.data?.error || 'Failed to run manual role sync.'
+            });
+        } finally {
+            setSyncingRoles(false);
+        }
+    };
+
     if (loading && applications.length === 0) {
         return (
             <div className="flex items-center justify-center min-h-screen">
@@ -240,14 +271,34 @@ const AdminDashboard = ({ user }) => {
                     <h1 className="text-3xl font-bold text-gray-900">Admissions Dashboard</h1>
                     <p className="text-gray-600 mt-1">Manage and review student applications</p>
                 </div>
-                <button
-                    onClick={fetchApplications}
-                    className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors"
-                >
-                    <RefreshCw className="w-4 h-4" />
-                    Refresh
-                </button>
+                <div className="flex items-center gap-3">
+                    <button
+                        onClick={handleManualRoleSync}
+                        disabled={syncingRoles}
+                        className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-60 disabled:cursor-not-allowed rounded-lg transition-colors"
+                    >
+                        <RefreshCw className={`w-4 h-4 ${syncingRoles ? 'animate-spin' : ''}`} />
+                        {syncingRoles ? 'Syncing Roles...' : 'Sync Moodle Roles'}
+                    </button>
+                    <button
+                        onClick={fetchApplications}
+                        className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors"
+                    >
+                        <RefreshCw className="w-4 h-4" />
+                        Refresh
+                    </button>
+                </div>
             </div>
+
+            {syncStatus && (
+                <div className={`p-4 rounded-lg border ${
+                    syncStatus.type === 'success'
+                        ? 'bg-green-50 border-green-200 text-green-700'
+                        : 'bg-red-50 border-red-200 text-red-700'
+                }`}>
+                    {syncStatus.message}
+                </div>
+            )}
 
             {error && (
                 <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">

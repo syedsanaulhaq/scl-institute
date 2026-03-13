@@ -520,6 +520,31 @@ app.get('/api/admin/dashboard-stats', requireAuth, async (req, res) => {
     }
 });
 
+app.post('/api/admin/manual-role-sync', requireAuth, async (req, res) => {
+    if (roleSyncJobInProgress) {
+        return res.status(409).json({
+            success: false,
+            error: 'Role sync already in progress'
+        });
+    }
+
+    try {
+        const result = await syncAllUserRoleSnapshots();
+        console.log(`[ROLE SYNC] Manual sync complete: ${result.successCount}/${result.totalUsers} users refreshed`);
+        res.json({
+            success: true,
+            message: 'Manual role sync completed',
+            data: result
+        });
+    } catch (error) {
+        console.error('[ROLE SYNC] Manual sync error:', error.message);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to run manual role sync'
+        });
+    }
+});
+
 // ===============================
 // AUTHENTICATION ROUTES
 // ===============================
@@ -843,6 +868,41 @@ async function forceResyncRoleSnapshot({ email, moodleUserId = null }) {
         roleData: fresh.roleData || null,
         source: fresh.source || 'moodle'
     };
+}
+
+let roleSyncJobInProgress = false;
+
+async function syncAllUserRoleSnapshots() {
+    if (roleSyncJobInProgress) {
+        throw new Error('Role sync already in progress');
+    }
+
+    roleSyncJobInProgress = true;
+    const startedAt = Date.now();
+
+    try {
+        const [users] = await pool.query('SELECT email FROM users WHERE email IS NOT NULL AND email != ""');
+        let successCount = 0;
+        let failureCount = 0;
+
+        for (const user of users) {
+            try {
+                await forceResyncRoleSnapshot({ email: user.email });
+                successCount += 1;
+            } catch (syncErr) {
+                failureCount += 1;
+            }
+        }
+
+        return {
+            totalUsers: users.length,
+            successCount,
+            failureCount,
+            durationMs: Date.now() - startedAt
+        };
+    } finally {
+        roleSyncJobInProgress = false;
+    }
 }
 
 async function getMoodleRolesByEmail(email, options = {}) {
@@ -1261,18 +1321,12 @@ app.get('/api/students/applications/:id/review', async (req, res) => {
 // so that Moodle admin changes (role/enrolment) propagate automatically without requiring re-login.
 setInterval(async () => {
     try {
-        const [users] = await pool.query('SELECT email FROM users WHERE email IS NOT NULL AND email != ""');
-        console.log(`[ROLE SYNC] Background sync starting for ${users.length} users`);
-        for (const user of users) {
-            try {
-                await forceResyncRoleSnapshot({ email: user.email });
-            } catch (e) {
-                // ignore per-user errors (e.g. user not in Moodle)
-            }
-        }
-        console.log(`[ROLE SYNC] Background sync complete`);
+        const result = await syncAllUserRoleSnapshots();
+        console.log(`[ROLE SYNC] Background sync complete: ${result.successCount}/${result.totalUsers} users refreshed`);
     } catch (e) {
-        console.error('[ROLE SYNC] Background sync error:', e.message);
+        if (e.message !== 'Role sync already in progress') {
+            console.error('[ROLE SYNC] Background sync error:', e.message);
+        }
     }
 }, 5 * 60 * 1000); // every 5 minutes
 
