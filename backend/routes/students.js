@@ -205,7 +205,8 @@ router.get('/my-moodle-courses', async (req, res) => {
         `, [email]);
 
         // Student registrations from enrol/user_enrolments (active + suspended for progression visibility).
-        const [enrolledRows] = await moodleDbPool.execute(`
+        const fetchEnrolledRows = async () => {
+            const [rows] = await moodleDbPool.execute(`
             SELECT DISTINCT
                 c.id,
                 c.idnumber AS course_code,
@@ -224,6 +225,55 @@ router.get('/my-moodle-courses', async (req, res) => {
               AND c.visible = 1
             ORDER BY c.fullname ASC
         `, [email]);
+
+            return rows;
+        };
+
+        let enrolledRows = await fetchEnrolledRows();
+
+        // Self-heal missing Moodle enrollment when the student is accepted in SCL but has no Moodle rows yet.
+        if (enrolledRows.length === 0) {
+            try {
+                const [acceptedApps] = await db.execute(
+                    `SELECT id, email, first_name, last_name, course_code
+                     FROM student_applications
+                     WHERE email = ? AND application_status = 'accepted' AND is_deleted = FALSE
+                     ORDER BY created_at DESC
+                     LIMIT 1`,
+                    [email]
+                );
+
+                if (acceptedApps.length > 0) {
+                    const acceptedApp = acceptedApps[0];
+                    const acceptedCourseCode = String(acceptedApp.course_code || '').trim();
+
+                    if (acceptedCourseCode) {
+                        const enrollmentResult = acceptedCourseCode.toUpperCase().includes('-INFO')
+                            ? await enrollStudentInProgrammeCourses(
+                                acceptedApp.email,
+                                acceptedApp.first_name,
+                                acceptedApp.last_name,
+                                acceptedCourseCode
+                            )
+                            : await enrollStudentInMoodle(
+                                acceptedApp.email,
+                                acceptedApp.first_name,
+                                acceptedApp.last_name,
+                                acceptedCourseCode
+                            );
+
+                        if (enrollmentResult?.success) {
+                            console.log(`[MOODLE SELF-HEAL] Rebuilt missing enrolments for ${email} (${acceptedCourseCode})`);
+                            enrolledRows = await fetchEnrolledRows();
+                        } else {
+                            console.warn(`[MOODLE SELF-HEAL] Enrollment warning for ${email}: ${enrollmentResult?.message || 'Unknown error'}`);
+                        }
+                    }
+                }
+            } catch (selfHealError) {
+                console.warn(`[MOODLE SELF-HEAL] Failed for ${email}:`, selfHealError.message);
+            }
+        }
 
         const enrolledCourseIds = Array.from(new Set(enrolledRows.map((course) => Number(course.id)).filter(Boolean)));
         const completedCourseIds = await getCompletedCourseIdsByEmail(email, enrolledCourseIds);
@@ -1838,13 +1888,47 @@ router.post('/applications/:id/review', async (req, res) => {
             [newStatus, id]
         );
 
+        let moodleEnrollment = null;
+        if (newStatus === 'accepted') {
+            try {
+                const [appRows] = await db.execute(
+                    'SELECT email, first_name, last_name, course_code FROM student_applications WHERE id = ? LIMIT 1',
+                    [id]
+                );
+
+                if (appRows.length > 0) {
+                    const app = appRows[0];
+                    const normalizedCourseCode = String(app.course_code || '').trim();
+
+                    if (normalizedCourseCode.toUpperCase().includes('-INFO')) {
+                        moodleEnrollment = await enrollStudentInProgrammeCourses(
+                            app.email,
+                            app.first_name,
+                            app.last_name,
+                            normalizedCourseCode
+                        );
+                    } else if (normalizedCourseCode) {
+                        moodleEnrollment = await enrollStudentInMoodle(
+                            app.email,
+                            app.first_name,
+                            app.last_name,
+                            normalizedCourseCode
+                        );
+                    }
+                }
+            } catch (enrollError) {
+                console.warn(`[REVIEW ENROLLMENT WARNING] Application ${id}: ${enrollError.message}`);
+            }
+        }
+
         res.json({
             success: true,
             message: 'Review submitted successfully',
             data: {
                 application_id: id,
                 new_status: newStatus,
-                recommendation
+                recommendation,
+                moodle_enrollment: moodleEnrollment
             }
         });
 
