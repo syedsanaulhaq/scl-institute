@@ -57,8 +57,8 @@ function Upload-FileToRemote {
 		[string]$ErrorMessage
 	)
 
-	$proc = Start-Process -FilePath "scp" -ArgumentList @($LocalPath, $RemoteSpec) -NoNewWindow -Wait -PassThru
-	if ($proc.ExitCode -ne 0) {
+	& scp $LocalPath $RemoteSpec
+	if ($LASTEXITCODE -ne 0) {
 		throw $ErrorMessage
 	}
 }
