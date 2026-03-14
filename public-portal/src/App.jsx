@@ -1,8 +1,15 @@
 import './index.css';
-import PublicApplicationForm from './components/PublicApplicationForm';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import StudentAdmissionForm from './components/StudentAdmissionForm';
 
 function App() {
-    return <PublicApplicationForm selectedTheme="modern" onBack={() => {}} />;
+    return (
+        <Router>
+            <Routes>
+                <Route path="*" element={<StudentAdmissionForm />} />
+            </Routes>
+        </Router>
+    );
 }
 
 export default App;
