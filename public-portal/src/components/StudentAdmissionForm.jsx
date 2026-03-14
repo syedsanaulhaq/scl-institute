@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { Upload, Calendar, User, GraduationCap, FileText, Shield, CheckCircle, AlertCircle, Download, X, FileUp, ChevronDown, ChevronRight } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
@@ -11,7 +11,6 @@ const PROGRAMME_SWITCH_CONFIRMATION_ALIASES = [
 ];
 
 const StudentAdmissionForm = ({ onSubmitSuccess, isEditMode = false }) => {
-  const navigate = useNavigate();
   const { id: applicationId } = useParams();
   const [activeSection, setActiveSection] = useState(1);
   const [applicationStatus, setApplicationStatus] = useState('');
@@ -29,6 +28,7 @@ const StudentAdmissionForm = ({ onSubmitSuccess, isEditMode = false }) => {
   const [confirmedProgrammeSwitchCode, setConfirmedProgrammeSwitchCode] = useState('');
   const [courses, setCourses] = useState([]);
   const [loadingCourses, setLoadingCourses] = useState(true);
+  const [submissionResult, setSubmissionResult] = useState(null);
   const [formData, setFormData] = useState({
     firstName: '',
     middleNames: '',
@@ -1007,15 +1007,16 @@ const StudentAdmissionForm = ({ onSubmitSuccess, isEditMode = false }) => {
         console.log(`✅ ${successMsg}: Reference=${reference}, ID=${appId}`);
         setSubmitStatus({
           type: 'success',
-          message: `${successMsg}. Redirecting...`
+          message: successMsg
         });
         if (onSubmitSuccess) {
           onSubmitSuccess(reference);
         }
-        // Redirect to applications list
-        setTimeout(() => {
-          navigate(`/applications?highlight=${reference || appId}`);
-        }, 1000);
+        setSubmissionResult({
+          reference: reference || String(appId || 'N/A'),
+          name: `${formData.firstName || ''} ${formData.lastName || ''}`.trim() || 'N/A',
+          course: formData.courseTitle || formData.courseCode || 'N/A'
+        });
       } else {
         setSubmitStatus({
           type: 'error',
@@ -1057,14 +1058,16 @@ const StudentAdmissionForm = ({ onSubmitSuccess, isEditMode = false }) => {
         console.log(`✅ ${successMsg}: Reference=${reference}, ID=${appId}`);
         setSubmitStatus({
           type: 'success',
-          message: `${successMsg}. Redirecting...`
+          message: successMsg
         });
         if (onSubmitSuccess) {
           onSubmitSuccess(reference);
         }
-        setTimeout(() => {
-          navigate(`/applications?highlight=${reference || appId}`);
-        }, 1000);
+        setSubmissionResult({
+          reference: reference || String(appId || 'N/A'),
+          name: `${formData.firstName || ''} ${formData.lastName || ''}`.trim() || 'N/A',
+          course: formData.courseTitle || formData.courseCode || 'N/A'
+        });
       } else {
         setSubmitStatus({
           type: 'error',
@@ -1230,33 +1233,65 @@ const StudentAdmissionForm = ({ onSubmitSuccess, isEditMode = false }) => {
     setActiveSection(1);
   };
 
+  if (submissionResult) {
+    return (
+      <div className="mx-auto flex min-h-[70vh] w-full max-w-4xl items-center justify-center px-4 py-10 md:px-6">
+        <div className="w-full rounded-2xl border border-green-200 bg-white p-8 text-center shadow-lg">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
+            <CheckCircle className="h-9 w-9 text-green-600" />
+          </div>
+          <h2 className="text-3xl font-bold text-gray-900">Thank You For Your Registration</h2>
+          <p className="mt-3 text-gray-700">Your application has been submitted successfully.</p>
+
+          <div className="mx-auto mt-6 max-w-2xl rounded-xl border border-gray-200 bg-gray-50 p-5 text-left">
+            <p className="text-sm text-gray-700"><span className="font-semibold">Application Reference:</span> {submissionResult.reference}</p>
+            <p className="mt-2 text-sm text-gray-700"><span className="font-semibold">Applicant:</span> {submissionResult.name}</p>
+            <p className="mt-2 text-sm text-gray-700"><span className="font-semibold">Programme:</span> {submissionResult.course}</p>
+          </div>
+
+          <div className="mt-6 rounded-xl border border-blue-200 bg-blue-50 px-5 py-4 text-left text-sm text-blue-900">
+            We will let you know once your registration is reviewed and approved. After approval, you will receive your login details to access your student portal and programme.
+          </div>
+
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            className="mt-8 rounded-lg bg-scl-purple px-6 py-3 font-semibold text-white transition-colors hover:bg-scl-light"
+          >
+            Submit Another Registration
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-4">
+    <div className="mx-auto w-full max-w-5xl space-y-4 px-4 py-6 md:px-6">
       {/* Page Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between rounded-xl bg-scl-dark px-5 py-4 text-white shadow-sm">
         <div>
-          <h1 className="text-xl font-bold text-gray-900">Student Admission Application</h1>
-          <p className="text-gray-600 mt-1 text-sm">Complete all sections to submit your application</p>
+          <h1 className="text-xl font-bold text-white">Student Admission Application</h1>
+          <p className="mt-1 text-sm text-purple-100">Complete all sections to submit your application</p>
         </div>
         <div className="flex items-center space-x-3">
           <button
             type="button"
             onClick={fillSampleData}
-            className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors text-sm"
+            className="flex items-center rounded-lg bg-scl-purple px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-scl-light"
           >
             <User className="w-4 h-4 mr-2" />
             Fill Sample Data
           </button>
 
           <div className="flex items-center space-x-3">
-            <span className="text-sm text-gray-600">Progress:</span>
-            <div className="w-32 bg-gray-200 rounded-full h-2">
+            <span className="text-sm text-purple-100">Progress:</span>
+            <div className="h-2 w-32 rounded-full bg-white/30">
               <div 
                 className="bg-scl-purple h-2 rounded-full transition-all duration-300"
                 style={{ width: `${(activeSection / 5) * 100}%` }}
               />
             </div>
-            <span className="text-sm font-semibold text-gray-900">{activeSection}/5</span>
+            <span className="text-sm font-semibold text-white">{activeSection}/5</span>
           </div>
         </div>
       </div>
