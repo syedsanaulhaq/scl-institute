@@ -89,7 +89,7 @@ services:
     volumes:
       - ./public-portal:/app
       - /app/node_modules
-    command: npm run dev
+    command: sh -c "npm install --no-audit --no-fund && npm run dev"
 
 networks:
   scl-network-dev:
