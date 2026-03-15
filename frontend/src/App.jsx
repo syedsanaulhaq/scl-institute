@@ -39,6 +39,7 @@ import CourseAccreditationsView from './pages/CourseAccreditationsView';
 import CourseInductions from './pages/CourseInductions';
 import CourseInductionsDetail from './pages/CourseInductionsDetail';
 import ManagerCourseChangeRequests from './components/ManagerCourseChangeRequests';
+import AccountSettings from './components/AccountSettings';
 import { getRoleContext } from './utils/roleAccess';
 import { logoutMoodleSession } from './utils/ssoService';
 
@@ -142,6 +143,15 @@ function App() {
                     user && canAccessStudentPortal ? (
                         <Layout user={user} onLogout={handleLogout}>
                             <StudentProfile user={user} />
+                        </Layout>
+                    ) : (
+                        <LoginPage onLoginSuccess={handleLoginSuccess} />
+                    )
+                } />
+                <Route path="/settings" element={
+                    user ? (
+                        <Layout user={user} onLogout={handleLogout}>
+                            <AccountSettings user={user} />
                         </Layout>
                     ) : (
                         <LoginPage onLoginSuccess={handleLoginSuccess} />

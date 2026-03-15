@@ -151,27 +151,21 @@ export const getMoodleUrl = () => {
 export const logoutMoodleSession = () => {
     try {
         const moodleUrl = getMoodleUrl();
-        const logoutUrl = `${moodleUrl}/login/logout.php`;
+        const logoutBaseUrl = `${moodleUrl}/local/sclsso/logout.php`;
+        const silentLogoutUrl = `${logoutBaseUrl}?redirect=${encodeURIComponent('/login/index.php')}`;
+        const windowLogoutUrl = `${logoutBaseUrl}?close=1&redirect=${encodeURIComponent('/login/index.php')}`;
 
-        // Best-effort silent logout request (may be limited by cookie/CORS policy).
-        fetch(logoutUrl, {
+        // Best-effort silent logout request for cases where the LMS window was closed manually.
+        fetch(silentLogoutUrl, {
             method: 'GET',
             mode: 'no-cors',
-            credentials: 'include'
+            credentials: 'include',
+            keepalive: true
         }).catch(() => {});
 
         if (lmsWindowRef && !lmsWindowRef.closed) {
-            // Trigger Moodle logout in the opened LMS window, then close it.
-            lmsWindowRef.location.href = logoutUrl;
-            setTimeout(() => {
-                try {
-                    if (lmsWindowRef && !lmsWindowRef.closed) {
-                        lmsWindowRef.close();
-                    }
-                } catch {
-                    // Ignore close errors.
-                }
-            }, 300);
+            // Let the Moodle window complete server-side logout and close itself.
+            lmsWindowRef.location.href = windowLogoutUrl;
         }
         lmsWindowRef = null;
     } catch (err) {

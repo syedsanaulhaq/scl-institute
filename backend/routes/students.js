@@ -4890,17 +4890,36 @@ router.get('/my-applications', async (req, res) => {
                 id,
                 application_reference,
                 first_name,
+                middle_names,
                 last_name,
                 email,
+                date_of_birth,
+                gender,
+                nationality,
+                contact_number,
+                address_line1,
+                address_line2,
+                town_city,
+                postcode,
+                country_of_residence,
                 course_title,
                 course_code,
                 course_type,
                 mode_of_study,
-                application_status,
+                entry_route,
                 intake_start_date,
-                created_at
+                highest_qualification,
+                institution_name,
+                year_completed,
+                relevant_work_experience,
+                english_proficiency,
+                english_score,
+                application_status,
+                submitted_at,
+                created_at,
+                updated_at
             FROM student_applications
-            WHERE email = ? AND application_status = 'accepted' AND is_deleted = FALSE
+            WHERE email = ? AND is_deleted = FALSE
             ORDER BY created_at DESC
         `, [email]);
 

@@ -5,6 +5,27 @@ import { openMoodleSSO } from '../../utils/ssoService';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
 
+const ACCEPTED_APPLICATION_STATUSES = new Set(['accepted', 'conditional_accept']);
+const APPLICATION_PROFILE_FIELDS = [
+    'middle_names',
+    'contact_number',
+    'date_of_birth',
+    'gender',
+    'nationality',
+    'address_line1',
+    'address_line2',
+    'town_city',
+    'postcode',
+    'country_of_residence',
+    'entry_route',
+    'highest_qualification',
+    'institution_name',
+    'year_completed',
+    'relevant_work_experience',
+    'english_proficiency',
+    'english_score'
+];
+
 const extractProgrammeCode = (courseCode) => {
     const match = String(courseCode || '').trim().match(/^([A-Z]+-\d+)(?:-INFO)?$/i);
     return match ? match[1].toUpperCase() : '';
@@ -31,6 +52,32 @@ const extractProgrammeKey = (courseCode) => {
 
     const fallback = normalized.match(/^([A-Z]+-\d+)/);
     return fallback ? fallback[1] : normalized;
+};
+
+const applicationCompletenessScore = (app) =>
+    APPLICATION_PROFILE_FIELDS.reduce((score, field) => {
+        const value = app?.[field];
+        if (value === null || value === undefined) return score;
+        if (typeof value === 'string' && value.trim() === '') return score;
+        return score + 1;
+    }, 0);
+
+const selectRelevantApplication = (applications) => {
+    const apps = Array.isArray(applications) ? applications.filter(Boolean) : [];
+    if (apps.length === 0) return null;
+
+    return [...apps].sort((a, b) => {
+        const aAccepted = ACCEPTED_APPLICATION_STATUSES.has(String(a?.application_status || '').toLowerCase());
+        const bAccepted = ACCEPTED_APPLICATION_STATUSES.has(String(b?.application_status || '').toLowerCase());
+        if (aAccepted !== bAccepted) {
+            return Number(bAccepted) - Number(aAccepted);
+        }
+
+        const scoreDiff = applicationCompletenessScore(b) - applicationCompletenessScore(a);
+        if (scoreDiff !== 0) return scoreDiff;
+
+        return new Date(b?.updated_at || b?.created_at || 0) - new Date(a?.updated_at || a?.created_at || 0);
+    })[0];
 };
 
 const mapCatalogCoursesToProgramme = (categories, studentApp) => {
@@ -204,20 +251,25 @@ const StudentProgramme = ({ user }) => {
             
             if (appsResponse.data?.success) {
                 const apps = appsResponse.data.data?.applications || [];
-                const studentApp = apps[0]; // Get first accepted application
+                const studentApp = selectRelevantApplication(apps);
+                const registeredCoursesResponse = await axios.get(`${API_URL}/students/my-moodle-courses`, {
+                    params: { email: user.email }
+                });
+                const allRegisteredCourses = (registeredCoursesResponse.data?.data || []).filter(
+                    (course) => course.isStudentEnrolled
+                );
                 
                 if (studentApp) {
                     const currentProgrammeCode = extractProgrammeCode(studentApp.course_code);
-
-                    const registeredCoursesResponse = await axios.get(`${API_URL}/students/my-moodle-courses`, {
-                        params: { email: user.email }
-                    });
-                    const myStudentCourses = (registeredCoursesResponse.data?.data || []).filter(
+                    const myStudentCourses = allRegisteredCourses.filter(
                         (course) => course.isStudentEnrolled && belongsToProgramme(course, currentProgrammeCode)
                     );
 
                     if (myStudentCourses.length > 0) {
                         setRegisteredCourses(myStudentCourses);
+                    } else if (allRegisteredCourses.length > 0) {
+                        setRegisteredCourses(allRegisteredCourses);
+                        setProgrammeWarning('Showing your registered Moodle courses because the current programme code did not match the returned Moodle enrolments.');
                     } else {
                         // Fallback to synced catalogue to keep full programme filters visible.
                         const catalogResponse = await axios.get(`${API_URL}/students/course-catalog`);
@@ -227,21 +279,40 @@ const StudentProgramme = ({ user }) => {
                         setProgrammeWarning('Showing synced programme courses from catalogue because Moodle enrollment data is incomplete.');
                     }
 
-                    // Then fetch the programme details from Moodle
-                    const progResponse = await axios.get(`${API_URL}/students/programme/${studentApp.id}`);
-                    if (progResponse.data?.success) {
-                        const { programme, modules, outcomes } = progResponse.data.data;
-                        setError('');
-                        setProgrammeData({
-                            ...studentApp,
-                            ...programme
-                        });
-                        setCourseModules(modules || []);
-                        setLearningOutcomes(outcomes || []);
+                    try {
+                        const progResponse = await axios.get(`${API_URL}/students/programme/${studentApp.id}`);
+                        if (progResponse.data?.success) {
+                            const { programme, modules, outcomes } = progResponse.data.data;
+                            setError('');
+                            setProgrammeData({
+                                ...studentApp,
+                                ...programme
+                            });
+                            setCourseModules(modules || []);
+                            setLearningOutcomes(outcomes || []);
+                        } else {
+                            setProgrammeData(studentApp);
+                            setCourseModules([]);
+                            setLearningOutcomes([]);
+                            setProgrammeWarning((currentWarning) => currentWarning || 'Programme overview could not be loaded, but your registered Moodle courses are shown below.');
+                        }
+                    } catch (programmeErr) {
+                        console.error('Error fetching programme details:', programmeErr);
+                        setProgrammeData(studentApp);
+                        setCourseModules([]);
+                        setLearningOutcomes([]);
+                        setProgrammeWarning((currentWarning) => currentWarning || 'Programme overview could not be loaded, but your registered Moodle courses are shown below.');
                     }
                 } else {
-                    setRegisteredCourses([]);
-                    setProgrammeWarning('No accepted application found. Showing your registered Moodle courses below.');
+                    setProgrammeData(null);
+                    setCourseModules([]);
+                    setLearningOutcomes([]);
+                    setRegisteredCourses(allRegisteredCourses);
+                    setProgrammeWarning(
+                        allRegisteredCourses.length > 0
+                            ? 'No accepted application found. Showing your registered Moodle courses below.'
+                            : 'No accepted application or Moodle course registrations were found.'
+                    );
                 }
             }
         } catch (err) {

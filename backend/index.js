@@ -4,6 +4,7 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 const mysql = require('mysql2/promise');
 const axios = require('axios');
+const crypto = require('crypto');
 const { v4: uuidv4 } = require('uuid');
 console.log("Backend process starting...");
 const studentsRouter = require('./routes/students');
@@ -178,9 +179,12 @@ initDB();
 app.use(cors({
     origin: [
         'http://localhost:3000',
+        'http://localhost:7777',
+        'http://127.0.0.1:7777',
         'http://localhost:5173',
         'http://localhost:8080',
         'http://103.93.57.101:3000',
+        'http://103.93.57.101:7777',
         'http://103.93.57.101:5173',
         'http://103.93.57.101:8080'
     ],
@@ -1184,6 +1188,62 @@ app.post('/api/v1/auth/login', async (req, res) => {
         res.status(500).json({ success: false, message: 'Database error' });
     }
 });
+
+const changePasswordHandler = async (req, res) => {
+    const { email, currentPassword, newPassword } = req.body;
+
+    if (!email || !currentPassword || !newPassword) {
+        return res.status(400).json({
+            success: false,
+            message: 'Email, current password, and new password are required'
+        });
+    }
+
+    if (String(newPassword).length < 8) {
+        return res.status(400).json({
+            success: false,
+            message: 'New password must be at least 8 characters long'
+        });
+    }
+
+    if (currentPassword === newPassword) {
+        return res.status(400).json({
+            success: false,
+            message: 'New password must be different from current password'
+        });
+    }
+
+    try {
+        const [rows] = await pool.query(
+            'SELECT id, password FROM users WHERE email = ? LIMIT 1',
+            [email]
+        );
+
+        if (rows.length === 0) {
+            return res.status(404).json({ success: false, message: 'User not found' });
+        }
+
+        const user = rows[0];
+        if (String(user.password || '') !== String(currentPassword)) {
+            return res.status(401).json({ success: false, message: 'Current password is incorrect' });
+        }
+
+        const passwordHash = crypto.createHash('sha256').update(String(newPassword)).digest('hex');
+
+        await pool.query(
+            'UPDATE users SET password = ?, password_hash = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+            [newPassword, passwordHash, user.id]
+        );
+
+        return res.json({ success: true, message: 'Password updated successfully' });
+    } catch (error) {
+        console.error('[CHANGE PASSWORD] Error:', error.message);
+        return res.status(500).json({ success: false, message: 'Failed to update password' });
+    }
+};
+
+app.post('/api/change-password', changePasswordHandler);
+app.post('/api/v1/auth/change-password', changePasswordHandler);
 
 app.post('/api/sso/generate', async (req, res) => {
     const { email, redirect_url } = req.body;
