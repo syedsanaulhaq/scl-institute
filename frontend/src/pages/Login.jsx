@@ -30,7 +30,6 @@ const LoginPage = ({ onLoginSuccess }) => {
             sessionStorage.setItem('accessToken', token);
             sessionStorage.setItem('user', JSON.stringify(userData));
             localStorage.setItem('studentEmail', userData.email);
-            localStorage.setItem('authToken', token);
             onLoginSuccess(userData);
             
             const roleContext = getRoleContext(userData);

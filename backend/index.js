@@ -39,6 +39,10 @@ const pool = mysql.createPool({
 // Alias for convenience
 const db = pool;
 
+// In-memory session store. Automatically cleared on server restart,
+// which forces all users to re-authenticate after a restart.
+const activeSessions = new Map();
+
 const moodlePool = mysql.createPool({
     host: process.env.MOODLE_DATABASE_HOST || 'host.docker.internal',
     port: process.env.MOODLE_DATABASE_PORT || 3306,
@@ -1098,6 +1102,7 @@ app.post('/api/login', async (req, res) => {
             }
 
             const token = 'Bearer ' + Buffer.from(`${user.id}:${user.email}`).toString('base64');
+            activeSessions.set(token, user.id);
             res.json({ 
                 success: true,
                 token: token,
@@ -1161,7 +1166,7 @@ app.post('/api/v1/auth/login', async (req, res) => {
             console.log(`[LOGIN V1] User authenticated:`, { email: user.email, role: user.role });
             
             const accessToken = `token_${user.id}_${Date.now()}`;
-            
+            activeSessions.set(accessToken, user.id);
             res.json({ 
                 success: true,
                 tokens: {
@@ -1244,6 +1249,16 @@ const changePasswordHandler = async (req, res) => {
 
 app.post('/api/change-password', changePasswordHandler);
 app.post('/api/v1/auth/change-password', changePasswordHandler);
+
+// Validate a stored access token — returns { valid: true } if the session is still
+// alive on this server instance (i.e. the server has not restarted since login).
+app.post('/api/v1/auth/verify', (req, res) => {
+    const { token } = req.body || {};
+    if (token && activeSessions.has(token)) {
+        return res.json({ valid: true });
+    }
+    return res.status(401).json({ valid: false });
+});
 
 app.post('/api/sso/generate', async (req, res) => {
     const { email, redirect_url } = req.body;

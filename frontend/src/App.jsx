@@ -43,26 +43,38 @@ import AccountSettings from './components/AccountSettings';
 import { getRoleContext } from './utils/roleAccess';
 import { logoutMoodleSession } from './utils/ssoService';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
+
 function App() {
-    const [user, setUser] = useState(() => {
-        // Initialize user from sessionStorage on first load
-        try {
-            const storedUser = sessionStorage.getItem('user');
-            const accessToken = sessionStorage.getItem('accessToken');
-            
-            if (storedUser && accessToken) {
-                const userData = JSON.parse(storedUser);
-                console.log('[AUTH] User initialized from storage:', { email: userData.email, role: userData.role });
-                return userData;
+    const [user, setUser] = useState(null);
+    const [isInitialized, setIsInitialized] = useState(false);
+
+    useEffect(() => {
+        const verifySession = async () => {
+            try {
+                const storedUser = sessionStorage.getItem('user');
+                const accessToken = sessionStorage.getItem('accessToken');
+                if (storedUser && accessToken) {
+                    // Verify the token against the live backend.
+                    // If the server has restarted, it will no longer recognise the token
+                    // and will return 401 — forcing the user to log in again.
+                    const response = await axios.post(`${API_URL}/v1/auth/verify`, { token: accessToken });
+                    if (response.data?.valid) {
+                        setUser(JSON.parse(storedUser));
+                    } else {
+                        throw new Error('invalid');
+                    }
+                }
+            } catch {
+                sessionStorage.removeItem('user');
+                sessionStorage.removeItem('accessToken');
+                localStorage.removeItem('authToken');
+            } finally {
+                setIsInitialized(true);
             }
-        } catch (e) {
-            console.error('[AUTH] Failed to parse stored user:', e.message);
-            sessionStorage.removeItem('user');
-            sessionStorage.removeItem('accessToken');
-        }
-        return null;
-    });
-    const [isInitialized, setIsInitialized] = useState(true);
+        };
+        verifySession();
+    }, []);
 
     const handleLoginSuccess = (userData) => {
         setUser(userData);
@@ -74,6 +86,7 @@ function App() {
         sessionStorage.removeItem('accessToken');
         sessionStorage.removeItem('user');
         localStorage.removeItem('studentEmail');
+        localStorage.removeItem('authToken');
     };
 
     if (!isInitialized) {
