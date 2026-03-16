@@ -88,6 +88,25 @@ services:
         max-size: "10m"
         max-file: "3"
 
+  scli-public-portal:
+    build:
+      context: ./public-portal
+      dockerfile: Dockerfile.prod
+    container_name: scli-public-portal-prod
+    restart: always
+    networks:
+      - scl-network-prod
+    healthcheck:
+      test: [ "CMD", "wget", "-q", "--spider", "http://127.0.0.1:7777" ]
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
   scli-nginx:
     image: nginx:alpine
     container_name: scli-nginx-prod
@@ -101,6 +120,7 @@ services:
     depends_on:
       - scli-frontend
       - scli-backend
+      - scli-public-portal
     networks:
       - scl-network-prod
     healthcheck:
