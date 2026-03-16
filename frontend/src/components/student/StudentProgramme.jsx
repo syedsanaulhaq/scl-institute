@@ -177,6 +177,35 @@ const StudentProgramme = ({ user }) => {
         return match ? `Semester ${match[1]}` : null;
     };
 
+    const formatProgrammeStage = (course, fallbackType) => {
+        const yearNumber = Number(course?.year_number || 0);
+        if (yearNumber > 0) {
+            const labels = ['First', 'Second', 'Third', 'Fourth', 'Fifth', 'Sixth'];
+            const label = labels[yearNumber - 1] || `Year ${yearNumber}`;
+            return String(label).toUpperCase().includes('YEAR') ? String(label).toUpperCase() : `${label.toUpperCase()} YEAR`;
+        }
+        return fallbackType || 'Programme';
+    };
+
+    const formatProgrammeDuration = (course, fallbackDuration) => {
+        const startDate = course?.start_date ? new Date(course.start_date) : null;
+        const endDate = course?.end_date ? new Date(course.end_date) : null;
+
+        if (startDate && endDate && !Number.isNaN(startDate.getTime()) && !Number.isNaN(endDate.getTime()) && endDate > startDate) {
+            const months = Math.round((endDate - startDate) / (1000 * 60 * 60 * 24 * 30.44));
+            if (months >= 11 && months <= 13) return '1 Year';
+            if (months > 0) return `${months} Months`;
+        }
+
+        if (Number(course?.duration_months || 0) > 0) {
+            const months = Number(course.duration_months);
+            if (months === 12) return '1 Year';
+            return `${months} Months`;
+        }
+
+        return fallbackDuration || '1 Year';
+    };
+
     const toggleSection = (index) => {
         setExpandedSections(prev => ({
             ...prev,
@@ -399,6 +428,12 @@ const StudentProgramme = ({ user }) => {
     };
 
     const selectedCourseBlocked = isProgressionBlocked(selectedCourse);
+    const overviewTitle = selectedCourse?.course_title || programmeData?.title || programmeData?.course_title || 'Programme Title';
+    const overviewCode = selectedCourse?.course_code || programmeData?.code || programmeData?.course_code || 'N/A';
+    const overviewType = formatProgrammeStage(selectedCourse, selectedCourse?.course_type || programmeData?.type || programmeData?.course_type || 'Programme');
+    const overviewStudyMode = programmeData?.studyMode || programmeData?.mode_of_study || programmeData?.study_mode || programmeData?.modeOfStudy || 'Full-time';
+    const overviewStartDate = selectedCourse?.start_date || programmeData?.startDate || programmeData?.intake_start_date || null;
+    const overviewDuration = formatProgrammeDuration(selectedCourse, programmeData?.duration || '1 Year');
 
     if (loading) {
         return <div className="p-8 text-center">Loading programme details...</div>;
@@ -635,26 +670,26 @@ const StudentProgramme = ({ user }) => {
             <div className="bg-gradient-to-r from-blue-600 to-blue-800 rounded-lg shadow p-6 mb-8 text-white">
                 <div className="flex items-start justify-between">
                     <div>
-                        <h2 className="text-2xl font-bold mb-2">{selectedCourse?.course_title || programmeData?.title || programmeData?.course_title || 'Programme Title'}</h2>
-                        <p className="text-blue-100 mb-4">Programme Code: {selectedCourse?.course_code || programmeData?.code || programmeData?.course_code || 'N/A'}</p>
+                        <h2 className="text-2xl font-bold mb-2">{overviewTitle}</h2>
+                        <p className="text-blue-100 mb-4">Programme Code: {overviewCode}</p>
                         <div className="grid grid-cols-2 gap-4 text-sm">
                             <div>
                                 <p className="text-blue-200">Programme Type</p>
-                                <p className="font-semibold">{selectedCourse?.course_type || programmeData?.type || 'Bachelor Degree'}</p>
+                                <p className="font-semibold">{overviewType}</p>
                             </div>
                             <div>
                                 <p className="text-blue-200">Study Mode</p>
-                                <p className="font-semibold">{programmeData?.studyMode || 'Full-time'}</p>
+                                <p className="font-semibold">{overviewStudyMode}</p>
                             </div>
                             <div>
                                 <p className="text-blue-200">Start Date</p>
                                 <p className="font-semibold">
-                                    {programmeData?.startDate ? new Date(programmeData.startDate).toLocaleDateString() : 'TBD'}
+                                    {overviewStartDate ? new Date(overviewStartDate).toLocaleDateString() : 'TBD'}
                                 </p>
                             </div>
                             <div>
                                 <p className="text-blue-200">Duration</p>
-                                <p className="font-semibold">{programmeData?.duration || '1 Year Full-time'}</p>
+                                <p className="font-semibold">{overviewDuration}</p>
                             </div>
                         </div>
                     </div>

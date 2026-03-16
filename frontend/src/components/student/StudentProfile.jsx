@@ -18,6 +18,65 @@ import axios from 'axios';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
 
+const COUNTRY_OPTIONS = [
+    'United Kingdom',
+    'United States',
+    'Canada',
+    'Australia',
+    'Germany',
+    'France',
+    'Spain',
+    'Italy',
+    'Netherlands',
+    'Ireland',
+    'Nigeria',
+    'Ghana',
+    'Kenya',
+    'South Africa',
+    'India',
+    'Pakistan',
+    'Bangladesh',
+    'Sri Lanka',
+    'Nepal',
+    'China',
+    'Japan',
+    'United Arab Emirates',
+    'Saudi Arabia',
+    'Qatar',
+    'Kuwait',
+    'Oman',
+    'Bahrain',
+    'Jordan',
+    'Lebanon',
+    'Egypt'
+];
+
+const RELATIONSHIP_OPTIONS = [
+    'Parent',
+    'Mother',
+    'Father',
+    'Guardian',
+    'Spouse',
+    'Sibling',
+    'Brother',
+    'Sister',
+    'Grandparent',
+    'Uncle',
+    'Aunt',
+    'Cousin',
+    'Relative',
+    'Friend',
+    'Other'
+];
+
+const buildSelectOptions = (currentValue, options) => {
+    const normalizedValue = String(currentValue || '').trim();
+    if (!normalizedValue || options.includes(normalizedValue)) {
+        return options;
+    }
+    return [normalizedValue, ...options];
+};
+
 // Helper function to format date as dd/mm/yyyy
 const formatDate = (dateString) => {
     if (!dateString) return '';
@@ -488,12 +547,16 @@ const StudentProfile = ({ user }) => {
                                 <div className="flex-1">
                                     <p className="text-sm text-gray-600">Nationality</p>
                                     {isEditing ? (
-                                        <input
-                                            type="text"
+                                        <select
                                             value={displayData.nationality || ''}
                                             onChange={(e) => handleInputChange('nationality', e.target.value)}
                                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                        />
+                                        >
+                                            <option value="">Select nationality</option>
+                                            {buildSelectOptions(displayData.nationality, COUNTRY_OPTIONS).map((country) => (
+                                                <option key={country} value={country}>{country}</option>
+                                            ))}
+                                        </select>
                                     ) : (
                                         <p className="font-medium text-gray-900">{displayData.nationality || '-'}</p>
                                     )}
@@ -581,12 +644,16 @@ const StudentProfile = ({ user }) => {
                                 <div className="flex-1">
                                     <p className="text-sm text-gray-600">Country of Residence</p>
                                     {isEditing ? (
-                                        <input
-                                            type="text"
+                                        <select
                                             value={displayData.country_of_residence || ''}
                                             onChange={(e) => handleInputChange('country_of_residence', e.target.value)}
                                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                        />
+                                        >
+                                            <option value="">Select country</option>
+                                            {buildSelectOptions(displayData.country_of_residence, COUNTRY_OPTIONS).map((country) => (
+                                                <option key={country} value={country}>{country}</option>
+                                            ))}
+                                        </select>
                                     ) : (
                                         <p className="font-medium text-gray-900">{displayData.country_of_residence || '-'}</p>
                                     )}
@@ -617,12 +684,16 @@ const StudentProfile = ({ user }) => {
                     <div>
                         <p className="text-sm text-gray-600">Relationship</p>
                         {isEditing ? (
-                            <input
-                                type="text"
+                            <select
                                 value={displayData.emergency_contact_relationship || ''}
                                 onChange={(e) => handleInputChange('emergency_contact_relationship', e.target.value)}
                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            />
+                            >
+                                <option value="">Select relationship</option>
+                                {buildSelectOptions(displayData.emergency_contact_relationship, RELATIONSHIP_OPTIONS).map((relationship) => (
+                                    <option key={relationship} value={relationship}>{relationship}</option>
+                                ))}
+                            </select>
                         ) : (
                             <p className="font-medium text-gray-900">{displayData.emergency_contact_relationship || '-'}</p>
                         )}
@@ -676,12 +747,16 @@ const StudentProfile = ({ user }) => {
                     <div>
                         <p className="text-sm text-gray-600">Relationship</p>
                         {isEditing ? (
-                            <input
-                                type="text"
+                            <select
                                 value={displayData.next_of_kin_relationship || ''}
                                 onChange={(e) => handleInputChange('next_of_kin_relationship', e.target.value)}
                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            />
+                            >
+                                <option value="">Select relationship</option>
+                                {buildSelectOptions(displayData.next_of_kin_relationship, RELATIONSHIP_OPTIONS).map((relationship) => (
+                                    <option key={relationship} value={relationship}>{relationship}</option>
+                                ))}
+                            </select>
                         ) : (
                             <p className="font-medium text-gray-900">{displayData.next_of_kin_relationship || '-'}</p>
                         )}

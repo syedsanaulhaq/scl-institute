@@ -41,6 +41,13 @@ export default {
   theme: {
     extend: {
       colors: {
+        scl: {
+          purple: '#6B46C1',
+          dark: '#553399',
+          light: '#8B5CF6',
+          bg: '#F7F9FC',
+          error: '#EF4444'
+        },
         'college-blue': '#1e40af',
         'college-navy': '#1e3a8a', 
         'college-gold': '#f59e0b',

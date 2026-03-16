@@ -188,6 +188,8 @@ router.get('/my-moodle-courses', async (req, res) => {
                 c.shortname AS course_shortname,
                 c.fullname AS course_title,
                 COALESCE(cc.name, 'General') AS course_type,
+                c.startdate AS course_startdate,
+                c.enddate AS course_enddate,
                 c.summary AS description,
                 r.shortname AS role_name
             FROM mdl_user u
@@ -213,6 +215,8 @@ router.get('/my-moodle-courses', async (req, res) => {
                 c.shortname AS course_shortname,
                 c.fullname AS course_title,
                 COALESCE(cc.name, 'General') AS course_type,
+                c.startdate AS course_startdate,
+                c.enddate AS course_enddate,
                 c.summary AS description,
                 ue.status AS enrolment_status
             FROM mdl_user u
@@ -308,6 +312,8 @@ router.get('/my-moodle-courses', async (req, res) => {
                 course_code: course.course_code || course.course_shortname || `COURSE-${id}`,
                 course_title: course.course_title,
                 course_type: course.course_type,
+                start_date: Number(course.course_startdate || 0) > 0 ? new Date(Number(course.course_startdate) * 1000).toISOString() : null,
+                end_date: Number(course.course_enddate || 0) > 0 ? new Date(Number(course.course_enddate) * 1000).toISOString() : null,
                 department: 'General',
                 description: course.description || course.course_title,
                 duration_months: 12,
@@ -359,6 +365,8 @@ router.get('/my-moodle-courses', async (req, res) => {
                 course_code: normalizedCode,
                 course_title: course.course_title,
                 course_type: course.course_type,
+                start_date: Number(course.course_startdate || 0) > 0 ? new Date(Number(course.course_startdate) * 1000).toISOString() : null,
+                end_date: Number(course.course_enddate || 0) > 0 ? new Date(Number(course.course_enddate) * 1000).toISOString() : null,
                 department: 'General',
                 description: course.description || course.course_title,
                 duration_months: 12,
