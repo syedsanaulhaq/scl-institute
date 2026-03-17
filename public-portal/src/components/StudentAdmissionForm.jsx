@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { Upload, Calendar, User, GraduationCap, FileText, Shield, CheckCircle, AlertCircle, Download, X, FileUp, ChevronDown, ChevronRight } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
@@ -12,6 +12,7 @@ const PROGRAMME_SWITCH_CONFIRMATION_ALIASES = [
 
 const StudentAdmissionForm = ({ onSubmitSuccess, isEditMode = false }) => {
   const { id: applicationId } = useParams();
+  const navigate = useNavigate();
   const [activeSection, setActiveSection] = useState(1);
   const [applicationStatus, setApplicationStatus] = useState('');
   const [originalCourseCode, setOriginalCourseCode] = useState('');
@@ -1259,6 +1260,13 @@ const StudentAdmissionForm = ({ onSubmitSuccess, isEditMode = false }) => {
             className="mt-8 rounded-lg bg-scl-purple px-6 py-3 font-semibold text-white transition-colors hover:bg-scl-light"
           >
             Submit Another Registration
+                    <button
+                      type="button"
+                      onClick={() => navigate('/')}
+                      className="mt-4 rounded-lg border border-gray-300 bg-white px-6 py-3 font-semibold text-gray-700 transition-colors hover:bg-gray-50"
+                    >
+                      Back to Home
+                    </button>
           </button>
         </div>
       </div>

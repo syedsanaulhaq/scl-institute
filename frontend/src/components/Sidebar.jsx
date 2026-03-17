@@ -30,10 +30,11 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
     const location = useLocation();
     const [loading, setLoading] = useState(false);
     const roleContext = getRoleContext(user);
-    const { canAccessStudentPortal, canAccessManagementPortal, hasTeaching, hasManagement } = roleContext;
+    const { canAccessStudentPortal, canAccessManagementPortal, hasTeaching, hasManagement, hasStudent } = roleContext;
     const isManagementUser = Boolean(canAccessManagementPortal || hasManagement);
     const [activeSectionTitle, setActiveSectionTitle] = useState(() => {
         if (canAccessManagementPortal) return 'Manager Menu';
+        if (hasTeaching && !hasStudent) return 'Teacher Menu';
         if (canAccessStudentPortal) return 'Student Menu';
         if (hasTeaching) return 'Teacher Menu';
         return 'General Menu';
@@ -68,13 +69,23 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
                     { name: 'Reports', icon: FileText, path: '/applications-report' }
                 ]
             },
+            {
+                name: 'Teacher Admission',
+                icon: Users,
+                isParent: true,
+                key: 'teacher-admission',
+                subItems: [
+                    { name: 'Teacher Registrations', icon: Users, path: '/teacher-registrations' },
+                    { name: 'New Teacher Registration', icon: UserPlus, path: '/teacher-registration' }
+                ]
+            },
             { name: 'Course Accreditations', icon: FileText, path: '/course-accreditations' },
             { name: 'Access LMS', icon: GraduationCap, isSSO: true },
             { name: 'Settings', icon: Settings, path: '/settings' }
         ]
         : [];
 
-    const studentMenuItems = (canAccessStudentPortal || isManagementUser)
+    const studentMenuItems = (hasStudent || isManagementUser)
         ? [
             { name: 'Dashboard', icon: LayoutDashboard, path: '/student/dashboard' },
             { name: 'Portal Home', icon: BookOpen, path: '/student/portal' },

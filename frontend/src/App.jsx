@@ -40,6 +40,8 @@ import CourseInductions from './pages/CourseInductions';
 import CourseInductionsDetail from './pages/CourseInductionsDetail';
 import ManagerCourseChangeRequests from './components/ManagerCourseChangeRequests';
 import AccountSettings from './components/AccountSettings';
+import TeacherRegistrationForm from './components/TeacherRegistrationForm';
+import TeacherRegistrationRequests from './components/TeacherRegistrationRequests';
 import { getRoleContext } from './utils/roleAccess';
 import { logoutMoodleSession } from './utils/ssoService';
 
@@ -413,6 +415,15 @@ function App() {
                         <LoginPage onLoginSuccess={handleLoginSuccess} />
                     )
                 } />
+                <Route path="/teacher-registration" element={
+                    user && canAccessManagementPortal ? (
+                        <Layout user={user} onLogout={handleLogout}>
+                            <TeacherRegistrationForm />
+                        </Layout>
+                    ) : (
+                        <LoginPage onLoginSuccess={handleLoginSuccess} />
+                    )
+                } />
                 <Route path="/student-list" element={
                     user && canAccessManagementPortal ? (
                         <Layout user={user} onLogout={handleLogout}>
@@ -444,6 +455,15 @@ function App() {
                     user && canAccessManagementPortal ? (
                         <Layout user={user} onLogout={handleLogout}>
                             <ApplicationRequests />
+                        </Layout>
+                    ) : (
+                        <LoginPage onLoginSuccess={handleLoginSuccess} />
+                    )
+                } />
+                <Route path="/teacher-registrations" element={
+                    user && canAccessManagementPortal ? (
+                        <Layout user={user} onLogout={handleLogout}>
+                            <TeacherRegistrationRequests user={user} />
                         </Layout>
                     ) : (
                         <LoginPage onLoginSuccess={handleLoginSuccess} />

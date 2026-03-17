@@ -92,6 +92,46 @@ const uploadFields = upload.fields([
     { name: 'applicationId', maxCount: 1 }
 ]);
 
+async function ensureTeacherRegistrationTables() {
+    try {
+        await db.query(`
+            CREATE TABLE IF NOT EXISTS teacher_registrations (
+                id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                registration_reference VARCHAR(20) NULL UNIQUE,
+                first_name VARCHAR(100) NOT NULL,
+                last_name VARCHAR(100) NOT NULL,
+                email VARCHAR(255) NOT NULL,
+                contact_number VARCHAR(20) NULL,
+                nationality VARCHAR(100) NULL,
+                highest_qualification VARCHAR(255) NULL,
+                years_of_experience INT NULL,
+                current_employer VARCHAR(255) NULL,
+                teaching_statement TEXT NULL,
+                selected_course_title VARCHAR(255) NOT NULL,
+                selected_course_code VARCHAR(100) NOT NULL,
+                selected_course_type VARCHAR(100) NULL,
+                teaching_role VARCHAR(50) NOT NULL DEFAULT 'editingteacher',
+                cv_resume VARCHAR(500) NULL,
+                application_status ENUM('submitted', 'under_review', 'accepted', 'rejected') DEFAULT 'submitted',
+                reviewer_name VARCHAR(255) NULL,
+                reviewer_notes TEXT NULL,
+                approved_at DATETIME NULL,
+                rejected_at DATETIME NULL,
+                created_user_id INT NULL,
+                created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                INDEX idx_teacher_reg_status (application_status),
+                INDEX idx_teacher_reg_email (email),
+                INDEX idx_teacher_reg_course (selected_course_code)
+            )
+        `);
+    } catch (error) {
+        console.error('[TEACHER REGISTRATION] Failed to ensure tables:', error.message);
+    }
+}
+
+ensureTeacherRegistrationTables();
+
 // ===============================================
 // ROUTE: GET /api/students/teacher-courses
 // Get courses where user is assigned as teacher/editingteacher
@@ -1702,6 +1742,218 @@ router.get('/applications/:id/offer-letter', async (req, res) => {
             message: 'Failed to generate offer letter',
             error: error.message
         });
+    }
+});
+
+router.post('/teacher-registrations', upload.single('cv_resume'), async (req, res) => {
+    try {
+        const {
+            first_name,
+            last_name,
+            email,
+            contact_number,
+            nationality,
+            highest_qualification,
+            years_of_experience,
+            current_employer,
+            teaching_statement,
+            selected_course_title,
+            selected_course_code,
+            selected_course_type,
+            teaching_role
+        } = req.body;
+
+        if (!first_name || !last_name || !email || !selected_course_title || !selected_course_code) {
+            return res.status(400).json({ success: false, message: 'First name, last name, email, course title, and course code are required' });
+        }
+
+        const cvResumePath = req.file ? `/uploads/student-documents/${req.file.filename}` : null;
+        const [result] = await db.execute(
+            `INSERT INTO teacher_registrations (
+                first_name, last_name, email, contact_number, nationality,
+                highest_qualification, years_of_experience, current_employer,
+                teaching_statement, selected_course_title, selected_course_code,
+                selected_course_type, teaching_role, cv_resume, application_status
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'submitted')`,
+            [
+                first_name,
+                last_name,
+                email,
+                contact_number || null,
+                nationality || null,
+                highest_qualification || null,
+                years_of_experience ? Number(years_of_experience) : null,
+                current_employer || null,
+                teaching_statement || null,
+                selected_course_title,
+                selected_course_code,
+                selected_course_type || null,
+                teaching_role || 'editingteacher',
+                cvResumePath
+            ]
+        );
+
+        const registrationId = Number(result.insertId);
+        const registrationReference = `TCH-${String(registrationId).padStart(6, '0')}`;
+        await db.execute('UPDATE teacher_registrations SET registration_reference = ? WHERE id = ?', [registrationReference, registrationId]);
+
+        return res.status(201).json({
+            success: true,
+            message: 'Teacher registration submitted successfully',
+            data: { id: registrationId, registration_reference: registrationReference }
+        });
+    } catch (error) {
+        console.error('Error creating teacher registration:', error);
+        res.status(500).json({ success: false, message: 'Failed to submit teacher registration', error: error.message });
+    }
+});
+
+router.get('/teacher-registrations', async (req, res) => {
+    try {
+        const { status, search } = req.query;
+        const conditions = ['1 = 1'];
+        const values = [];
+
+        if (status && status !== 'all') {
+            conditions.push('application_status = ?');
+            values.push(status);
+        }
+
+        if (search) {
+            conditions.push('(first_name LIKE ? OR last_name LIKE ? OR email LIKE ? OR registration_reference LIKE ? OR selected_course_title LIKE ? OR selected_course_code LIKE ?)');
+            const searchValue = `%${search}%`;
+            values.push(searchValue, searchValue, searchValue, searchValue, searchValue, searchValue);
+        }
+
+        const [rows] = await db.execute(
+            `SELECT * FROM teacher_registrations WHERE ${conditions.join(' AND ')} ORDER BY created_at DESC`,
+            values
+        );
+
+        res.json({ success: true, data: { registrations: rows } });
+    } catch (error) {
+        console.error('Error fetching teacher registrations:', error);
+        res.status(500).json({ success: false, message: 'Failed to fetch teacher registrations', error: error.message });
+    }
+});
+
+router.get('/teacher-registrations/:id', async (req, res) => {
+    try {
+        const [rows] = await db.execute('SELECT * FROM teacher_registrations WHERE id = ? LIMIT 1', [req.params.id]);
+        if (rows.length === 0) {
+            return res.status(404).json({ success: false, message: 'Teacher registration not found' });
+        }
+        res.json({ success: true, data: { registration: rows[0] } });
+    } catch (error) {
+        console.error('Error fetching teacher registration:', error);
+        res.status(500).json({ success: false, message: 'Failed to fetch teacher registration', error: error.message });
+    }
+});
+
+router.post('/teacher-registrations/:id/decision', async (req, res) => {
+    try {
+        const { decision, reviewer_name, reviewer_notes } = req.body;
+        const registrationId = req.params.id;
+        const portalLoginUrl = process.env.PORTAL_LOGIN_URL || process.env.FRONTEND_URL || 'http://localhost:3000/login';
+        const moodleUrl = process.env.MOODLE_URL || process.env.MOODLE_INTERNAL_URL || 'http://localhost:9090';
+
+        if (!decision || !['accepted', 'rejected', 'under_review'].includes(String(decision))) {
+            return res.status(400).json({ success: false, message: 'Valid decision is required' });
+        }
+
+        const [rows] = await db.execute('SELECT * FROM teacher_registrations WHERE id = ? LIMIT 1', [registrationId]);
+        if (rows.length === 0) {
+            return res.status(404).json({ success: false, message: 'Teacher registration not found' });
+        }
+
+        const registration = rows[0];
+        let createdUser = null;
+        let moodleAssignment = null;
+        let loginDetails = null;
+        let userId = registration.created_user_id ? Number(registration.created_user_id) : null;
+
+        if (decision === 'accepted') {
+            moodleAssignment = await assignTeacherToMoodleCourse(
+                registration.email,
+                registration.first_name,
+                registration.last_name,
+                registration.selected_course_code,
+                registration.teaching_role || 'editingteacher'
+            );
+
+            if (!moodleAssignment?.success) {
+                return res.status(502).json({
+                    success: false,
+                    message: moodleAssignment?.message || 'Failed to assign teacher to Moodle course',
+                    data: {
+                        registrationId: Number(registrationId),
+                        status: registration.application_status,
+                        moodle_assignment: moodleAssignment
+                    }
+                });
+            }
+
+            const [userRows] = await db.execute('SELECT id, role, password FROM users WHERE email = ? LIMIT 1', [registration.email]);
+            let tempPassword = null;
+
+            if (userRows.length === 0) {
+                tempPassword = generateTempPassword();
+                const passwordHash = crypto.createHash('sha256').update(tempPassword).digest('hex');
+                const mergedRole = mergeRoleValue('', registration.teaching_role || 'editingteacher');
+                const [insertResult] = await db.execute(
+                    'INSERT INTO users (email, password, password_hash, first_name, last_name, role, phone, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, 1)',
+                    [registration.email, tempPassword, passwordHash, registration.first_name, registration.last_name, mergedRole, registration.contact_number || null]
+                );
+                userId = Number(insertResult.insertId);
+                createdUser = { id: userId, email: registration.email, password: tempPassword, role: mergedRole, status: 'created' };
+            } else {
+                userId = Number(userRows[0].id);
+                const mergedRole = mergeRoleValue(userRows[0].role, registration.teaching_role || 'editingteacher');
+                await db.execute(
+                    'UPDATE users SET role = ?, first_name = ?, last_name = ?, phone = COALESCE(?, phone), is_active = 1 WHERE id = ?',
+                    [mergedRole, registration.first_name, registration.last_name, registration.contact_number || null, userId]
+                );
+                createdUser = { id: userId, email: registration.email, password: userRows[0].password || null, role: mergedRole, status: 'updated' };
+            }
+
+            loginDetails = {
+                email: registration.email,
+                password: createdUser?.password || null,
+                role: registration.teaching_role || 'editingteacher',
+                portal_login_url: portalLoginUrl,
+                moodle_url: moodleUrl,
+                moodle_course_code: registration.selected_course_code,
+                moodle_course_title: registration.selected_course_title,
+                note: createdUser?.password
+                    ? 'Use these credentials to login, then open Teacher Menu > Open Moodle Teaching.'
+                    : 'Existing user account reused. Use existing password or reset via Forgot Password.'
+            };
+        }
+
+        await db.execute(
+            `UPDATE teacher_registrations
+             SET application_status = ?, reviewer_name = ?, reviewer_notes = ?,
+                 approved_at = CASE WHEN ? = 'accepted' THEN NOW() ELSE NULL END,
+                 rejected_at = CASE WHEN ? = 'rejected' THEN NOW() ELSE NULL END,
+                 created_user_id = CASE WHEN ? = 'accepted' THEN ? ELSE created_user_id END
+             WHERE id = ?`,
+            [decision, reviewer_name || null, reviewer_notes || null, decision, decision, decision, userId, registrationId]
+        );
+
+        return res.json({
+            success: true,
+            message: `Teacher registration ${decision}`,
+            data: {
+                registrationId: Number(registrationId),
+                status: decision,
+                created_user: createdUser,
+                moodle_assignment: moodleAssignment,
+                login_details: loginDetails
+            }
+        });
+    } catch (error) {
+        console.error('Error processing teacher registration decision:', error);
+        res.status(500).json({ success: false, message: 'Failed to process teacher registration decision', error: error.message });
     }
 });
 
@@ -3692,6 +3944,186 @@ async function getCourseContextRows(courseIds) {
     `, ids);
 
     return rows;
+}
+
+function mergeRoleValue(existingRoleValue, roleToAdd) {
+    const existingRoles = String(existingRoleValue || '')
+        .split(/[|,;]+/)
+        .map((entry) => String(entry || '').trim())
+        .filter(Boolean);
+
+    if (!existingRoles.some((entry) => entry.toLowerCase() === String(roleToAdd || '').trim().toLowerCase())) {
+        existingRoles.push(roleToAdd);
+    }
+
+    return existingRoles.join(', ');
+}
+
+async function createMoodleUserAccountFallback(email, firstName, lastName) {
+    const normalizedEmail = String(email || '').trim().toLowerCase();
+    const now = Math.floor(Date.now() / 1000);
+
+    try {
+        const [result] = await moodleDbPool.execute(
+            `INSERT INTO mdl_user (
+                auth, confirmed, mnethostid, username, password, firstname, lastname, email,
+                lang, calendartype, timezone, timecreated, timemodified
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+                'manual',
+                1,
+                1,
+                normalizedEmail,
+                generateTempPassword(),
+                firstName || 'Teacher',
+                lastName || 'User',
+                normalizedEmail,
+                'en',
+                'gregorian',
+                'Europe/London',
+                now,
+                now
+            ]
+        );
+
+        return {
+            success: true,
+            moodleUserId: Number(result.insertId),
+            created: true,
+            method: 'db-fallback'
+        };
+    } catch (error) {
+        if (error.code === 'ER_DUP_ENTRY') {
+            const existingUserId = await getMoodleUserIdByEmail(normalizedEmail);
+            if (existingUserId) {
+                return { success: true, moodleUserId: existingUserId, created: false, method: 'db-fallback-existing' };
+            }
+        }
+        throw error;
+    }
+}
+
+async function ensureMoodleUserAccount(email, firstName, lastName) {
+    const existingUserId = await getMoodleUserIdByEmail(email);
+    if (existingUserId) {
+        return { success: true, moodleUserId: existingUserId, created: false };
+    }
+
+    const axios = require('axios');
+    const moodleToken = process.env.MOODLE_TOKEN || 'e86dd021aaa42f78114e6c67cc9d8ff1';
+    const moodleUrl = process.env.MOODLE_INTERNAL_URL || 'http://scli-moodle-dev:8080';
+
+    try {
+        await axios.post(
+            `${moodleUrl}/webservice/rest/server.php`,
+            {
+                wstoken: moodleToken,
+                wsfunction: 'core_user_create_users',
+                users: [{
+                    username: email,
+                    password: generateTempPassword(),
+                    firstname: firstName || 'Teacher',
+                    lastname: lastName || 'User',
+                    email
+                }],
+                moodlewsrestformat: 'json'
+            }
+        );
+    } catch (error) {
+        console.warn('[MOODLE USER CREATE FALLBACK]', error.message);
+        return createMoodleUserAccountFallback(email, firstName, lastName);
+    }
+
+    const createdUserId = await getMoodleUserIdByEmail(email);
+    if (!createdUserId) {
+        return createMoodleUserAccountFallback(email, firstName, lastName);
+    }
+
+    return { success: true, moodleUserId: createdUserId, created: true, method: 'webservice' };
+}
+
+async function assignTeacherToMoodleCourse(email, firstName, lastName, courseCode, roleShortname = 'editingteacher') {
+    try {
+        const targetCourse = await getMoodleCourseByCode(courseCode);
+        if (!targetCourse) {
+            return { success: false, message: 'Course not found in Moodle' };
+        }
+
+        const roleId = String(roleShortname || '').toLowerCase() === 'teacher' ? 4 : 3;
+        const moodleUserAccount = await ensureMoodleUserAccount(email, firstName, lastName);
+        const moodleUserId = moodleUserAccount.moodleUserId;
+        const manualEnrolRows = await getManualEnrolmentRows([targetCourse.id]);
+        if (manualEnrolRows.length === 0) {
+            return { success: false, message: 'No manual enrolment instance found for teacher course assignment' };
+        }
+
+        const contextRows = await getCourseContextRows([targetCourse.id]);
+        const contextId = contextRows.length > 0 ? Number(contextRows[0].id) : null;
+        if (!contextId) {
+            return { success: false, message: 'Course context not found in Moodle' };
+        }
+
+        const enrolId = Number(manualEnrolRows[0].id);
+        const now = Math.floor(Date.now() / 1000);
+        const connection = await moodleDbPool.getConnection();
+
+        try {
+            await connection.beginTransaction();
+
+            const [existingEnrolments] = await connection.query(
+                `SELECT id FROM mdl_user_enrolments WHERE userid = ? AND enrolid = ? LIMIT 1`,
+                [moodleUserId, enrolId]
+            );
+
+            if (existingEnrolments.length > 0) {
+                await connection.query(
+                    `UPDATE mdl_user_enrolments
+                     SET status = 0, timestart = CASE WHEN timestart = 0 THEN ? ELSE timestart END, timeend = 0, timemodified = ?
+                     WHERE userid = ? AND enrolid = ?`,
+                    [now, now, moodleUserId, enrolId]
+                );
+            } else {
+                await connection.query(
+                    `INSERT INTO mdl_user_enrolments
+                        (status, enrolid, userid, timestart, timeend, modifierid, timecreated, timemodified)
+                     VALUES (0, ?, ?, ?, 0, 0, ?, ?)`,
+                    [enrolId, moodleUserId, now, now, now]
+                );
+            }
+
+            const [existingAssignments] = await connection.query(
+                `SELECT id FROM mdl_role_assignments WHERE roleid = ? AND contextid = ? AND userid = ? LIMIT 1`,
+                [roleId, contextId, moodleUserId]
+            );
+
+            if (existingAssignments.length === 0) {
+                await connection.query(
+                    `INSERT INTO mdl_role_assignments
+                        (roleid, contextid, userid, timemodified, modifierid, component, itemid, sortorder)
+                     VALUES (?, ?, ?, ?, 0, '', 0, 0)`,
+                    [roleId, contextId, moodleUserId, now]
+                );
+            }
+
+            await connection.commit();
+            return {
+                success: true,
+                message: `Teacher assigned to ${targetCourse.fullname}`,
+                moodleUserId,
+                moodleCourseId: targetCourse.id,
+                roleId,
+                roleShortname
+            };
+        } catch (error) {
+            await connection.rollback();
+            throw error;
+        } finally {
+            connection.release();
+        }
+    } catch (error) {
+        console.error('[TEACHER MOODLE ASSIGNMENT ERROR]', error.message);
+        return { success: false, message: error.message };
+    }
 }
 
 async function fallbackUnenrollStudentFromCourseIds(email, courseIds) {
