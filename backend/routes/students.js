@@ -132,6 +132,63 @@ async function ensureTeacherRegistrationTables() {
 
 ensureTeacherRegistrationTables();
 
+async function ensureCourseRegistrationTables() {
+    try {
+        await db.query(`
+            CREATE TABLE IF NOT EXISTS course_registrations (
+                id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                registration_reference VARCHAR(20) NULL UNIQUE,
+                course_title VARCHAR(255) NOT NULL,
+                course_code VARCHAR(100) NOT NULL,
+                course_type VARCHAR(100) NULL,
+                awarding_body_accreditation VARCHAR(255) NULL,
+                regulation_level VARCHAR(100) NULL,
+                mode_of_delivery VARCHAR(100) NULL,
+                start_date DATE NULL,
+                end_date_or_duration VARCHAR(100) NULL,
+                subject_area_discipline VARCHAR(150) NULL,
+                course_description TEXT NULL,
+                learning_outcomes TEXT NULL,
+                units_modules_covered TEXT NULL,
+                assessment_methods VARCHAR(150) NULL,
+                entry_requirements TEXT NULL,
+                tuition_fee_gbp DECIMAL(10,2) NULL,
+                additional_costs TEXT NULL,
+                funding_options VARCHAR(150) NULL,
+                learning_resources_provided TEXT NULL,
+                special_equipment_needed TEXT NULL,
+                work_placement_included VARCHAR(10) NULL,
+                course_leader_programme_director VARCHAR(255) NULL,
+                internal_verification_contact VARCHAR(255) NULL,
+                ukvi_approved_course VARCHAR(10) NULL,
+                approval_date DATE NULL,
+                review_date DATE NULL,
+                special_admission_considerations TEXT NULL,
+                progression_opportunities TEXT NULL,
+                industry_partnerships TEXT NULL,
+                application_status ENUM('draft', 'submitted', 'approved', 'rejected') DEFAULT 'submitted',
+                reviewer_name VARCHAR(255) NULL,
+                reviewer_notes TEXT NULL,
+                approved_at DATETIME NULL,
+                rejected_at DATETIME NULL,
+                moodle_course_id INT NULL,
+                moodle_sync_status ENUM('pending', 'synced', 'failed') DEFAULT 'pending',
+                moodle_sync_message TEXT NULL,
+                last_synced_at DATETIME NULL,
+                created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                INDEX idx_course_reg_code (course_code),
+                INDEX idx_course_reg_status (application_status),
+                INDEX idx_course_reg_sync (moodle_sync_status)
+            )
+        `);
+    } catch (error) {
+        console.error('[COURSE REGISTRATION] Failed to ensure table:', error.message);
+    }
+}
+
+ensureCourseRegistrationTables();
+
 // ===============================================
 // ROUTE: GET /api/students/teacher-courses
 // Get courses where user is assigned as teacher/editingteacher
@@ -1954,6 +2011,181 @@ router.post('/teacher-registrations/:id/decision', async (req, res) => {
     } catch (error) {
         console.error('Error processing teacher registration decision:', error);
         res.status(500).json({ success: false, message: 'Failed to process teacher registration decision', error: error.message });
+    }
+});
+
+router.post('/course-registrations', async (req, res) => {
+    try {
+        const payload = normalizeCourseRegistrationPayload(req.body || {});
+        if (!payload.course_title || !payload.course_code) {
+            return res.status(400).json({ success: false, message: 'Course Title and Course Code / ID are required' });
+        }
+
+        const [result] = await db.execute(
+            `INSERT INTO course_registrations (
+                course_title, course_code, course_type, awarding_body_accreditation, regulation_level,
+                mode_of_delivery, start_date, end_date_or_duration, subject_area_discipline,
+                course_description, learning_outcomes, units_modules_covered, assessment_methods,
+                entry_requirements, tuition_fee_gbp, additional_costs, funding_options,
+                learning_resources_provided, special_equipment_needed, work_placement_included,
+                course_leader_programme_director, internal_verification_contact, ukvi_approved_course,
+                approval_date, review_date, special_admission_considerations, progression_opportunities,
+                industry_partnerships, application_status, moodle_sync_status
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
+            [
+                payload.course_title,
+                payload.course_code,
+                payload.course_type,
+                payload.awarding_body_accreditation,
+                payload.regulation_level,
+                payload.mode_of_delivery,
+                payload.start_date,
+                payload.end_date_or_duration,
+                payload.subject_area_discipline,
+                payload.course_description,
+                payload.learning_outcomes,
+                payload.units_modules_covered,
+                payload.assessment_methods,
+                payload.entry_requirements,
+                payload.tuition_fee_gbp,
+                payload.additional_costs,
+                payload.funding_options,
+                payload.learning_resources_provided,
+                payload.special_equipment_needed,
+                payload.work_placement_included,
+                payload.course_leader_programme_director,
+                payload.internal_verification_contact,
+                payload.ukvi_approved_course,
+                payload.approval_date,
+                payload.review_date,
+                payload.special_admission_considerations,
+                payload.progression_opportunities,
+                payload.industry_partnerships,
+                payload.application_status
+            ]
+        );
+
+        const registrationId = Number(result.insertId);
+        const registrationReference = `CRS-${String(registrationId).padStart(6, '0')}`;
+        await db.execute('UPDATE course_registrations SET registration_reference = ? WHERE id = ?', [registrationReference, registrationId]);
+
+        let moodleSync = null;
+        const shouldSyncNow = Boolean(req.body?.sync_to_moodle) || payload.application_status === 'approved';
+        if (shouldSyncNow) {
+            moodleSync = await syncCourseRegistrationToMoodle(registrationId);
+        }
+
+        const [rows] = await db.execute('SELECT * FROM course_registrations WHERE id = ? LIMIT 1', [registrationId]);
+        return res.status(201).json({
+            success: true,
+            message: shouldSyncNow ? 'Course registration submitted and Moodle sync attempted' : 'Course registration submitted successfully',
+            data: {
+                registration: rows[0],
+                moodle_sync: moodleSync
+            }
+        });
+    } catch (error) {
+        console.error('Error creating course registration:', error);
+        return res.status(500).json({ success: false, message: 'Failed to submit course registration', error: error.message });
+    }
+});
+
+router.get('/course-registrations', async (req, res) => {
+    try {
+        const { status, sync_status, search } = req.query;
+        const conditions = ['1 = 1'];
+        const values = [];
+
+        if (status && status !== 'all') {
+            conditions.push('application_status = ?');
+            values.push(status);
+        }
+
+        if (sync_status && sync_status !== 'all') {
+            conditions.push('moodle_sync_status = ?');
+            values.push(sync_status);
+        }
+
+        if (search) {
+            conditions.push('(course_title LIKE ? OR course_code LIKE ? OR registration_reference LIKE ? OR awarding_body_accreditation LIKE ?)');
+            const q = `%${search}%`;
+            values.push(q, q, q, q);
+        }
+
+        const [rows] = await db.execute(
+            `SELECT * FROM course_registrations WHERE ${conditions.join(' AND ')} ORDER BY created_at DESC`,
+            values
+        );
+
+        return res.json({ success: true, data: { registrations: rows } });
+    } catch (error) {
+        console.error('Error listing course registrations:', error);
+        return res.status(500).json({ success: false, message: 'Failed to fetch course registrations', error: error.message });
+    }
+});
+
+router.get('/course-registrations/:id', async (req, res) => {
+    try {
+        const [rows] = await db.execute('SELECT * FROM course_registrations WHERE id = ? LIMIT 1', [req.params.id]);
+        if (rows.length === 0) {
+            return res.status(404).json({ success: false, message: 'Course registration not found' });
+        }
+        return res.json({ success: true, data: { registration: rows[0] } });
+    } catch (error) {
+        console.error('Error fetching course registration:', error);
+        return res.status(500).json({ success: false, message: 'Failed to fetch course registration', error: error.message });
+    }
+});
+
+router.post('/course-registrations/:id/approve', async (req, res) => {
+    try {
+        const registrationId = Number(req.params.id);
+        const reviewerName = req.body?.reviewer_name || null;
+        const reviewerNotes = req.body?.reviewer_notes || null;
+
+        await db.execute(
+            `UPDATE course_registrations
+             SET application_status = 'approved',
+                 reviewer_name = ?,
+                 reviewer_notes = ?,
+                 approved_at = NOW(),
+                 rejected_at = NULL,
+                 moodle_sync_status = 'pending'
+             WHERE id = ?`,
+            [reviewerName, reviewerNotes, registrationId]
+        );
+
+        const moodleSync = await syncCourseRegistrationToMoodle(registrationId);
+        const [rows] = await db.execute('SELECT * FROM course_registrations WHERE id = ? LIMIT 1', [registrationId]);
+
+        return res.json({
+            success: true,
+            message: 'Course registration approved and Moodle sync attempted',
+            data: {
+                registration: rows[0] || null,
+                moodle_sync: moodleSync
+            }
+        });
+    } catch (error) {
+        console.error('Error approving course registration:', error);
+        return res.status(500).json({ success: false, message: 'Failed to approve course registration', error: error.message });
+    }
+});
+
+router.post('/course-registrations/:id/sync-moodle', async (req, res) => {
+    try {
+        const registrationId = Number(req.params.id);
+        const moodleSync = await syncCourseRegistrationToMoodle(registrationId);
+
+        const statusCode = moodleSync?.success ? 200 : 502;
+        return res.status(statusCode).json({
+            success: Boolean(moodleSync?.success),
+            message: moodleSync?.message || 'Moodle sync finished',
+            data: moodleSync
+        });
+    } catch (error) {
+        console.error('Error syncing course registration to Moodle:', error);
+        return res.status(500).json({ success: false, message: 'Failed to sync course registration to Moodle', error: error.message });
     }
 });
 
@@ -3944,6 +4176,408 @@ async function getCourseContextRows(courseIds) {
     `, ids);
 
     return rows;
+}
+
+function normalizeCourseRegistrationPayload(rawPayload) {
+    const payload = rawPayload || {};
+    const numberValue = payload.tuition_fee_gbp === '' || payload.tuition_fee_gbp === null || payload.tuition_fee_gbp === undefined
+        ? null
+        : Number(payload.tuition_fee_gbp);
+
+    const normalizeDateValue = (value) => {
+        const trimmed = String(value || '').trim();
+        return trimmed ? trimmed : null;
+    };
+
+    return {
+        course_title: String(payload.course_title || '').trim(),
+        course_code: String(payload.course_code || '').trim(),
+        course_type: payload.course_type || null,
+        awarding_body_accreditation: payload.awarding_body_accreditation || null,
+        regulation_level: payload.regulation_level || null,
+        mode_of_delivery: payload.mode_of_delivery || null,
+        start_date: normalizeDateValue(payload.start_date),
+        end_date_or_duration: payload.end_date_or_duration || null,
+        subject_area_discipline: payload.subject_area_discipline || null,
+        course_description: payload.course_description || null,
+        learning_outcomes: payload.learning_outcomes || null,
+        units_modules_covered: payload.units_modules_covered || null,
+        assessment_methods: payload.assessment_methods || null,
+        entry_requirements: payload.entry_requirements || null,
+        tuition_fee_gbp: Number.isFinite(numberValue) ? numberValue : null,
+        additional_costs: payload.additional_costs || null,
+        funding_options: payload.funding_options || null,
+        learning_resources_provided: payload.learning_resources_provided || null,
+        special_equipment_needed: payload.special_equipment_needed || null,
+        work_placement_included: payload.work_placement_included || null,
+        course_leader_programme_director: payload.course_leader_programme_director || null,
+        internal_verification_contact: payload.internal_verification_contact || null,
+        ukvi_approved_course: payload.ukvi_approved_course || null,
+        approval_date: normalizeDateValue(payload.approval_date),
+        review_date: normalizeDateValue(payload.review_date),
+        special_admission_considerations: payload.special_admission_considerations || null,
+        progression_opportunities: payload.progression_opportunities || null,
+        industry_partnerships: payload.industry_partnerships || null,
+        application_status: ['draft', 'submitted', 'approved', 'rejected'].includes(String(payload.application_status || '').toLowerCase())
+            ? String(payload.application_status).toLowerCase()
+            : 'submitted'
+    };
+}
+
+function normalizeFieldKey(value) {
+    return String(value || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+}
+
+function parseCourseModules(unitsModulesCovered) {
+    const lines = String(unitsModulesCovered || '')
+        .split(/\r?\n|,/)
+        .map((line) => String(line || '').trim())
+        .filter(Boolean);
+
+    return Array.from(new Set(lines));
+}
+
+function buildCourseSummaryFromRegistration(registration) {
+    const blocks = [];
+    if (registration.course_description) {
+        blocks.push(`Course Description:\n${registration.course_description}`);
+    }
+    if (registration.learning_outcomes) {
+        blocks.push(`Learning Outcomes:\n${registration.learning_outcomes}`);
+    }
+    if (registration.entry_requirements) {
+        blocks.push(`Entry Requirements:\n${registration.entry_requirements}`);
+    }
+    return blocks.join('\n\n');
+}
+
+function getMoodleRestConfig() {
+    return {
+        token: process.env.MOODLE_TOKEN || 'e86dd021aaa42f78114e6c67cc9d8ff1',
+        baseUrl: (process.env.MOODLE_INTERNAL_URL || process.env.MOODLE_URL || 'http://localhost:9090').replace(/\/$/, '')
+    };
+}
+
+function appendMoodleParam(form, key, value) {
+    if (Array.isArray(value)) {
+        value.forEach((item, index) => appendMoodleParam(form, `${key}[${index}]`, item));
+        return;
+    }
+
+    if (value !== null && value !== undefined && typeof value === 'object') {
+        Object.entries(value).forEach(([childKey, childValue]) => appendMoodleParam(form, `${key}[${childKey}]`, childValue));
+        return;
+    }
+
+    form.append(key, value === null || value === undefined ? '' : String(value));
+}
+
+async function callMoodleRest(wsfunction, params = {}) {
+    const axios = require('axios');
+    const { token, baseUrl } = getMoodleRestConfig();
+    const endpoint = `${baseUrl}/webservice/rest/server.php`;
+    const form = new URLSearchParams();
+
+    form.append('wstoken', token);
+    form.append('wsfunction', wsfunction);
+    form.append('moodlewsrestformat', 'json');
+    Object.entries(params || {}).forEach(([key, value]) => appendMoodleParam(form, key, value));
+
+    const response = await axios.post(endpoint, form.toString(), {
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        timeout: 15000
+    });
+
+    if (response.data && response.data.exception) {
+        throw new Error(response.data.message || response.data.errorcode || 'Moodle API error');
+    }
+
+    return response.data;
+}
+
+async function findBestMoodleCategoryId() {
+    const [rows] = await moodleDbPool.execute(
+        `SELECT id FROM mdl_course_categories WHERE id > 0 ORDER BY CASE WHEN id = 1 THEN 0 ELSE 1 END, id ASC LIMIT 1`
+    );
+    return rows.length > 0 ? Number(rows[0].id) : 1;
+}
+
+async function createOrUpdateMoodleCourseCore(registration) {
+    const existingCourse = await getMoodleCourseByCode(registration.course_code);
+    const summary = buildCourseSummaryFromRegistration(registration);
+    const startDateEpoch = registration.start_date ? Math.floor(new Date(registration.start_date).getTime() / 1000) : 0;
+    const categoryId = await findBestMoodleCategoryId();
+
+    if (existingCourse) {
+        try {
+            await callMoodleRest('core_course_update_courses', {
+                courses: [{
+                    id: existingCourse.id,
+                    fullname: registration.course_title,
+                    shortname: registration.course_code,
+                    idnumber: registration.course_code,
+                    summary,
+                    summaryformat: 1,
+                    startdate: startDateEpoch,
+                    visible: 1
+                }]
+            });
+        } catch (apiError) {
+            await moodleDbPool.execute(
+                `UPDATE mdl_course
+                 SET fullname = ?, shortname = ?, idnumber = ?, summary = ?, summaryformat = 1,
+                     startdate = ?, timemodified = ?
+                 WHERE id = ?`,
+                [registration.course_title, registration.course_code, registration.course_code, summary, startDateEpoch, Math.floor(Date.now() / 1000), existingCourse.id]
+            );
+        }
+
+        return { moodleCourseId: Number(existingCourse.id), created: false };
+    }
+
+    try {
+        const createResult = await callMoodleRest('core_course_create_courses', {
+            courses: [{
+                fullname: registration.course_title,
+                shortname: registration.course_code,
+                idnumber: registration.course_code,
+                categoryid: categoryId,
+                summary,
+                summaryformat: 1,
+                format: 'topics',
+                visible: 1,
+                startdate: startDateEpoch
+            }]
+        });
+
+        const createdCourse = Array.isArray(createResult) ? createResult[0] : null;
+        if (!createdCourse?.id) {
+            throw new Error('Moodle did not return created course ID');
+        }
+
+        return { moodleCourseId: Number(createdCourse.id), created: true };
+    } catch (apiError) {
+        const now = Math.floor(Date.now() / 1000);
+        const [insertResult] = await moodleDbPool.execute(
+            `INSERT INTO mdl_course (
+                category, sortorder, fullname, shortname, idnumber, summary, summaryformat, format,
+                showgrades, newsitems, startdate, enddate, marker, maxbytes, legacyfiles, showreports,
+                visible, visibleold, groupmode, groupmodeforce, defaultgroupingid, timecreated, timemodified
+            ) VALUES (?, 0, ?, ?, ?, ?, 1, 'topics', 1, 5, ?, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, ?, ?)`,
+            [categoryId, registration.course_title, registration.course_code, registration.course_code, summary, startDateEpoch, now, now]
+        );
+
+        return { moodleCourseId: Number(insertResult.insertId), created: true };
+    }
+}
+
+async function ensureManualEnrolmentForCourse(courseId) {
+    const [rows] = await moodleDbPool.execute(
+        `SELECT id FROM mdl_enrol WHERE courseid = ? AND enrol = 'manual' LIMIT 1`,
+        [courseId]
+    );
+
+    if (rows.length > 0) {
+        return Number(rows[0].id);
+    }
+
+    const now = Math.floor(Date.now() / 1000);
+    const [insertResult] = await moodleDbPool.execute(
+        `INSERT INTO mdl_enrol (
+            enrol, status, courseid, sortorder, name, enrolperiod, expirythreshold,
+            expirynotify, notifyall, enrolstartdate, enrolenddate, timecreated, timemodified, customint6
+        ) VALUES ('manual', 0, ?, 0, '', 0, 0, 0, 0, 0, 0, ?, ?, 5)`,
+        [courseId, now, now]
+    );
+
+    return Number(insertResult.insertId);
+}
+
+const COURSE_CUSTOM_FIELD_ALIASES = {
+    course_type: ['course_type', 'course_type_id', 'type_of_course'],
+    awarding_body_accreditation: ['awarding_body_accreditation', 'awarding_body', 'accreditation'],
+    regulation_level: ['regulation_level', 'rqf_level'],
+    mode_of_delivery: ['mode_of_delivery', 'delivery_mode'],
+    end_date_or_duration: ['end_date_or_duration', 'duration'],
+    subject_area_discipline: ['subject_area_discipline', 'subject_area', 'discipline'],
+    learning_outcomes: ['learning_outcomes'],
+    units_modules_covered: ['units_modules_covered', 'units_modules'],
+    assessment_methods: ['assessment_methods', 'assessment_method'],
+    entry_requirements: ['entry_requirements'],
+    tuition_fee_gbp: ['tuition_fee_gbp', 'tuition_fee'],
+    additional_costs: ['additional_costs'],
+    funding_options: ['funding_options'],
+    learning_resources_provided: ['learning_resources_provided'],
+    special_equipment_needed: ['special_equipment_needed'],
+    work_placement_included: ['work_placement_included', 'work_placement_internship_included'],
+    course_leader_programme_director: ['course_leader_programme_director', 'course_leader'],
+    internal_verification_contact: ['internal_verification_contact'],
+    ukvi_approved_course: ['ukvi_approved_course'],
+    approval_date: ['approval_date'],
+    review_date: ['review_date'],
+    special_admission_considerations: ['special_admission_considerations'],
+    progression_opportunities: ['progression_opportunities'],
+    industry_partnerships: ['industry_partnerships']
+};
+
+async function upsertMoodleCourseCustomFields(courseId, registration) {
+    let fields = [];
+    try {
+        const [rows] = await moodleDbPool.execute(
+            `SELECT f.id, f.shortname, f.name
+             FROM mdl_customfield_field f
+             INNER JOIN mdl_customfield_category c ON c.id = f.categoryid
+             WHERE c.component = 'core_course' AND c.area = 'course'`
+        );
+        fields = rows;
+    } catch (error) {
+        return { updated: 0, message: 'Custom field tables not available; skipped custom field sync' };
+    }
+
+    if (!fields.length) {
+        return { updated: 0, message: 'No Moodle course custom fields found; skipped custom field sync' };
+    }
+
+    const fieldsByKey = new Map();
+    fields.forEach((field) => {
+        fieldsByKey.set(normalizeFieldKey(field.shortname), field);
+        fieldsByKey.set(normalizeFieldKey(field.name), field);
+    });
+
+    let updates = 0;
+    for (const [payloadKey, aliases] of Object.entries(COURSE_CUSTOM_FIELD_ALIASES)) {
+        const rawValue = registration[payloadKey];
+        if (rawValue === null || rawValue === undefined || rawValue === '') {
+            continue;
+        }
+
+        const matchedField = aliases
+            .map((alias) => fieldsByKey.get(normalizeFieldKey(alias)))
+            .find(Boolean);
+
+        if (!matchedField) {
+            continue;
+        }
+
+        const valueText = String(rawValue);
+        const charValue = valueText.slice(0, 255);
+        const numericValue = Number(rawValue);
+        const intValue = Number.isInteger(numericValue) ? numericValue : 0;
+        const decValue = Number.isFinite(numericValue) ? numericValue : 0;
+        const now = Math.floor(Date.now() / 1000);
+
+        await moodleDbPool.execute(
+            `INSERT INTO mdl_customfield_data (
+                fieldid, instanceid, intvalue, decvalue, shortcharvalue, charvalue, value,
+                valueformat, timecreated, timemodified
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?, ?)
+            ON DUPLICATE KEY UPDATE
+                intvalue = VALUES(intvalue),
+                decvalue = VALUES(decvalue),
+                shortcharvalue = VALUES(shortcharvalue),
+                charvalue = VALUES(charvalue),
+                value = VALUES(value),
+                timemodified = VALUES(timemodified)`,
+            [matchedField.id, courseId, intValue, decValue, charValue, charValue, valueText, now, now]
+        );
+        updates += 1;
+    }
+
+    return { updated: updates, message: `Updated ${updates} Moodle custom field value(s)` };
+}
+
+async function upsertMoodleCourseSections(courseId, unitsModulesCovered) {
+    const modules = parseCourseModules(unitsModulesCovered);
+    if (!modules.length) {
+        return { updated: 0, message: 'No modules supplied; skipped section sync' };
+    }
+
+    const [existingRows] = await moodleDbPool.execute(
+        `SELECT id, section FROM mdl_course_sections WHERE course = ? AND section > 0`,
+        [courseId]
+    );
+    const existingBySection = new Map(existingRows.map((row) => [Number(row.section), Number(row.id)]));
+    const now = Math.floor(Date.now() / 1000);
+    let updated = 0;
+
+    for (let index = 0; index < modules.length; index += 1) {
+        const sectionNumber = index + 1;
+        const sectionName = modules[index];
+
+        if (existingBySection.has(sectionNumber)) {
+            await moodleDbPool.execute(
+                `UPDATE mdl_course_sections
+                 SET name = ?, timemodified = ?
+                 WHERE id = ?`,
+                [sectionName, now, existingBySection.get(sectionNumber)]
+            );
+        } else {
+            await moodleDbPool.execute(
+                `INSERT INTO mdl_course_sections (
+                    course, section, name, summary, summaryformat, sequence, visible, timemodified
+                ) VALUES (?, ?, ?, '', 1, '', 1, ?)`,
+                [courseId, sectionNumber, sectionName, now]
+            );
+        }
+
+        updated += 1;
+    }
+
+    return { updated, message: `Synced ${updated} Moodle section(s)` };
+}
+
+async function syncCourseRegistrationToMoodle(registrationId) {
+    const [rows] = await db.execute('SELECT * FROM course_registrations WHERE id = ? LIMIT 1', [registrationId]);
+    if (rows.length === 0) {
+        return { success: false, message: 'Course registration not found' };
+    }
+
+    const registration = rows[0];
+
+    try {
+        const courseSync = await createOrUpdateMoodleCourseCore(registration);
+        await ensureManualEnrolmentForCourse(courseSync.moodleCourseId);
+        const customFieldSync = await upsertMoodleCourseCustomFields(courseSync.moodleCourseId, registration);
+        const sectionSync = await upsertMoodleCourseSections(courseSync.moodleCourseId, registration.units_modules_covered);
+
+        const syncMessage = [
+            courseSync.created ? 'Course created/updated in Moodle' : 'Course updated in Moodle',
+            customFieldSync.message,
+            sectionSync.message
+        ].join(' | ');
+
+        await db.execute(
+            `UPDATE course_registrations
+             SET moodle_course_id = ?, moodle_sync_status = 'synced', moodle_sync_message = ?, last_synced_at = NOW()
+             WHERE id = ?`,
+            [courseSync.moodleCourseId, syncMessage, registrationId]
+        );
+
+        return {
+            success: true,
+            message: syncMessage,
+            registration_id: registrationId,
+            moodle_course_id: courseSync.moodleCourseId,
+            created_in_moodle: Boolean(courseSync.created),
+            custom_fields_updated: customFieldSync.updated,
+            sections_synced: sectionSync.updated
+        };
+    } catch (error) {
+        await db.execute(
+            `UPDATE course_registrations
+             SET moodle_sync_status = 'failed', moodle_sync_message = ?, last_synced_at = NOW()
+             WHERE id = ?`,
+            [error.message || 'Moodle sync failed', registrationId]
+        );
+
+        return {
+            success: false,
+            message: error.message || 'Moodle sync failed',
+            registration_id: registrationId
+        };
+    }
 }
 
 function mergeRoleValue(existingRoleValue, roleToAdd) {
