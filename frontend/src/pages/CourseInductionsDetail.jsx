@@ -548,9 +548,9 @@ const CourseInductionsDetail = () => {
                         </button>
                         <div>
                             <h1 className="text-2xl font-bold text-gray-900">
-                                {isNew ? 'New Induction' : 'Edit Induction'}
+                                {isNew ? 'New Course Induction' : 'Edit Course Induction'}
                             </h1>
-                            <p className="text-sm text-gray-600">Fill in all the accreditation requirements</p>
+                            <p className="text-sm text-gray-600">Plan and manage course induction requirements across 11 sections</p>
                         </div>
                     </div>
                 </div>
@@ -659,123 +659,125 @@ const CourseInductionsDetail = () => {
 
                         {expandedSections[sectionNum] && (
                             <div className="p-6 border-t border-gray-200">
-                                {/* Form at Top */}
-                                <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 mb-4">
-                                    <h4 className="font-semibold text-gray-900 mb-3 text-sm">
-                                        {editingRowIdx !== null && editingSection === sectionNum ? 'Edit Requirement' : 'Add New Requirement'}
-                                    </h4>
-                                    
-                                    {/* Row 1: Requirement Area (full width) */}
-                                    <div className="mb-2">
-                                        <label className="block text-xs font-semibold text-gray-700 mb-0.5">Requirement Area *</label>
-                                        <select
-                                            value={currentForm.area}
-                                            onChange={(e) => {
-                                                const selectedTask = SECTION_CONFIG[sectionNum].tasks.find(t => t.area === e.target.value);
-                                                setCurrentForm(prev => ({
-                                                    ...prev,
-                                                    area: e.target.value,
-                                                    description: selectedTask?.description || ''
-                                                }));
-                                            }}
-                                            className="w-full px-2 py-1 border border-gray-300 rounded text-xs"
-                                        >
-                                            <option value="">Select Area</option>
-                                            {SECTION_CONFIG[sectionNum].tasks.map(task => (
-                                                <option key={task.area} value={task.area}>{task.area}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-
-                                    {/* Row 2: Description & Responsible Person */}
-                                    <div className="grid grid-cols-3 gap-2 mb-2">
-                                        <div className="col-span-2">
-                                            <label className="block text-xs font-semibold text-gray-700 mb-0.5">Description</label>
-                                            <textarea
-                                                value={currentForm.description}
-                                                onChange={(e) => setCurrentForm(prev => ({ ...prev, description: e.target.value }))}
-                                                placeholder={SECTION_CONFIG[sectionNum].tasks.find(t => t.area === currentForm.area)?.description || 'Type description here...'}
+                                {/* Skip form for sections 9-11 for now, just show data table */}
+                                {sectionNum <= 8 && (
+                                    <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 mb-4">
+                                        <h4 className="font-semibold text-gray-900 mb-3 text-sm">
+                                            {editingRowIdx !== null && editingSection === sectionNum ? 'Edit Requirement' : 'Add New Requirement'}
+                                        </h4>
+                                        
+                                        {/* Row 1: Requirement Area (full width) */}
+                                        <div className="mb-2">
+                                            <label className="block text-xs font-semibold text-gray-700 mb-0.5">Requirement Area *</label>
+                                            <select
+                                                value={currentForm.area}
+                                                onChange={(e) => {
+                                                    const selectedReq = (SECTION_CONFIG[sectionNum].requirements || []).find(r => r.area === e.target.value);
+                                                    setCurrentForm(prev => ({
+                                                        ...prev,
+                                                        area: e.target.value,
+                                                        description: selectedReq?.description || ''
+                                                    }));
+                                                }}
                                                 className="w-full px-2 py-1 border border-gray-300 rounded text-xs"
-                                                rows="2"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs font-semibold text-gray-700 mb-0.5">Responsible Person</label>
-                                            <input
-                                                type="text"
-                                                value={currentForm.responsible}
-                                                onChange={(e) => setCurrentForm(prev => ({ ...prev, responsible: e.target.value }))}
-                                                placeholder="Name"
-                                                className="w-full px-2 py-1 border border-gray-300 rounded text-xs"
-                                            />
-                                        </div>
-                                    </div>
-
-                                    {/* Row 3: Source & Evidence File Uploads */}
-                                    <div className="grid grid-cols-3 gap-2 mb-2">
-                                        <div>
-                                            <label className="block text-xs font-semibold text-gray-700 mb-0.5">Source (File)</label>
-                                            <input
-                                                ref={sourceInputRef}
-                                                type="file"
-                                                onChange={(e) => setCurrentForm(prev => ({ ...prev, source: e.target.files ? e.target.files[0].name : '' }))}
-                                                className="w-full text-xs"
-                                            />
-                                            {currentForm.source && <p className="text-xs text-gray-600 mt-0.5">✓ {currentForm.source.substring(0, 20)}</p>}
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs font-semibold text-gray-700 mb-0.5">Evidence (File)</label>
-                                            <input
-                                                ref={evidenceInputRef}
-                                                type="file"
-                                                onChange={(e) => setCurrentForm(prev => ({ ...prev, evidence: e.target.files ? e.target.files[0].name : '' }))}
-                                                className="w-full text-xs"
-                                            />
-                                            {currentForm.evidence && <p className="text-xs text-gray-600 mt-0.5">✓ {currentForm.evidence.substring(0, 20)}</p>}
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs font-semibold text-gray-700 mb-0.5">Review Notes</label>
-                                            <textarea
-                                                value={currentForm.notes}
-                                                onChange={(e) => setCurrentForm(prev => ({ ...prev, notes: e.target.value }))}
-                                                placeholder="Notes..."
-                                                className="w-full px-2 py-1 border border-gray-300 rounded text-xs"
-                                                rows="2"
-                                            />
-                                        </div>
-                                    </div>
-
-                                    {/* Row 4: Status Checkbox & Buttons */}
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-2">
-                                            <input
-                                                type="checkbox"
-                                                checked={currentForm.status}
-                                                onChange={(e) => setCurrentForm(prev => ({ ...prev, status: e.target.checked }))}
-                                                className="w-4 h-4"
-                                            />
-                                            <label className="text-xs font-semibold text-gray-700">Complete</label>
-                                        </div>
-                                        <div className="flex gap-2">
-                                            <button
-                                                type="button"
-                                                onClick={() => handleAddRequirement(sectionNum)}
-                                                className="px-3 py-1 bg-scl-purple text-white rounded text-xs font-semibold hover:bg-scl-purple/90"
                                             >
-                                                {editingRowIdx !== null && editingSection === sectionNum ? 'Update' : 'Add'}
-                                            </button>
-                                            {(editingRowIdx !== null || currentForm.area) && (
+                                                <option value="">Select Area</option>
+                                                {(SECTION_CONFIG[sectionNum].requirements || []).map(req => (
+                                                    <option key={req.area} value={req.area}>{req.area}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+
+                                        {/* Row 2: Description & Responsible Person */}
+                                        <div className="grid grid-cols-3 gap-2 mb-2">
+                                            <div className="col-span-2">
+                                                <label className="block text-xs font-semibold text-gray-700 mb-0.5">Description</label>
+                                                <textarea
+                                                    value={currentForm.description}
+                                                    onChange={(e) => setCurrentForm(prev => ({ ...prev, description: e.target.value }))}
+                                                    placeholder="Type description here..."
+                                                    className="w-full px-2 py-1 border border-gray-300 rounded text-xs"
+                                                    rows="2"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-semibold text-gray-700 mb-0.5">Responsible Person</label>
+                                                <input
+                                                    type="text"
+                                                    value={currentForm.responsible}
+                                                    onChange={(e) => setCurrentForm(prev => ({ ...prev, responsible: e.target.value }))}
+                                                    placeholder="Name"
+                                                    className="w-full px-2 py-1 border border-gray-300 rounded text-xs"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {/* Row 3: Source & Evidence References */}
+                                        <div className="grid grid-cols-3 gap-2 mb-2">
+                                            <div>
+                                                <label className="block text-xs font-semibold text-gray-700 mb-0.5">Source Reference</label>
+                                                <input
+                                                    type="text"
+                                                    value={currentForm.source}
+                                                    onChange={(e) => setCurrentForm(prev => ({ ...prev, source: e.target.value }))}
+                                                    placeholder="e.g., Handbook p.5"
+                                                    className="w-full px-2 py-1 border border-gray-300 rounded text-xs"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-semibold text-gray-700 mb-0.5">Evidence Held</label>
+                                                <input
+                                                    type="text"
+                                                    value={currentForm.evidence}
+                                                    onChange={(e) => setCurrentForm(prev => ({ ...prev, evidence: e.target.value }))}
+                                                    placeholder="e.g., Document location"
+                                                    className="w-full px-2 py-1 border border-gray-300 rounded text-xs"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-semibold text-gray-700 mb-0.5">Review Notes</label>
+                                                <textarea
+                                                    value={currentForm.notes}
+                                                    onChange={(e) => setCurrentForm(prev => ({ ...prev, notes: e.target.value }))}
+                                                    placeholder="Notes..."
+                                                    className="w-full px-2 py-1 border border-gray-300 rounded text-xs"
+                                                    rows="2"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {/* Row 4: Status Checkbox & Buttons */}
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-2">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={currentForm.status}
+                                                    onChange={(e) => setCurrentForm(prev => ({ ...prev, status: e.target.checked }))}
+                                                    className="w-4 h-4"
+                                                />
+                                                <label className="text-xs font-semibold text-gray-700">Complete</label>
+                                            </div>
+                                            <div className="flex gap-2">
                                                 <button
                                                     type="button"
-                                                    onClick={handleFormReset}
-                                                    className="px-3 py-1 border border-gray-300 rounded text-xs font-semibold text-gray-700 hover:bg-gray-100"
+                                                    onClick={() => handleAddRequirement(sectionNum)}
+                                                    className="px-3 py-1 bg-scl-purple text-white rounded text-xs font-semibold hover:bg-scl-purple/90"
                                                 >
-                                                    Cancel
+                                                    {editingRowIdx !== null && editingSection === sectionNum ? 'Update' : 'Add'}
                                                 </button>
-                                            )}
+                                                {(editingRowIdx !== null || currentForm.area) && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={handleFormReset}
+                                                        className="px-3 py-1 border border-gray-300 rounded text-xs font-semibold text-gray-700 hover:bg-gray-100"
+                                                    >
+                                                        Cancel
+                                                    </button>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
+                                )}
 
                                 {/* Table at Bottom */}
                                 {(formData.sections[sectionNum] || []).length > 0 && (
@@ -783,40 +785,133 @@ const CourseInductionsDetail = () => {
                                         <table className="w-full text-sm border-collapse">
                                             <thead>
                                                 <tr className="bg-gray-100">
-                                                    <th className="border border-gray-300 px-3 py-2 text-left font-semibold">Req Area</th>
-                                                    <th className="border border-gray-300 px-3 py-2 text-left font-semibold">Description</th>
-                                                    <th className="border border-gray-300 px-3 py-2 text-left font-semibold">Responsible</th>
-                                                    <th className="border border-gray-300 px-3 py-2 text-center font-semibold">Status</th>
-                                                    <th className="border border-gray-300 px-3 py-2 text-center font-semibold">Actions</th>
+                                                    {sectionNum <= 8 && (
+                                                        <>
+                                                            <th className="border border-gray-300 px-3 py-2 text-left font-semibold">Area</th>
+                                                            <th className="border border-gray-300 px-3 py-2 text-left font-semibold">Description</th>
+                                                            <th className="border border-gray-300 px-3 py-2 text-left font-semibold">Responsible</th>
+                                                            <th className="border border-gray-300 px-3 py-2 text-center font-semibold">Status</th>
+                                                            <th className="border border-gray-300 px-3 py-2 text-center font-semibold">Actions</th>
+                                                        </>
+                                                    )}
+                                                    {sectionNum === 9 && (
+                                                        <>
+                                                            <th className="border border-gray-300 px-3 py-2 text-left font-semibold">Condition</th>
+                                                            <th className="border border-gray-300 px-3 py-2 text-left font-semibold">Action Required</th>
+                                                            <th className="border border-gray-300 px-3 py-2 text-left font-semibold">Responsible</th>
+                                                            <th className="border border-gray-300 px-3 py-2 text-left font-semibold">Deadline</th>
+                                                            <th className="border border-gray-300 px-3 py-2 text-center font-semibold">Actions</th>
+                                                        </>
+                                                    )}
+                                                    {sectionNum === 10 && (
+                                                        <>
+                                                            <th className="border border-gray-300 px-3 py-2 text-left font-semibold">Risk Issue</th>
+                                                            <th className="border border-gray-300 px-3 py-2 text-left font-semibold">Impact</th>
+                                                            <th className="border border-gray-300 px-3 py-2 text-left font-semibold">Mitigation</th>
+                                                            <th className="border border-gray-300 px-3 py-2 text-left font-semibold">Owner</th>
+                                                            <th className="border border-gray-300 px-3 py-2 text-center font-semibold">Status</th>
+                                                            <th className="border border-gray-300 px-3 py-2 text-center font-semibold">Actions</th>
+                                                        </>
+                                                    )}
+                                                    {sectionNum === 11 && (
+                                                        <>
+                                                            <th className="border border-gray-300 px-3 py-2 text-left font-semibold">Role</th>
+                                                            <th className="border border-gray-300 px-3 py-2 text-left font-semibold">Name</th>
+                                                            <th className="border border-gray-300 px-3 py-2 text-center font-semibold">Actions</th>
+                                                        </>
+                                                    )}
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                {(formData.sections[sectionNum] || []).map((req, idx) => (
-                                                    <tr key={req.id || req.tempId || idx} className="hover:bg-blue-50">
-                                                        <td className="border border-gray-300 px-3 py-2 text-sm font-medium">{req.area}</td>
-                                                        <td className="border border-gray-300 px-3 py-2 text-sm">{req.description.substring(0, 50)}...</td>
-                                                        <td className="border border-gray-300 px-3 py-2 text-sm">{req.responsible}</td>
-                                                        <td className="border border-gray-300 px-3 py-2 text-center">
-                                                            {req.status ? <span className="text-green-600 font-semibold">✓</span> : <span className="text-gray-400">○</span>}
-                                                        </td>
-                                                        <td className="border border-gray-300 px-3 py-2 text-center">
-                                                            <button
-                                                                onClick={() => handleEditRequirement(sectionNum, idx)}
-                                                                className="text-blue-500 hover:text-blue-700 font-semibold text-sm mr-2"
-                                                            >
-                                                                Edit
-                                                            </button>
-                                                            <button
-                                                                onClick={() => {
-                                                                    if (window.confirm('Delete this requirement?')) {
-                                                                        handleDeleteRequirement(sectionNum, idx);
-                                                                    }
-                                                                }}
-                                                                className="text-red-500 hover:text-red-700 font-semibold text-sm"
-                                                            >
-                                                                Delete
-                                                            </button>
-                                                        </td>
+                                                {(formData.sections[sectionNum] || []).map((item, idx) => (
+                                                    <tr key={item.id || item.tempId || idx} className="hover:bg-blue-50">
+                                                        {sectionNum <= 8 && (
+                                                            <>
+                                                                <td className="border border-gray-300 px-3 py-2 text-sm font-medium">{item.area}</td>
+                                                                <td className="border border-gray-300 px-3 py-2 text-sm">{item.description && item.description.substring(0, 50)}{item.description && item.description.length > 50 ? '...' : ''}</td>
+                                                                <td className="border border-gray-300 px-3 py-2 text-sm">{item.responsible}</td>
+                                                                <td className="border border-gray-300 px-3 py-2 text-center">
+                                                                    {item.status ? <span className="text-green-600 font-semibold">✓</span> : <span className="text-gray-400">○</span>}
+                                                                </td>
+                                                                <td className="border border-gray-300 px-3 py-2 text-center">
+                                                                    <button
+                                                                        onClick={() => handleEditRequirement(sectionNum, idx)}
+                                                                        className="text-blue-500 hover:text-blue-700 font-semibold text-sm mr-2"
+                                                                    >
+                                                                        Edit
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => {
+                                                                            if (window.confirm('Delete this requirement?')) {
+                                                                                handleDeleteRequirement(sectionNum, idx);
+                                                                            }
+                                                                        }}
+                                                                        className="text-red-500 hover:text-red-700 font-semibold text-sm"
+                                                                    >
+                                                                        Delete
+                                                                    </button>
+                                                                </td>
+                                                            </>
+                                                        )}
+                                                        {sectionNum === 9 && (
+                                                            <>
+                                                                <td className="border border-gray-300 px-3 py-2 text-sm">{item.area}</td>
+                                                                <td className="border border-gray-300 px-3 py-2 text-sm">{item.description && item.description.substring(0, 30)}</td>
+                                                                <td className="border border-gray-300 px-3 py-2 text-sm">{item.responsible}</td>
+                                                                <td className="border border-gray-300 px-3 py-2 text-sm">{item.deadline}</td>
+                                                                <td className="border border-gray-300 px-3 py-2 text-center">
+                                                                    <button
+                                                                        onClick={() => {
+                                                                            if (window.confirm('Delete this condition?')) {
+                                                                                handleDeleteRequirement(sectionNum, idx);
+                                                                            }
+                                                                        }}
+                                                                        className="text-red-500 hover:text-red-700 font-semibold text-sm"
+                                                                    >
+                                                                        Delete
+                                                                    </button>
+                                                                </td>
+                                                            </>
+                                                        )}
+                                                        {sectionNum === 10 && (
+                                                            <>
+                                                                <td className="border border-gray-300 px-3 py-2 text-sm">{item.area}</td>
+                                                                <td className="border border-gray-300 px-3 py-2 text-sm">{item.impact}</td>
+                                                                <td className="border border-gray-300 px-3 py-2 text-sm">{item.mitigation && item.mitigation.substring(0, 30)}</td>
+                                                                <td className="border border-gray-300 px-3 py-2 text-sm">{item.responsible}</td>
+                                                                <td className="border border-gray-300 px-3 py-2 text-sm text-center">{item.status || 'Open'}</td>
+                                                                <td className="border border-gray-300 px-3 py-2 text-center">
+                                                                    <button
+                                                                        onClick={() => {
+                                                                            if (window.confirm('Delete this risk?')) {
+                                                                                handleDeleteRequirement(sectionNum, idx);
+                                                                            }
+                                                                        }}
+                                                                        className="text-red-500 hover:text-red-700 font-semibold text-sm"
+                                                                    >
+                                                                        Delete
+                                                                    </button>
+                                                                </td>
+                                                            </>
+                                                        )}
+                                                        {sectionNum === 11 && (
+                                                            <>
+                                                                <td className="border border-gray-300 px-3 py-2 text-sm">{item.area}</td>
+                                                                <td className="border border-gray-300 px-3 py-2 text-sm">{item.description}</td>
+                                                                <td className="border border-gray-300 px-3 py-2 text-center">
+                                                                    <button
+                                                                        onClick={() => {
+                                                                            if (window.confirm('Delete this sign-off?')) {
+                                                                                handleDeleteRequirement(sectionNum, idx);
+                                                                            }
+                                                                        }}
+                                                                        className="text-red-500 hover:text-red-700 font-semibold text-sm"
+                                                                    >
+                                                                        Delete
+                                                                    </button>
+                                                                </td>
+                                                            </>
+                                                        )}
                                                     </tr>
                                                 ))}
                                             </tbody>
