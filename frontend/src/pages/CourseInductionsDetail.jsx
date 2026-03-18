@@ -5,7 +5,6 @@ import { ChevronDown, ChevronUp, ArrowLeft } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
 
-// Utility function to format dates for HTML5 date input (yyyy-MM-dd)
 const formatDateForInput = (dateString) => {
     if (!dateString) return '';
     const date = new Date(dateString);
@@ -13,75 +12,93 @@ const formatDateForInput = (dateString) => {
     return date.toISOString().split('T')[0];
 };
 
+// Section configuration based on Course Inductions CSV
 const SECTION_CONFIG = {
     1: {
-        title: 'Initial Planning & Approval',
-        tasks: [
-            { area: 'Strategic Fit Assessment', description: 'Confirm course/partnership aligns with college mission & market need' },
-            { area: 'Governing Body Approval in Principle', description: 'Formal approval to proceed' },
-            { area: 'Gap Analysis', description: 'Compare college capabilities vs. awarding body requirements' },
-            { area: 'Resource Plan', description: 'Staffing, facilities, budget needs' }
+        title: 'Course Approval Details',
+        requirements: [
+            { area: 'Programme Specification', description: 'Approved and finalised version' },
+            { area: 'Learning Outcomes', description: 'As approved, mapped to framework' },
+            { area: 'Curriculum Structure', description: 'Module titles, codes, credit values' },
+            { area: 'Assessment Strategy', description: 'Weighting, method, moderation' }
         ]
     },
     2: {
-        title: 'Application Preparation',
-        tasks: [
-            { area: 'Identify Target Institution', description: 'Research and confirm most suitable awarding body' },
-            { area: 'Institutional Profile Document', description: 'History, governance, quality systems, financial stability' },
-            { area: 'Programme Specification', description: 'Approved content, LOs, mapping to framework' },
-            { area: 'Assessment Strategy', description: 'Weightings, moderation, external examiner' },
-            { area: 'Staff CVs & Qualifications', description: 'To meet awarding body standards' }
+        title: 'Staffing Requirements',
+        requirements: [
+            { area: 'Minimum Qualifications', description: 'E.g., teaching qualification + subject expertise' },
+            { area: 'External Examiner', description: 'Appointed, trained, approved' },
+            { area: 'CPD Requirements', description: 'Annual hours or activities' }
         ]
     },
     3: {
-        title: 'Submission & Engagement',
-        tasks: [
-            { area: 'Pre-Application Contact', description: 'Initial discussion with awarding body' },
-            { area: 'Application Dossier Compilation', description: 'Assemble all documents in required format' },
-            { area: 'Formal Submission', description: 'Submit application and confirm receipt' },
-            { area: 'Partner Queries Response', description: 'Clarifications and additional requests' }
+        title: 'Facilities & Resources',
+        requirements: [
+            { area: 'Classroom / Lab Standards', description: 'Min size, equipment, accessibility' },
+            { area: 'Library & Learning Resources', description: 'Physical and digital access' },
+            { area: 'Specialist Equipment', description: 'Software, instruments, safety equipment' }
         ]
     },
     4: {
-        title: 'Review, Visits & Validation',
-        tasks: [
-            { area: 'Institutional Approval Visit', description: 'Arrange and host awarding body visit' },
-            { area: 'Course Validation Event', description: 'Attend and present course proposal' },
-            { area: 'Response to Conditions', description: 'Implement and document required changes' }
+        title: 'Admission & Enrolment',
+        requirements: [
+            { area: 'Entry Requirements', description: 'Academic and/or work experience criteria' },
+            { area: 'English Language Requirements', description: 'Minimum IELTS/TOEFL or equivalent' },
+            { area: 'Recognition of Prior Learning (RPL)', description: 'Process for credit transfer or exemption' },
+            { area: 'Application Process', description: 'Forms, deadlines, documents required' },
+            { area: 'Offer Letter Format', description: 'Partner-approved wording & conditions' },
+            { area: 'Enrolment Documentation', description: 'Proof of ID, qualifications, visas' }
         ]
     },
     5: {
-        title: 'Agreement & Implementation',
-        tasks: [
-            { area: 'Contract Review', description: 'Legal review of agreement terms' },
-            { area: 'Marketing & Recruitment Plan', description: 'Joint plan with partner' },
-            { area: 'Staff Briefing & Training', description: 'Induction on partner processes' },
-            { area: 'Launch Readiness Check', description: 'All requirements met before first intake' }
+        title: 'Fees & Payment Frequencies',
+        requirements: [
+            { area: 'Partner Accreditation Fees', description: 'Annual/periodic validation or licence fees' },
+            { area: 'Per-Student Registration Fees', description: 'Fee per student to awarding body' },
+            { area: 'Exam / Assessment Fees', description: 'Fees for exam entries or moderation' },
+            { area: 'Payment Schedule', description: 'Agreed payment dates & frequency' },
+            { area: 'Student Tuition Fee Structure', description: 'Approved rates & instalment plan' }
         ]
     },
     6: {
-        title: 'Post-Approval Monitoring',
-        tasks: [
-            { area: 'Annual Monitoring Report Submission', description: 'Required by partner' },
-            { area: 'Partnership Review Meetings', description: 'Periodic progress meetings' },
-            { area: 'Policy Alignment Updates', description: 'Ensure ongoing compliance' }
+        title: 'Student Support & Administration',
+        requirements: [
+            { area: 'Induction Programme', description: 'Schedule, content, materials' },
+            { area: 'Academic Guidance', description: 'Tutor allocation, office hours' },
+            { area: 'Accessibility & Inclusivity', description: 'Reasonable adjustments, resources' }
         ]
     },
     7: {
-        title: 'Risk & Issue Log',
-        tasks: [
-            { area: 'Example: Staffing gap in specialist subject', impact: 'Delays in course delivery', mitigation: 'Recruit part-time lecturer', owner: 'HR Manager', status: 'Open' }
-        ],
-        fields: ['risk', 'impact', 'mitigation', 'owner', 'status']
+        title: 'Returns & Reports to Awarding Body',
+        requirements: [
+            { area: 'Student Registration Data', description: 'Enrolment list sent within 30 days' },
+            { area: 'Assessment Results', description: 'Marks and grades reporting' },
+            { area: 'Annual Monitoring Report', description: 'Quality review & performance data' },
+            { area: 'External Examiner Reports', description: 'Submission to partner' },
+            { area: 'Financial Returns', description: 'Student registration fee reconciliation' }
+        ]
     },
     8: {
+        title: 'Quality Assurance & Compliance',
+        requirements: [
+            { area: 'Annual Monitoring', description: 'Data submission deadlines' },
+            { area: 'Assessment Board Attendance', description: 'Required staff presence' },
+            { area: 'Policy Alignment', description: 'College policies mapped to partner' },
+            { area: 'Revalidation Cycle', description: 'Timeline & requirements' }
+        ]
+    },
+    9: {
+        title: 'Conditions & Recommendations',
+        type: 'conditions'
+    },
+    10: {
+        title: 'Risk & Issue Log',
+        type: 'risks'
+    },
+    11: {
         title: 'Sign-off',
-        tasks: [
-            { area: 'Lead Coordinator', role: '', date: '', signature: '' },
-            { area: 'QA Manager', role: '', date: '', signature: '' },
-            { area: 'Principal / CEO', role: '', date: '', signature: '' }
-        ],
-        fields: ['name', 'role', 'date', 'signature']
+        type: 'signoff',
+        roles: ['Programme Leader', 'QA Manager', 'Senior Management']
     }
 };
 
@@ -92,11 +109,6 @@ const CourseInductionsDetail = () => {
     
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
-    const [courses, setCourses] = useState([]);
-    const [selectedCourseId, setSelectedCourseId] = useState(null);
-    const [courseLoading, setCourseLoading] = useState(true);
-    const [inductionExists, setInductionExists] = useState(false);
-    const [existingInductionId, setExistingInductionId] = useState(null);
     const [expandedSections, setExpandedSections] = useState({ 1: true });
     const [editingRowIdx, setEditingRowIdx] = useState(null);
     const [editingSection, setEditingSection] = useState(null);
@@ -115,282 +127,129 @@ const CourseInductionsDetail = () => {
         course_title: '',
         course_code: '',
         awarding_body: '',
-        application_type: '',
-        date_started: '',
-        expected_submission_date: '',
-        lead_coordinator: '',
+        qualification_level: '',
+        approval_date: '',
+        review_date: '',
+        document_owner: '',
         version: '1.0',
         sections: {}
     });
 
     useEffect(() => {
-        const initializeData = async () => {
-            // First fetch courses and get the list
-            const coursesList = await fetchCourses();
-            console.log('Courses loaded in useEffect:', coursesList);
-            
-            // Then fetch induction if in edit mode, passing courses along
-            if (id && id !== 'new') {
-                fetchInduction(coursesList);
-            }
-        };
-        
-        initializeData();
+        if (id && id !== 'new') {
+            fetchInduction();
+        }
     }, [id]);
 
-    // Second useEffect to ensure course dropdown is selected after both courses and formData are loaded
-    useEffect(() => {
-        if (formData.course_title && courses.length > 0 && !loading) {
-            console.log('Attempting to auto-select course in dropdown:', formData.course_title);
-            const matchingCourse = courses.find(c => 
-                (c.fullname || c.course_title) === formData.course_title
-            );
-            if (matchingCourse) {
-                setSelectedCourseId(matchingCourse.id);
-                console.log('Auto-selected course with ID:', matchingCourse.id);
-            } else {
-                console.log('No matching course found for:', formData.course_title);
-            }
-        }
-    }, [formData.course_title, courses, loading]);
-
-    const fetchCourses = async () => {
+    const fetchInduction = async () => {
         try {
-            setCourseLoading(true);
-            console.log('Fetching courses from:', `${API_URL}/students/courses`);
-            const response = await axios.get(`${API_URL}/students/courses`);
-            console.log('Courses response:', response.data);
-            const coursesList = Array.isArray(response.data?.data) ? response.data.data : response.data;
-            console.log('Processed courses list:', coursesList);
-            const coursesArray = Array.isArray(coursesList) ? coursesList : [];
-            setCourses(coursesArray);
-            return coursesArray; // Return the courses for use in async chain
-        } catch (err) {
-            console.error('Failed to fetch courses:', err);
-            setCourses([]);
-            return [];
-        } finally {
-            setCourseLoading(false);
-        }
-    };
-
-    const handleCourseSelect = async (courseId) => {
-        setSelectedCourseId(courseId);
-        const course = courses.find(c => c.id === parseInt(courseId));
-        
-        if (course) {
-            // Set the course info
-            setFormData(prev => ({
-                ...prev,
-                course_title: course.fullname || course.course_title || '',
-                course_code: course.shortname || course.course_code || ''
-            }));
-
-            // Check if induction already exists for this course
-            try {
-                const response = await axios.get(`${API_URL}/inductions`, { 
-                    params: { course_id: courseId } 
-                });
-                const existingInduction = response.data?.data?.find(ind => ind.course_id === courseId || ind.course_title === (course.fullname || course.course_title));
+            setLoading(true);
+            const response = await axios.get(`${API_URL}/course-inductions/${id}`);
+            const data = response.data?.data || {};
+            
+            const { induction, requirements = [], risks = [], signoffs = [], conditions = [] } = data;
+            
+            if (induction) {
+                // Organize requirements by section
+                const sectionsByNum = {};
+                for (let i = 1; i <= 11; i++) {
+                    sectionsByNum[i] = [];
+                }
                 
-                if (existingInduction) {
-                    // Load existing induction data
-                    setInductionExists(true);
-                    setExistingInductionId(existingInduction.id);
-                    setLoading(true);
-                    try {
-                        const detailResponse = await axios.get(`${API_URL}/inductions/${existingInduction.id}`);
-                        const bundle = detailResponse.data?.data;
-                        
-                        if (bundle && bundle.induction) {
-                            const induction = bundle.induction;
-                            const requirements = bundle.requirements || [];
-                            
-                            const sectionsByNum = {};
-                            for (let i = 1; i <= 8; i++) {
-                                sectionsByNum[i] = [];
-                            }
-                            
-                            requirements.forEach(req => {
-                                const sectionNum = req.section_number || 1;
-                                if (sectionsByNum[sectionNum]) {
-                                    sectionsByNum[sectionNum].push({
-                                        id: req.id,
-                                        area: req.requirement_area || '',
-                                        description: req.evidence_required || '',
-                                        source: req.evidence_links?.split('|')[0] || '',
-                                        evidence: req.evidence_links?.split('|')[1] || '',
-                                        responsible: req.responsible_role || '',
-                                        status: req.status === 'Completed',
-                                        notes: req.notes || ''
-                                    });
-                                }
-                            });
-                            
-                            // Ensure Section 8 (Sign-off) always has the three required roles
-                            if (!sectionsByNum[8] || sectionsByNum[8].length === 0) {
-                                sectionsByNum[8] = [
-                                    { area: 'Lead Coordinator', description: '', source: '', responsible: '' },
-                                    { area: 'QA Manager', description: '', source: '', responsible: '' },
-                                    { area: 'Principal / CEO', description: '', source: '', responsible: '' }
-                                ];
-                            }
-                            
-                            setFormData({
-                                course_title: induction.course_title || '',
-                                course_code: induction.course_code || '',
-                                awarding_body: induction.awarding_body || '',
-                                application_type: induction.application_type || '',
-                                date_started: formatDateForInput(induction.date_started),
-                                expected_submission_date: formatDateForInput(induction.expected_submission_date),
-                                lead_coordinator: induction.induction_owner || '',
-                                version: induction.version || '1.0',
-                                sections: sectionsByNum
-                            });
-                        }
-                    } catch (err) {
-                        console.error('Failed to fetch induction details:', err);
-                    } finally {
-                        setLoading(false);
+                // Sections 1-8: requirements
+                requirements.forEach(req => {
+                    const sectionNum = req.section_number || 1;
+                    if (sectionsByNum[sectionNum]) {
+                        sectionsByNum[sectionNum].push({
+                            id: req.id,
+                            area: req.requirement_area || '',
+                            description: req.description || '',
+                            source: req.source_reference || '',
+                            evidence: req.evidence_held || '',
+                            responsible: req.responsible_person || '',
+                            status: req.compliance_status === 'Completed',
+                            notes: req.review_notes || ''
+                        });
                     }
+                });
+                
+                // Section 9: conditions
+                if (Array.isArray(conditions)) {
+                    sectionsByNum[9] = conditions.map(c => ({
+                        id: c.id,
+                        area: c.condition_recommendation || '',
+                        description: c.action_required || '',
+                        responsible: c.responsible_person || '',
+                        deadline: formatDateForInput(c.deadline),
+                        status: c.status || 'Open'
+                    }));
+                }
+                
+                // Section 10: risks
+                if (Array.isArray(risks)) {
+                    sectionsByNum[10] = risks.map(r => ({
+                        id: r.id,
+                        area: r.risk_issue || '',
+                        impact: r.impact || '',
+                        mitigation: r.mitigation || '',
+                        responsible: r.owner || '',
+                        status: r.status || 'Open'
+                    }));
+                }
+                
+                // Section 11: sign-offs
+                if (Array.isArray(signoffs)) {
+                    sectionsByNum[11] = signoffs.map(s => ({
+                        id: s.id,
+                        area: s.role || '',
+                        description: s.name || '',
+                        responsible: s.name || ''
+                    }));
                 } else {
-                    // New induction - initialize empty sections
-                    setInductionExists(false);
-                    initializeNewForm();
+                    // Default sign-off roles
+                    sectionsByNum[11] = SECTION_CONFIG[11].roles.map(role => ({
+                        area: role,
+                        description: '',
+                        responsible: ''
+                    }));
                 }
-            } catch (err) {
-                console.error('Failed to check induction:', err);
-                setInductionExists(false);
-                initializeNewForm();
-            }
-        }
-    };
-
-    const initializeNewForm = () => {
-        const sections = {};
-        for (let i = 1; i <= 8; i++) {
-            sections[i] = [];
-        }
-        // Pre-populate Section 8 (Sign-off) with the three required roles
-        sections[8] = [
-            { area: 'Lead Coordinator', description: '', source: '', responsible: '', tempId: 'signoff-1' },
-            { area: 'QA Manager', description: '', source: '', responsible: '', tempId: 'signoff-2' },
-            { area: 'Principal / CEO', description: '', source: '', responsible: '', tempId: 'signoff-3' }
-        ];
-        setFormData(prev => ({ ...prev, sections }));
-    };
-
-    const fetchInduction = async (coursesList = []) => {
-        try {
-            const response = await axios.get(`${API_URL}/inductions/${id}`);
-            console.log('Induction response:', response.data);
-            
-            const bundle = response.data?.data;
-            
-            if (!bundle || !bundle.induction) {
-                throw new Error('Invalid data structure');
-            }
-            
-            const induction = bundle.induction;
-            const requirements = bundle.requirements || [];
-            
-            console.log('Loaded induction:', induction);
-            console.log('Loaded requirements:', requirements);
-            
-            // Group requirements by section_number
-            const sectionsByNum = {};
-            for (let i = 1; i <= 8; i++) {
-                sectionsByNum[i] = [];
-            }
-            
-            requirements.forEach(req => {
-                const sectionNum = req.section_number || 1;
-                if (sectionsByNum[sectionNum]) {
-                    sectionsByNum[sectionNum].push({
-                        id: req.id,  // Track the database ID for update/delete
-                        area: req.requirement_area || '',
-                        description: req.evidence_required || '',
-                        source: req.evidence_links?.split('|')[0] || '',
-                        evidence: req.evidence_links?.split('|')[1] || '',
-                        responsible: req.responsible_role || '',
-                        status: req.status === 'Completed',
-                        notes: req.notes || ''
-                    });
-                }
-            });
-            
-            // Ensure Section 8 (Sign-off) always has the three required roles
-            if (!sectionsByNum[8] || sectionsByNum[8].length === 0) {
-                sectionsByNum[8] = [
-                    { area: 'Lead Coordinator', description: '', source: '', responsible: '' },
-                    { area: 'QA Manager', description: '', source: '', responsible: '' },
-                    { area: 'Principal / CEO', description: '', source: '', responsible: '' }
-                ];
-            }
-            
-            setFormData({
-                course_title: induction.course_title || '',
-                course_code: induction.course_code || '',
-                awarding_body: induction.awarding_body || '',
-                application_type: induction.application_type || '',
-                date_started: formatDateForInput(induction.date_started),
-                expected_submission_date: formatDateForInput(induction.expected_submission_date),
-                lead_coordinator: induction.induction_owner || '',
-                version: induction.version || '1.0',
-                sections: sectionsByNum
-            });
-
-            // Reset the task form to prevent stale data from showing
-            setCurrentForm({
-                area: '',
-                description: '',
-                source: '',
-                evidence: '',
-                responsible: '',
-                status: false,
-                notes: ''
-            });
-            setEditingRowIdx(null);
-            setEditingSection(null);
-
-            // Find and set the matching course ID using the passed-in coursesList
-            console.log('Available courses:', coursesList.map(c => ({ id: c.id, fullname: c.fullname || c.course_title })));
-            console.log('Looking for course with title:', induction.course_title);
-            if (coursesList.length > 0) {
-                const matchingCourse = coursesList.find(c => 
-                    (c.fullname || c.course_title) === induction.course_title
-                );
-                console.log('Found matching course?', !!matchingCourse, matchingCourse);
-                if (matchingCourse) {
-                    setSelectedCourseId(matchingCourse.id);
-                    console.log('Set selectedCourseId to:', matchingCourse.id);
-                }
-            } else {
-                console.log('No courses provided to fetchInduction');
+                
+                setFormData({
+                    course_title: induction.course_title || '',
+                    course_code: induction.course_code || '',
+                    awarding_body: induction.awarding_body || '',
+                    qualification_level: induction.qualification_level || '',
+                    approval_date: formatDateForInput(induction.approval_date),
+                    review_date: formatDateForInput(induction.review_date),
+                    document_owner: induction.document_owner || '',
+                    version: induction.version || '1.0',
+                    sections: sectionsByNum
+                });
             }
         } catch (err) {
             console.error('Failed to fetch induction:', err);
-            alert('Error loading induction data');
         } finally {
             setLoading(false);
         }
     };
 
-    const transformInductionData = () => {
-        // Transform frontend formData to match backend inductions endpoint expectations
-        return {
-            course_id: selectedCourseId || null,
-            course_code: formData.course_code || '',
-            course_title: formData.course_title || '',
-            awarding_body: formData.awarding_body || '',
-            version: formData.version || '1.0',
-            induction_owner: formData.lead_coordinator || '',
-            start_date: formData.date_started || null,
-            review_date: formData.expected_submission_date || null,
-            overall_status: 'Draft',
-            created_by: null
-        };
+    const initializeNewForm = () => {
+        const sections = {};
+        for (let i = 1; i <= 11; i++) {
+            sections[i] = [];
+        }
+        
+        // Pre-populate Section 11 (Sign-off) with required roles
+        sections[11] = SECTION_CONFIG[11].roles.map((role, idx) => ({
+            area: role,
+            description: '',
+            responsible: '',
+            tempId: `signoff-${idx}`
+        }));
+        
+        setFormData(prev => ({ ...prev, sections }));
     };
+
 
     const handleSave = async () => {
         try {
@@ -398,147 +257,143 @@ const CourseInductionsDetail = () => {
             
             // Validation
             if (!formData.course_title) {
-                alert('Please select a course');
+                alert('Please enter a course title');
                 setSaving(false);
                 return;
             }
             
-            const transformedData = transformInductionData();
-            console.log('Transformed induction data:', transformedData);
+            const inductionPayload = {
+                course_title: formData.course_title,
+                course_code: formData.course_code,
+                awarding_body: formData.awarding_body,
+                qualification_level: formData.qualification_level,
+                approval_date: formData.approval_date || null,
+                review_date: formData.review_date || null,
+                document_owner: formData.document_owner,
+                version: formData.version
+            };
             
-            // If coming from course selection on new page
-            if (isNew && selectedCourseId) {
-                if (inductionExists && existingInductionId) {
-                    // Update existing induction for this course
-                    await axios.put(`${API_URL}/inductions/${existingInductionId}`, transformedData);
-                    
-                    // Save all requirements
-                    for (let sectionNum = 1; sectionNum <= 8; sectionNum++) {
-                        const requirements = (formData.sections[sectionNum] || []).filter(req => req.area);
-                        
-                        for (const req of requirements) {
-                            const reqData = {
-                                section_number: sectionNum,
-                                section_title: SECTION_CONFIG[sectionNum].title,
-                                requirement_area: req.area,
-                                evidence_required: req.description,
-                                responsible_role: req.responsible,
-                                status: req.status ? 'Completed' : 'Not Started',
-                                notes: req.notes,
-                                evidence_links: req.source && req.evidence ? `${req.source}|${req.evidence}` : ''
-                            };
-
-                            if (req.id) {
-                                await axios.put(
-                                    `${API_URL}/inductions/${existingInductionId}/requirements/${req.id}`,
-                                    reqData
-                                );
-                            } else {
-                                await axios.post(
-                                    `${API_URL}/inductions/${existingInductionId}/requirements`,
-                                    reqData
-                                );
-                            }
-                        }
-                    }
-                    
-                    navigate('/course-inductions');
-                } else {
-                    // Create new induction
-                    console.log('Creating new induction');
-                    const response = await axios.post(`${API_URL}/inductions`, transformedData);
-                    console.log('Create response:', response.data);
-                    
-                    const inductionId = response.data?.data?.id || response.data?.id;
-                    if (!inductionId) {
-                        throw new Error(`Invalid response from server: ${JSON.stringify(response.data)}`);
-                    }
-                    console.log('Created induction with ID:', inductionId);
-                    
-                    // Save all requirements
-                    for (let sectionNum = 1; sectionNum <= 8; sectionNum++) {
-                        const requirements = (formData.sections[sectionNum] || []).filter(req => req.area);
-                        
-                        for (const req of requirements) {
-                            const reqData = {
-                                section_number: sectionNum,
-                                section_title: SECTION_CONFIG[sectionNum].title,
-                                requirement_area: req.area,
-                                evidence_required: req.description,
-                                responsible_role: req.responsible,
-                                status: req.status ? 'Completed' : 'Not Started',
-                                notes: req.notes,
-                                evidence_links: req.source && req.evidence ? `${req.source}|${req.evidence}` : ''
-                            };
-
-                            if (req.id) {
-                                await axios.put(
-                                    `${API_URL}/inductions/${inductionId}/requirements/${req.id}`,
-                                    reqData
-                                );
-                            } else {
-                                await axios.post(
-                                    `${API_URL}/inductions/${inductionId}/requirements`,
-                                    reqData
-                                );
-                            }
-                        }
-                    }
-                    
-                    navigate('/course-inductions');
-                }
+            let inductionId;
+            
+            if (isNew) {
+                // Create new induction
+                const response = await axios.post(`${API_URL}/course-inductions`, inductionPayload);
+                inductionId = response.data?.data?.id;
+                if (!inductionId) throw new Error('Failed to create induction');
             } else {
-                // Old flow: URL-based id
-                let inductionId = id;
-                
-                if (isNew) {
-                    console.log('Creating new induction (old flow)');
-                    const response = await axios.post(`${API_URL}/inductions`, transformedData);
-                    console.log('Create response:', response.data);
-                    
-                    inductionId = response.data?.data?.id || response.data?.id;
-                    if (!inductionId) {
-                        throw new Error(`Invalid response from server: ${JSON.stringify(response.data)}`);
-                    }
-                    console.log('Created induction with ID:', inductionId);
-                } else {
-                    await axios.put(`${API_URL}/inductions/${inductionId}`, transformedData);
-                }
-
-                for (let sectionNum = 1; sectionNum <= 8; sectionNum++) {
-                    const requirements = (formData.sections[sectionNum] || []).filter(req => req.area);
-                    
-                    for (const req of requirements) {
-                        const reqData = {
-                            section_number: sectionNum,
-                            section_title: SECTION_CONFIG[sectionNum].title,
-                            requirement_area: req.area,
-                            evidence_required: req.description,
-                            responsible_role: req.responsible,
-                            status: req.status ? 'Completed' : 'Not Started',
-                            notes: req.notes,
-                            evidence_links: req.source && req.evidence ? `${req.source}|${req.evidence}` : ''
-                        };
-
-                        if (req.id) {
-                            await axios.put(
-                                `${API_URL}/inductions/${inductionId}/requirements/${req.id}`,
-                                reqData
-                            );
-                        } else {
-                            await axios.post(
-                                `${API_URL}/inductions/${inductionId}/requirements`,
-                                reqData
-                            );
-                        }
-                    }
-                }
-
-                navigate('/course-inductions');
+                // Update existing induction
+                await axios.put(`${API_URL}/course-inductions/${id}`, inductionPayload);
+                inductionId = id;
             }
+            
+            // Save requirements (sections 1-8)
+            for (let sectionNum = 1; sectionNum <= 8; sectionNum++) {
+                const items = (formData.sections[sectionNum] || []).filter(item => item.area);
+                
+                for (const item of items) {
+                    const reqData = {
+                        section_number: sectionNum,
+                        section_title: SECTION_CONFIG[sectionNum].title,
+                        requirement_area: item.area,
+                        description: item.description,
+                        source_reference: item.source,
+                        evidence_held: item.evidence,
+                        responsible_person: item.responsible,
+                        compliance_status: item.status ? 'Completed' : 'Not Started',
+                        review_notes: item.notes
+                    };
+                    
+                    if (item.id && !isNew) {
+                        await axios.put(
+                            `${API_URL}/course-inductions/${inductionId}/requirements/${item.id}`,
+                            reqData
+                        );
+                    } else if (!item.tempId) {
+                        // Only post if it doesn't have a temporary ID (unsaved new item)
+                        await axios.post(
+                            `${API_URL}/course-inductions/${inductionId}/requirements`,
+                            reqData
+                        );
+                    }
+                }
+            }
+            
+            // Save conditions (section 9)
+            const conditions = (formData.sections[9] || []).filter(c => c.area);
+            for (const condition of conditions) {
+                const condData = {
+                    condition_recommendation: condition.area,
+                    action_required: condition.description,
+                    responsible_person: condition.responsible,
+                    deadline: condition.deadline || null,
+                    status: condition.status || 'Open'
+                };
+                
+                if (condition.id && !isNew) {
+                    // Update existing - if API supports PATCH
+                    await axios.post(
+                        `${API_URL}/course-inductions/${inductionId}/conditions`,
+                        condData
+                    );
+                } else if (!condition.tempId) {
+                    await axios.post(
+                        `${API_URL}/course-inductions/${inductionId}/conditions`,
+                        condData
+                    );
+                }
+            }
+            
+            // Save risks (section 10)
+            const risks = (formData.sections[10] || []).filter(r => r.area);
+            for (const risk of risks) {
+                const riskData = {
+                    risk_issue: risk.area,
+                    impact: risk.impact,
+                    mitigation: risk.mitigation,
+                    owner: risk.responsible,
+                    status: risk.status || 'Open'
+                };
+                
+                if (risk.id && !isNew) {
+                    await axios.post(
+                        `${API_URL}/course-inductions/${inductionId}/risks`,
+                        riskData
+                    );
+                } else if (!risk.tempId) {
+                    await axios.post(
+                        `${API_URL}/course-inductions/${inductionId}/risks`,
+                        riskData
+                    );
+                }
+            }
+            
+            // Save signoffs (section 11)
+            const signoffs = (formData.sections[11] || []).filter(s => s.description);
+            for (const signoff of signoffs) {
+                const signoffData = {
+                    role: signoff.area,
+                    name: signoff.description
+                };
+                
+                if (signoff.id && !isNew) {
+                    // Signoffs might not have update - just replace
+                    await axios.post(
+                        `${API_URL}/course-inductions/${inductionId}/signoffs`,
+                        signoffData
+                    );
+                } else if (!signoff.tempId) {
+                    await axios.post(
+                        `${API_URL}/course-inductions/${inductionId}/signoffs`,
+                        signoffData
+                    );
+                }
+            }
+            
+            alert('Induction saved successfully');
+            navigate('/course-inductions');
         } catch (err) {
             console.error('Failed to save:', err);
-            alert('Error saving induction');
+            alert('Error saving induction: ' + (err.response?.data?.message || err.message));
         } finally {
             setSaving(false);
         }
@@ -628,18 +483,29 @@ const CourseInductionsDetail = () => {
         setFormData(prev => {
             const newData = { ...prev };
             
-            // Safety check: ensure section and row exist
             if (!newData.sections[sectionNum] || !newData.sections[sectionNum][rowIdx]) {
                 console.error(`Section ${sectionNum} or row ${rowIdx} does not exist`);
                 return newData;
             }
             
-            const deletedReq = newData.sections[sectionNum][rowIdx];
+            const deletedItem = newData.sections[sectionNum][rowIdx];
             
-            // If requirement has an ID, delete it from the database immediately
-            if (deletedReq && deletedReq.id && !isNew) {
-                axios.delete(`${API_URL}/inductions/${id}/requirements/${deletedReq.id}`)
-                    .catch(err => console.error('Failed to delete requirement from database:', err));
+            // If item has an ID and we're in edit mode, delete from database
+            if (deletedItem && deletedItem.id && !isNew) {
+                const sectionData = SECTION_CONFIG[sectionNum];
+                
+                if (sectionData.type === 'conditions') {
+                    // Would need a DELETE endpoint for conditions
+                } else if (sectionData.type === 'risks') {
+                    axios.delete(`${API_URL}/course-inductions/${id}/risks/${deletedItem.id}`)
+                        .catch(err => console.error('Failed to delete risk:', err));
+                } else if (sectionData.type === 'signoff') {
+                    // Sign-offs might not have individual delete
+                } else {
+                    // Requirements
+                    axios.delete(`${API_URL}/course-inductions/${id}/requirements/${deletedItem.id}`)
+                        .catch(err => console.error('Failed to delete requirement:', err));
+                }
             }
             
             newData.sections[sectionNum].splice(rowIdx, 1);
@@ -698,43 +564,22 @@ const CourseInductionsDetail = () => {
                         
                         <div>
                             <label className="block text-sm font-semibold text-gray-700 mb-1">Course Title *</label>
-                            <select
+                            <input
+                                type="text"
                                 value={formData.course_title}
-                                onChange={(e) => {
-                                    const course = courses.find(c => (c.fullname || c.course_title) === e.target.value);
-                                    if (course) {
-                                        setFormData(prev => ({
-                                            ...prev,
-                                            course_title: course.fullname || course.course_title || '',
-                                            course_code: course.shortname || course.course_code || ''
-                                        }));
-                                        // Check if induction exists for this course
-                                        handleCourseSelect(course.id);
-                                    }
-                                }}
-                                disabled={courseLoading}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-scl-purple focus:border-transparent disabled:bg-gray-50 disabled:cursor-not-allowed"
-                            >
-                                <option value="">-- Select a Course --</option>
-                                {courses.length > 0 ? (
-                                    courses.map(course => (
-                                        <option key={course.id} value={course.fullname || course.course_title}>
-                                            {course.fullname || course.course_title}
-                                        </option>
-                                    ))
-                                ) : (
-                                    !courseLoading && <option value="">No courses available</option>
-                                )}
-                            </select>
+                                onChange={(e) => handleInputChange('course_title', e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-scl-purple focus:border-transparent"
+                                placeholder="Enter course title"
+                            />
                         </div>
                         <div>
                             <label className="block text-sm font-semibold text-gray-700 mb-1">Course Code</label>
                             <input
                                 type="text"
                                 value={formData.course_code}
-                                readOnly
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 cursor-not-allowed text-gray-600"
-                                placeholder="Auto-filled from course selection"
+                                onChange={(e) => handleInputChange('course_code', e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-scl-purple focus:border-transparent"
+                                placeholder="e.g., BBA-001"
                             />
                         </div>
                         <div>
@@ -744,46 +589,45 @@ const CourseInductionsDetail = () => {
                                 value={formData.awarding_body}
                                 onChange={(e) => handleInputChange('awarding_body', e.target.value)}
                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-scl-purple focus:border-transparent"
+                                placeholder="e.g., University X"
                             />
                         </div>
                         <div>
-                            <label className="block text-sm font-semibold text-gray-700 mb-1">Application Type</label>
-                            <select
-                                value={formData.application_type}
-                                onChange={(e) => handleInputChange('application_type', e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-scl-purple focus:border-transparent"
-                            >
-                                <option value="">Select...</option>
-                                <option value="New Course Accreditation">New Course Accreditation</option>
-                                <option value="Partnership Agreement">Partnership Agreement</option>
-                                <option value="Revalidation">Revalidation</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label className="block text-sm font-semibold text-gray-700 mb-1">Date Started</label>
-                            <input
-                                type="date"
-                                value={formData.date_started}
-                                onChange={(e) => handleInputChange('date_started', e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-scl-purple focus:border-transparent"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-semibold text-gray-700 mb-1">Expected Submission Date</label>
-                            <input
-                                type="date"
-                                value={formData.expected_submission_date}
-                                onChange={(e) => handleInputChange('expected_submission_date', e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-scl-purple focus:border-transparent"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-semibold text-gray-700 mb-1">Lead Coordinator</label>
+                            <label className="block text-sm font-semibold text-gray-700 mb-1">Qualification Level</label>
                             <input
                                 type="text"
-                                value={formData.lead_coordinator}
-                                onChange={(e) => handleInputChange('lead_coordinator', e.target.value)}
+                                value={formData.qualification_level}
+                                onChange={(e) => handleInputChange('qualification_level', e.target.value)}
                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-scl-purple focus:border-transparent"
+                                placeholder="e.g., Level 6 (Degree)"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-1">Approval Date</label>
+                            <input
+                                type="date"
+                                value={formData.approval_date}
+                                onChange={(e) => handleInputChange('approval_date', e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-scl-purple focus:border-transparent"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-1">Review Date</label>
+                            <input
+                                type="date"
+                                value={formData.review_date}
+                                onChange={(e) => handleInputChange('review_date', e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-scl-purple focus:border-transparent"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-1">Document Owner</label>
+                            <input
+                                type="text"
+                                value={formData.document_owner}
+                                onChange={(e) => handleInputChange('document_owner', e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-scl-purple focus:border-transparent"
+                                placeholder="Name or role"
                             />
                         </div>
                         <div>
@@ -799,7 +643,7 @@ const CourseInductionsDetail = () => {
                 </div>
 
                 {/* Sections with Form and Table */}
-                {[1, 2, 3, 4, 5, 6, 7, 8].map(sectionNum => (
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map(sectionNum => (
                     <div key={sectionNum} className="bg-white rounded-lg border border-gray-200 overflow-hidden">
                         <button
                             onClick={() => toggleSection(sectionNum)}
