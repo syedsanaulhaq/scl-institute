@@ -9,6 +9,7 @@ const { v4: uuidv4 } = require('uuid');
 console.log("Backend process starting...");
 const studentsRouter = require('./routes/students');
 const { router: notificationsRouter } = require('./routes/notifications');
+const courseInductionsRouter = require('./routes/course-inductions');
 
 process.on('unhandledRejection', (reason, p) => {
     console.error('Unhandled Rejection at:', p, 'reason:', reason);
@@ -204,6 +205,7 @@ app.use(bodyParser.json({ verify: (req, res, buf, encoding) => {
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use('/api/students', studentsRouter);
 app.use('/api/notifications', notificationsRouter);
+app.use('/api/course-inductions', courseInductionsRouter);
 
 // ===============================
 // ROUTES
