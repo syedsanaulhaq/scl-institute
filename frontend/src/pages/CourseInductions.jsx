@@ -71,7 +71,7 @@ const CourseInductions = () => {
             setLoading(true);
             setError('');
             const params = source === 'moodle' ? '?from_moodle=true' : '';
-            const response = await axios.get(`${API_URL}/inductions${params}`);
+            const response = await axios.get(`${API_URL}/course-inductions${params}`);
             setInductions(response.data?.data || []);
             setDataSource(source);
         } catch (err) {
@@ -86,7 +86,7 @@ const CourseInductions = () => {
         try {
             setSyncing(true);
             setError('');
-            const response = await axios.post(`${API_URL}/inductions/sync-moodle`);
+            const response = await axios.post(`${API_URL}/course-inductions/sync-moodle`);
             
             if (response.data.success) {
                 setError('');
@@ -105,7 +105,7 @@ const CourseInductions = () => {
     const fetchInductionDetails = async (id) => {
         try {
             setLoadingDetails(true);
-            const response = await axios.get(`${API_URL}/inductions/${id}`);
+            const response = await axios.get(`${API_URL}/course-inductions/${id}`);
             setDetails(response.data?.data || null);
             setStatusEdits({});
             setNotesEdits({});
@@ -145,7 +145,7 @@ const CourseInductions = () => {
                 status: statusEdits[reqId] || undefined,
                 notes: notesEdits[reqId] || undefined
             };
-            await axios.put(`${API_URL}/inductions/${inductionId}/requirements/${reqId}`, payload);
+            await axios.put(`${API_URL}/course-inductions/${inductionId}/requirements/${reqId}`, payload);
             await fetchInductionDetails(inductionId);
         } catch (err) {
             console.error('Failed to update requirement:', err);
@@ -159,7 +159,7 @@ const CourseInductions = () => {
         if (!conditionForm.condition_text) return;
         try {
             setSaving(true);
-            await axios.post(`${API_URL}/inductions/${selectedInductionId}/conditions`, conditionForm);
+            await axios.post(`${API_URL}/course-inductions/${selectedInductionId}/conditions`, conditionForm);
             setConditionForm({ condition_text: '', owner: '', due_date: '' });
             await fetchInductionDetails(selectedInductionId);
         } catch (err) {
@@ -174,7 +174,7 @@ const CourseInductions = () => {
         if (!riskForm.risk_description) return;
         try {
             setSaving(true);
-            await axios.post(`${API_URL}/inductions/${selectedInductionId}/risks`, riskForm);
+            await axios.post(`${API_URL}/course-inductions/${selectedInductionId}/risks`, riskForm);
             setRiskForm({ risk_description: '', impact: '', likelihood: '', mitigation: '', owner: '' });
             await fetchInductionDetails(selectedInductionId);
         } catch (err) {
@@ -192,7 +192,7 @@ const CourseInductions = () => {
                 decision: signoffEdits[signId] || undefined,
                 comments: signoffComments[signId] || undefined
             };
-            await axios.put(`${API_URL}/inductions/${inductionId}/signoffs/${signId}`, payload);
+            await axios.put(`${API_URL}/course-inductions/${inductionId}/signoffs/${signId}`, payload);
             await fetchInductionDetails(inductionId);
         } catch (err) {
             console.error('Failed to update sign-off:', err);
@@ -214,7 +214,7 @@ const CourseInductions = () => {
                 version: documentControlEdits.version !== undefined ? documentControlEdits.version : details.induction.version,
                 document_owner: documentControlEdits.document_owner !== undefined ? documentControlEdits.document_owner : details.induction.document_owner
             };
-            await axios.put(`${API_URL}/inductions/${inductionId}`, payload);
+            await axios.put(`${API_URL}/course-inductions/${inductionId}`, payload);
             setDocumentControlEdits({});
             await fetchInductionDetails(inductionId);
         } catch (err) {
@@ -227,7 +227,7 @@ const CourseInductions = () => {
 
     const handleExport = (type) => {
         if (!selectedInductionId) return;
-        window.open(`${API_URL}/inductions/${selectedInductionId}/export/${type}`, '_blank');
+        window.open(`${API_URL}/course-inductions/${selectedInductionId}/export/${type}`, '_blank');
     };
 
     if (loading) {
