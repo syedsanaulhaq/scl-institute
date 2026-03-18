@@ -122,6 +122,15 @@ const CourseAccreditationsDetail = () => {
         version: '1.0',
         sections: {}
     });
+    const [courseRegistrationData, setCourseRegistrationData] = useState({
+        course_type: '',
+        regulation_level: '',
+        mode_of_delivery: '',
+        subject_area_discipline: '',
+        course_description: '',
+        learning_outcomes: '',
+        units_modules_covered: ''
+    });
 
     useEffect(() => {
         const initializeData = async () => {
@@ -508,6 +517,105 @@ const CourseAccreditationsDetail = () => {
             alert('Error loading accreditation data');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const transformFormData = () => {
+        // Transform frontend formData structure to match backend expectations
+        const documentControl = {
+            course_title: formData.course_title || '',
+            course_code: formData.course_code || '',
+            awarding_body: formData.awarding_body || '',
+            application_type: formData.application_type || '',
+            date_started: formData.date_started || null,
+            expected_submission_date: formData.expected_submission_date || null,
+            lead_coordinator: formData.lead_coordinator || '',
+            version: formData.version || '1.0'
+        };
+
+        // Extract sections (no deduplication - let backend handle unique constraints)
+        const cleanedSections = {};
+        for (let i = 1; i <= 8; i++) {
+            cleanedSections[i] = (formData.sections[i] || []).filter(task => task.area);
+        }
+
+        // Extract risks from section 7
+        const risks = (cleanedSections[7] || []).map(task => ({
+            impact: task.description || '',
+            mitigation: task.responsible || '',
+            owner: task.source || '',
+            review_date: null,
+            status: task.status ? 'Completed' : 'Open'
+        }));
+
+        // Extract signoffs from section 8
+        const signoffs = (cleanedSections[8] || []).map(task => ({
+            name: task.description || '',
+            role: task.area || '',
+            sign_date: null
+        }));
+
+        return {
+            documentControl,
+            sections: cleanedSections || {},
+            risks,
+            signoffs
+        };
+    };
+
+    const handleSaveToCourseRegistration = async () => {
+        try {
+            setSaving(true);
+            
+            // Validation
+            if (!formData.course_title) {
+                alert('Please select a course');
+                setSaving(false);
+                return;
+            }
+
+            console.log('Saving course registration with data:', courseRegistrationData);
+
+            // Build the course registration payload
+            const courseRegistrationPayload = {
+                course_title: formData.course_title || '',
+                course_code: formData.course_code || '',
+                course_type: courseRegistrationData.course_type || '',
+                awarding_body_accreditation: formData.awarding_body || '',
+                regulation_level: courseRegistrationData.regulation_level || '',
+                mode_of_delivery: courseRegistrationData.mode_of_delivery || '',
+                start_date: formData.date_started || null,
+                end_date_or_duration: formData.expected_submission_date || null,
+                subject_area_discipline: courseRegistrationData.subject_area_discipline || '',
+                course_description: courseRegistrationData.course_description || '',
+                learning_outcomes: courseRegistrationData.learning_outcomes || '',
+                units_modules_covered: courseRegistrationData.units_modules_covered || '',
+                application_status: 'submitted',
+                sync_to_moodle: true
+            };
+
+            console.log('Course registration payload:', courseRegistrationPayload);
+
+            // POST to course_registrations endpoint with auto-sync enabled
+            const response = await axios.post(
+                `${API_URL}/students/course-registrations`,
+                courseRegistrationPayload
+            );
+
+            console.log('Course registration response:', response.data);
+            
+            if (response.data?.success || response.data?.data?.id) {
+                const moodleSync = response.data?.data?.moodle_sync_status || 'pending';
+                alert(`Course registered successfully! Moodle sync status: ${moodleSync}`);
+                navigate('/course-accreditations');
+            } else {
+                throw new Error('Unexpected response from server');
+            }
+        } catch (err) {
+            console.error('Failed to save course registration:', err);
+            alert(`Error registering course: ${err.response?.data?.message || err.message}`);
+        } finally {
+            setSaving(false);
         }
     };
 
@@ -1086,8 +1194,101 @@ const CourseAccreditationsDetail = () => {
                         </div>
                     </div>
                 </div>
+                
+                {/* Course Registration Details */}
+                <div className="bg-white rounded-lg border border-gray-200 p-6">
+                    <h2 className="text-lg font-bold text-gray-900 mb-4">Course Registration for Moodle</h2>
+                    <p className="text-sm text-gray-600 mb-4">Fill in additional details to register this course to Moodle with automatic field mapping.</p>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-1">Course Type</label>
+                            <select
+                                value={courseRegistrationData.course_type}
+                                onChange={(e) => setCourseRegistrationData(prev => ({ ...prev, course_type: e.target.value }))}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-scl-purple focus:border-transparent"
+                            >
+                                <option value="">Select...</option>
+                                <option value="Degree">Degree</option>
+                                <option value="Diploma">Diploma</option>
+                                <option value="Certificate">Certificate</option>
+                                <option value="Postgraduate">Postgraduate</option>
+                                <option value="Professional">Professional</option>
+                                <option value="Short Course">Short Course</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-1">Regulation Level (RQF)</label>
+                            <select
+                                value={courseRegistrationData.regulation_level}
+                                onChange={(e) => setCourseRegistrationData(prev => ({ ...prev, regulation_level: e.target.value }))}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-scl-purple focus:border-transparent"
+                            >
+                                <option value="">Select...</option>
+                                <option value="RQF Level 3">RQF Level 3</option>
+                                <option value="RQF Level 4">RQF Level 4</option>
+                                <option value="RQF Level 5">RQF Level 5</option>
+                                <option value="RQF Level 6">RQF Level 6</option>
+                                <option value="RQF Level 7">RQF Level 7</option>
+                                <option value="RQF Level 8">RQF Level 8</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-1">Mode of Delivery</label>
+                            <select
+                                value={courseRegistrationData.mode_of_delivery}
+                                onChange={(e) => setCourseRegistrationData(prev => ({ ...prev, mode_of_delivery: e.target.value }))}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-scl-purple focus:border-transparent"
+                            >
+                                <option value="">Select...</option>
+                                <option value="Face-to-Face">Face-to-Face</option>
+                                <option value="Online">Online</option>
+                                <option value="Blended">Blended</option>
+                                <option value="Work-Based">Work-Based</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-1">Subject Area / Discipline</label>
+                            <input
+                                type="text"
+                                value={courseRegistrationData.subject_area_discipline}
+                                onChange={(e) => setCourseRegistrationData(prev => ({ ...prev, subject_area_discipline: e.target.value }))}
+                                placeholder="e.g., Computer Science, Business Studies"
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-scl-purple focus:border-transparent"
+                            />
+                        </div>
+                        <div className="col-span-2">
+                            <label className="block text-sm font-semibold text-gray-700 mb-1">Course Description</label>
+                            <textarea
+                                value={courseRegistrationData.course_description}
+                                onChange={(e) => setCourseRegistrationData(prev => ({ ...prev, course_description: e.target.value }))}
+                                placeholder="Brief description of the course"
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-scl-purple focus:border-transparent"
+                                rows="3"
+                            />
+                        </div>
+                        <div className="col-span-2">
+                            <label className="block text-sm font-semibold text-gray-700 mb-1">Learning Outcomes</label>
+                            <textarea
+                                value={courseRegistrationData.learning_outcomes}
+                                onChange={(e) => setCourseRegistrationData(prev => ({ ...prev, learning_outcomes: e.target.value }))}
+                                placeholder="What students will learn (one per line)"
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-scl-purple focus:border-transparent"
+                                rows="3"
+                            />
+                        </div>
+                        <div className="col-span-2">
+                            <label className="block text-sm font-semibold text-gray-700 mb-1">Units / Modules Covered</label>
+                            <textarea
+                                value={courseRegistrationData.units_modules_covered}
+                                onChange={(e) => setCourseRegistrationData(prev => ({ ...prev, units_modules_covered: e.target.value }))}
+                                placeholder="List units/modules separated by newlines (will auto-sync to Moodle course sections)"
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-scl-purple focus:border-transparent"
+                                rows="4"
+                            />
+                        </div>
+                    </div>
+                </div>
 
-                {/* Sections with Form and Table */}
                 {[1, 2, 3, 4, 5, 6, 7, 8].map(sectionNum => (
                     <div key={sectionNum} className="bg-white rounded-lg border border-gray-200 overflow-hidden">
                         <button
@@ -1504,6 +1705,13 @@ const CourseAccreditationsDetail = () => {
                         className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-semibold"
                     >
                         Cancel
+                    </button>
+                    <button
+                        onClick={handleSaveToCourseRegistration}
+                        disabled={saving}
+                        className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold disabled:opacity-50"
+                    >
+                        {saving ? 'Registering...' : 'Register to Moodle'}
                     </button>
                     <button
                         onClick={handleSave}
