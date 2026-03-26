@@ -140,6 +140,14 @@ async function ensureCourseRegistrationTables() {
                 registration_reference VARCHAR(20) NULL UNIQUE,
                 course_title VARCHAR(255) NOT NULL,
                 course_code VARCHAR(100) NOT NULL,
+                programme_type_name VARCHAR(255) NULL,
+                program_name VARCHAR(255) NULL,
+                academic_year VARCHAR(50) NULL,
+                semester_name VARCHAR(50) NULL,
+                programme_type_category_id INT NULL,
+                program_category_id INT NULL,
+                year_category_id INT NULL,
+                semester_category_id INT NULL,
                 course_type VARCHAR(100) NULL,
                 awarding_body_accreditation VARCHAR(255) NULL,
                 regulation_level VARCHAR(100) NULL,
@@ -182,6 +190,25 @@ async function ensureCourseRegistrationTables() {
                 INDEX idx_course_reg_sync (moodle_sync_status)
             )
         `);
+
+        const [existingColumns] = await db.query('SHOW COLUMNS FROM course_registrations');
+        const existingColumnNames = new Set(existingColumns.map((column) => String(column.Field || '').toLowerCase()));
+        const requiredColumns = [
+            { name: 'programme_type_name', sql: 'ALTER TABLE course_registrations ADD COLUMN programme_type_name VARCHAR(255) NULL AFTER course_code' },
+            { name: 'program_name', sql: 'ALTER TABLE course_registrations ADD COLUMN program_name VARCHAR(255) NULL AFTER course_code' },
+            { name: 'academic_year', sql: 'ALTER TABLE course_registrations ADD COLUMN academic_year VARCHAR(50) NULL AFTER program_name' },
+            { name: 'semester_name', sql: 'ALTER TABLE course_registrations ADD COLUMN semester_name VARCHAR(50) NULL AFTER academic_year' },
+            { name: 'programme_type_category_id', sql: 'ALTER TABLE course_registrations ADD COLUMN programme_type_category_id INT NULL AFTER semester_name' },
+            { name: 'program_category_id', sql: 'ALTER TABLE course_registrations ADD COLUMN program_category_id INT NULL AFTER semester_name' },
+            { name: 'year_category_id', sql: 'ALTER TABLE course_registrations ADD COLUMN year_category_id INT NULL AFTER program_category_id' },
+            { name: 'semester_category_id', sql: 'ALTER TABLE course_registrations ADD COLUMN semester_category_id INT NULL AFTER year_category_id' }
+        ];
+
+        for (const column of requiredColumns) {
+            if (!existingColumnNames.has(column.name)) {
+                await db.query(column.sql);
+            }
+        }
     } catch (error) {
         console.error('[COURSE REGISTRATION] Failed to ensure table:', error.message);
     }
@@ -2014,6 +2041,770 @@ router.post('/teacher-registrations/:id/decision', async (req, res) => {
     }
 });
 
+router.get('/moodle/category-hierarchy', async (req, res) => {
+    try {
+        const includeInactiveParam = String(req.query.include_inactive || 'false').trim().toLowerCase();
+        const includeInactive = includeInactiveParam === 'true' || includeInactiveParam === '1' || includeInactiveParam === 'yes';
+        const [rows] = await moodleDbPool.execute(
+            `SELECT id, parent, name, sortorder, depth, path, visible
+             FROM mdl_course_categories
+             ${includeInactive ? '' : 'WHERE COALESCE(visible, 1) = 1'}
+             ORDER BY depth ASC, parent ASC, sortorder ASC, name ASC`
+        );
+
+        const categories = (rows || []).map((row) => ({
+            id: Number(row.id),
+            parent: Number(row.parent || 0),
+            name: String(row.name || '').trim(),
+            sortorder: Number(row.sortorder || 0),
+            depth: Number(row.depth || 0),
+            path: String(row.path || '').trim(),
+            visible: Number(row.visible ?? 1) === 1
+        }));
+
+        const byParent = new Map();
+        for (const row of categories) {
+            if (!byParent.has(row.parent)) {
+                byParent.set(row.parent, []);
+            }
+            byParent.get(row.parent).push(row);
+        }
+
+        const sortCategoryNodes = (list) => (list || []).slice().sort((a, b) => {
+            if (a.sortorder !== b.sortorder) return a.sortorder - b.sortorder;
+            return a.name.localeCompare(b.name);
+        });
+
+        // Fetch local (not-yet-synced) categories from SCL DB
+        let localRows = [];
+        try {
+            const [lRows] = await db.execute('SELECT * FROM scl_local_categories WHERE moodle_category_id IS NULL ORDER BY id ASC');
+            localRows = lRows || [];
+        } catch (e) {
+            // Table may not exist yet; ignore
+        }
+
+        // Build local lookup maps (using negative IDs)
+        const localById = new Map(localRows.map(r => [r.id, r]));
+        const localByParentLocal = new Map();
+        const localByParentMoodle = new Map();
+        for (const r of localRows) {
+            if (r.parent_local_id) {
+                if (!localByParentLocal.has(r.parent_local_id)) localByParentLocal.set(r.parent_local_id, []);
+                localByParentLocal.get(r.parent_local_id).push(r);
+            } else if (r.parent_moodle_id) {
+                if (!localByParentMoodle.has(r.parent_moodle_id)) localByParentMoodle.set(r.parent_moodle_id, []);
+                localByParentMoodle.get(r.parent_moodle_id).push(r);
+            }
+        }
+        const localRoots = localRows.filter(r => !r.parent_local_id && !r.parent_moodle_id);
+
+        const makeLocalSemesters = (parentLocalId, parentMoodleId) => {
+            const kids = parentLocalId ? (localByParentLocal.get(parentLocalId) || []) : (localByParentMoodle.get(parentMoodleId) || []);
+            return kids.filter(r => r.level === 'semester').map(r => ({
+                id: -(r.id), name: r.name, parent: parentMoodleId || -(parentLocalId), depth: 4, path: '', sortorder: 9999, is_local: true
+            }));
+        };
+
+        const makeLocalYears = (parentLocalId, parentMoodleId) => {
+            const kids = parentLocalId ? (localByParentLocal.get(parentLocalId) || []) : (localByParentMoodle.get(parentMoodleId) || []);
+            return kids.filter(r => r.level === 'year').map(r => ({
+                id: -(r.id), name: r.name, parent: parentMoodleId || -(parentLocalId), depth: 3, path: '', sortorder: 9999, is_local: true,
+                semesters: makeLocalSemesters(r.id, null)
+            }));
+        };
+
+        const makeLocalPrograms = (parentLocalId, parentMoodleId) => {
+            const kids = parentLocalId ? (localByParentLocal.get(parentLocalId) || []) : (localByParentMoodle.get(parentMoodleId) || []);
+            return kids.filter(r => r.level === 'program').map(r => ({
+                id: -(r.id), name: r.name, parent: parentMoodleId || -(parentLocalId), depth: 2, path: '', sortorder: 9999, is_local: true,
+                years: [
+                    ...sortCategoryNodes(byParent.get(-(r.id)) || []).map((year) => {
+                        const semesters = sortCategoryNodes(byParent.get(year.id) || []).map(s => ({ id: s.id, name: s.name, parent: s.parent, depth: s.depth, path: s.path, sortorder: s.sortorder }));
+                        return { id: year.id, name: year.name, parent: year.parent, depth: year.depth, path: year.path, sortorder: year.sortorder, semesters };
+                    }),
+                    ...makeLocalYears(r.id, null)
+                ]
+            }));
+        };
+
+        const programme_types = [
+            ...sortCategoryNodes(byParent.get(0) || []).map((programmeType) => {
+                const moodlePrograms = sortCategoryNodes(byParent.get(programmeType.id) || []).map((program) => {
+                    const moodleYears = sortCategoryNodes(byParent.get(program.id) || []).map((year) => {
+                        const semesters = [
+                            ...sortCategoryNodes(byParent.get(year.id) || []).map((semester) => ({
+                                id: semester.id, name: semester.name, parent: semester.parent, depth: semester.depth, path: semester.path, sortorder: semester.sortorder
+                            })),
+                            ...makeLocalSemesters(null, year.id)
+                        ];
+                        return { id: year.id, name: year.name, parent: year.parent, depth: year.depth, path: year.path, sortorder: year.sortorder, semesters };
+                    });
+                    return {
+                        id: program.id, name: program.name, parent: program.parent, depth: program.depth, path: program.path, sortorder: program.sortorder,
+                        years: [...moodleYears, ...makeLocalYears(null, program.id)]
+                    };
+                });
+                return {
+                    id: programmeType.id, name: programmeType.name, parent: programmeType.parent, depth: programmeType.depth, path: programmeType.path, sortorder: programmeType.sortorder,
+                    programs: [...moodlePrograms, ...makeLocalPrograms(null, programmeType.id)]
+                };
+            }),
+            // Local root-level programme types
+            ...localRoots.filter(r => r.level === 'programme_type').map(r => ({
+                id: -(r.id), name: r.name, parent: 0, depth: 1, path: '', sortorder: 9999, is_local: true,
+                programs: makeLocalPrograms(r.id, null)
+            }))
+        ];
+
+        const programs = programme_types.flatMap((type) => type.programs || []);
+
+        return res.json({
+            success: true,
+            data: {
+                programme_types,
+                programs,
+                categories
+            }
+        });
+    } catch (error) {
+        console.error('Error fetching Moodle category hierarchy:', error.message);
+        return res.status(500).json({ success: false, message: 'Failed to fetch Moodle category hierarchy', error: error.message });
+    }
+});
+
+// POST /api/students/moodle/ensure-category-path
+// Create full category path in Moodle if not exist and return IDs
+router.post('/moodle/ensure-category-path', async (req, res) => {
+    try {
+        const programmeTypeName = String(req.body?.programme_type_name || '').trim();
+        const programName = String(req.body?.program_name || '').trim();
+        const academicYear = String(req.body?.academic_year || '').trim();
+        const semesterName = String(req.body?.semester_name || '').trim();
+
+        console.log('[ensure-category-path] Input:', { programmeTypeName, programName, academicYear, semesterName });
+
+        if (!programmeTypeName || !programName || !academicYear || !semesterName) {
+            return res.status(400).json({
+                success: false,
+                message: 'programme_type_name, program_name, academic_year and semester_name are required'
+            });
+        }
+
+        console.log('[ensure-category-path] Finding root category...');
+        const rootCategoryId = getStructureRootCategoryId();
+        console.log('[ensure-category-path] Root category ID:', rootCategoryId);
+
+        console.log('[ensure-category-path] Creating programme type category:', programmeTypeName);
+        const programmeTypeCategoryId = await findOrCreateMoodleCategory(programmeTypeName, rootCategoryId, 'programme-type');
+        console.log('[ensure-category-path] Programme type category ID:', programmeTypeCategoryId);
+
+        console.log('[ensure-category-path] Creating program category:', programName);
+        const programCategoryId = await findOrCreateMoodleCategory(programName, programmeTypeCategoryId, 'program');
+        console.log('[ensure-category-path] Program category ID:', programCategoryId);
+
+        console.log('[ensure-category-path] Creating year category:', academicYear);
+        const yearCategoryId = await findOrCreateMoodleCategory(academicYear, programCategoryId, 'year');
+        console.log('[ensure-category-path] Year category ID:', yearCategoryId);
+
+        console.log('[ensure-category-path] Creating semester category:', semesterName);
+        const semesterCategoryId = await findOrCreateMoodleCategory(semesterName, yearCategoryId, 'semester');
+        console.log('[ensure-category-path] Semester category ID:', semesterCategoryId);
+
+        return res.json({
+            success: true,
+            message: 'Moodle category path ensured',
+            data: {
+                programme_type_category_id: programmeTypeCategoryId,
+                program_category_id: programCategoryId,
+                year_category_id: yearCategoryId,
+                semester_category_id: semesterCategoryId
+            }
+        });
+    } catch (error) {
+        console.error('[ensure-category-path] ERROR:', error);
+        console.error('[ensure-category-path] Stack:', error.stack);
+        return res.status(500).json({
+            success: false,
+            message: 'Failed to ensure Moodle category path',
+            error: error.message,
+            detail: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        });
+    }
+});
+
+// POST /api/students/moodle/create-level-category
+// Create category in Moodle at click-time and always enforce full parent chain.
+router.post('/moodle/create-level-category', async (req, res) => {
+    try {
+        const name = String(req.body?.name || '').trim();
+        const level = String(req.body?.level || '').trim(); // 'programme_type' | 'program' | 'year' | 'semester'
+        const programmeTypeName = String(req.body?.programme_type_name || '').trim();
+        const programName = String(req.body?.program_name || '').trim();
+        const academicYear = String(req.body?.academic_year || '').trim();
+        const courseCode = String(req.body?.course_code || '').trim();
+        const explicitCode = String(req.body?.explicit_code || '').trim();
+
+        if (!name || !level) {
+            return res.status(400).json({ success: false, message: 'name and level are required' });
+        }
+
+        const rootId = getStructureRootCategoryId();
+        const resultIds = {};
+        const hierarchyCodes = buildHierarchyCodePattern(courseCode, programmeTypeName, programName, academicYear, name);
+
+        const thisCode = explicitCode || (
+            level === 'programme_type' ? hierarchyCodes.programmeTypeCode :
+            level === 'program' ? hierarchyCodes.programCode :
+            level === 'year' ? hierarchyCodes.yearCode :
+            hierarchyCodes.semesterCode
+        );
+
+        if (level !== 'programme_type' && !thisCode) {
+            return res.status(400).json({
+                success: false,
+                message: 'Hierarchy code is missing for this level. Refresh the page and try again.'
+            });
+        }
+
+        const codeParts = String(thisCode || '').split('-').filter(Boolean);
+        const programmeTypeCode = codeParts[0] || hierarchyCodes.programmeTypeCode;
+        const programCode = codeParts.length >= 2 ? `${codeParts[0]}-${codeParts[1]}` : hierarchyCodes.programCode;
+        const yearCode = codeParts.length >= 3 ? `${codeParts[0]}-${codeParts[1]}-${codeParts[2]}` : hierarchyCodes.yearCode;
+        const semesterCode = codeParts.length >= 4 ? `${codeParts[0]}-${codeParts[1]}-${codeParts[2]}-${codeParts[3]}` : hierarchyCodes.semesterCode;
+
+        if (level === 'programme_type') {
+            resultIds.programme_type_category_id = await findOrCreateMoodleCategory(
+                name,
+                rootId,
+                'programme-type',
+                thisCode || programmeTypeCode
+            );
+        } else if (level === 'program') {
+            const typeLabel = programmeTypeName || programmeTypeCode;
+            if (!typeLabel || !programmeTypeCode) {
+                return res.status(400).json({ success: false, message: 'Missing programme type data for program creation' });
+            }
+
+            resultIds.programme_type_category_id = await findOrCreateMoodleCategory(
+                typeLabel,
+                rootId,
+                'programme-type',
+                programmeTypeCode
+            );
+            resultIds.program_category_id = await findOrCreateMoodleCategory(
+                name,
+                resultIds.programme_type_category_id,
+                'program',
+                thisCode || programCode
+            );
+        } else if (level === 'year') {
+            const typeLabel = programmeTypeName || programmeTypeCode;
+            const programLabel = programName || programCode;
+            if (!typeLabel || !programmeTypeCode || !programLabel || !programCode) {
+                return res.status(400).json({ success: false, message: 'Missing hierarchy data for year creation' });
+            }
+
+            resultIds.programme_type_category_id = await findOrCreateMoodleCategory(
+                typeLabel,
+                rootId,
+                'programme-type',
+                programmeTypeCode
+            );
+            resultIds.program_category_id = await findOrCreateMoodleCategory(
+                programLabel,
+                resultIds.programme_type_category_id,
+                'program',
+                programCode
+            );
+            resultIds.year_category_id = await findOrCreateMoodleCategory(
+                name,
+                resultIds.program_category_id,
+                'year',
+                thisCode || yearCode
+            );
+        } else if (level === 'semester') {
+            const typeLabel = programmeTypeName || programmeTypeCode;
+            const programLabel = programName || programCode;
+            const yearLabel = academicYear || yearCode;
+            if (!typeLabel || !programmeTypeCode || !programLabel || !programCode || !yearLabel || !yearCode) {
+                return res.status(400).json({ success: false, message: 'Missing hierarchy data for semester creation' });
+            }
+
+            resultIds.programme_type_category_id = await findOrCreateMoodleCategory(
+                typeLabel,
+                rootId,
+                'programme-type',
+                programmeTypeCode
+            );
+            resultIds.program_category_id = await findOrCreateMoodleCategory(
+                programLabel,
+                resultIds.programme_type_category_id,
+                'program',
+                programCode
+            );
+            resultIds.year_category_id = await findOrCreateMoodleCategory(
+                yearLabel,
+                resultIds.program_category_id,
+                'year',
+                yearCode
+            );
+            resultIds.semester_category_id = await findOrCreateMoodleCategory(
+                name,
+                resultIds.year_category_id,
+                'semester',
+                thisCode || semesterCode
+            );
+        } else {
+            return res.status(400).json({ success: false, message: `Unknown level: ${level}` });
+        }
+
+        return res.json({ success: true, data: resultIds });
+    } catch (error) {
+        console.error('[create-level-category] ERROR:', error.message);
+        return res.status(500).json({ success: false, message: 'Failed to create Moodle category', error: error.message });
+    }
+});
+
+// POST /api/students/moodle/sync-master-course
+// Create or update a course in Moodle immediately using the category IDs from a master course record.
+router.post('/moodle/sync-master-course', async (req, res) => {
+    try {
+        const course_title = String(req.body?.course_title || '').trim();
+        const course_code = String(req.body?.course_code || '').trim();
+        let programme_type_name = String(req.body?.programme_type_name || '').trim();
+        let program_name = String(req.body?.program_name || '').trim();
+        let academic_year = String(req.body?.academic_year || '').trim();
+        let semester_name = String(req.body?.semester_name || '').trim();
+
+        if (!course_title || !course_code) {
+            return res.status(400).json({ success: false, message: 'course_title and course_code are required' });
+        }
+
+        const hasExplicitStructure = Boolean(
+            programme_type_name &&
+            program_name &&
+            academic_year &&
+            semester_name
+        );
+
+        const derivedHierarchy = deriveHierarchyFromCourseCode(course_code);
+        if (!hasExplicitStructure && derivedHierarchy) {
+            programme_type_name = derivedHierarchy.programme_type_name;
+            program_name = derivedHierarchy.program_name;
+            academic_year = derivedHierarchy.academic_year;
+            semester_name = derivedHierarchy.semester_name;
+        }
+
+        if (!programme_type_name || !program_name || !academic_year || !semester_name) {
+            return res.status(400).json({
+                success: false,
+                message: 'programme_type_name, program_name, academic_year and semester_name are required before syncing to Moodle'
+            });
+        }
+
+        const parseId = (value) => {
+            const parsed = Number(value);
+            return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+        };
+
+        const parseAnyInt = (value) => {
+            const parsed = Number(value);
+            return Number.isInteger(parsed) ? parsed : null;
+        };
+
+        const hierarchyCodes = buildHierarchyCodePattern(course_code, programme_type_name, program_name, academic_year, semester_name);
+
+        const resolveCategoryId = async (rawValue, categoryName, parentId, level, explicitIdNumber = null) => {
+            const parsed = parseAnyInt(rawValue);
+            if (!parsed) return null;
+            if (parsed > 0) return parsed;
+
+            // Local temporary IDs are negative in UI; map them to real Moodle IDs if available.
+            const localId = Math.abs(parsed);
+            try {
+                const [rows] = await db.execute(
+                    'SELECT id, name, moodle_category_id FROM scl_local_categories WHERE id = ? LIMIT 1',
+                    [localId]
+                );
+                if (!rows.length) return null;
+
+                const localCat = rows[0];
+                let moodleId = localCat.moodle_category_id ? Number(localCat.moodle_category_id) : null;
+
+                // If local category hasn't been synced to Moodle yet, create it now
+                if (!Number.isInteger(moodleId) || moodleId <= 0) {
+                    const catName = categoryName || String(localCat.name || '').trim();
+                    if (catName && parentId && level) {
+                        moodleId = await findOrCreateMoodleCategory(catName, parentId, level, explicitIdNumber);
+                        if (Number.isInteger(moodleId) && moodleId > 0) {
+                            // Update local category with the real Moodle ID
+                            await db.execute(
+                                'UPDATE scl_local_categories SET moodle_category_id = ? WHERE id = ?',
+                                [moodleId, localId]
+                            ).catch(() => {});
+                        }
+                    }
+                }
+
+                return Number.isInteger(moodleId) && moodleId > 0 ? moodleId : null;
+            } catch (_error) {
+                return null;
+            }
+        };
+
+        const rootCategoryId = getStructureRootCategoryId();
+
+        const registration = {
+            course_title,
+            course_code,
+            programme_type_name,
+            program_name,
+            academic_year,
+            semester_name,
+            programme_type_category_id: await resolveCategoryId(req.body?.programme_type_category_id, programme_type_name, rootCategoryId, 'programme-type', hierarchyCodes.programmeTypeCode),
+            program_category_id: null,
+            year_category_id: null,
+            semester_category_id: null,
+            start_date: null
+        };
+
+        // Resolve program under programme type
+        if (registration.programme_type_category_id) {
+            registration.program_category_id = await resolveCategoryId(req.body?.program_category_id, program_name, registration.programme_type_category_id, 'program', hierarchyCodes.programCode);
+        }
+
+        // Resolve year under program
+        if (registration.program_category_id) {
+            registration.year_category_id = await resolveCategoryId(req.body?.year_category_id, academic_year, registration.program_category_id, 'year', hierarchyCodes.yearCode);
+        }
+
+        // Resolve semester under year
+        if (registration.year_category_id) {
+            registration.semester_category_id = await resolveCategoryId(req.body?.semester_category_id, semester_name, registration.year_category_id, 'semester', hierarchyCodes.semesterCode);
+        }
+
+        const hasExplicitHierarchyIds = Boolean(
+            registration.programme_type_category_id &&
+            registration.program_category_id &&
+            registration.year_category_id &&
+            registration.semester_category_id
+        );
+
+        let usedExplicitHierarchyIds = false;
+        if (hasExplicitHierarchyIds) {
+            const ids = [
+                registration.programme_type_category_id,
+                registration.program_category_id,
+                registration.year_category_id,
+                registration.semester_category_id
+            ];
+
+            const [rows] = await moodleDbPool.execute(
+                `SELECT id, parent FROM mdl_course_categories WHERE id IN (?, ?, ?, ?)`,
+                ids
+            );
+
+            const byId = new Map((rows || []).map((row) => [Number(row.id), Number(row.parent)]));
+            const programParent = byId.get(registration.program_category_id);
+            const yearParent = byId.get(registration.year_category_id);
+            const semesterParent = byId.get(registration.semester_category_id);
+
+            usedExplicitHierarchyIds =
+                byId.size === 4 &&
+                programParent === Number(registration.programme_type_category_id) &&
+                yearParent === Number(registration.program_category_id) &&
+                semesterParent === Number(registration.year_category_id);
+        }
+
+        if (!usedExplicitHierarchyIds) {
+            try {
+                const rootCategoryId = getStructureRootCategoryId();
+                const programmeTypeCategoryId = await findOrCreateMoodleCategory(registration.programme_type_name, rootCategoryId, 'programme-type', hierarchyCodes.programmeTypeCode);
+                const programCategoryId = await findOrCreateMoodleCategory(registration.program_name, programmeTypeCategoryId, 'program', hierarchyCodes.programCode);
+                const yearCategoryId = await findOrCreateMoodleCategory(registration.academic_year, programCategoryId, 'year', hierarchyCodes.yearCode);
+                const semesterCategoryId = await findOrCreateMoodleCategory(registration.semester_name, yearCategoryId, 'semester', hierarchyCodes.semesterCode);
+
+                registration.programme_type_category_id = programmeTypeCategoryId;
+                registration.program_category_id = programCategoryId;
+                registration.year_category_id = yearCategoryId;
+                registration.semester_category_id = semesterCategoryId;
+            } catch (categoryError) {
+                // Fallback: resolve only from existing Moodle DB categories without creating new ones.
+                const rootCategoryId = getStructureRootCategoryId();
+                const programmeTypeCategoryId = await findMoodleCategoryByName(registration.programme_type_name, rootCategoryId);
+                const programCategoryId = programmeTypeCategoryId ? await findMoodleCategoryByName(registration.program_name, programmeTypeCategoryId) : null;
+                const yearCategoryId = programCategoryId ? await findMoodleCategoryByName(registration.academic_year, programCategoryId) : null;
+                const semesterCategoryId = yearCategoryId ? await findMoodleCategoryByName(registration.semester_name, yearCategoryId) : null;
+
+                if (programmeTypeCategoryId && programCategoryId && yearCategoryId && semesterCategoryId) {
+                    registration.programme_type_category_id = programmeTypeCategoryId;
+                    registration.program_category_id = programCategoryId;
+                    registration.year_category_id = yearCategoryId;
+                    registration.semester_category_id = semesterCategoryId;
+                } else {
+                    throw new Error(`Could not resolve Moodle category path: ${categoryError.message}`);
+                }
+            }
+        }
+
+        const result = await createOrUpdateMoodleCourseCore(registration);
+        return res.json({
+            success: true,
+            message: result.created ? 'Course created in Moodle' : 'Course updated in Moodle',
+            data: {
+                moodle_course_id: result.moodleCourseId,
+                created: result.created,
+                resolved_category_ids: {
+                    programme_type_category_id: registration.programme_type_category_id,
+                    program_category_id: registration.program_category_id,
+                    year_category_id: registration.year_category_id,
+                    semester_category_id: registration.semester_category_id
+                },
+                resolved_hierarchy: {
+                    programme_type_name: registration.programme_type_name,
+                    program_name: registration.program_name,
+                    academic_year: registration.academic_year,
+                    semester_name: registration.semester_name
+                }
+            }
+        });
+    } catch (error) {
+        console.error('[sync-master-course] ERROR:', error.message);
+        return res.status(500).json({ success: false, message: 'Failed to sync course to Moodle', error: error.message });
+    }
+});
+
+// POST /api/students/moodle/create-category
+// Create a single category in Moodle and return its ID
+router.post('/moodle/create-category', async (req, res) => {
+    try {
+        const name = String(req.body?.name || '').trim();
+        const parentId = req.body?.parent_id ? Number(req.body.parent_id) : null;
+        const level = String(req.body?.level || '').trim();
+
+        console.log('[create-category] Input:', { name, parentId, level });
+
+        if (!name) {
+            return res.status(400).json({ success: false, message: 'Category name is required' });
+        }
+
+        let actualParentId = parentId;
+        if (!actualParentId || actualParentId <= 0) {
+            actualParentId = getStructureRootCategoryId();
+        }
+
+        const existingId = await findMoodleCategoryByName(name, actualParentId);
+        if (existingId) {
+            return res.json({
+                success: true,
+                message: 'Category already exists',
+                data: {
+                    id: existingId,
+                    name,
+                    created: false
+                }
+            });
+        }
+
+        const idnumber = [level, toCategorySlug(name)].filter(Boolean).join('-').slice(0, 100);
+        console.log('[create-category] Creating with idnumber:', idnumber);
+
+        const created = await callMoodleRest('core_course_create_categories', {
+            categories: [{
+                name,
+                parent: actualParentId,
+                idnumber
+            }]
+        });
+
+        const createdId = Array.isArray(created) && created[0]?.id ? Number(created[0].id) : null;
+        if (!createdId) {
+            throw new Error('Failed to create category: no ID returned from Moodle');
+        }
+
+        console.log('[create-category] Category created with ID:', createdId);
+
+        return res.json({
+            success: true,
+            message: 'Category created successfully',
+            data: {
+                id: createdId,
+                name,
+                created: true
+            }
+        });
+    } catch (error) {
+        console.error('[create-category] ERROR:', error);
+        console.error('[create-category] Stack:', error.stack);
+        return res.status(500).json({
+            success: false,
+            message: 'Failed to create category',
+            error: error.message,
+            detail: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        });
+    }
+});
+
+router.get('/moodle/courses-by-structure', async (req, res) => {
+    try {
+        const normalizeLocal = (value) => String(value || '').trim().toLowerCase();
+        const parseNullableInt = (value) => {
+            const parsed = Number(value);
+            return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+        };
+
+        const programmeTypeName = String(req.query.programme_type_name || '').trim();
+        const programName = String(req.query.program_name || '').trim();
+        const academicYear = String(req.query.academic_year || '').trim();
+        const semesterName = String(req.query.semester_name || '').trim();
+
+        const semesterCategoryId = parseNullableInt(req.query.semester_category_id);
+        const yearCategoryId = parseNullableInt(req.query.year_category_id);
+        const programCategoryId = parseNullableInt(req.query.program_category_id);
+        const programmeTypeCategoryId = parseNullableInt(req.query.programme_type_category_id);
+
+        const rootCategoryId = semesterCategoryId || yearCategoryId || programCategoryId || programmeTypeCategoryId;
+        const seen = new Set();
+        const courses = [];
+        if (rootCategoryId) {
+            const [categoryRows] = await moodleDbPool.execute(
+                `SELECT id
+                   FROM mdl_course_categories
+                  WHERE id = ?
+                     OR path LIKE ?
+                     OR path LIKE ?`,
+                [rootCategoryId, `%/${rootCategoryId}/%`, `%/${rootCategoryId}`]
+            );
+
+            const categoryIds = (categoryRows || []).map((row) => Number(row.id)).filter((id) => Number.isInteger(id) && id > 0);
+            if (categoryIds.length) {
+                const placeholders = categoryIds.map(() => '?').join(', ');
+                const [courseRows] = await moodleDbPool.execute(
+                    `SELECT c.id, c.fullname, c.shortname, c.idnumber, c.category, c.visible,
+                            cc.name AS category_name
+                       FROM mdl_course c
+                       LEFT JOIN mdl_course_categories cc ON cc.id = c.category
+                      WHERE c.id <> 1
+                        AND COALESCE(c.visible, 1) = 1
+                        AND c.category IN (${placeholders})
+                      ORDER BY c.fullname ASC, c.shortname ASC`,
+                    categoryIds
+                );
+
+                for (const row of courseRows || []) {
+                    const title = String(row.fullname || '').trim();
+                    if (!title) continue;
+                    const code = String(row.idnumber || row.shortname || '').trim() || `CRS-${row.id}`;
+                    const key = `${normalizeLocal(title)}|${normalizeLocal(code)}`;
+                    if (seen.has(key)) continue;
+                    seen.add(key);
+
+                    courses.push({
+                        id: Number(row.id),
+                        course_title: title,
+                        course_code: code,
+                        moodle_course_id: Number(row.id),
+                        category_id: Number(row.category),
+                        category_name: String(row.category_name || '').trim()
+                    });
+                }
+            }
+        }
+
+        // If subtree has no courses, fallback to fuzzy Moodle search using selected structure text.
+        if (!courses.length) {
+            const [allCourseRows] = await moodleDbPool.execute(
+                `SELECT c.id, c.fullname, c.shortname, c.idnumber, c.category, c.visible,
+                        cc.name AS category_name
+                   FROM mdl_course c
+                   LEFT JOIN mdl_course_categories cc ON cc.id = c.category
+                  WHERE c.id <> 1
+                    AND COALESCE(c.visible, 1) = 1`
+            );
+
+            const typeName = programmeTypeName.toLowerCase();
+            const typeAbbrev = typeName.replace(/[^a-z]/g, '').slice(0, 3);
+            const programTokens = programName
+                .toLowerCase()
+                .split(/[^a-z0-9]+/)
+                .filter((token) => token.length >= 4);
+            const yearMatch = academicYear.match(/\d+/);
+            const semMatch = semesterName.match(/\d+/);
+            const yearNum = yearMatch ? yearMatch[0] : '';
+            const semNum = semMatch ? semMatch[0] : '';
+
+            const scored = [];
+            for (const row of allCourseRows || []) {
+                const title = String(row.fullname || '').trim();
+                if (!title) continue;
+                const code = String(row.idnumber || row.shortname || '').trim() || `CRS-${row.id}`;
+                const hay = `${title} ${code} ${String(row.category_name || '')}`.toLowerCase();
+
+                let score = 0;
+                if (typeName && hay.includes(typeName)) score += 3;
+                if (typeAbbrev && hay.includes(typeAbbrev)) score += 3;
+                for (const token of programTokens) {
+                    if (hay.includes(token)) score += 2;
+                }
+                if (yearNum && (hay.includes(`y${yearNum}`) || hay.includes(`year ${yearNum}`) || hay.includes(`l${Number(yearNum) + 3}`) || hay.includes(`level ${Number(yearNum) + 3}`))) {
+                    score += 1;
+                }
+                if (semNum && (hay.includes(`s${semNum}`) || hay.includes(`semester ${semNum}`) || hay.includes(`sem-${semNum}`))) {
+                    score += 1;
+                }
+
+                if (score <= 0) continue;
+                scored.push({
+                    score,
+                    row: {
+                        id: Number(row.id),
+                        course_title: title,
+                        course_code: code,
+                        moodle_course_id: Number(row.id),
+                        category_id: Number(row.category),
+                        category_name: String(row.category_name || '').trim()
+                    }
+                });
+            }
+
+            scored.sort((a, b) => b.score - a.score || a.row.course_title.localeCompare(b.row.course_title));
+            for (const item of scored.slice(0, 120)) {
+                const key = `${normalizeLocal(item.row.course_title)}|${normalizeLocal(item.row.course_code)}`;
+                if (seen.has(key)) continue;
+                seen.add(key);
+                courses.push(item.row);
+            }
+
+            // Final safety fallback: provide active Moodle courses so client-side typing can still find matches.
+            if (!courses.length) {
+                for (const row of allCourseRows || []) {
+                    const title = String(row.fullname || '').trim();
+                    if (!title) continue;
+                    const code = String(row.idnumber || row.shortname || '').trim() || `CRS-${row.id}`;
+                    const key = `${normalizeLocal(title)}|${normalizeLocal(code)}`;
+                    if (seen.has(key)) continue;
+                    seen.add(key);
+                    courses.push({
+                        id: Number(row.id),
+                        course_title: title,
+                        course_code: code,
+                        moodle_course_id: Number(row.id),
+                        category_id: Number(row.category),
+                        category_name: String(row.category_name || '').trim()
+                    });
+                    if (courses.length >= 200) break;
+                }
+            }
+        }
+
+        return res.json({ success: true, data: { courses } });
+    } catch (error) {
+        console.error('Error fetching Moodle courses by structure:', error.message);
+        return res.status(500).json({ success: false, message: 'Failed to fetch Moodle courses', error: error.message });
+    }
+});
+
 router.post('/course-registrations', async (req, res) => {
     try {
         const payload = normalizeCourseRegistrationPayload(req.body || {});
@@ -2023,7 +2814,7 @@ router.post('/course-registrations', async (req, res) => {
 
         const [result] = await db.execute(
             `INSERT INTO course_registrations (
-                course_title, course_code, course_type, awarding_body_accreditation, regulation_level,
+                course_title, course_code, programme_type_name, program_name, academic_year, semester_name, programme_type_category_id, program_category_id, year_category_id, semester_category_id, course_type, awarding_body_accreditation, regulation_level,
                 mode_of_delivery, start_date, end_date_or_duration, subject_area_discipline,
                 course_description, learning_outcomes, units_modules_covered, assessment_methods,
                 entry_requirements, tuition_fee_gbp, additional_costs, funding_options,
@@ -2031,10 +2822,18 @@ router.post('/course-registrations', async (req, res) => {
                 course_leader_programme_director, internal_verification_contact, ukvi_approved_course,
                 approval_date, review_date, special_admission_considerations, progression_opportunities,
                 industry_partnerships, application_status, moodle_sync_status
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
             [
                 payload.course_title,
                 payload.course_code,
+                payload.programme_type_name,
+                payload.program_name,
+                payload.academic_year,
+                payload.semester_name,
+                payload.programme_type_category_id,
+                payload.program_category_id,
+                payload.year_category_id,
+                payload.semester_category_id,
                 payload.course_type,
                 payload.awarding_body_accreditation,
                 payload.regulation_level,
@@ -2134,6 +2933,443 @@ router.get('/course-registrations/:id', async (req, res) => {
     } catch (error) {
         console.error('Error fetching course registration:', error);
         return res.status(500).json({ success: false, message: 'Failed to fetch course registration', error: error.message });
+    }
+});
+
+router.get('/course-lifecycle/dashboard', async (req, res) => {
+    try {
+        const lifecycleMaster = await safeSelectRows('SELECT * FROM course_lifecycle_master ORDER BY updated_at DESC, created_at DESC');
+        const accreditations = await safeSelectRows('SELECT * FROM course_accreditations ORDER BY updated_at DESC, created_at DESC');
+        const visits = await safeSelectRows('SELECT * FROM course_visits ORDER BY updated_at DESC, created_at DESC');
+        const inductions = await safeSelectRows('SELECT * FROM course_inductions ORDER BY updated_at DESC, created_at DESC');
+        const registrations = await safeSelectRows('SELECT * FROM course_registrations ORDER BY updated_at DESC, created_at DESC');
+
+        const courseMap = new Map();
+
+        const ensureCourseRow = (courseCode, courseTitle) => {
+            const key = buildCourseLifecycleKey(courseCode, courseTitle);
+            if (!courseMap.has(key)) {
+                const normalizedTitle = normalizeCourseTitle(courseTitle);
+                const existingByTitle = normalizedTitle
+                    ? Array.from(courseMap.values()).find((row) => normalizeCourseTitle(row.course_title) === normalizedTitle)
+                    : null;
+
+                if (existingByTitle) {
+                    if (!existingByTitle.course_code && courseCode) {
+                        existingByTitle.course_code = String(courseCode || '').trim();
+                    }
+                    return existingByTitle;
+                }
+
+                courseMap.set(key, {
+                    lifecycle_key: key,
+                    master_id: null,
+                    course_code: String(courseCode || '').trim(),
+                    course_title: String(courseTitle || '').trim() || 'Untitled Course',
+                    awarding_body: null,
+                    qualification_level: null,
+                    application_type: null,
+                    course_type: null,
+                    document_owner: null,
+                    lead_coordinator: null,
+                    version: null,
+                    accreditation_id: null,
+                    visit_id: null,
+                    induction_id: null,
+                    registration_id: null,
+                    accreditation_status: 'not_started',
+                    visit_status: 'not_started',
+                    induction_status: 'not_started',
+                    registration_status: 'not_started',
+                    accreditation_raw_status: null,
+                    visit_raw_status: null,
+                    induction_raw_status: null,
+                    registration_raw_status: null,
+                    accreditation_created_at: null,
+                    visit_created_at: null,
+                    induction_created_at: null,
+                    registration_created_at: null,
+                    entry_created_at: null,
+                    accreditation_updated_at: null,
+                    visit_updated_at: null,
+                    induction_updated_at: null,
+                    registration_updated_at: null,
+                    last_updated_at: null
+                });
+            }
+            return courseMap.get(key);
+        };
+
+        for (const master of lifecycleMaster) {
+            const item = ensureCourseRow(master.course_code, master.course_title);
+            item.master_id = master.id || item.master_id;
+            item.awarding_body = master.awarding_body || item.awarding_body;
+            item.qualification_level = master.qualification_level || item.qualification_level;
+            item.application_type = master.application_type || item.application_type;
+            item.course_type = master.course_type || item.course_type;
+            item.document_owner = master.document_owner || item.document_owner;
+            item.lead_coordinator = master.lead_coordinator || item.lead_coordinator;
+            item.version = master.version || item.version;
+            item.entry_created_at = minDate(item.entry_created_at, master.created_at || null);
+            if (master.accreditation_id && !item.accreditation_id) {
+                item.accreditation_id = master.accreditation_id;
+            }
+        }
+
+        for (const row of accreditations) {
+            const item = ensureCourseRow(row.course_code, row.course_title);
+            if (!item.accreditation_id || item.accreditation_id === row.id) {
+                item.accreditation_id = row.id;
+                item.accreditation_status = toLifecycleStatus(row.overall_status, row.completion_percentage);
+                item.accreditation_raw_status = row.overall_status || null;
+                item.accreditation_created_at = row.created_at || null;
+                item.entry_created_at = minDate(item.entry_created_at, item.accreditation_created_at);
+                item.accreditation_updated_at = row.updated_at || row.created_at || null;
+                item.last_updated_at = maxDate(item.last_updated_at, item.accreditation_updated_at);
+            }
+        }
+
+        for (const row of visits) {
+            const item = ensureCourseRow(row.course_code, row.course_title);
+            if (!item.visit_id || item.visit_id === row.id) {
+                item.visit_id = row.id;
+                item.visit_status = toLifecycleStatus(row.overall_status, row.completion_percentage);
+                item.visit_raw_status = row.overall_status || null;
+                item.visit_created_at = row.created_at || null;
+                item.entry_created_at = minDate(item.entry_created_at, item.visit_created_at);
+                item.visit_updated_at = row.updated_at || row.created_at || null;
+                item.last_updated_at = maxDate(item.last_updated_at, item.visit_updated_at);
+            }
+        }
+
+        for (const row of inductions) {
+            const item = ensureCourseRow(row.course_code, row.course_title);
+            if (!item.induction_id || item.induction_id === row.id) {
+                item.induction_id = row.id;
+                item.induction_status = toLifecycleStatus(row.overall_status, row.completion_percentage);
+                item.induction_raw_status = row.overall_status || null;
+                item.induction_created_at = row.created_at || null;
+                item.entry_created_at = minDate(item.entry_created_at, item.induction_created_at);
+                item.induction_updated_at = row.updated_at || row.created_at || null;
+                item.last_updated_at = maxDate(item.last_updated_at, item.induction_updated_at);
+            }
+        }
+
+        for (const row of registrations) {
+            const item = ensureCourseRow(row.course_code, row.course_title);
+            if (!item.registration_id || item.registration_id === row.id) {
+                item.registration_id = row.id;
+                item.registration_status = toRegistrationLifecycleStatus(row.application_status, row.moodle_sync_status);
+                item.registration_raw_status = row.application_status || null;
+                item.registration_created_at = row.created_at || null;
+                item.entry_created_at = minDate(item.entry_created_at, item.registration_created_at);
+                item.registration_updated_at = row.updated_at || row.created_at || null;
+                item.last_updated_at = maxDate(item.last_updated_at, item.registration_updated_at);
+            }
+        }
+
+        const courses = Array.from(courseMap.values())
+            .sort((a, b) => new Date(b.entry_created_at || 0).getTime() - new Date(a.entry_created_at || 0).getTime());
+
+        const summary = {
+            total_courses: courses.length,
+            accreditation_completed: courses.filter((row) => ['completed', 'approved'].includes(row.accreditation_status)).length,
+            visit_completed: courses.filter((row) => ['completed', 'approved'].includes(row.visit_status)).length,
+            induction_completed: courses.filter((row) => ['completed', 'approved'].includes(row.induction_status)).length,
+            registration_completed: courses.filter((row) => ['completed', 'approved'].includes(row.registration_status)).length,
+            fully_active: courses.filter((row) => ['completed', 'approved'].includes(row.accreditation_status) && ['completed', 'approved'].includes(row.visit_status) && ['completed', 'approved'].includes(row.induction_status) && ['completed', 'approved'].includes(row.registration_status)).length
+        };
+
+        return res.json({ success: true, data: { courses, summary } });
+    } catch (error) {
+        console.error('Error fetching course lifecycle dashboard:', error);
+        return res.status(500).json({ success: false, message: 'Failed to fetch course lifecycle dashboard', error: error.message });
+    }
+});
+
+router.get('/course-lifecycle/details', async (req, res) => {
+    try {
+        const normalizedCode = String(req.query.course_code || '').trim();
+        const normalizedTitle = String(req.query.course_title || '').trim();
+
+        if (!normalizedCode && !normalizedTitle) {
+            return res.status(400).json({ success: false, message: 'course_code or course_title is required' });
+        }
+
+        const findWhere = [];
+        const values = [];
+
+        if (normalizedCode) {
+            findWhere.push('course_code = ?');
+            values.push(normalizedCode);
+        }
+        if (normalizedTitle) {
+            findWhere.push('course_title = ?');
+            values.push(normalizedTitle);
+        }
+
+        const whereClause = findWhere.length > 0 ? `WHERE ${findWhere.join(' OR ')}` : '';
+
+        const accreditationRows = await safeSelectRows(
+            `SELECT * FROM course_accreditations ${whereClause} ORDER BY updated_at DESC, created_at DESC LIMIT 1`,
+            values
+        );
+        const accreditation = accreditationRows[0] || null;
+
+        const visitRows = await safeSelectRows(
+            `SELECT * FROM course_visits ${whereClause} ORDER BY updated_at DESC, created_at DESC LIMIT 1`,
+            values
+        );
+        const visit = visitRows[0] || null;
+
+        const inductionRows = await safeSelectRows(
+            `SELECT * FROM course_inductions ${whereClause} ORDER BY updated_at DESC, created_at DESC LIMIT 1`,
+            values
+        );
+        const induction = inductionRows[0] || null;
+
+        const registrationRows = await safeSelectRows(
+            `SELECT * FROM course_registrations ${whereClause} ORDER BY updated_at DESC, created_at DESC LIMIT 1`,
+            values
+        );
+        const registration = registrationRows[0] || null;
+
+        let tasks = [];
+        let accreditationRisks = [];
+        let accreditationSignoffs = [];
+        if (accreditation?.id) {
+            tasks = await safeSelectRows('SELECT * FROM accreditation_tasks WHERE accreditation_id = ? ORDER BY section_number, id', [accreditation.id]);
+            accreditationRisks = await safeSelectRows('SELECT * FROM accreditation_risks WHERE accreditation_id = ? ORDER BY id DESC', [accreditation.id]);
+            accreditationSignoffs = await safeSelectRows('SELECT * FROM accreditation_signoffs WHERE accreditation_id = ? ORDER BY id DESC', [accreditation.id]);
+        }
+
+        let requirements = [];
+        let conditions = [];
+        let inductionRisks = [];
+        let inductionSignoffs = [];
+        if (induction?.id) {
+            requirements = await safeSelectRows('SELECT * FROM induction_requirements WHERE induction_id = ? ORDER BY section_number, id', [induction.id]);
+            conditions = await safeSelectRows('SELECT * FROM induction_conditions WHERE induction_id = ? ORDER BY id DESC', [induction.id]);
+            inductionRisks = await safeSelectRows('SELECT * FROM induction_risks WHERE induction_id = ? ORDER BY id DESC', [induction.id]);
+            inductionSignoffs = await safeSelectRows('SELECT * FROM induction_signoffs WHERE induction_id = ? ORDER BY id DESC', [induction.id]);
+        }
+
+        return res.json({
+            success: true,
+            data: {
+                accreditation: {
+                    document: accreditation,
+                    tasks,
+                    risks: accreditationRisks,
+                    signoffs: accreditationSignoffs
+                },
+                visit: {
+                    document: visit
+                },
+                induction: {
+                    document: induction,
+                    requirements,
+                    conditions,
+                    risks: inductionRisks,
+                    signoffs: inductionSignoffs
+                },
+                registration: {
+                    document: registration
+                }
+            }
+        });
+    } catch (error) {
+        console.error('Error fetching lifecycle details:', error);
+        return res.status(500).json({ success: false, message: 'Failed to fetch lifecycle details', error: error.message });
+    }
+});
+
+router.delete('/course-lifecycle/delete', async (req, res) => {
+    try {
+        const courseCode = String(req.body.course_code || '').trim();
+        const courseTitle = String(req.body.course_title || '').trim();
+
+        if (!courseCode && !courseTitle) {
+            return res.status(400).json({ success: false, message: 'course_code or course_title is required' });
+        }
+
+        const safeMoodleDelete = async (query, params = []) => {
+            try {
+                const [result] = await moodleDbPool.execute(query, params);
+                return result;
+            } catch (error) {
+                if (error && (error.code === 'ER_NO_SUCH_TABLE' || String(error.message || '').includes("doesn't exist"))) {
+                    return { affectedRows: 0 };
+                }
+                throw error;
+            }
+        };
+
+        const safeMoodleSelectRows = async (query, params = []) => {
+            try {
+                const [rows] = await moodleDbPool.execute(query, params);
+                return rows;
+            } catch (error) {
+                if (error && (error.code === 'ER_NO_SUCH_TABLE' || String(error.message || '').includes("doesn't exist"))) {
+                    return [];
+                }
+                throw error;
+            }
+        };
+
+        // Delete from Moodle first
+        const moodleWhere = [];
+        const moodleValues = [];
+        if (courseCode) {
+            moodleWhere.push('(shortname = ? OR idnumber = ?)');
+            moodleValues.push(courseCode, courseCode);
+        }
+        if (courseTitle) {
+            moodleWhere.push('fullname = ?');
+            moodleValues.push(courseTitle);
+        }
+
+        let moodleCoursesDeleted = 0;
+        let moodleCategoriesDeleted = 0;
+        if (moodleWhere.length > 0) {
+            const [moodleCourseRows] = await moodleDbPool.execute(
+                `SELECT id FROM mdl_course WHERE id > 1 AND (${moodleWhere.join(' OR ')})`,
+                moodleValues
+            );
+
+            for (const row of moodleCourseRows) {
+                const moodleCourseId = Number(row.id);
+                if (!moodleCourseId) continue;
+
+                const categoryRows = await safeMoodleSelectRows(
+                    'SELECT category FROM mdl_course WHERE id = ? LIMIT 1',
+                    [moodleCourseId]
+                );
+                const courseCategoryId = Number(categoryRows[0]?.category || 0);
+
+                await safeMoodleDelete(
+                    `DELETE FROM mdl_role_assignments
+                     WHERE contextid IN (
+                        SELECT id FROM (
+                            SELECT id FROM mdl_context WHERE contextlevel = 50 AND instanceid = ?
+                        ) c
+                     )`,
+                    [moodleCourseId]
+                );
+                await safeMoodleDelete('DELETE FROM mdl_course_modules_completion WHERE coursemoduleid IN (SELECT id FROM (SELECT id FROM mdl_course_modules WHERE course = ?) cm)', [moodleCourseId]);
+                await safeMoodleDelete('DELETE FROM mdl_course_modules_viewed WHERE coursemoduleid IN (SELECT id FROM (SELECT id FROM mdl_course_modules WHERE course = ?) cmv)', [moodleCourseId]);
+                await safeMoodleDelete('DELETE FROM mdl_course_completions WHERE course = ?', [moodleCourseId]);
+                await safeMoodleDelete('DELETE FROM mdl_grade_items WHERE courseid = ?', [moodleCourseId]);
+                await safeMoodleDelete('DELETE FROM mdl_grade_categories WHERE courseid = ?', [moodleCourseId]);
+                await safeMoodleDelete('DELETE FROM mdl_enrol WHERE courseid = ?', [moodleCourseId]);
+                await safeMoodleDelete('DELETE FROM mdl_course_modules WHERE course = ?', [moodleCourseId]);
+                await safeMoodleDelete('DELETE FROM mdl_course_sections WHERE course = ?', [moodleCourseId]);
+                await safeMoodleDelete('DELETE FROM mdl_course_format_options WHERE courseid = ?', [moodleCourseId]);
+                await safeMoodleDelete('DELETE FROM mdl_context WHERE contextlevel = 50 AND instanceid = ?', [moodleCourseId]);
+                const deleteCourseResult = await safeMoodleDelete('DELETE FROM mdl_course WHERE id = ? AND id > 1', [moodleCourseId]);
+                if (deleteCourseResult && deleteCourseResult.affectedRows) {
+                    moodleCoursesDeleted += deleteCourseResult.affectedRows;
+                    console.log(`✓ Deleted Moodle course ID: ${moodleCourseId}`);
+
+                    if (courseCategoryId > 1) {
+                        const targetCategoryRows = await safeMoodleSelectRows(
+                            'SELECT id, path FROM mdl_course_categories WHERE id = ? LIMIT 1',
+                            [courseCategoryId]
+                        );
+
+                        const categoryPath = String(targetCategoryRows[0]?.path || '').trim();
+                        const categoryIdsToCheck = Array.from(new Set(
+                            categoryPath
+                                .split('/')
+                                .map((value) => Number(value))
+                                .filter((id) => Number.isFinite(id) && id > 1)
+                        )).reverse();
+
+                        if (categoryIdsToCheck.length === 0) {
+                            categoryIdsToCheck.push(courseCategoryId);
+                        }
+
+                        for (const categoryId of categoryIdsToCheck) {
+                            const rowsWithCourses = await safeMoodleSelectRows(
+                                'SELECT COUNT(*) AS total FROM mdl_course WHERE category = ?',
+                                [categoryId]
+                            );
+                            const rowsWithChildren = await safeMoodleSelectRows(
+                                'SELECT COUNT(*) AS total FROM mdl_course_categories WHERE parent = ?',
+                                [categoryId]
+                            );
+
+                            const remainingCourses = Number(rowsWithCourses[0]?.total || 0);
+                            const remainingChildren = Number(rowsWithChildren[0]?.total || 0);
+
+                            if (remainingCourses === 0 && remainingChildren === 0) {
+                                const deleteCategoryResult = await safeMoodleDelete(
+                                    'DELETE FROM mdl_course_categories WHERE id = ? AND id > 1',
+                                    [categoryId]
+                                );
+                                if (deleteCategoryResult && deleteCategoryResult.affectedRows) {
+                                    moodleCategoriesDeleted += deleteCategoryResult.affectedRows;
+                                    console.log(`✓ Deleted empty Moodle category ID: ${categoryId}`);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Delete from SCL database
+        const whereConditions = [];
+        const values = [];
+
+        if (courseCode) {
+            whereConditions.push('course_code = ?');
+            values.push(courseCode);
+        }
+        if (courseTitle) {
+            whereConditions.push('course_title = ?');
+            values.push(courseTitle);
+        }
+
+        const whereClause = whereConditions.join(' OR ');
+
+        // Delete from all related tables
+        const tables = [
+            'course_visits',
+            'course_inductions',
+            'course_registrations',
+            'course_accreditations',
+            'course_lifecycle_master'
+        ];
+
+        let totalDeleted = 0;
+        for (const table of tables) {
+            const [result] = await db.execute(
+                `DELETE FROM ${table} WHERE ${whereClause}`,
+                values
+            );
+            if (result) {
+                totalDeleted += result.affectedRows || 0;
+                console.log(`✓ Deleted from ${table}: ${result.affectedRows || 0} rows`);
+            }
+        }
+
+        return res.json({ 
+            success: true, 
+            message: `Course deleted: ${totalDeleted} SCL records removed, ${moodleCoursesDeleted} Moodle courses removed, ${moodleCategoriesDeleted} empty Moodle categories removed`,
+            data: {
+                recordsDeleted: totalDeleted,
+                moodleCoursesDeleted,
+                moodleCategoriesDeleted
+            }
+        });
+    } catch (error) {
+        console.error('Error deleting course:', error);
+        return res.status(500).json({ 
+            success: false, 
+            message: 'Failed to delete course',
+            error: error.message 
+        });
     }
 });
 
@@ -4183,6 +5419,10 @@ function normalizeCourseRegistrationPayload(rawPayload) {
     const numberValue = payload.tuition_fee_gbp === '' || payload.tuition_fee_gbp === null || payload.tuition_fee_gbp === undefined
         ? null
         : Number(payload.tuition_fee_gbp);
+    const parseNullableInt = (value) => {
+        const numericValue = Number(value);
+        return Number.isInteger(numericValue) && numericValue > 0 ? numericValue : null;
+    };
 
     const normalizeDateValue = (value) => {
         const trimmed = String(value || '').trim();
@@ -4192,6 +5432,14 @@ function normalizeCourseRegistrationPayload(rawPayload) {
     return {
         course_title: String(payload.course_title || '').trim(),
         course_code: String(payload.course_code || '').trim(),
+        programme_type_name: String(payload.programme_type_name || '').trim() || null,
+        program_name: String(payload.program_name || '').trim() || null,
+        academic_year: String(payload.academic_year || '').trim() || null,
+        semester_name: String(payload.semester_name || '').trim() || null,
+        programme_type_category_id: parseNullableInt(payload.programme_type_category_id),
+        program_category_id: parseNullableInt(payload.program_category_id),
+        year_category_id: parseNullableInt(payload.year_category_id),
+        semester_category_id: parseNullableInt(payload.semester_category_id),
         course_type: payload.course_type || null,
         awarding_body_accreditation: payload.awarding_body_accreditation || null,
         regulation_level: payload.regulation_level || null,
@@ -4228,6 +5476,90 @@ function normalizeFieldKey(value) {
     return String(value || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
 }
 
+function normalizeCourseTitle(value) {
+    return String(value || '').trim().toLowerCase();
+}
+
+function buildCourseLifecycleKey(courseCode, courseTitle) {
+    const code = String(courseCode || '').trim().toUpperCase();
+    if (code) {
+        return `code:${code}`;
+    }
+
+    const title = normalizeCourseTitle(courseTitle);
+    if (title) {
+        return `title:${title}`;
+    }
+
+    return 'unknown';
+}
+
+function toLifecycleStatus(rawStatus, completionPercentage) {
+    const normalizedStatus = String(rawStatus || '').trim().toLowerCase();
+    const completion = Number(completionPercentage || 0);
+
+    if (!normalizedStatus) {
+        return 'completed';
+    }
+
+    if (['approved', 'active'].includes(normalizedStatus)) {
+        return 'approved';
+    }
+
+    if (['rejected', 'failed'].includes(normalizedStatus)) {
+        return 'rejected';
+    }
+
+    if (['completed', 'complete'].includes(normalizedStatus) || completion >= 100) {
+        return 'completed';
+    }
+
+    return 'completed';
+}
+
+function toRegistrationLifecycleStatus(applicationStatus, moodleSyncStatus) {
+    const status = String(applicationStatus || '').trim().toLowerCase();
+    const syncStatus = String(moodleSyncStatus || '').trim().toLowerCase();
+
+    if (!status) {
+        return 'completed';
+    }
+
+    if (status === 'rejected') {
+        return 'rejected';
+    }
+
+    if (status === 'approved') {
+        return syncStatus === 'failed' ? 'completed' : 'approved';
+    }
+
+    return 'completed';
+}
+
+function maxDate(a, b) {
+    if (!a) return b || null;
+    if (!b) return a || null;
+    return new Date(a).getTime() >= new Date(b).getTime() ? a : b;
+}
+
+function minDate(a, b) {
+    if (!a) return b || null;
+    if (!b) return a || null;
+    return new Date(a).getTime() <= new Date(b).getTime() ? a : b;
+}
+
+async function safeSelectRows(query, params = []) {
+    try {
+        const [rows] = await db.execute(query, params);
+        return rows;
+    } catch (error) {
+        if (error && (error.code === 'ER_NO_SUCH_TABLE' || String(error.message || '').includes("doesn't exist"))) {
+            return [];
+        }
+        throw error;
+    }
+}
+
 function parseCourseModules(unitsModulesCovered) {
     const lines = String(unitsModulesCovered || '')
         .split(/\r?\n|,/)
@@ -4252,10 +5584,27 @@ function buildCourseSummaryFromRegistration(registration) {
 }
 
 function getMoodleRestConfig() {
+    const preferredBaseUrls = [
+        process.env.MOODLE_URL,
+        process.env.MOODLE_INTERNAL_URL,
+        process.env.MOODLE_EXTERNAL_URL,
+        'http://localhost:9090',
+        'http://127.0.0.1:9090'
+    ]
+        .map((value) => String(value || '').trim().replace(/\/$/, ''))
+        .filter(Boolean)
+        .filter((value, index, arr) => arr.indexOf(value) === index);
+
     return {
         token: process.env.MOODLE_TOKEN || 'e86dd021aaa42f78114e6c67cc9d8ff1',
-        baseUrl: (process.env.MOODLE_INTERNAL_URL || process.env.MOODLE_URL || 'http://localhost:9090').replace(/\/$/, '')
+        baseUrl: preferredBaseUrls[0] || 'http://localhost:9090',
+        baseUrls: preferredBaseUrls
     };
+}
+
+function getStructureRootCategoryId() {
+    // Always keep the academic hierarchy at top level in Moodle.
+    return 0;
 }
 
 function appendMoodleParam(form, key, value) {
@@ -4274,27 +5623,55 @@ function appendMoodleParam(form, key, value) {
 
 async function callMoodleRest(wsfunction, params = {}) {
     const axios = require('axios');
-    const { token, baseUrl } = getMoodleRestConfig();
-    const endpoint = `${baseUrl}/webservice/rest/server.php`;
-    const form = new URLSearchParams();
+    const { token, baseUrls, baseUrl } = getMoodleRestConfig();
+    const candidateBaseUrls = (Array.isArray(baseUrls) && baseUrls.length ? baseUrls : [baseUrl]).filter(Boolean);
+    let lastError = null;
 
-    form.append('wstoken', token);
-    form.append('wsfunction', wsfunction);
-    form.append('moodlewsrestformat', 'json');
-    Object.entries(params || {}).forEach(([key, value]) => appendMoodleParam(form, key, value));
+    for (const currentBaseUrl of candidateBaseUrls) {
+        const endpoint = `${currentBaseUrl}/webservice/rest/server.php`;
+        const form = new URLSearchParams();
 
-    const response = await axios.post(endpoint, form.toString(), {
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded'
-        },
-        timeout: 15000
-    });
+        form.append('wstoken', token);
+        form.append('wsfunction', wsfunction);
+        form.append('moodlewsrestformat', 'json');
+        Object.entries(params || {}).forEach(([key, value]) => appendMoodleParam(form, key, value));
 
-    if (response.data && response.data.exception) {
-        throw new Error(response.data.message || response.data.errorcode || 'Moodle API error');
+        console.log(`[callMoodleRest] Calling ${wsfunction} to ${endpoint}`);
+
+        try {
+            const response = await axios.post(endpoint, form.toString(), {
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                timeout: 15000
+            });
+
+            if (response.data && response.data.exception) {
+                console.error(`[callMoodleRest] Moodle exception for ${wsfunction}:`, response.data);
+                throw new Error(response.data.message || response.data.errorcode || 'Moodle API error');
+            }
+
+            console.log(`[callMoodleRest] Success for ${wsfunction} via ${currentBaseUrl}`);
+            return response.data;
+        } catch (error) {
+            lastError = error;
+            const code = String(error?.code || '').toUpperCase();
+            const message = String(error?.message || '');
+            const isConnectionError = code === 'ECONNREFUSED' || code === 'ENOTFOUND' || code === 'ETIMEDOUT' || message.includes('ECONNREFUSED') || message.includes('ENOTFOUND') || message.includes('ETIMEDOUT');
+
+            console.error(`[callMoodleRest] Error calling ${wsfunction} via ${currentBaseUrl}:`, message);
+            if (error.response) {
+                console.error(`[callMoodleRest] Response status: ${error.response.status}`);
+                console.error(`[callMoodleRest] Response data:`, error.response.data);
+            }
+
+            if (!isConnectionError) {
+                throw error;
+            }
+        }
     }
 
-    return response.data;
+    throw lastError || new Error(`Failed to call Moodle REST (${wsfunction})`);
 }
 
 async function findBestMoodleCategoryId() {
@@ -4304,17 +5681,460 @@ async function findBestMoodleCategoryId() {
     return rows.length > 0 ? Number(rows[0].id) : 1;
 }
 
+function toCategorySlug(value) {
+    return String(value || '')
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+}
+
+function toLooseToken(value) {
+    return String(value || '')
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '');
+}
+
+function parseCourseCodeStructure(courseCode) {
+    const parts = String(courseCode || '').trim().split('-').map((part) => String(part || '').trim()).filter(Boolean);
+    if (parts.length < 5) {
+        return null;
+    }
+
+    const yearPart = parts[2];
+    const semesterPart = parts[3];
+    if (!/^y\d+$/i.test(yearPart) || !/^s\d+$/i.test(semesterPart)) {
+        return null;
+    }
+
+    return {
+        programCode: `${parts[0]}-${parts[1]}`,
+        yearCode: yearPart.toUpperCase(),
+        semesterCode: semesterPart.toUpperCase()
+    };
+}
+
+function deriveHierarchyFromCourseCode(courseCode) {
+    const raw = String(courseCode || '').trim().toUpperCase();
+    const match = raw.match(/^([A-Z0-9]+)-(\d{3})-(Y\d+)-(S\d+)-C\d+$/i);
+    if (!match) {
+        return null;
+    }
+
+    const programmeType = String(match[1] || '').toUpperCase();
+    const programCode = `${programmeType}-${String(match[2] || '').toUpperCase()}`;
+    const yearCode = `${programCode}-${String(match[3] || '').toUpperCase()}`;
+    const semesterCode = `${yearCode}-${String(match[4] || '').toUpperCase()}`;
+
+    return {
+        programme_type_name: programmeType,
+        program_name: programCode,
+        academic_year: yearCode,
+        semester_name: semesterCode
+    };
+}
+
+function abbreviateProgrammeTypeCode(name) {
+    const clean = String(name || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+    return clean.slice(0, 3);
+}
+
+function extractSequenceToken(value, prefix) {
+    const direct = String(value || '').trim().toUpperCase().match(new RegExp(`^${prefix}(\\d+)$`, 'i'));
+    if (direct) {
+        return `${prefix}${direct[1]}`;
+    }
+
+    const number = String(value || '').match(/\d+/);
+    if (!number) {
+        return '';
+    }
+
+    return `${prefix}${number[0]}`;
+}
+
+function buildHierarchyCodePattern(courseCode, programmeTypeName, programName, academicYear, semesterName) {
+    const rawCourseCode = String(courseCode || '').trim().toUpperCase();
+    const match = rawCourseCode.match(/^([A-Z0-9]+)-(\d{3})-(Y\d+)-(S\d+)-C\d+$/i);
+
+    let programmeTypeCode = '';
+    let programCode = '';
+    let yearToken = '';
+    let semesterToken = '';
+
+    if (match) {
+        programmeTypeCode = String(match[1] || '').toUpperCase();
+        programCode = `${programmeTypeCode}-${String(match[2] || '').toUpperCase()}`;
+        yearToken = String(match[3] || '').toUpperCase();
+        semesterToken = String(match[4] || '').toUpperCase();
+    }
+
+    const normalizedProgramName = String(programName || '').trim().toUpperCase();
+    if (!programCode && /^[A-Z0-9]+-\d{3}$/.test(normalizedProgramName)) {
+        programCode = normalizedProgramName;
+        programmeTypeCode = programmeTypeCode || normalizedProgramName.split('-')[0];
+    }
+
+    if (!programmeTypeCode) {
+        programmeTypeCode = abbreviateProgrammeTypeCode(programmeTypeName || programName || '');
+    }
+
+    if (!yearToken) {
+        yearToken = extractSequenceToken(academicYear, 'Y');
+    }
+
+    if (!semesterToken) {
+        semesterToken = extractSequenceToken(semesterName, 'S');
+    }
+
+    const yearCode = programCode && yearToken ? `${programCode}-${yearToken}` : '';
+    const semesterCode = yearCode && semesterToken ? `${yearCode}-${semesterToken}` : '';
+
+    return {
+        programmeTypeCode: String(programmeTypeCode || '').slice(0, 20),
+        programCode: String(programCode || '').slice(0, 40),
+        yearCode: String(yearCode || '').slice(0, 60),
+        semesterCode: String(semesterCode || '').slice(0, 80)
+    };
+}
+
+// Find a Moodle category by its exact idnumber field (anywhere in the tree).
+async function findMoodleCategoryByIdnumber(idnumber) {
+    const code = String(idnumber || '').trim();
+    if (!code) return null;
+    const [rows] = await moodleDbPool.execute(
+        `SELECT id FROM mdl_course_categories WHERE idnumber = ? LIMIT 1`,
+        [code]
+    );
+    return rows.length ? Number(rows[0].id) : null;
+}
+
+async function findMoodleCategoryByName(name, parentId) {
+    const normalized = String(name || '').trim();
+    if (!normalized) {
+        return null;
+    }
+
+    const [rows] = await moodleDbPool.execute(
+        `SELECT id
+           FROM mdl_course_categories
+          WHERE parent = ?
+            AND (name = ? OR idnumber = ?)
+          ORDER BY CASE WHEN name = ? THEN 0 ELSE 1 END, id ASC
+          LIMIT 1`,
+        [parentId, normalized, normalized, normalized]
+    );
+
+    if (!rows.length) {
+        return null;
+    }
+
+    return Number(rows[0].id);
+}
+
+async function findMoodleCategoryByCodeHint(codeHint, parentId, level) {
+    const hint = String(codeHint || '').trim();
+    if (!hint) {
+        return null;
+    }
+
+    const [rows] = await moodleDbPool.execute(
+        `SELECT id, name, idnumber
+           FROM mdl_course_categories
+          WHERE parent = ?
+          ORDER BY id ASC`,
+        [parentId]
+    );
+
+    if (!rows.length) {
+        return null;
+    }
+
+    const hintToken = toLooseToken(hint);
+    const hintDigits = (hint.match(/\d+/) || [''])[0];
+
+    const exact = rows.find((row) => {
+        const nameToken = toLooseToken(row.name);
+        const idNumberToken = toLooseToken(row.idnumber);
+        return nameToken === hintToken || idNumberToken === hintToken;
+    });
+    if (exact) {
+        return Number(exact.id);
+    }
+
+    const byContains = rows.find((row) => {
+        const nameToken = toLooseToken(row.name);
+        const idNumberToken = toLooseToken(row.idnumber);
+        return nameToken.includes(hintToken) || idNumberToken.includes(hintToken);
+    });
+    if (byContains) {
+        return Number(byContains.id);
+    }
+
+    if (!hintDigits) {
+        return null;
+    }
+
+    const byLevelAndNumber = rows.find((row) => {
+        const nameToken = toLooseToken(row.name);
+        const idNumberToken = toLooseToken(row.idnumber);
+
+        if (level === 'year') {
+            return (
+                nameToken.includes(`year${hintDigits}`) ||
+                idNumberToken.includes(`year${hintDigits}`) ||
+                nameToken === `y${hintDigits}` ||
+                idNumberToken === `y${hintDigits}`
+            );
+        }
+
+        if (level === 'semester') {
+            return (
+                nameToken.includes(`semester${hintDigits}`) ||
+                idNumberToken.includes(`semester${hintDigits}`) ||
+                nameToken === `s${hintDigits}` ||
+                idNumberToken === `s${hintDigits}`
+            );
+        }
+
+        return false;
+    });
+
+    return byLevelAndNumber ? Number(byLevelAndNumber.id) : null;
+}
+
+function isMoodleConnectionError(error) {
+    const code = String(error?.code || '').toUpperCase();
+    const message = String(error?.message || '');
+    return code === 'ECONNREFUSED'
+        || code === 'ENOTFOUND'
+        || code === 'ETIMEDOUT'
+        || message.includes('ECONNREFUSED')
+        || message.includes('ENOTFOUND')
+        || message.includes('ETIMEDOUT');
+}
+
+async function createMoodleCategoryViaDb(name, parentId, idnumber) {
+    const normalizedName = String(name || '').trim();
+    if (!normalizedName) {
+        throw new Error('Category name is required for DB fallback');
+    }
+
+    const existingId = await findMoodleCategoryByName(normalizedName, parentId);
+    if (existingId) {
+        return existingId;
+    }
+
+    let parentDepth = 0;
+    let parentPath = '';
+
+    if (Number(parentId) > 0) {
+        const [parentRows] = await moodleDbPool.execute(
+            `SELECT id, depth, path
+               FROM mdl_course_categories
+              WHERE id = ?
+              LIMIT 1`,
+            [parentId]
+        );
+
+        if (!parentRows.length) {
+            throw new Error(`Parent Moodle category not found for DB fallback: ${parentId}`);
+        }
+
+        parentDepth = Number(parentRows[0].depth || 0);
+        parentPath = String(parentRows[0].path || '').trim() || `/${parentId}`;
+    }
+
+    const [sortRows] = await moodleDbPool.execute(
+        `SELECT COALESCE(MAX(sortorder), 0) AS max_sortorder
+           FROM mdl_course_categories
+          WHERE parent = ?`,
+        [parentId]
+    );
+    const sortorder = Number(sortRows?.[0]?.max_sortorder || 0) + 1;
+    const now = Math.floor(Date.now() / 1000);
+
+    const [insertResult] = await moodleDbPool.execute(
+        `INSERT INTO mdl_course_categories (
+            name, idnumber, description, descriptionformat, parent, sortorder,
+            coursecount, visible, visibleold, timemodified, depth, path, theme
+        ) VALUES (?, ?, '', 0, ?, ?, 0, 1, 1, ?, ?, '', '')`,
+        [normalizedName, idnumber || '', parentId, sortorder, now, parentDepth + 1]
+    );
+
+    const newId = Number(insertResult.insertId);
+    if (!newId) {
+        throw new Error(`Failed DB fallback insert for Moodle category: ${normalizedName}`);
+    }
+
+    const newPath = parentPath ? `${parentPath}/${newId}` : `/${newId}`;
+    await moodleDbPool.execute(
+        `UPDATE mdl_course_categories
+            SET path = ?, depth = ?, timemodified = ?
+          WHERE id = ?`,
+        [newPath, parentDepth + 1, now, newId]
+    );
+
+    return newId;
+}
+
+async function findOrCreateMoodleCategory(name, parentId, idNumberPrefix, explicitIdNumber = null) {
+    const normalizedName = String(name || '').trim();
+    if (!normalizedName) {
+        return parentId;
+    }
+
+    // Search by display name first, then by idnumber/code so that a category
+    // titled "Arts" with idnumber "ART" is found when we look for "ART".
+    let existingId = await findMoodleCategoryByName(normalizedName, parentId);
+    if (!existingId) {
+        const codeToTry = String(explicitIdNumber || '').trim();
+        if (codeToTry && codeToTry !== normalizedName) {
+            existingId = await findMoodleCategoryByName(codeToTry, parentId);
+        }
+    }
+    if (existingId) {
+        const targetIdNumber = String(explicitIdNumber || '').trim().slice(0, 100);
+        if (targetIdNumber) {
+            await moodleDbPool.execute(
+                `UPDATE mdl_course_categories
+                    SET idnumber = ?
+                  WHERE id = ?
+                    AND (idnumber IS NULL OR idnumber = '' OR idnumber LIKE ?)`,
+                [targetIdNumber, existingId, `${idNumberPrefix}-%`]
+            ).catch(() => {});
+        }
+        return existingId;
+    }
+
+    const requestedIdNumber = String(explicitIdNumber || '').trim();
+    const idnumber = (requestedIdNumber || [idNumberPrefix, toCategorySlug(normalizedName)].filter(Boolean).join('-')).slice(0, 100);
+    let created = null;
+    try {
+        created = await callMoodleRest('core_course_create_categories', {
+            categories: [{
+                name: normalizedName,
+                parent: parentId,
+                idnumber
+            }]
+        });
+    } catch (apiError) {
+        const msg = String(apiError?.message || '');
+        const isAccessError = msg.includes('accessexception') || msg.includes('Access control exception') || msg.includes('is not allowed');
+        if (!isMoodleConnectionError(apiError) && !isAccessError) {
+            throw apiError;
+        }
+
+        // Match registration/induction style resilience: write directly to Moodle DB when REST is unavailable
+        // or when the function is not registered in the Moodle service.
+        const fallbackId = await createMoodleCategoryViaDb(normalizedName, parentId, idnumber);
+        if (fallbackId) {
+            return fallbackId;
+        }
+    }
+
+    const createdId = Array.isArray(created) && created[0]?.id ? Number(created[0].id) : null;
+    if (createdId) {
+        return createdId;
+    }
+
+    const afterCreateId = await findMoodleCategoryByName(normalizedName, parentId);
+    if (afterCreateId) {
+        return afterCreateId;
+    }
+
+    throw new Error(`Failed to create Moodle category: ${normalizedName}`);
+}
+
+async function resolveMoodleCategoryIdForRegistration(registration) {
+    const semesterCategoryId = Number(registration.semester_category_id || 0);
+    if (semesterCategoryId > 0) {
+        return semesterCategoryId;
+    }
+
+    const yearCategoryId = Number(registration.year_category_id || 0);
+    if (yearCategoryId > 0) {
+        return yearCategoryId;
+    }
+
+    const programCategoryId = Number(registration.program_category_id || 0);
+    if (programCategoryId > 0) {
+        return programCategoryId;
+    }
+
+    const programmeTypeCategoryId = Number(registration.programme_type_category_id || 0);
+    if (programmeTypeCategoryId > 0) {
+        return programmeTypeCategoryId;
+    }
+
+    const fallbackCategoryId = getStructureRootCategoryId();
+    const programmeTypeName = String(registration.programme_type_name || '').trim();
+    const programName = String(registration.program_name || '').trim();
+    const academicYear = String(registration.academic_year || '').trim();
+    const semesterName = String(registration.semester_name || '').trim();
+    const hierarchyCodes = buildHierarchyCodePattern(registration.course_code, programmeTypeName, programName, academicYear, semesterName);
+
+    const codeParts = parseCourseCodeStructure(registration.course_code);
+
+    if (!programmeTypeName && !programName && !academicYear && !semesterName && !codeParts) {
+        return fallbackCategoryId;
+    }
+
+    try {
+        let parentId = fallbackCategoryId;
+
+        // If course code follows pattern like DEG-001-Y0-S1-C4, use it to resolve existing category path.
+        if (codeParts) {
+            const programIdByCode = await findMoodleCategoryByCodeHint(codeParts.programCode, parentId, 'program');
+            if (programIdByCode) {
+                parentId = programIdByCode;
+
+                const yearIdByCode = await findMoodleCategoryByCodeHint(codeParts.yearCode, parentId, 'year');
+                if (yearIdByCode) {
+                    parentId = yearIdByCode;
+
+                    const semesterIdByCode = await findMoodleCategoryByCodeHint(codeParts.semesterCode, parentId, 'semester');
+                    if (semesterIdByCode) {
+                        return semesterIdByCode;
+                    }
+                }
+            }
+        }
+
+        parentId = fallbackCategoryId;
+        if (programmeTypeName) {
+            parentId = await findOrCreateMoodleCategory(programmeTypeName, parentId, 'programme-type', hierarchyCodes.programmeTypeCode);
+        }
+        if (programName) {
+            parentId = await findOrCreateMoodleCategory(programName, parentId, 'program', hierarchyCodes.programCode);
+        }
+        if (academicYear) {
+            parentId = await findOrCreateMoodleCategory(academicYear, parentId, 'year', hierarchyCodes.yearCode);
+        }
+        if (semesterName) {
+            parentId = await findOrCreateMoodleCategory(semesterName, parentId, 'semester', hierarchyCodes.semesterCode);
+        }
+
+        return parentId;
+    } catch (error) {
+        console.warn(`[COURSE REGISTRATION] Category hierarchy fallback: ${error.message}`);
+        return fallbackCategoryId;
+    }
+}
+
 async function createOrUpdateMoodleCourseCore(registration) {
     const existingCourse = await getMoodleCourseByCode(registration.course_code);
     const summary = buildCourseSummaryFromRegistration(registration);
     const startDateEpoch = registration.start_date ? Math.floor(new Date(registration.start_date).getTime() / 1000) : 0;
-    const categoryId = await findBestMoodleCategoryId();
+    const categoryId = await resolveMoodleCategoryIdForRegistration(registration);
 
     if (existingCourse) {
         try {
             await callMoodleRest('core_course_update_courses', {
                 courses: [{
                     id: existingCourse.id,
+                    categoryid: categoryId,
                     fullname: registration.course_title,
                     shortname: registration.course_code,
                     idnumber: registration.course_code,
@@ -4327,10 +6147,10 @@ async function createOrUpdateMoodleCourseCore(registration) {
         } catch (apiError) {
             await moodleDbPool.execute(
                 `UPDATE mdl_course
-                 SET fullname = ?, shortname = ?, idnumber = ?, summary = ?, summaryformat = 1,
+                 SET category = ?, fullname = ?, shortname = ?, idnumber = ?, summary = ?, summaryformat = 1,
                      startdate = ?, timemodified = ?
                  WHERE id = ?`,
-                [registration.course_title, registration.course_code, registration.course_code, summary, startDateEpoch, Math.floor(Date.now() / 1000), existingCourse.id]
+                [categoryId, registration.course_title, registration.course_code, registration.course_code, summary, startDateEpoch, Math.floor(Date.now() / 1000), existingCourse.id]
             );
         }
 
@@ -4396,6 +6216,9 @@ async function ensureManualEnrolmentForCourse(courseId) {
 }
 
 const COURSE_CUSTOM_FIELD_ALIASES = {
+    program_name: ['program_name', 'programme_name', 'program', 'programme'],
+    academic_year: ['academic_year', 'year', 'course_year'],
+    semester_name: ['semester_name', 'semester', 'term'],
     course_type: ['course_type', 'course_type_id', 'type_of_course'],
     awarding_body_accreditation: ['awarding_body_accreditation', 'awarding_body', 'accreditation'],
     regulation_level: ['regulation_level', 'rqf_level'],
