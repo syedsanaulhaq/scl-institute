@@ -26,7 +26,7 @@ const CourseAccreditations = ({ user }) => {
     const fetchAccreditations = async () => {
         try {
             setLoading(true);
-            const response = await axios.get(`${API_URL}/accreditations`);
+            const response = await axios.get(`${API_URL}/accreditations?active_only=true`);
             setAccreditations(response.data?.data || []);
         } catch (err) {
             console.error('Failed to fetch accreditations:', err);

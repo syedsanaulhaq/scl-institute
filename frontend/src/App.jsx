@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import axios from 'axios';
 import LoginPage from './pages/Login';
@@ -36,8 +36,13 @@ import StudentNotifications from './pages/StudentNotifications';
 import CourseAccreditations from './pages/CourseAccreditations';
 import CourseAccreditationsDetail from './pages/CourseAccreditationsDetail';
 import CourseAccreditationsView from './pages/CourseAccreditationsView';
+import CourseMasterDetail from './pages/CourseMasterDetail';
 import CourseInductions from './pages/CourseInductions';
 import CourseInductionsDetail from './pages/CourseInductionsDetail';
+import CourseVisits from './pages/CourseVisits';
+import CourseVisitsDetail from './pages/CourseVisitsDetail';
+import CourseLifecycleDashboard from './pages/CourseLifecycleDashboard';
+import CourseRegistrations from './pages/CourseRegistrations';
 import ManagerCourseChangeRequests from './components/ManagerCourseChangeRequests';
 import AccountSettings from './components/AccountSettings';
 import TeacherRegistrationForm from './components/TeacherRegistrationForm';
@@ -50,9 +55,16 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
 function App() {
     const [user, setUser] = useState(null);
     const [isInitialized, setIsInitialized] = useState(false);
+    const hasVerifiedSessionRef = useRef(false);
 
     useEffect(() => {
         const verifySession = async () => {
+            if (hasVerifiedSessionRef.current) {
+                setIsInitialized(true);
+                return;
+            }
+            hasVerifiedSessionRef.current = true;
+
             try {
                 const storedUser = sessionStorage.getItem('user');
                 const accessToken = sessionStorage.getItem('accessToken');
@@ -64,7 +76,9 @@ function App() {
                     if (response.data?.valid) {
                         setUser(JSON.parse(storedUser));
                     } else {
-                        throw new Error('invalid');
+                        sessionStorage.removeItem('user');
+                        sessionStorage.removeItem('accessToken');
+                        localStorage.removeItem('authToken');
                     }
                 }
             } catch {
@@ -325,6 +339,15 @@ function App() {
                         <LoginPage onLoginSuccess={handleLoginSuccess} />
                     )
                 } />
+                <Route path="/course-master/new" element={
+                    user && canAccessManagementPortal ? (
+                        <Layout user={user} onLogout={handleLogout}>
+                            <CourseMasterDetail user={user} />
+                        </Layout>
+                    ) : (
+                        <LoginPage onLoginSuccess={handleLoginSuccess} />
+                    )
+                } />
                 <Route path="/course-inductions" element={
                     user && canAccessManagementPortal ? (
                         <Layout user={user} onLogout={handleLogout}>
@@ -338,6 +361,42 @@ function App() {
                     user && canAccessManagementPortal ? (
                         <Layout user={user} onLogout={handleLogout}>
                             <CourseInductionsDetail user={user} />
+                        </Layout>
+                    ) : (
+                        <LoginPage onLoginSuccess={handleLoginSuccess} />
+                    )
+                } />
+                <Route path="/course-visits" element={
+                    user && canAccessManagementPortal ? (
+                        <Layout user={user} onLogout={handleLogout}>
+                            <CourseVisits user={user} />
+                        </Layout>
+                    ) : (
+                        <LoginPage onLoginSuccess={handleLoginSuccess} />
+                    )
+                } />
+                <Route path="/course-visits/:id" element={
+                    user && canAccessManagementPortal ? (
+                        <Layout user={user} onLogout={handleLogout}>
+                            <CourseVisitsDetail user={user} />
+                        </Layout>
+                    ) : (
+                        <LoginPage onLoginSuccess={handleLoginSuccess} />
+                    )
+                } />
+                <Route path="/course-lifecycle" element={
+                    user && canAccessManagementPortal ? (
+                        <Layout user={user} onLogout={handleLogout}>
+                            <CourseLifecycleDashboard user={user} />
+                        </Layout>
+                    ) : (
+                        <LoginPage onLoginSuccess={handleLoginSuccess} />
+                    )
+                } />
+                <Route path="/course-registrations" element={
+                    user && canAccessManagementPortal ? (
+                        <Layout user={user} onLogout={handleLogout}>
+                            <CourseRegistrations user={user} />
                         </Layout>
                     ) : (
                         <LoginPage onLoginSuccess={handleLoginSuccess} />

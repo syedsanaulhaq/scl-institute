@@ -10,6 +10,8 @@ console.log("Backend process starting...");
 const studentsRouter = require('./routes/students');
 const { router: notificationsRouter } = require('./routes/notifications');
 const courseInductionsRouter = require('./routes/course-inductions');
+const accreditationsRouter = require('./routes/accreditations');
+const courseVisitsRouter = require('./routes/course-visits');
 
 process.on('unhandledRejection', (reason, p) => {
     console.error('Unhandled Rejection at:', p, 'reason:', reason);
@@ -206,6 +208,8 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use('/api/students', studentsRouter);
 app.use('/api/notifications', notificationsRouter);
 app.use('/api/course-inductions', courseInductionsRouter);
+app.use('/api/accreditations', accreditationsRouter);
+app.use('/api/course-visits', courseVisitsRouter);
 
 // ===============================
 // ROUTES
@@ -1259,7 +1263,7 @@ app.post('/api/v1/auth/verify', (req, res) => {
     if (token && activeSessions.has(token)) {
         return res.json({ valid: true });
     }
-    return res.status(401).json({ valid: false });
+    return res.json({ valid: false });
 });
 
 app.post('/api/sso/generate', async (req, res) => {

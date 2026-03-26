@@ -79,7 +79,8 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
                     { name: 'New Teacher Registration', icon: UserPlus, path: '/teacher-registration' }
                 ]
             },
-            { name: 'Course Accreditations', icon: FileText, path: '/course-accreditations' },
+            { name: 'Course Lifecycle', icon: LayoutDashboard, path: '/course-lifecycle' },
+            { name: 'Course Registrations', icon: GraduationCap, path: '/course-registrations' },
             { name: 'Access LMS', icon: GraduationCap, isSSO: true },
             { name: 'Settings', icon: Settings, path: '/settings' }
         ]

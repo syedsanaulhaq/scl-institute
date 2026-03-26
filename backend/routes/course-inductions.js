@@ -2,6 +2,8 @@ const express = require('express');
 const pool = require('../db');
 
 const router = express.Router();
+const INIT_MAX_RETRIES = 30;
+const INIT_RETRY_DELAY_MS = 5000;
 
 // ===============================================
 // Initialize Course Inductions Tables
@@ -109,11 +111,42 @@ CREATE TABLE IF NOT EXISTS induction_conditions (
         console.log('✓ Course Induction tables initialized');
     } catch (error) {
         console.error('Error initializing course induction tables:', error.message);
+        throw error;
     }
 }
 
-// Call on startup
-ensureCourseInductionTables();
+function shouldRetryInit(error) {
+    const message = String(error?.message || '').toLowerCase();
+    return (
+        error?.code === 'ECONNREFUSED' ||
+        error?.code === 'ETIMEDOUT' ||
+        error?.code === 'PROTOCOL_CONNECTION_LOST' ||
+        message.includes('connect econnrefused') ||
+        message.includes('too many connections') ||
+        message.includes('can\'t connect')
+    );
+}
+
+function startInductionInitWithRetry(attempt = 1) {
+    ensureCourseInductionTables()
+        .then(() => {
+            if (attempt > 1) {
+                console.log(`[INIT] Course induction tables initialized after retry attempt ${attempt}`);
+            }
+        })
+        .catch((error) => {
+            if (!shouldRetryInit(error) || attempt >= INIT_MAX_RETRIES) {
+                console.error(`[INIT] Course induction table init failed permanently after attempt ${attempt}:`, error.message);
+                return;
+            }
+
+            console.warn(`[INIT] Course induction table init retry ${attempt}/${INIT_MAX_RETRIES} in ${INIT_RETRY_DELAY_MS}ms`);
+            setTimeout(() => startInductionInitWithRetry(attempt + 1), INIT_RETRY_DELAY_MS);
+        });
+}
+
+// Call on startup with retry
+startInductionInitWithRetry();
 
 // ===============================================
 // ROUTE 1: GET /api/course-inductions
@@ -137,20 +170,21 @@ router.get('/', async (req, res) => {
 // ===============================================
 router.post('/', async (req, res) => {
     try {
-        const { documentControl } = req.body;
+        // Accept both flat body and { documentControl } wrapper
+        const dc = req.body.documentControl || req.body;
 
         // Create main induction record
         const [result] = await pool.query(
             'INSERT INTO course_inductions (course_title, course_code, awarding_body, qualification_level, approval_date, review_date, version, document_owner, overall_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
             [
-                documentControl.course_title || 'Untitled',
-                documentControl.course_code || '',
-                documentControl.awarding_body || '',
-                documentControl.qualification_level || '',
-                documentControl.approval_date || null,
-                documentControl.review_date || null,
-                documentControl.version || '1.0',
-                documentControl.document_owner || '',
+                dc.course_title || 'Untitled',
+                dc.course_code || '',
+                dc.awarding_body || '',
+                dc.qualification_level || '',
+                dc.approval_date || null,
+                dc.review_date || null,
+                dc.version || '1.0',
+                dc.document_owner || '',
                 'Draft'
             ]
         );
@@ -229,7 +263,8 @@ router.get('/:id', async (req, res) => {
 router.put('/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const { documentControl } = req.body;
+        // Accept both flat body and { documentControl } wrapper
+        const documentControl = req.body.documentControl || req.body;
 
         if (documentControl) {
             const updates = [];

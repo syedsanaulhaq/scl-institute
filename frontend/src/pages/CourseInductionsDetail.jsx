@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { ChevronDown, ChevronUp, ArrowLeft } from 'lucide-react';
 
@@ -105,10 +105,12 @@ const SECTION_CONFIG = {
 const CourseInductionsDetail = () => {
     const { id } = useParams();
     const navigate = useNavigate();
+    const location = useLocation();
     const isNew = id === 'new';
     
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
+    const [accreditedCourses, setAccreditedCourses] = useState([]);
     const [expandedSections, setExpandedSections] = useState({ 1: true });
     const [editingRowIdx, setEditingRowIdx] = useState(null);
     const [editingSection, setEditingSection] = useState(null);
@@ -138,8 +140,21 @@ const CourseInductionsDetail = () => {
     useEffect(() => {
         if (id && id !== 'new') {
             fetchInduction();
+        } else {
+            initializeNewForm();
         }
-    }, [id]);
+        fetchAccreditedCourses();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [id, location.search]);
+
+    const fetchAccreditedCourses = async () => {
+        try {
+            const response = await axios.get(`${API_URL}/accreditations`);
+            setAccreditedCourses(response.data?.data || []);
+        } catch (err) {
+            console.error('Failed to fetch accredited courses:', err);
+        }
+    };
 
     const fetchInduction = async () => {
         try {
@@ -234,6 +249,7 @@ const CourseInductionsDetail = () => {
     };
 
     const initializeNewForm = () => {
+        const search = new URLSearchParams(location.search);
         const sections = {};
         for (let i = 1; i <= 11; i++) {
             sections[i] = [];
@@ -247,7 +263,16 @@ const CourseInductionsDetail = () => {
             tempId: `signoff-${idx}`
         }));
         
-        setFormData(prev => ({ ...prev, sections }));
+        setFormData(prev => ({
+            ...prev,
+            course_title: search.get('course_title') || prev.course_title || '',
+            course_code: search.get('course_code') || prev.course_code || '',
+            awarding_body: search.get('awarding_body') || prev.awarding_body || '',
+            qualification_level: search.get('qualification_level') || prev.qualification_level || '',
+            document_owner: search.get('document_owner') || prev.document_owner || '',
+            version: search.get('version') || prev.version || '1.0',
+            sections
+        }));
     };
 
 
@@ -413,6 +438,67 @@ const CourseInductionsDetail = () => {
         }));
     };
 
+    const fillTestData = () => {
+        const today = new Date();
+        const plus90 = new Date(today);
+        plus90.setDate(today.getDate() + 90);
+        const fmt = (d) => d.toISOString().slice(0, 10);
+
+        const generatedSections = {};
+
+        for (let sectionNum = 1; sectionNum <= 8; sectionNum++) {
+            const requirements = SECTION_CONFIG[sectionNum]?.requirements || [];
+            generatedSections[sectionNum] = requirements.map((req, idx) => ({
+                area: req.area,
+                description: req.description,
+                source: `Policy ref ${sectionNum}.${idx + 1}`,
+                evidence: `Evidence file ${sectionNum}.${idx + 1}`,
+                responsible: 'Programme Team',
+                status: idx % 2 === 0,
+                notes: 'Auto-filled test data'
+            }));
+        }
+
+        generatedSections[9] = [
+            {
+                area: 'Update student handbook',
+                description: 'Align handbook with approved curriculum and assessment policy.',
+                responsible: 'Registry Manager',
+                deadline: fmt(plus90),
+                status: 'Open'
+            }
+        ];
+
+        generatedSections[10] = [
+            {
+                area: 'Late timetabling risk',
+                impact: 'Medium',
+                mitigation: 'Reserve backup teaching slots and staff availability.',
+                responsible: 'Timetable Officer',
+                status: 'Open'
+            }
+        ];
+
+        generatedSections[11] = [
+            { area: 'Programme Leader', description: 'Dr Sarah Mitchell', responsible: 'Signed' },
+            { area: 'QA Manager', description: 'Mr John Carter', responsible: 'Signed' },
+            { area: 'Senior Management', description: 'Ms Anna Reid', responsible: 'Signed' }
+        ];
+
+        setFormData((prev) => ({
+            ...prev,
+            course_title: prev.course_title || 'BSc Business Management',
+            course_code: prev.course_code || 'BSC-BM-101',
+            awarding_body: prev.awarding_body || 'University of London',
+            qualification_level: prev.qualification_level || 'Level 6 (Degree)',
+            approval_date: prev.approval_date || fmt(today),
+            review_date: prev.review_date || fmt(plus90),
+            document_owner: prev.document_owner || 'QA Team',
+            version: prev.version || '1.0',
+            sections: generatedSections
+        }));
+    };
+
     const updateRequirement = (sectionNum, rowIdx, field, value) => {
         setFormData(prev => {
             const newData = { ...prev };
@@ -562,6 +648,31 @@ const CourseInductionsDetail = () => {
                     <h2 className="text-lg font-bold text-gray-900 mb-4">Document Control - General Information</h2>
                     <div className="grid grid-cols-2 gap-4">
                         
+                        {isNew && (
+                            <div className="col-span-2">
+                                <label className="block text-sm font-semibold text-gray-700 mb-1">Select Accredited Course *</label>
+                                <select
+                                    onChange={(e) => {
+                                        const acc = accreditedCourses.find(a => String(a.id) === e.target.value);
+                                        if (acc) {
+                                            handleInputChange('course_title', acc.course_title || '');
+                                            handleInputChange('course_code', acc.course_code || '');
+                                            handleInputChange('awarding_body', acc.awarding_body || '');
+                                        }
+                                    }}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-scl-purple focus:border-transparent"
+                                    defaultValue=""
+                                >
+                                    <option value="" disabled>-- Pick a course from Accreditation --</option>
+                                    {accreditedCourses.map(acc => (
+                                        <option key={acc.id} value={acc.id}>
+                                            {acc.course_title}{acc.course_code ? ` (${acc.course_code})` : ''}
+                                        </option>
+                                    ))}
+                                </select>
+                                <p className="text-xs text-gray-400 mt-1">Selecting a course auto-fills the fields below.</p>
+                            </div>
+                        )}
                         <div>
                             <label className="block text-sm font-semibold text-gray-700 mb-1">Course Title *</label>
                             <input
@@ -925,6 +1036,13 @@ const CourseInductionsDetail = () => {
 
                 {/* Footer */}
                 <div className="sticky bottom-0 bg-white border-t border-gray-200 px-6 py-4 flex items-center justify-end gap-3">
+                    <button
+                        onClick={fillTestData}
+                        type="button"
+                        className="px-4 py-2 border border-purple-200 bg-purple-50 text-purple-700 rounded-lg hover:bg-purple-100 font-semibold"
+                    >
+                        Fill Test Data
+                    </button>
                     <button
                         onClick={() => navigate('/course-inductions')}
                         className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-semibold"
