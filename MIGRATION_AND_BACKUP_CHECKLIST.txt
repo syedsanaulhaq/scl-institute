@@ -1,0 +1,97 @@
+SCL Institute - Laptop Migration and Backup Checklist
+
+Date: 2026-03-26
+Current branch workflow rule: always develop first, then production.
+
+====================================================================
+PART A - PREPARE ON OLD LAPTOP
+====================================================================
+
+1) Ensure repo is fully pushed
+   - git checkout develop
+   - git pull origin develop
+   - git push origin develop
+
+2) Capture current commit hash
+   - git rev-parse --short HEAD
+
+3) Export local Docker-based SCL database (if needed)
+   - docker exec scli-mysql-dev mysqldump -uroot -prootpassword --databases scl_institute > scl_institute_dump.sql
+
+4) Export Moodle database from WSL (if needed)
+   - wsl mysqldump -u moodleuser -pmoodlepass moodle > moodle_dump.sql
+
+5) Save environment files and secrets (do not commit secrets)
+   - backend .env
+   - frontend env files
+   - deployment credentials and API tokens
+
+====================================================================
+PART B - COPY WHOLE PROJECT TO BACKUP DRIVE (WINDOWS)
+====================================================================
+
+Choose backup target folder, example:
+   E:\SCL-Backup\scl-institute
+
+Recommended command (includes .git for full history):
+
+robocopy "C:\SCL System\scl-institute" "E:\SCL-Backup\scl-institute" /MIR /R:1 /W:1 /Z /FFT /XD node_modules dist build .vite .next .cache
+
+Notes:
+- /MIR mirrors source to destination.
+- This will delete files in destination that do not exist in source.
+- If you want safer first run, remove /MIR and use:
+  robocopy "C:\SCL System\scl-institute" "E:\SCL-Backup\scl-institute" /E /R:1 /W:1 /Z /FFT /XD node_modules dist build .vite .next .cache
+
+Optional verification:
+- dir "E:\SCL-Backup\scl-institute"
+- git -C "E:\SCL-Backup\scl-institute" log -1 --oneline
+
+====================================================================
+PART C - SET UP NEW LAPTOP
+====================================================================
+
+1) Install tools
+   - Git
+   - Docker Desktop + WSL2 integration
+   - Node.js (same major version as old laptop)
+   - VS Code
+   - WSL Ubuntu (for Moodle local stack style)
+
+2) Configure Git access (SSH or HTTPS)
+   - ssh -T git@github.com
+
+3) Clone repository
+   - git clone <your-repo-url>
+   - cd scl-institute
+   - git checkout develop
+   - git pull origin develop
+
+4) Restore env files/secrets
+   - Copy backend/frontend env files from secure backup location
+
+5) Start local dev services
+   - docker compose -f docker-compose.dev.yml up -d
+
+6) Restore databases if required
+   - SCL DB import:
+     docker exec -i scli-mysql-dev mysql -uroot -prootpassword scl_institute < scl_institute_dump.sql
+   - Moodle DB import:
+     wsl mysql -u moodleuser -pmoodlepass moodle < moodle_dump.sql
+
+7) Validate
+   - Backend reachable on port 4000
+   - Frontend reachable on port 3000
+   - Test Moodle category creation flow
+
+====================================================================
+PART D - QUICK GO/NO-GO CHECK
+====================================================================
+
+- Repo branch is develop and synced.
+- Docker containers start without errors.
+- DB connections succeed.
+- Moodle category hierarchy creates and nests correctly.
+- Deploy scripts accessible and credentials available.
+
+End of checklist.
