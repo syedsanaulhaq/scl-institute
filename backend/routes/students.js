@@ -2812,6 +2812,11 @@ router.post('/course-registrations', async (req, res) => {
             return res.status(400).json({ success: false, message: 'Course Title and Course Code / ID are required' });
         }
 
+        const gateCheck = await ensureRegistrationGateFromInduction(payload.course_code, payload.course_title);
+        if (!gateCheck.allowed) {
+            return res.status(403).json({ success: false, message: gateCheck.message });
+        }
+
         const [result] = await db.execute(
             `INSERT INTO course_registrations (
                 course_title, course_code, programme_type_name, program_name, academic_year, semester_name, programme_type_category_id, program_category_id, year_category_id, semester_category_id, course_type, awarding_body_accreditation, regulation_level,
@@ -2886,6 +2891,135 @@ router.post('/course-registrations', async (req, res) => {
     } catch (error) {
         console.error('Error creating course registration:', error);
         return res.status(500).json({ success: false, message: 'Failed to submit course registration', error: error.message });
+    }
+});
+
+router.put('/course-registrations/:id', async (req, res) => {
+    try {
+        const registrationId = Number(req.params.id);
+        if (!Number.isInteger(registrationId) || registrationId <= 0) {
+            return res.status(400).json({ success: false, message: 'Invalid course registration ID' });
+        }
+
+        const payload = normalizeCourseRegistrationPayload(req.body || {});
+        if (!payload.course_title || !payload.course_code) {
+            return res.status(400).json({ success: false, message: 'Course Title and Course Code / ID are required' });
+        }
+
+        const [existingRows] = await db.execute('SELECT * FROM course_registrations WHERE id = ? LIMIT 1', [registrationId]);
+        if (!existingRows || existingRows.length === 0) {
+            return res.status(404).json({ success: false, message: 'Course registration not found' });
+        }
+
+        const gateCheck = await ensureRegistrationGateFromInduction(payload.course_code, payload.course_title);
+        if (!gateCheck.allowed) {
+            return res.status(403).json({ success: false, message: gateCheck.message });
+        }
+
+        const shouldSyncNow = Boolean(req.body?.sync_to_moodle) || payload.application_status === 'approved';
+        const nextSyncStatus = shouldSyncNow ? 'pending' : (existingRows[0].moodle_sync_status || 'pending');
+
+        await db.execute(
+            `UPDATE course_registrations
+             SET course_title = ?,
+                 course_code = ?,
+                 programme_type_name = ?,
+                 program_name = ?,
+                 academic_year = ?,
+                 semester_name = ?,
+                 programme_type_category_id = ?,
+                 program_category_id = ?,
+                 year_category_id = ?,
+                 semester_category_id = ?,
+                 course_type = ?,
+                 awarding_body_accreditation = ?,
+                 regulation_level = ?,
+                 mode_of_delivery = ?,
+                 start_date = ?,
+                 end_date_or_duration = ?,
+                 subject_area_discipline = ?,
+                 course_description = ?,
+                 learning_outcomes = ?,
+                 units_modules_covered = ?,
+                 assessment_methods = ?,
+                 entry_requirements = ?,
+                 tuition_fee_gbp = ?,
+                 additional_costs = ?,
+                 funding_options = ?,
+                 learning_resources_provided = ?,
+                 special_equipment_needed = ?,
+                 work_placement_included = ?,
+                 course_leader_programme_director = ?,
+                 internal_verification_contact = ?,
+                 ukvi_approved_course = ?,
+                 approval_date = ?,
+                 review_date = ?,
+                 special_admission_considerations = ?,
+                 progression_opportunities = ?,
+                 industry_partnerships = ?,
+                 application_status = ?,
+                 moodle_sync_status = ?
+             WHERE id = ?`,
+            [
+                payload.course_title,
+                payload.course_code,
+                payload.programme_type_name,
+                payload.program_name,
+                payload.academic_year,
+                payload.semester_name,
+                payload.programme_type_category_id,
+                payload.program_category_id,
+                payload.year_category_id,
+                payload.semester_category_id,
+                payload.course_type,
+                payload.awarding_body_accreditation,
+                payload.regulation_level,
+                payload.mode_of_delivery,
+                payload.start_date,
+                payload.end_date_or_duration,
+                payload.subject_area_discipline,
+                payload.course_description,
+                payload.learning_outcomes,
+                payload.units_modules_covered,
+                payload.assessment_methods,
+                payload.entry_requirements,
+                payload.tuition_fee_gbp,
+                payload.additional_costs,
+                payload.funding_options,
+                payload.learning_resources_provided,
+                payload.special_equipment_needed,
+                payload.work_placement_included,
+                payload.course_leader_programme_director,
+                payload.internal_verification_contact,
+                payload.ukvi_approved_course,
+                payload.approval_date,
+                payload.review_date,
+                payload.special_admission_considerations,
+                payload.progression_opportunities,
+                payload.industry_partnerships,
+                payload.application_status,
+                nextSyncStatus,
+                registrationId
+            ]
+        );
+
+        let moodleSync = null;
+        if (shouldSyncNow) {
+            moodleSync = await syncCourseRegistrationToMoodle(registrationId);
+        }
+
+        const [rows] = await db.execute('SELECT * FROM course_registrations WHERE id = ? LIMIT 1', [registrationId]);
+        return res.json({
+            success: true,
+            message: shouldSyncNow ? 'Course registration updated and Moodle sync attempted' : 'Course registration updated successfully',
+            data: {
+                registration: rows[0],
+                moodle_sync: moodleSync
+            }
+        });
+    } catch (error) {
+        console.error('Error updating course registration:', error);
+        return res.status(500).json({ success: false, message: 'Failed to update course registration', error: error.message });
     }
 });
 
@@ -3393,6 +3527,10 @@ router.post('/course-registrations/:id/approve', async (req, res) => {
 
         const moodleSync = await syncCourseRegistrationToMoodle(registrationId);
         const [rows] = await db.execute('SELECT * FROM course_registrations WHERE id = ? LIMIT 1', [registrationId]);
+
+        if (rows[0]?.application_status === 'approved') {
+            await updateLifecycleMasterStageByCourse(rows[0].course_code, rows[0].course_title, 'registered');
+        }
 
         return res.json({
             success: true,
@@ -5472,6 +5610,82 @@ function normalizeCourseRegistrationPayload(rawPayload) {
     };
 }
 
+function normalizeLifecycleStatus(value) {
+    return String(value || '').trim().toLowerCase();
+}
+
+function isDoneLifecycleStatus(value) {
+    return ['completed', 'complete', 'approved', 'active'].includes(normalizeLifecycleStatus(value));
+}
+
+async function findLatestInductionForCourse(courseCode, courseTitle) {
+    const normalizedCode = String(courseCode || '').trim();
+    const normalizedTitle = String(courseTitle || '').trim();
+
+    if (normalizedCode) {
+        const [rows] = await db.execute(
+            'SELECT * FROM course_inductions WHERE course_code = ? ORDER BY updated_at DESC, created_at DESC LIMIT 1',
+            [normalizedCode]
+        );
+        if (rows.length > 0) {
+            return rows[0];
+        }
+    }
+
+    if (normalizedTitle) {
+        const [rows] = await db.execute(
+            'SELECT * FROM course_inductions WHERE course_title = ? ORDER BY updated_at DESC, created_at DESC LIMIT 1',
+            [normalizedTitle]
+        );
+        if (rows.length > 0) {
+            return rows[0];
+        }
+    }
+
+    return null;
+}
+
+async function ensureRegistrationGateFromInduction(courseCode, courseTitle) {
+    const induction = await findLatestInductionForCourse(courseCode, courseTitle);
+    if (!induction) {
+        return {
+            allowed: false,
+            message: 'Course registration is locked. Complete induction first.'
+        };
+    }
+
+    if (!isDoneLifecycleStatus(induction.overall_status)) {
+        return {
+            allowed: false,
+            message: 'Course registration is locked. Induction must be Completed or Approved before registration.'
+        };
+    }
+
+    return { allowed: true };
+}
+
+async function updateLifecycleMasterStageByCourse(courseCode, courseTitle, stage) {
+    const normalizedCode = String(courseCode || '').trim();
+    const normalizedTitle = String(courseTitle || '').trim();
+
+    if (!normalizedCode && !normalizedTitle) {
+        return;
+    }
+
+    if (normalizedCode) {
+        await db.execute(
+            'UPDATE course_lifecycle_master SET current_stage = ?, updated_at = CURRENT_TIMESTAMP WHERE course_code = ?',
+            [stage, normalizedCode]
+        );
+        return;
+    }
+
+    await db.execute(
+        'UPDATE course_lifecycle_master SET current_stage = ?, updated_at = CURRENT_TIMESTAMP WHERE course_title = ?',
+        [stage, normalizedTitle]
+    );
+}
+
 function normalizeFieldKey(value) {
     return String(value || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
 }
@@ -5498,15 +5712,11 @@ function toLifecycleStatus(rawStatus, completionPercentage) {
     const normalizedStatus = String(rawStatus || '').trim().toLowerCase();
     const completion = Number(completionPercentage || 0);
 
-    if (!normalizedStatus) {
-        return 'completed';
-    }
-
     if (['approved', 'active'].includes(normalizedStatus)) {
         return 'approved';
     }
 
-    if (['rejected', 'failed'].includes(normalizedStatus)) {
+    if (['rejected', 'failed', 'cancelled', 'canceled'].includes(normalizedStatus)) {
         return 'rejected';
     }
 
@@ -5514,7 +5724,23 @@ function toLifecycleStatus(rawStatus, completionPercentage) {
         return 'completed';
     }
 
-    return 'completed';
+    if (['in progress', 'in_progress', 'processing'].includes(normalizedStatus)) {
+        return 'in_progress';
+    }
+
+    if (['draft', 'pending', 'submitted', 'open'].includes(normalizedStatus)) {
+        return 'in_progress';
+    }
+
+    if (['not started', 'not_started'].includes(normalizedStatus)) {
+        return 'not_started';
+    }
+
+    if (!normalizedStatus) {
+        return completion > 0 ? 'in_progress' : 'not_started';
+    }
+
+    return completion > 0 ? 'in_progress' : 'not_started';
 }
 
 function toRegistrationLifecycleStatus(applicationStatus, moodleSyncStatus) {
@@ -5581,6 +5807,59 @@ function buildCourseSummaryFromRegistration(registration) {
         blocks.push(`Entry Requirements:\n${registration.entry_requirements}`);
     }
     return blocks.join('\n\n');
+}
+
+function toEpochDate(value) {
+    if (!value) return 0;
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+        return 0;
+    }
+    return Math.floor(date.getTime() / 1000);
+}
+
+function parseDurationToDays(rawValue) {
+    const value = String(rawValue || '').trim().toLowerCase();
+    if (!value) return 0;
+
+    const match = value.match(/(\d+)\s*(day|days|week|weeks|month|months|year|years)/i);
+    if (!match) return 0;
+
+    const amount = Number(match[1] || 0);
+    const unit = String(match[2] || '').toLowerCase();
+    if (!amount) return 0;
+
+    if (unit.startsWith('day')) return amount;
+    if (unit.startsWith('week')) return amount * 7;
+    if (unit.startsWith('month')) return amount * 30;
+    if (unit.startsWith('year')) return amount * 365;
+    return 0;
+}
+
+function deriveCourseDates(registration) {
+    const startDateEpoch = toEpochDate(registration.start_date);
+
+    let endDateEpoch = toEpochDate(registration.end_date_or_duration);
+    if (!endDateEpoch && startDateEpoch) {
+        const durationDays = parseDurationToDays(registration.end_date_or_duration);
+        if (durationDays > 0) {
+            endDateEpoch = startDateEpoch + (durationDays * 24 * 60 * 60);
+        }
+    }
+
+    return {
+        startDateEpoch,
+        endDateEpoch
+    };
+}
+
+function deriveMoodleShortname(registration) {
+    const title = String(registration.course_title || '').trim();
+    if (title) {
+        return title.slice(0, 255);
+    }
+
+    return String(registration.course_code || '').trim().slice(0, 255);
 }
 
 function getMoodleRestConfig() {
@@ -6126,7 +6405,8 @@ async function resolveMoodleCategoryIdForRegistration(registration) {
 async function createOrUpdateMoodleCourseCore(registration) {
     const existingCourse = await getMoodleCourseByCode(registration.course_code);
     const summary = buildCourseSummaryFromRegistration(registration);
-    const startDateEpoch = registration.start_date ? Math.floor(new Date(registration.start_date).getTime() / 1000) : 0;
+    const { startDateEpoch, endDateEpoch } = deriveCourseDates(registration);
+    const shortname = deriveMoodleShortname(registration);
     const categoryId = await resolveMoodleCategoryIdForRegistration(registration);
 
     if (existingCourse) {
@@ -6136,11 +6416,12 @@ async function createOrUpdateMoodleCourseCore(registration) {
                     id: existingCourse.id,
                     categoryid: categoryId,
                     fullname: registration.course_title,
-                    shortname: registration.course_code,
+                    shortname,
                     idnumber: registration.course_code,
                     summary,
                     summaryformat: 1,
                     startdate: startDateEpoch,
+                    enddate: endDateEpoch,
                     visible: 1
                 }]
             });
@@ -6148,9 +6429,9 @@ async function createOrUpdateMoodleCourseCore(registration) {
             await moodleDbPool.execute(
                 `UPDATE mdl_course
                  SET category = ?, fullname = ?, shortname = ?, idnumber = ?, summary = ?, summaryformat = 1,
-                     startdate = ?, timemodified = ?
+                     startdate = ?, enddate = ?, timemodified = ?
                  WHERE id = ?`,
-                [categoryId, registration.course_title, registration.course_code, registration.course_code, summary, startDateEpoch, Math.floor(Date.now() / 1000), existingCourse.id]
+                [categoryId, registration.course_title, shortname, registration.course_code, summary, startDateEpoch, endDateEpoch, Math.floor(Date.now() / 1000), existingCourse.id]
             );
         }
 
@@ -6161,14 +6442,15 @@ async function createOrUpdateMoodleCourseCore(registration) {
         const createResult = await callMoodleRest('core_course_create_courses', {
             courses: [{
                 fullname: registration.course_title,
-                shortname: registration.course_code,
+                shortname,
                 idnumber: registration.course_code,
                 categoryid: categoryId,
                 summary,
                 summaryformat: 1,
                 format: 'topics',
                 visible: 1,
-                startdate: startDateEpoch
+                startdate: startDateEpoch,
+                enddate: endDateEpoch
             }]
         });
 
@@ -6185,8 +6467,8 @@ async function createOrUpdateMoodleCourseCore(registration) {
                 category, sortorder, fullname, shortname, idnumber, summary, summaryformat, format,
                 showgrades, newsitems, startdate, enddate, marker, maxbytes, legacyfiles, showreports,
                 visible, visibleold, groupmode, groupmodeforce, defaultgroupingid, timecreated, timemodified
-            ) VALUES (?, 0, ?, ?, ?, ?, 1, 'topics', 1, 5, ?, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, ?, ?)`,
-            [categoryId, registration.course_title, registration.course_code, registration.course_code, summary, startDateEpoch, now, now]
+            ) VALUES (?, 0, ?, ?, ?, ?, 1, 'topics', 1, 5, ?, ?, 0, 0, 0, 0, 1, 1, 0, 0, 0, ?, ?)`,
+            [categoryId, registration.course_title, shortname, registration.course_code, summary, startDateEpoch, endDateEpoch, now, now]
         );
 
         return { moodleCourseId: Number(insertResult.insertId), created: true };

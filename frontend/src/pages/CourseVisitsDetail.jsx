@@ -113,6 +113,14 @@ const createEmptyRow = (columns) => {
     return row;
 };
 
+const createInitialSectionState = (valueFactory) => {
+    const state = {};
+    STRUCTURED_SECTIONS.forEach((section) => {
+        state[section.key] = valueFactory(section);
+    });
+    return state;
+};
+
 const parseStructuredValue = (value, columns) => {
     if (!value) return [];
     try {
@@ -129,24 +137,32 @@ const parseStructuredValue = (value, columns) => {
     return [];
 };
 
+const isCompletedStatus = (value) => ['completed', 'complete', 'approved', 'done'].includes(String(value || '').trim().toLowerCase());
+
+const statusFromCompletedToggle = (checked) => (checked ? 'Completed' : 'In Progress');
+
 const CourseVisitsDetail = () => {
     const { id } = useParams();
     const navigate = useNavigate();
     const location = useLocation();
     const isNew = id === 'new';
+    const searchParams = new URLSearchParams(location.search || '');
+    const prefilledMasterId = String(searchParams.get('master_id') || '').trim();
+    const prefilledCourseTitle = String(searchParams.get('course_title') || '').trim();
+    const prefilledCourseCode = String(searchParams.get('course_code') || '').trim();
+    const prefilledAwardingBody = String(searchParams.get('awarding_body') || '').trim();
+    const prefilledVersion = String(searchParams.get('version') || '').trim();
+    const isPrefilledCourseContext = isNew && Boolean(prefilledMasterId || prefilledCourseCode || prefilledCourseTitle);
 
     const [formData, setFormData] = useState(EMPTY);
     const [accreditedCourses, setAccreditedCourses] = useState([]);
+    const [selectedAccreditationId, setSelectedAccreditationId] = useState('');
     const [saving, setSaving] = useState(false);
     const [loading, setLoading] = useState(false);
     const [expandedSections, setExpandedSections] = useState({ 2: true, 3: true, 4: false, 5: false, 6: false, 7: false });
-    const [sectionRows, setSectionRows] = useState(() => {
-        const initial = {};
-        STRUCTURED_SECTIONS.forEach((section) => {
-            initial[section.key] = [];
-        });
-        return initial;
-    });
+    const [sectionRows, setSectionRows] = useState(() => createInitialSectionState(() => []));
+    const [sectionDrafts, setSectionDrafts] = useState(() => createInitialSectionState((section) => createEmptyRow(section.columns)));
+    const [editingSectionRows, setEditingSectionRows] = useState(() => createInitialSectionState(() => null));
 
     const handleInputChange = (key, value) => {
         setFormData((prev) => ({ ...prev, [key]: value }));
@@ -163,13 +179,12 @@ const CourseVisitsDetail = () => {
 
     const fetchVisit = async () => {
         if (isNew) {
-            const search = new URLSearchParams(location.search);
             setFormData((prev) => ({
                 ...prev,
-                course_title: search.get('course_title') || prev.course_title || '',
-                course_code: search.get('course_code') || prev.course_code || '',
-                awarding_body: search.get('awarding_body') || prev.awarding_body || '',
-                version: search.get('version') || prev.version || '1.0'
+                course_title: prefilledCourseTitle || prev.course_title || '',
+                course_code: prefilledCourseCode || prev.course_code || '',
+                awarding_body: prefilledAwardingBody || prev.awarding_body || '',
+                version: prefilledVersion || prev.version || '1.0'
             }));
             return;
         }
@@ -205,6 +220,35 @@ const CourseVisitsDetail = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [id, location.search]);
 
+    useEffect(() => {
+        if (!isNew || accreditedCourses.length === 0) {
+            return;
+        }
+
+        const normalizedPrefilledCode = prefilledCourseCode.toLowerCase();
+        const normalizedPrefilledTitle = prefilledCourseTitle.toLowerCase();
+
+        const matched = accreditedCourses.find((acc) => {
+            const code = String(acc.course_code || '').trim().toLowerCase();
+            const title = String(acc.course_title || '').trim().toLowerCase();
+            return (normalizedPrefilledCode && code === normalizedPrefilledCode) || (normalizedPrefilledTitle && title === normalizedPrefilledTitle);
+        });
+
+        if (!matched) {
+            return;
+        }
+
+        const matchedId = String(matched.id || '');
+        setSelectedAccreditationId(matchedId);
+        setFormData((prev) => ({
+            ...prev,
+            course_title: matched.course_title || prev.course_title || '',
+            course_code: matched.course_code || prev.course_code || '',
+            awarding_body: matched.awarding_body || prev.awarding_body || '',
+            version: prefilledVersion || prev.version || '1.0'
+        }));
+    }, [isNew, accreditedCourses, prefilledCourseCode, prefilledCourseTitle, prefilledVersion]);
+
     const handleSave = async () => {
         if (!formData.course_title) {
             alert('Course title is required');
@@ -229,7 +273,7 @@ const CourseVisitsDetail = () => {
                 await axios.put(`${API_URL}/course-visits/${id}`, payload);
                 alert('Course visit updated successfully');
             }
-            navigate('/course-visits');
+            navigate('/course-lifecycle');
         } catch (err) {
             console.error('Failed to save visit:', err);
             alert(`Failed to save visit: ${err.response?.data?.message || err.message}`);
@@ -335,21 +379,67 @@ const CourseVisitsDetail = () => {
     };
 
     const addRow = (sectionKey, columns) => {
-        setSectionRows((prev) => ({
+        setSectionRows((prev) => {
+            const draft = sectionDrafts[sectionKey] || createEmptyRow(columns);
+            const nextRows = [...(prev[sectionKey] || [])];
+            const editingIndex = editingSectionRows[sectionKey];
+
+            if (editingIndex !== null && editingIndex !== undefined && editingIndex >= 0 && editingIndex < nextRows.length) {
+                nextRows[editingIndex] = { ...draft };
+            } else {
+                nextRows.push({ ...draft });
+            }
+
+            return {
+                ...prev,
+                [sectionKey]: nextRows
+            };
+        });
+
+        setSectionDrafts((prev) => ({
             ...prev,
-            [sectionKey]: [...(prev[sectionKey] || []), createEmptyRow(columns)]
+            [sectionKey]: createEmptyRow(columns)
+        }));
+
+        setEditingSectionRows((prev) => ({
+            ...prev,
+            [sectionKey]: null
         }));
     };
 
-    const updateRowValue = (sectionKey, rowIndex, field, value) => {
-        setSectionRows((prev) => {
-            const rows = [...(prev[sectionKey] || [])];
-            rows[rowIndex] = {
-                ...(rows[rowIndex] || {}),
+    const updateRowValue = (sectionKey, field, value) => {
+        setSectionDrafts((prev) => ({
+            ...prev,
+            [sectionKey]: {
+                ...(prev[sectionKey] || {}),
                 [field]: value
-            };
-            return { ...prev, [sectionKey]: rows };
-        });
+            }
+        }));
+    };
+
+    const editRow = (sectionKey, rowIndex, columns) => {
+        setSectionDrafts((prev) => ({
+            ...prev,
+            [sectionKey]: {
+                ...createEmptyRow(columns),
+                ...((sectionRows[sectionKey] || [])[rowIndex] || {})
+            }
+        }));
+        setEditingSectionRows((prev) => ({
+            ...prev,
+            [sectionKey]: rowIndex
+        }));
+    };
+
+    const cancelEditRow = (sectionKey, columns) => {
+        setSectionDrafts((prev) => ({
+            ...prev,
+            [sectionKey]: createEmptyRow(columns)
+        }));
+        setEditingSectionRows((prev) => ({
+            ...prev,
+            [sectionKey]: null
+        }));
     };
 
     const removeRow = (sectionKey, rowIndex) => {
@@ -357,6 +447,17 @@ const CourseVisitsDetail = () => {
             const rows = [...(prev[sectionKey] || [])];
             rows.splice(rowIndex, 1);
             return { ...prev, [sectionKey]: rows };
+        });
+
+        setEditingSectionRows((prev) => {
+            const current = prev[sectionKey];
+            if (current === rowIndex) {
+                return { ...prev, [sectionKey]: null };
+            }
+            if (typeof current === 'number' && current > rowIndex) {
+                return { ...prev, [sectionKey]: current - 1 };
+            }
+            return prev;
         });
     };
 
@@ -386,7 +487,10 @@ const CourseVisitsDetail = () => {
                             <div className="col-span-2">
                                 <label className="block text-sm font-semibold text-gray-700 mb-1">Select Accredited Course</label>
                                 <select
+                                    value={selectedAccreditationId}
                                     onChange={(e) => {
+                                        const nextId = e.target.value;
+                                        setSelectedAccreditationId(nextId);
                                         const acc = accreditedCourses.find((a) => String(a.id) === e.target.value);
                                         if (acc) {
                                             handleInputChange('course_title', acc.course_title || '');
@@ -394,8 +498,8 @@ const CourseVisitsDetail = () => {
                                             handleInputChange('awarding_body', acc.awarding_body || '');
                                         }
                                     }}
-                                    defaultValue=""
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-scl-purple focus:border-transparent"
+                                    disabled={isPrefilledCourseContext}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-scl-purple focus:border-transparent disabled:bg-gray-100 disabled:text-gray-600"
                                 >
                                     <option value="" disabled>-- Pick from Accreditation --</option>
                                     {accreditedCourses.map((acc) => (
@@ -408,15 +512,15 @@ const CourseVisitsDetail = () => {
                         )}
                         <div>
                             <label className="block text-sm font-semibold text-gray-700 mb-1">Course Title *</label>
-                            <input type="text" value={formData.course_title} onChange={(e) => handleInputChange('course_title', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
+                            <input type="text" value={formData.course_title} onChange={(e) => handleInputChange('course_title', e.target.value)} disabled={isPrefilledCourseContext} className="w-full px-3 py-2 border border-gray-300 rounded-lg disabled:bg-gray-100 disabled:text-gray-600" />
                         </div>
                         <div>
                             <label className="block text-sm font-semibold text-gray-700 mb-1">Course Code</label>
-                            <input type="text" value={formData.course_code} onChange={(e) => handleInputChange('course_code', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
+                            <input type="text" value={formData.course_code} onChange={(e) => handleInputChange('course_code', e.target.value)} disabled={isPrefilledCourseContext} className="w-full px-3 py-2 border border-gray-300 rounded-lg disabled:bg-gray-100 disabled:text-gray-600" />
                         </div>
                         <div>
                             <label className="block text-sm font-semibold text-gray-700 mb-1">Awarding Body / University</label>
-                            <input type="text" value={formData.awarding_body} onChange={(e) => handleInputChange('awarding_body', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
+                            <input type="text" value={formData.awarding_body} onChange={(e) => handleInputChange('awarding_body', e.target.value)} disabled={isPrefilledCourseContext} className="w-full px-3 py-2 border border-gray-300 rounded-lg disabled:bg-gray-100 disabled:text-gray-600" />
                         </div>
                         <div>
                             <label className="block text-sm font-semibold text-gray-700 mb-1">Visit / Inspection Type</label>
@@ -436,7 +540,7 @@ const CourseVisitsDetail = () => {
                         </div>
                         <div>
                             <label className="block text-sm font-semibold text-gray-700 mb-1">Version</label>
-                            <input type="text" value={formData.version} onChange={(e) => handleInputChange('version', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg" />
+                            <input type="text" value={formData.version} onChange={(e) => handleInputChange('version', e.target.value)} disabled={isPrefilledCourseContext} className="w-full px-3 py-2 border border-gray-300 rounded-lg disabled:bg-gray-100 disabled:text-gray-600" />
                         </div>
                         <div>
                             <label className="block text-sm font-semibold text-gray-700 mb-1">Last Updated</label>
@@ -488,6 +592,9 @@ const CourseVisitsDetail = () => {
                 {STRUCTURED_SECTIONS.map((section, index) => {
                     const sectionNumber = index + 2;
                     const rows = sectionRows[section.key] || [];
+                    const draft = sectionDrafts[section.key] || createEmptyRow(section.columns);
+                    const editingRowIndex = editingSectionRows[section.key];
+                    const isEditing = editingRowIndex !== null && editingRowIndex !== undefined;
                     return (
                         <div key={section.key} className="bg-white rounded-lg border border-gray-200 overflow-hidden">
                             <button
@@ -505,14 +612,72 @@ const CourseVisitsDetail = () => {
 
                             {expandedSections[sectionNumber] && (
                                 <div className="p-6 border-t border-gray-200">
-                                    <div className="flex justify-end mb-3">
-                                        <button
-                                            type="button"
-                                            onClick={() => addRow(section.key, section.columns)}
-                                            className="px-3 py-1.5 rounded text-xs font-semibold bg-scl-purple text-white hover:bg-scl-purple/90 flex items-center gap-1"
-                                        >
-                                            <Plus className="w-3 h-3" /> Add Row
-                                        </button>
+                                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-4">
+                                        <div className="flex items-center justify-between mb-3">
+                                            <h3 className="text-sm font-semibold text-gray-800">{isEditing ? 'Edit Row' : 'Add New Row'}</h3>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                                            {section.columns.map((column) => (
+                                                <div key={`${section.key}-draft-${column.key}`}>
+                                                    <label className="block text-xs font-semibold text-gray-600 mb-1">{column.label}</label>
+
+                                                    {(column.key === 'source_reference' || column.key === 'evidence_required') ? (
+                                                        <div>
+                                                            <input
+                                                                type="file"
+                                                                onChange={(e) => updateRowValue(section.key, column.key, e.target.files ? e.target.files[0]?.name || '' : '')}
+                                                                className="w-full text-xs"
+                                                            />
+                                                            {draft[column.key] ? <p className="text-xs text-gray-600 mt-1">{draft[column.key]}</p> : null}
+                                                        </div>
+                                                    ) : column.key === 'status' ? (
+                                                        <label className="inline-flex items-center gap-2 mt-2">
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={isCompletedStatus(draft[column.key])}
+                                                                onChange={(e) => updateRowValue(section.key, column.key, statusFromCompletedToggle(e.target.checked))}
+                                                                className="w-4 h-4"
+                                                            />
+                                                            <span className="text-xs font-semibold text-gray-700">Complete</span>
+                                                        </label>
+                                                    ) : column.key === 'notes' ? (
+                                                        <textarea
+                                                            value={draft[column.key] || ''}
+                                                            onChange={(e) => updateRowValue(section.key, column.key, e.target.value)}
+                                                            className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm"
+                                                            rows={2}
+                                                        />
+                                                    ) : (
+                                                        <input
+                                                            type={column.type === 'date' ? 'date' : 'text'}
+                                                            value={draft[column.key] || ''}
+                                                            onChange={(e) => updateRowValue(section.key, column.key, e.target.value)}
+                                                            className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm"
+                                                        />
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+
+                                        <div className="flex justify-end gap-2 mt-3">
+                                            {isEditing && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => cancelEditRow(section.key, section.columns)}
+                                                    className="px-3 py-1.5 rounded text-xs font-semibold border border-gray-300 text-gray-700 hover:bg-gray-100"
+                                                >
+                                                    Cancel
+                                                </button>
+                                            )}
+                                            <button
+                                                type="button"
+                                                onClick={() => addRow(section.key, section.columns)}
+                                                className="px-3 py-1.5 rounded text-xs font-semibold bg-scl-purple text-white hover:bg-scl-purple/90 flex items-center gap-1"
+                                            >
+                                                <Plus className="w-3 h-3" /> {isEditing ? 'Update Row' : 'Add Row'}
+                                            </button>
+                                        </div>
                                     </div>
 
                                     <div className="overflow-x-auto">
@@ -537,16 +702,23 @@ const CourseVisitsDetail = () => {
                                                 ) : rows.map((row, rowIndex) => (
                                                     <tr key={`${section.key}-${rowIndex}`} className="hover:bg-blue-50">
                                                         {section.columns.map((column) => (
-                                                            <td key={column.key} className="border border-gray-300 px-2 py-1">
-                                                                <input
-                                                                    type={column.type === 'date' ? 'date' : 'text'}
-                                                                    value={row[column.key] || ''}
-                                                                    onChange={(e) => updateRowValue(section.key, rowIndex, column.key, e.target.value)}
-                                                                    className="w-full px-2 py-1 border border-gray-300 rounded text-xs"
-                                                                />
+                                                            <td key={column.key} className="border border-gray-300 px-2 py-1.5 text-xs text-gray-800">
+                                                                {column.key === 'status'
+                                                                    ? (isCompletedStatus(row[column.key])
+                                                                        ? <span className="text-green-600 font-semibold">✓</span>
+                                                                        : <span className="text-gray-500">In Progress</span>)
+                                                                    : (row[column.key] || '-')}
                                                             </td>
                                                         ))}
                                                         <td className="border border-gray-300 px-2 py-1 text-center">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => editRow(section.key, rowIndex, section.columns)}
+                                                                className="text-blue-600 hover:text-blue-800 text-xs font-semibold mr-2"
+                                                                title="Edit row"
+                                                            >
+                                                                Edit
+                                                            </button>
                                                             <button
                                                                 type="button"
                                                                 onClick={() => removeRow(section.key, rowIndex)}

@@ -148,6 +148,138 @@ function startInductionInitWithRetry(attempt = 1) {
 // Call on startup with retry
 startInductionInitWithRetry();
 
+function normalizeLifecycleStatus(value) {
+    return String(value || '').trim().toLowerCase();
+}
+
+function isDoneLifecycleStatus(value) {
+    return ['completed', 'complete', 'approved', 'active'].includes(normalizeLifecycleStatus(value));
+}
+
+async function findLatestVisit(courseCode, courseTitle) {
+    const normalizedCode = String(courseCode || '').trim();
+    const normalizedTitle = String(courseTitle || '').trim();
+
+    if (normalizedCode) {
+        const [rows] = await pool.query(
+            'SELECT * FROM course_visits WHERE course_code = ? ORDER BY updated_at DESC, created_at DESC LIMIT 1',
+            [normalizedCode]
+        );
+        if (rows.length > 0) {
+            return rows[0];
+        }
+    }
+
+    if (normalizedTitle) {
+        const [rows] = await pool.query(
+            'SELECT * FROM course_visits WHERE course_title = ? ORDER BY updated_at DESC, created_at DESC LIMIT 1',
+            [normalizedTitle]
+        );
+        if (rows.length > 0) {
+            return rows[0];
+        }
+    }
+
+    return null;
+}
+
+async function updateLifecycleMasterStage(courseCode, courseTitle, stage) {
+    const normalizedCode = String(courseCode || '').trim();
+    const normalizedTitle = String(courseTitle || '').trim();
+
+    if (!normalizedCode && !normalizedTitle) {
+        return;
+    }
+
+    if (normalizedCode) {
+        await pool.query(
+            'UPDATE course_lifecycle_master SET current_stage = ?, updated_at = CURRENT_TIMESTAMP WHERE course_code = ?',
+            [stage, normalizedCode]
+        );
+        return;
+    }
+
+    await pool.query(
+        'UPDATE course_lifecycle_master SET current_stage = ?, updated_at = CURRENT_TIMESTAMP WHERE course_title = ?',
+        [stage, normalizedTitle]
+    );
+}
+
+function isTruthyText(value) {
+    return String(value || '').trim().length > 0;
+}
+
+function isCompletedLikeStatus(value) {
+    return ['completed', 'complete', 'approved', 'closed', 'done', 'resolved'].includes(normalizeLifecycleStatus(value));
+}
+
+async function recalculateInductionProgress(inductionId) {
+    const [[induction]] = await pool.query('SELECT id, course_code, course_title FROM course_inductions WHERE id = ? LIMIT 1', [inductionId]);
+    if (!induction) {
+        return;
+    }
+
+    const [requirements] = await pool.query(
+        'SELECT compliance_status FROM induction_requirements WHERE induction_id = ?',
+        [inductionId]
+    );
+    const [conditions] = await pool.query(
+        'SELECT condition_recommendation, action_required, responsible_person, deadline FROM induction_conditions WHERE induction_id = ?',
+        [inductionId]
+    );
+    const [risks] = await pool.query(
+        'SELECT risk_issue, impact, mitigation, owner FROM induction_risks WHERE induction_id = ?',
+        [inductionId]
+    );
+    const [signoffs] = await pool.query(
+        'SELECT role, name FROM induction_signoffs WHERE induction_id = ?',
+        [inductionId]
+    );
+
+    let total = 0;
+    let done = 0;
+
+    for (const row of requirements) {
+        total += 1;
+        if (isCompletedLikeStatus(row.compliance_status)) {
+            done += 1;
+        }
+    }
+
+    for (const row of conditions) {
+        total += 1;
+        if (isTruthyText(row.condition_recommendation) && isTruthyText(row.action_required) && isTruthyText(row.responsible_person) && row.deadline) {
+            done += 1;
+        }
+    }
+
+    for (const row of risks) {
+        total += 1;
+        if (isTruthyText(row.risk_issue) && isTruthyText(row.impact) && isTruthyText(row.mitigation) && isTruthyText(row.owner)) {
+            done += 1;
+        }
+    }
+
+    for (const row of signoffs) {
+        total += 1;
+        if (isTruthyText(row.role) && isTruthyText(row.name)) {
+            done += 1;
+        }
+    }
+
+    const completionPercentage = total > 0 ? Math.round((done / total) * 100) : 0;
+    const overallStatus = total === 0 ? 'Not Started' : (done >= total ? 'Completed' : 'In Progress');
+
+    await pool.query(
+        'UPDATE course_inductions SET completion_percentage = ?, overall_status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+        [completionPercentage, overallStatus, inductionId]
+    );
+
+    if (overallStatus === 'Completed') {
+        await updateLifecycleMasterStage(induction.course_code, induction.course_title, 'induction_done');
+    }
+}
+
 // ===============================================
 // ROUTE 1: GET /api/course-inductions
 // Get all course inductions
@@ -172,6 +304,21 @@ router.post('/', async (req, res) => {
     try {
         // Accept both flat body and { documentControl } wrapper
         const dc = req.body.documentControl || req.body;
+        const visit = await findLatestVisit(dc.course_code, dc.course_title);
+
+        if (!visit) {
+            return res.status(403).json({
+                success: false,
+                message: 'Induction is locked. Complete visit first.'
+            });
+        }
+
+        if (!isDoneLifecycleStatus(visit.overall_status)) {
+            return res.status(403).json({
+                success: false,
+                message: 'Induction is locked. Visit must be Completed or Approved before creating induction.'
+            });
+        }
 
         // Create main induction record
         const [result] = await pool.query(
@@ -191,6 +338,11 @@ router.post('/', async (req, res) => {
 
         const inductionId = result.insertId;
         const [rows] = await pool.query('SELECT * FROM course_inductions WHERE id = ?', [inductionId]);
+
+        if (rows[0] && isDoneLifecycleStatus(rows[0].overall_status)) {
+            await updateLifecycleMasterStage(rows[0].course_code, rows[0].course_title, 'induction_done');
+        }
+
         res.status(201).json({ success: true, data: rows[0], message: 'Course induction created successfully' });
     } catch (error) {
         console.error('Error creating course induction:', error.message);
@@ -288,6 +440,11 @@ router.put('/:id', async (req, res) => {
         }
 
         const [rows] = await pool.query('SELECT * FROM course_inductions WHERE id = ?', [id]);
+
+        if (rows[0] && isDoneLifecycleStatus(rows[0].overall_status)) {
+            await updateLifecycleMasterStage(rows[0].course_code, rows[0].course_title, 'induction_done');
+        }
+
         res.json({ success: true, data: rows[0], message: 'Course induction updated successfully' });
     } catch (error) {
         console.error('Error updating course induction:', error.message);
@@ -346,6 +503,7 @@ router.post('/:id/requirements', async (req, res) => {
         );
 
         const [rows] = await pool.query('SELECT * FROM induction_requirements WHERE id = ?', [result.insertId]);
+        await recalculateInductionProgress(id);
         res.status(201).json({ success: true, data: rows[0] });
     } catch (error) {
         console.error('Error adding requirement:', error.message);
@@ -410,6 +568,7 @@ router.put('/:id/requirements/:reqId', async (req, res) => {
         );
 
         const [rows] = await pool.query('SELECT * FROM induction_requirements WHERE id = ?', [reqId]);
+        await recalculateInductionProgress(id);
         res.json({ success: true, data: rows[0] });
     } catch (error) {
         console.error('Error updating requirement:', error.message);
@@ -430,6 +589,7 @@ router.delete('/:id/requirements/:reqId', async (req, res) => {
             [reqId, id]
         );
 
+        await recalculateInductionProgress(id);
         res.json({ success: true, message: 'Requirement deleted' });
     } catch (error) {
         console.error('Error deleting requirement:', error.message);
@@ -451,6 +611,7 @@ router.post('/:id/risks', async (req, res) => {
             [id, risk_issue, impact, mitigation, owner, review_date]
         );
 
+        await recalculateInductionProgress(id);
         res.json({ success: true, message: 'Risk added successfully' });
     } catch (error) {
         console.error('Error adding risk:', error.message);
@@ -465,11 +626,15 @@ router.post('/:id/risks', async (req, res) => {
 router.put('/:id/risks/:riskId', async (req, res) => {
     try {
         const { id, riskId } = req.params;
-        const { status, impact, mitigation, owner, review_date } = req.body;
+        const { risk_issue, status, impact, mitigation, owner, review_date } = req.body;
 
         const updates = [];
         const params = [];
 
+        if (risk_issue !== undefined) {
+            updates.push('risk_issue = ?');
+            params.push(risk_issue);
+        }
         if (status !== undefined) {
             updates.push('status = ?');
             params.push(status);
@@ -502,10 +667,32 @@ router.put('/:id/risks/:riskId', async (req, res) => {
             params
         );
 
+        await recalculateInductionProgress(id);
         res.json({ success: true, message: 'Risk updated successfully' });
     } catch (error) {
         console.error('Error updating risk:', error.message);
         res.status(500).json({ success: false, message: 'Failed to update risk', error: error.message });
+    }
+});
+
+// ===============================================
+// ROUTE 10b: DELETE /api/course-inductions/:id/risks/:riskId
+// Delete risk/issue
+// ===============================================
+router.delete('/:id/risks/:riskId', async (req, res) => {
+    try {
+        const { id, riskId } = req.params;
+
+        await pool.query(
+            'DELETE FROM induction_risks WHERE induction_id = ? AND id = ?',
+            [id, riskId]
+        );
+
+        await recalculateInductionProgress(id);
+        res.json({ success: true, message: 'Risk deleted successfully' });
+    } catch (error) {
+        console.error('Error deleting risk:', error.message);
+        res.status(500).json({ success: false, message: 'Failed to delete risk', error: error.message });
     }
 });
 
@@ -524,10 +711,60 @@ router.post('/:id/signoffs', async (req, res) => {
         );
 
         const [rows] = await pool.query('SELECT * FROM induction_signoffs WHERE id = ?', [result.insertId]);
+        await recalculateInductionProgress(id);
         res.status(201).json({ success: true, data: rows[0], message: 'Sign-off added successfully' });
     } catch (error) {
         console.error('Error adding sign-off:', error.message);
         res.status(500).json({ success: false, message: 'Failed to add sign-off', error: error.message });
+    }
+});
+
+// ===============================================
+// ROUTE 11b: PUT /api/course-inductions/:id/signoffs/:signoffId
+// Update sign-off
+// ===============================================
+router.put('/:id/signoffs/:signoffId', async (req, res) => {
+    try {
+        const { id, signoffId } = req.params;
+        const { role, name, sign_date, signature } = req.body;
+
+        const updates = [];
+        const params = [];
+
+        if (role !== undefined) {
+            updates.push('role = ?');
+            params.push(role);
+        }
+        if (name !== undefined) {
+            updates.push('name = ?');
+            params.push(name);
+        }
+        if (sign_date !== undefined) {
+            updates.push('sign_date = ?');
+            params.push(sign_date);
+        }
+        if (signature !== undefined) {
+            updates.push('signature = ?');
+            params.push(signature);
+        }
+
+        if (updates.length === 0) {
+            return res.status(400).json({ success: false, message: 'No fields to update' });
+        }
+
+        params.push(id, signoffId);
+
+        await pool.query(
+            `UPDATE induction_signoffs SET ${updates.join(', ')} WHERE induction_id = ? AND id = ?`,
+            params
+        );
+
+        const [rows] = await pool.query('SELECT * FROM induction_signoffs WHERE induction_id = ? AND id = ?', [id, signoffId]);
+        await recalculateInductionProgress(id);
+        res.json({ success: true, data: rows[0], message: 'Sign-off updated successfully' });
+    } catch (error) {
+        console.error('Error updating sign-off:', error.message);
+        res.status(500).json({ success: false, message: 'Failed to update sign-off', error: error.message });
     }
 });
 
@@ -544,10 +781,32 @@ router.delete('/:id/signoffs/all', async (req, res) => {
             [id]
         );
 
+        await recalculateInductionProgress(id);
         res.json({ success: true, message: 'All sign-offs deleted' });
     } catch (error) {
         console.error('Error deleting signoffs:', error.message);
         res.status(500).json({ success: false, message: 'Failed to delete signoffs', error: error.message });
+    }
+});
+
+// ===============================================
+// ROUTE 12b: DELETE /api/course-inductions/:id/signoffs/:signoffId
+// Delete a single sign-off
+// ===============================================
+router.delete('/:id/signoffs/:signoffId', async (req, res) => {
+    try {
+        const { id, signoffId } = req.params;
+
+        await pool.query(
+            'DELETE FROM induction_signoffs WHERE induction_id = ? AND id = ?',
+            [id, signoffId]
+        );
+
+        await recalculateInductionProgress(id);
+        res.json({ success: true, message: 'Sign-off deleted' });
+    } catch (error) {
+        console.error('Error deleting sign-off:', error.message);
+        res.status(500).json({ success: false, message: 'Failed to delete sign-off', error: error.message });
     }
 });
 
@@ -566,10 +825,89 @@ router.post('/:id/conditions', async (req, res) => {
         );
 
         const [rows] = await pool.query('SELECT * FROM induction_conditions WHERE id = ?', [result.insertId]);
+        await recalculateInductionProgress(id);
         res.status(201).json({ success: true, data: rows[0] });
     } catch (error) {
         console.error('Error adding condition:', error.message);
         res.status(500).json({ success: false, message: 'Failed to add condition', error: error.message });
+    }
+});
+
+// ===============================================
+// ROUTE 13b: PUT /api/course-inductions/:id/conditions/:conditionId
+// Update condition/recommendation
+// ===============================================
+router.put('/:id/conditions/:conditionId', async (req, res) => {
+    try {
+        const { id, conditionId } = req.params;
+        const { condition_recommendation, action_required, deadline, responsible_person, status, evidence } = req.body;
+
+        const updates = [];
+        const params = [];
+
+        if (condition_recommendation !== undefined) {
+            updates.push('condition_recommendation = ?');
+            params.push(condition_recommendation);
+        }
+        if (action_required !== undefined) {
+            updates.push('action_required = ?');
+            params.push(action_required);
+        }
+        if (deadline !== undefined) {
+            updates.push('deadline = ?');
+            params.push(deadline);
+        }
+        if (responsible_person !== undefined) {
+            updates.push('responsible_person = ?');
+            params.push(responsible_person);
+        }
+        if (status !== undefined) {
+            updates.push('status = ?');
+            params.push(status);
+        }
+        if (evidence !== undefined) {
+            updates.push('evidence = ?');
+            params.push(evidence);
+        }
+
+        if (updates.length === 0) {
+            return res.status(400).json({ success: false, message: 'No fields to update' });
+        }
+
+        params.push(id, conditionId);
+
+        await pool.query(
+            `UPDATE induction_conditions SET ${updates.join(', ')} WHERE induction_id = ? AND id = ?`,
+            params
+        );
+
+        const [rows] = await pool.query('SELECT * FROM induction_conditions WHERE induction_id = ? AND id = ?', [id, conditionId]);
+        await recalculateInductionProgress(id);
+        res.json({ success: true, data: rows[0], message: 'Condition updated successfully' });
+    } catch (error) {
+        console.error('Error updating condition:', error.message);
+        res.status(500).json({ success: false, message: 'Failed to update condition', error: error.message });
+    }
+});
+
+// ===============================================
+// ROUTE 13c: DELETE /api/course-inductions/:id/conditions/:conditionId
+// Delete condition/recommendation
+// ===============================================
+router.delete('/:id/conditions/:conditionId', async (req, res) => {
+    try {
+        const { id, conditionId } = req.params;
+
+        await pool.query(
+            'DELETE FROM induction_conditions WHERE induction_id = ? AND id = ?',
+            [id, conditionId]
+        );
+
+        await recalculateInductionProgress(id);
+        res.json({ success: true, message: 'Condition deleted' });
+    } catch (error) {
+        console.error('Error deleting condition:', error.message);
+        res.status(500).json({ success: false, message: 'Failed to delete condition', error: error.message });
     }
 });
 

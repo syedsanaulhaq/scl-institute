@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import axios from 'axios';
 import LoginPage from './pages/Login';
 import Dashboard from './pages/Dashboard';
@@ -315,7 +315,7 @@ function App() {
                 <Route path="/course-accreditations" element={
                     user && canAccessManagementPortal ? (
                         <Layout user={user} onLogout={handleLogout}>
-                            <CourseAccreditations user={user} />
+                            <Navigate to="/course-lifecycle" replace />
                         </Layout>
                     ) : (
                         <LoginPage onLoginSuccess={handleLoginSuccess} />
@@ -351,7 +351,7 @@ function App() {
                 <Route path="/course-inductions" element={
                     user && canAccessManagementPortal ? (
                         <Layout user={user} onLogout={handleLogout}>
-                            <CourseInductions user={user} />
+                            <Navigate to="/course-lifecycle" replace />
                         </Layout>
                     ) : (
                         <LoginPage onLoginSuccess={handleLoginSuccess} />
@@ -369,7 +369,7 @@ function App() {
                 <Route path="/course-visits" element={
                     user && canAccessManagementPortal ? (
                         <Layout user={user} onLogout={handleLogout}>
-                            <CourseVisits user={user} />
+                            <Navigate to="/course-lifecycle" replace />
                         </Layout>
                     ) : (
                         <LoginPage onLoginSuccess={handleLoginSuccess} />

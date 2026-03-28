@@ -107,10 +107,20 @@ const CourseInductionsDetail = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const isNew = id === 'new';
+    const searchParams = new URLSearchParams(location.search || '');
+    const prefilledMasterId = String(searchParams.get('master_id') || '').trim();
+    const prefilledCourseTitle = String(searchParams.get('course_title') || '').trim();
+    const prefilledCourseCode = String(searchParams.get('course_code') || '').trim();
+    const prefilledAwardingBody = String(searchParams.get('awarding_body') || '').trim();
+    const prefilledQualificationLevel = String(searchParams.get('qualification_level') || '').trim();
+    const prefilledDocumentOwner = String(searchParams.get('document_owner') || '').trim();
+    const prefilledVersion = String(searchParams.get('version') || '').trim();
+    const isPrefilledCourseContext = isNew && Boolean(prefilledMasterId || prefilledCourseCode || prefilledCourseTitle);
     
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
     const [accreditedCourses, setAccreditedCourses] = useState([]);
+    const [selectedAccreditationId, setSelectedAccreditationId] = useState('');
     const [expandedSections, setExpandedSections] = useState({ 1: true });
     const [editingRowIdx, setEditingRowIdx] = useState(null);
     const [editingSection, setEditingSection] = useState(null);
@@ -123,7 +133,10 @@ const CourseInductionsDetail = () => {
         evidence: '',
         responsible: '',
         status: false,
-        notes: ''
+        notes: '',
+        deadline: '',
+        impact: '',
+        mitigation: ''
     });
     const [formData, setFormData] = useState({
         course_title: '',
@@ -249,7 +262,6 @@ const CourseInductionsDetail = () => {
     };
 
     const initializeNewForm = () => {
-        const search = new URLSearchParams(location.search);
         const sections = {};
         for (let i = 1; i <= 11; i++) {
             sections[i] = [];
@@ -265,15 +277,47 @@ const CourseInductionsDetail = () => {
         
         setFormData(prev => ({
             ...prev,
-            course_title: search.get('course_title') || prev.course_title || '',
-            course_code: search.get('course_code') || prev.course_code || '',
-            awarding_body: search.get('awarding_body') || prev.awarding_body || '',
-            qualification_level: search.get('qualification_level') || prev.qualification_level || '',
-            document_owner: search.get('document_owner') || prev.document_owner || '',
-            version: search.get('version') || prev.version || '1.0',
+            course_title: prefilledCourseTitle || prev.course_title || '',
+            course_code: prefilledCourseCode || prev.course_code || '',
+            awarding_body: prefilledAwardingBody || prev.awarding_body || '',
+            qualification_level: prefilledQualificationLevel || prev.qualification_level || '',
+            document_owner: prefilledDocumentOwner || prev.document_owner || '',
+            version: prefilledVersion || prev.version || '1.0',
             sections
         }));
     };
+
+    useEffect(() => {
+        if (!isNew || accreditedCourses.length === 0) {
+            return;
+        }
+
+        const normalizedPrefilledCode = prefilledCourseCode.toLowerCase();
+        const normalizedPrefilledTitle = prefilledCourseTitle.toLowerCase();
+
+        const matched = accreditedCourses.find((acc) => {
+            const code = String(acc.course_code || '').trim().toLowerCase();
+            const title = String(acc.course_title || '').trim().toLowerCase();
+            return (normalizedPrefilledCode && code === normalizedPrefilledCode) || (normalizedPrefilledTitle && title === normalizedPrefilledTitle);
+        });
+
+        if (!matched) {
+            return;
+        }
+
+        const matchedId = String(matched.id || '');
+        setSelectedAccreditationId(matchedId);
+
+        setFormData((prev) => ({
+            ...prev,
+            course_title: matched.course_title || prev.course_title || '',
+            course_code: matched.course_code || prev.course_code || '',
+            awarding_body: matched.awarding_body || prev.awarding_body || '',
+            qualification_level: prefilledQualificationLevel || prev.qualification_level || '',
+            document_owner: prefilledDocumentOwner || prev.document_owner || '',
+            version: prefilledVersion || prev.version || '1.0'
+        }));
+    }, [isNew, accreditedCourses, prefilledCourseCode, prefilledCourseTitle, prefilledQualificationLevel, prefilledDocumentOwner, prefilledVersion]);
 
 
     const handleSave = async () => {
@@ -333,8 +377,8 @@ const CourseInductionsDetail = () => {
                             `${API_URL}/course-inductions/${inductionId}/requirements/${item.id}`,
                             reqData
                         );
-                    } else if (!item.tempId) {
-                        // Only post if it doesn't have a temporary ID (unsaved new item)
+                    } else if (!item.id) {
+                        // Create new row
                         await axios.post(
                             `${API_URL}/course-inductions/${inductionId}/requirements`,
                             reqData
@@ -355,12 +399,11 @@ const CourseInductionsDetail = () => {
                 };
                 
                 if (condition.id && !isNew) {
-                    // Update existing - if API supports PATCH
-                    await axios.post(
-                        `${API_URL}/course-inductions/${inductionId}/conditions`,
+                    await axios.put(
+                        `${API_URL}/course-inductions/${inductionId}/conditions/${condition.id}`,
                         condData
                     );
-                } else if (!condition.tempId) {
+                } else if (!condition.id) {
                     await axios.post(
                         `${API_URL}/course-inductions/${inductionId}/conditions`,
                         condData
@@ -380,11 +423,11 @@ const CourseInductionsDetail = () => {
                 };
                 
                 if (risk.id && !isNew) {
-                    await axios.post(
-                        `${API_URL}/course-inductions/${inductionId}/risks`,
+                    await axios.put(
+                        `${API_URL}/course-inductions/${inductionId}/risks/${risk.id}`,
                         riskData
                     );
-                } else if (!risk.tempId) {
+                } else if (!risk.id) {
                     await axios.post(
                         `${API_URL}/course-inductions/${inductionId}/risks`,
                         riskData
@@ -401,12 +444,11 @@ const CourseInductionsDetail = () => {
                 };
                 
                 if (signoff.id && !isNew) {
-                    // Signoffs might not have update - just replace
-                    await axios.post(
-                        `${API_URL}/course-inductions/${inductionId}/signoffs`,
+                    await axios.put(
+                        `${API_URL}/course-inductions/${inductionId}/signoffs/${signoff.id}`,
                         signoffData
                     );
-                } else if (!signoff.tempId) {
+                } else if (!signoff.id) {
                     await axios.post(
                         `${API_URL}/course-inductions/${inductionId}/signoffs`,
                         signoffData
@@ -515,47 +557,33 @@ const CourseInductionsDetail = () => {
 
     const handleAddRequirement = (sectionNum) => {
         if (!currentForm.area) {
-            alert('Please select a requirement area');
+            alert('Please fill in the required field');
             return;
         }
-        
+
+        const isEditing = editingRowIdx !== null && editingSection === sectionNum;
         const reqId = `temp_${Date.now()}_${Math.random()}`;
 
         setFormData(prev => {
-            const newData = { ...prev };
-            if (!newData.sections[sectionNum]) {
-                newData.sections[sectionNum] = [];
-            }
-            
-            if (editingRowIdx !== null && editingSection === sectionNum) {
-                // Update existing - keep the ID if it exists
-                const existingId = newData.sections[sectionNum][editingRowIdx]?.id;
-                newData.sections[sectionNum][editingRowIdx] = { 
-                    ...currentForm,
-                    id: existingId // Preserve ID for existing records
-                };
-                alert('Record updated in the section');
+            const existingRows = prev.sections[sectionNum] || [];
+
+            let updatedRows;
+            if (isEditing) {
+                // Replace the row at editingRowIdx, preserving its DB id
+                updatedRows = existingRows.map((row, i) => {
+                    if (i !== editingRowIdx) return row;
+                    return { ...currentForm, id: row.id, tempId: row.tempId };
+                });
             } else {
-                // Check if this exact requirement was just added (prevent duplicates from double-rendering)
-                const isDuplicate = newData.sections[sectionNum].some(
-                    req => req.area === currentForm.area &&
-                           req.description === currentForm.description &&
-                           req.responsible === currentForm.responsible
-                );
-                
-                if (!isDuplicate) {
-                    // Add new - generate temporary ID if not from database
-                    const newReq = { 
-                        ...currentForm,
-                        tempId: reqId
-                    };
-                    newData.sections[sectionNum].push(newReq);
-                    alert('Record added to the section successfully');
-                }
+                updatedRows = [...existingRows, { ...currentForm, tempId: reqId }];
             }
-            return newData;
+
+            return {
+                ...prev,
+                sections: { ...prev.sections, [sectionNum]: updatedRows }
+            };
         });
-        
+
         handleFormReset();
     };
 
@@ -565,38 +593,43 @@ const CourseInductionsDetail = () => {
         setEditingSection(sectionNum);
     };
 
-    const handleDeleteRequirement = (sectionNum, rowIdx) => {
-        setFormData(prev => {
-            const newData = { ...prev };
-            
-            if (!newData.sections[sectionNum] || !newData.sections[sectionNum][rowIdx]) {
-                console.error(`Section ${sectionNum} or row ${rowIdx} does not exist`);
-                return newData;
-            }
-            
-            const deletedItem = newData.sections[sectionNum][rowIdx];
-            
-            // If item has an ID and we're in edit mode, delete from database
-            if (deletedItem && deletedItem.id && !isNew) {
-                const sectionData = SECTION_CONFIG[sectionNum];
-                
-                if (sectionData.type === 'conditions') {
-                    // Would need a DELETE endpoint for conditions
-                } else if (sectionData.type === 'risks') {
-                    axios.delete(`${API_URL}/course-inductions/${id}/risks/${deletedItem.id}`)
-                        .catch(err => console.error('Failed to delete risk:', err));
-                } else if (sectionData.type === 'signoff') {
-                    // Sign-offs might not have individual delete
-                } else {
-                    // Requirements
-                    axios.delete(`${API_URL}/course-inductions/${id}/requirements/${deletedItem.id}`)
-                        .catch(err => console.error('Failed to delete requirement:', err));
+    const handleDeleteRequirement = async (sectionNum, rowIdx) => {
+        const sectionRows = formData.sections[sectionNum] || [];
+        const deletedItem = sectionRows[rowIdx];
+
+        if (!deletedItem) {
+            console.error(`Section ${sectionNum} or row ${rowIdx} does not exist`);
+            return;
+        }
+
+        try {
+            if (deletedItem.id && !isNew) {
+                if (sectionNum >= 1 && sectionNum <= 8) {
+                    await axios.delete(`${API_URL}/course-inductions/${id}/requirements/${deletedItem.id}`);
+                } else if (sectionNum === 9) {
+                    await axios.delete(`${API_URL}/course-inductions/${id}/conditions/${deletedItem.id}`);
+                } else if (sectionNum === 10) {
+                    await axios.delete(`${API_URL}/course-inductions/${id}/risks/${deletedItem.id}`);
+                } else if (sectionNum === 11) {
+                    await axios.delete(`${API_URL}/course-inductions/${id}/signoffs/${deletedItem.id}`);
                 }
             }
-            
-            newData.sections[sectionNum].splice(rowIdx, 1);
-            return newData;
-        });
+
+            setFormData(prev => ({
+                ...prev,
+                sections: {
+                    ...prev.sections,
+                    [sectionNum]: (prev.sections[sectionNum] || []).filter((_, idx) => idx !== rowIdx)
+                }
+            }));
+
+            if (editingRowIdx === rowIdx && editingSection === sectionNum) {
+                handleFormReset();
+            }
+        } catch (err) {
+            console.error('Failed to delete row:', err);
+            alert('Failed to delete row. Please try again.');
+        }
     };
 
     const handleFormReset = () => {
@@ -607,7 +640,10 @@ const CourseInductionsDetail = () => {
             evidence: '',
             responsible: '',
             status: false,
-            notes: ''
+            notes: '',
+            deadline: '',
+            impact: '',
+            mitigation: ''
         });
         // Clear file input elements
         if (sourceInputRef.current) sourceInputRef.current.value = '';
@@ -652,7 +688,10 @@ const CourseInductionsDetail = () => {
                             <div className="col-span-2">
                                 <label className="block text-sm font-semibold text-gray-700 mb-1">Select Accredited Course *</label>
                                 <select
+                                    value={selectedAccreditationId}
                                     onChange={(e) => {
+                                        const nextId = e.target.value;
+                                        setSelectedAccreditationId(nextId);
                                         const acc = accreditedCourses.find(a => String(a.id) === e.target.value);
                                         if (acc) {
                                             handleInputChange('course_title', acc.course_title || '');
@@ -660,8 +699,8 @@ const CourseInductionsDetail = () => {
                                             handleInputChange('awarding_body', acc.awarding_body || '');
                                         }
                                     }}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-scl-purple focus:border-transparent"
-                                    defaultValue=""
+                                    disabled={isPrefilledCourseContext}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-scl-purple focus:border-transparent disabled:bg-gray-100 disabled:text-gray-600"
                                 >
                                     <option value="" disabled>-- Pick a course from Accreditation --</option>
                                     {accreditedCourses.map(acc => (
@@ -679,7 +718,8 @@ const CourseInductionsDetail = () => {
                                 type="text"
                                 value={formData.course_title}
                                 onChange={(e) => handleInputChange('course_title', e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-scl-purple focus:border-transparent"
+                                disabled={isPrefilledCourseContext}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-scl-purple focus:border-transparent disabled:bg-gray-100 disabled:text-gray-600"
                                 placeholder="Enter course title"
                             />
                         </div>
@@ -689,7 +729,8 @@ const CourseInductionsDetail = () => {
                                 type="text"
                                 value={formData.course_code}
                                 onChange={(e) => handleInputChange('course_code', e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-scl-purple focus:border-transparent"
+                                disabled={isPrefilledCourseContext}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-scl-purple focus:border-transparent disabled:bg-gray-100 disabled:text-gray-600"
                                 placeholder="e.g., BBA-001"
                             />
                         </div>
@@ -699,7 +740,8 @@ const CourseInductionsDetail = () => {
                                 type="text"
                                 value={formData.awarding_body}
                                 onChange={(e) => handleInputChange('awarding_body', e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-scl-purple focus:border-transparent"
+                                disabled={isPrefilledCourseContext}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-scl-purple focus:border-transparent disabled:bg-gray-100 disabled:text-gray-600"
                                 placeholder="e.g., University X"
                             />
                         </div>
@@ -709,7 +751,8 @@ const CourseInductionsDetail = () => {
                                 type="text"
                                 value={formData.qualification_level}
                                 onChange={(e) => handleInputChange('qualification_level', e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-scl-purple focus:border-transparent"
+                                disabled={isPrefilledCourseContext}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-scl-purple focus:border-transparent disabled:bg-gray-100 disabled:text-gray-600"
                                 placeholder="e.g., Level 6 (Degree)"
                             />
                         </div>
@@ -737,7 +780,8 @@ const CourseInductionsDetail = () => {
                                 type="text"
                                 value={formData.document_owner}
                                 onChange={(e) => handleInputChange('document_owner', e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-scl-purple focus:border-transparent"
+                                disabled={isPrefilledCourseContext}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-scl-purple focus:border-transparent disabled:bg-gray-100 disabled:text-gray-600"
                                 placeholder="Name or role"
                             />
                         </div>
@@ -747,7 +791,8 @@ const CourseInductionsDetail = () => {
                                 type="text"
                                 value={formData.version}
                                 onChange={(e) => handleInputChange('version', e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-scl-purple focus:border-transparent"
+                                disabled={isPrefilledCourseContext}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-scl-purple focus:border-transparent disabled:bg-gray-100 disabled:text-gray-600"
                             />
                         </div>
                     </div>
@@ -826,24 +871,24 @@ const CourseInductionsDetail = () => {
                                         {/* Row 3: Source & Evidence References */}
                                         <div className="grid grid-cols-3 gap-2 mb-2">
                                             <div>
-                                                <label className="block text-xs font-semibold text-gray-700 mb-0.5">Source Reference</label>
+                                                <label className="block text-xs font-semibold text-gray-700 mb-0.5">Source (File)</label>
                                                 <input
-                                                    type="text"
-                                                    value={currentForm.source}
-                                                    onChange={(e) => setCurrentForm(prev => ({ ...prev, source: e.target.value }))}
-                                                    placeholder="e.g., Handbook p.5"
-                                                    className="w-full px-2 py-1 border border-gray-300 rounded text-xs"
+                                                    ref={sourceInputRef}
+                                                    type="file"
+                                                    onChange={(e) => setCurrentForm(prev => ({ ...prev, source: e.target.files ? e.target.files[0].name : '' }))}
+                                                    className="w-full text-xs"
                                                 />
+                                                {currentForm.source && <p className="text-xs text-gray-600 mt-0.5">✓ {currentForm.source.substring(0, 20)}</p>}
                                             </div>
                                             <div>
-                                                <label className="block text-xs font-semibold text-gray-700 mb-0.5">Evidence Held</label>
+                                                <label className="block text-xs font-semibold text-gray-700 mb-0.5">Evidence (File)</label>
                                                 <input
-                                                    type="text"
-                                                    value={currentForm.evidence}
-                                                    onChange={(e) => setCurrentForm(prev => ({ ...prev, evidence: e.target.value }))}
-                                                    placeholder="e.g., Document location"
-                                                    className="w-full px-2 py-1 border border-gray-300 rounded text-xs"
+                                                    ref={evidenceInputRef}
+                                                    type="file"
+                                                    onChange={(e) => setCurrentForm(prev => ({ ...prev, evidence: e.target.files ? e.target.files[0].name : '' }))}
+                                                    className="w-full text-xs"
                                                 />
+                                                {currentForm.evidence && <p className="text-xs text-gray-600 mt-0.5">✓ {currentForm.evidence.substring(0, 20)}</p>}
                                             </div>
                                             <div>
                                                 <label className="block text-xs font-semibold text-gray-700 mb-0.5">Review Notes</label>
@@ -881,20 +926,217 @@ const CourseInductionsDetail = () => {
                                                         type="button"
                                                         onClick={handleFormReset}
                                                         className="px-3 py-1 border border-gray-300 rounded text-xs font-semibold text-gray-700 hover:bg-gray-100"
-                                                    >
-                                                        Cancel
-                                                    </button>
+                                                    >Cancel</button>
                                                 )}
                                             </div>
                                         </div>
                                     </div>
                                 )}
 
+                                {/* Section 9: Conditions & Recommendations form */}
+                                {sectionNum === 9 && (
+                                    <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 mb-4">
+                                        <h4 className="font-semibold text-gray-900 mb-3 text-sm">
+                                            {editingRowIdx !== null && editingSection === sectionNum ? 'Edit Condition' : 'Add New Condition'}
+                                        </h4>
+                                        <div className="grid grid-cols-2 gap-2 mb-2">
+                                            <div>
+                                                <label className="block text-xs font-semibold text-gray-700 mb-0.5">Condition *</label>
+                                                <input
+                                                    type="text"
+                                                    value={currentForm.area}
+                                                    onChange={(e) => setCurrentForm(prev => ({ ...prev, area: e.target.value }))}
+                                                    placeholder="Describe the condition"
+                                                    className="w-full px-2 py-1 border border-gray-300 rounded text-xs"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-semibold text-gray-700 mb-0.5">Action Required</label>
+                                                <textarea
+                                                    value={currentForm.description}
+                                                    onChange={(e) => setCurrentForm(prev => ({ ...prev, description: e.target.value }))}
+                                                    placeholder="Action required..."
+                                                    className="w-full px-2 py-1 border border-gray-300 rounded text-xs"
+                                                    rows="2"
+                                                />
+                                            </div>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-2 mb-2">
+                                            <div>
+                                                <label className="block text-xs font-semibold text-gray-700 mb-0.5">Responsible</label>
+                                                <input
+                                                    type="text"
+                                                    value={currentForm.responsible}
+                                                    onChange={(e) => setCurrentForm(prev => ({ ...prev, responsible: e.target.value }))}
+                                                    placeholder="Name or role"
+                                                    className="w-full px-2 py-1 border border-gray-300 rounded text-xs"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-semibold text-gray-700 mb-0.5">Deadline</label>
+                                                <input
+                                                    type="date"
+                                                    value={currentForm.deadline}
+                                                    onChange={(e) => setCurrentForm(prev => ({ ...prev, deadline: e.target.value }))}
+                                                    className="w-full px-2 py-1 border border-gray-300 rounded text-xs"
+                                                />
+                                            </div>
+                                        </div>
+                                        <div className="flex justify-end gap-2">
+                                            <button
+                                                type="button"
+                                                onClick={() => handleAddRequirement(sectionNum)}
+                                                className="px-3 py-1 bg-scl-purple text-white rounded text-xs font-semibold hover:bg-scl-purple/90"
+                                            >
+                                                {editingRowIdx !== null && editingSection === sectionNum ? 'Update' : 'Add'}
+                                            </button>
+                                            {(editingRowIdx !== null || currentForm.area) && (
+                                                <button
+                                                    type="button"
+                                                    onClick={handleFormReset}
+                                                    className="px-3 py-1 border border-gray-300 rounded text-xs font-semibold text-gray-700 hover:bg-gray-100"
+                                                >Cancel</button>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Section 10: Risk & Issue Log form */}
+                                {sectionNum === 10 && (
+                                    <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 mb-4">
+                                        <h4 className="font-semibold text-gray-900 mb-3 text-sm">
+                                            {editingRowIdx !== null && editingSection === sectionNum ? 'Edit Risk' : 'Add New Risk'}
+                                        </h4>
+                                        <div className="grid grid-cols-2 gap-2 mb-2">
+                                            <div>
+                                                <label className="block text-xs font-semibold text-gray-700 mb-0.5">Risk Issue *</label>
+                                                <input
+                                                    type="text"
+                                                    value={currentForm.area}
+                                                    onChange={(e) => setCurrentForm(prev => ({ ...prev, area: e.target.value }))}
+                                                    placeholder="Describe the risk"
+                                                    className="w-full px-2 py-1 border border-gray-300 rounded text-xs"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-semibold text-gray-700 mb-0.5">Impact</label>
+                                                <select
+                                                    value={currentForm.impact}
+                                                    onChange={(e) => setCurrentForm(prev => ({ ...prev, impact: e.target.value }))}
+                                                    className="w-full px-2 py-1 border border-gray-300 rounded text-xs"
+                                                >
+                                                    <option value="">Select Impact</option>
+                                                    <option value="Low">Low</option>
+                                                    <option value="Medium">Medium</option>
+                                                    <option value="High">High</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-2 mb-2">
+                                            <div>
+                                                <label className="block text-xs font-semibold text-gray-700 mb-0.5">Mitigation</label>
+                                                <textarea
+                                                    value={currentForm.mitigation}
+                                                    onChange={(e) => setCurrentForm(prev => ({ ...prev, mitigation: e.target.value }))}
+                                                    placeholder="Mitigation strategy..."
+                                                    className="w-full px-2 py-1 border border-gray-300 rounded text-xs"
+                                                    rows="2"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-semibold text-gray-700 mb-0.5">Owner</label>
+                                                <input
+                                                    type="text"
+                                                    value={currentForm.responsible}
+                                                    onChange={(e) => setCurrentForm(prev => ({ ...prev, responsible: e.target.value }))}
+                                                    placeholder="Risk owner"
+                                                    className="w-full px-2 py-1 border border-gray-300 rounded text-xs"
+                                                />
+                                            </div>
+                                        </div>
+                                        <div className="mb-2">
+                                            <label className="block text-xs font-semibold text-gray-700 mb-0.5">Status</label>
+                                            <select
+                                                value={typeof currentForm.status === 'string' ? currentForm.status : 'Open'}
+                                                onChange={(e) => setCurrentForm(prev => ({ ...prev, status: e.target.value }))}
+                                                className="w-full px-2 py-1 border border-gray-300 rounded text-xs"
+                                            >
+                                                <option value="Open">Open</option>
+                                                <option value="Monitoring">Monitoring</option>
+                                                <option value="Closed">Closed</option>
+                                            </select>
+                                        </div>
+                                        <div className="flex justify-end gap-2">
+                                            <button
+                                                type="button"
+                                                onClick={() => handleAddRequirement(sectionNum)}
+                                                className="px-3 py-1 bg-scl-purple text-white rounded text-xs font-semibold hover:bg-scl-purple/90"
+                                            >
+                                                {editingRowIdx !== null && editingSection === sectionNum ? 'Update' : 'Add'}
+                                            </button>
+                                            {(editingRowIdx !== null || currentForm.area) && (
+                                                <button
+                                                    type="button"
+                                                    onClick={handleFormReset}
+                                                    className="px-3 py-1 border border-gray-300 rounded text-xs font-semibold text-gray-700 hover:bg-gray-100"
+                                                >Cancel</button>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Section 11: Sign-offs form */}
+                                {sectionNum === 11 && (
+                                    <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 mb-4">
+                                        <h4 className="font-semibold text-gray-900 mb-3 text-sm">
+                                            {editingRowIdx !== null && editingSection === sectionNum ? 'Edit Sign-off' : 'Add Sign-off'}
+                                        </h4>
+                                        <div className="grid grid-cols-2 gap-2 mb-2">
+                                            <div>
+                                                <label className="block text-xs font-semibold text-gray-700 mb-0.5">Role *</label>
+                                                <input
+                                                    type="text"
+                                                    value={currentForm.area}
+                                                    onChange={(e) => setCurrentForm(prev => ({ ...prev, area: e.target.value }))}
+                                                    placeholder="Role or title"
+                                                    className="w-full px-2 py-1 border border-gray-300 rounded text-xs"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-semibold text-gray-700 mb-0.5">Name</label>
+                                                <input
+                                                    type="text"
+                                                    value={currentForm.description}
+                                                    onChange={(e) => setCurrentForm(prev => ({ ...prev, description: e.target.value }))}
+                                                    placeholder="Person name"
+                                                    className="w-full px-2 py-1 border border-gray-300 rounded text-xs"
+                                                />
+                                            </div>
+                                        </div>
+                                        <div className="flex justify-end gap-2">
+                                            <button
+                                                type="button"
+                                                onClick={() => handleAddRequirement(sectionNum)}
+                                                className="px-3 py-1 bg-scl-purple text-white rounded text-xs font-semibold hover:bg-scl-purple/90"
+                                            >
+                                                {editingRowIdx !== null && editingSection === sectionNum ? 'Update' : 'Add'}
+                                            </button>
+                                            {(editingRowIdx !== null || currentForm.area) && (
+                                                <button
+                                                    type="button"
+                                                    onClick={handleFormReset}
+                                                    className="px-3 py-1 border border-gray-300 rounded text-xs font-semibold text-gray-700 hover:bg-gray-100"
+                                                >Cancel</button>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+
                                 {/* Table at Bottom */}
                                 {(formData.sections[sectionNum] || []).length > 0 && (
-                                    <div className="overflow-x-auto">
-                                        <table className="w-full text-sm border-collapse">
-                                            <thead>
+                                    <div className="overflow-x-auto mt-3">
+                                    <table className="w-full border-collapse border border-gray-300 text-xs">
+                                        <thead>
                                                 <tr className="bg-gray-100">
                                                     {sectionNum <= 8 && (
                                                         <>
@@ -972,6 +1214,12 @@ const CourseInductionsDetail = () => {
                                                                 <td className="border border-gray-300 px-3 py-2 text-sm">{item.deadline}</td>
                                                                 <td className="border border-gray-300 px-3 py-2 text-center">
                                                                     <button
+                                                                        onClick={() => handleEditRequirement(sectionNum, idx)}
+                                                                        className="text-blue-500 hover:text-blue-700 font-semibold text-sm mr-2"
+                                                                    >
+                                                                        Edit
+                                                                    </button>
+                                                                    <button
                                                                         onClick={() => {
                                                                             if (window.confirm('Delete this condition?')) {
                                                                                 handleDeleteRequirement(sectionNum, idx);
@@ -993,6 +1241,12 @@ const CourseInductionsDetail = () => {
                                                                 <td className="border border-gray-300 px-3 py-2 text-sm text-center">{item.status || 'Open'}</td>
                                                                 <td className="border border-gray-300 px-3 py-2 text-center">
                                                                     <button
+                                                                        onClick={() => handleEditRequirement(sectionNum, idx)}
+                                                                        className="text-blue-500 hover:text-blue-700 font-semibold text-sm mr-2"
+                                                                    >
+                                                                        Edit
+                                                                    </button>
+                                                                    <button
                                                                         onClick={() => {
                                                                             if (window.confirm('Delete this risk?')) {
                                                                                 handleDeleteRequirement(sectionNum, idx);
@@ -1010,6 +1264,12 @@ const CourseInductionsDetail = () => {
                                                                 <td className="border border-gray-300 px-3 py-2 text-sm">{item.area}</td>
                                                                 <td className="border border-gray-300 px-3 py-2 text-sm">{item.description}</td>
                                                                 <td className="border border-gray-300 px-3 py-2 text-center">
+                                                                    <button
+                                                                        onClick={() => handleEditRequirement(sectionNum, idx)}
+                                                                        className="text-blue-500 hover:text-blue-700 font-semibold text-sm mr-2"
+                                                                    >
+                                                                        Edit
+                                                                    </button>
                                                                     <button
                                                                         onClick={() => {
                                                                             if (window.confirm('Delete this sign-off?')) {

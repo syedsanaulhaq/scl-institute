@@ -145,6 +145,7 @@ CREATE TABLE IF NOT EXISTS accreditation_signoffs (
         await safeAddMasterColumn('program_category_id INT NULL');
         await safeAddMasterColumn('year_category_id INT NULL');
         await safeAddMasterColumn('semester_category_id INT NULL');
+        await safeAddMasterColumn("current_stage VARCHAR(50) NULL DEFAULT 'pending_accreditation'");
 
         // Local (pre-Moodle-sync) category store
         await pool.query(`
@@ -260,12 +261,102 @@ async function upsertLifecycleMasterFromAccreditation(accreditation) {
         insertMap.accreditation_id = accreditation.id || null;
         updateMap.accreditation_id = 'VALUES(accreditation_id)';
     }
+    if (columns.has('current_stage')) {
+        insertMap.current_stage = 'pending_accreditation';
+        updateMap.current_stage = "IFNULL(current_stage, 'pending_accreditation')";
+    }
     if (columns.has('updated_at')) {
         updateMap.updated_at = 'CURRENT_TIMESTAMP';
     }
 
     const { sql, values } = buildDynamicUpsertSql('course_lifecycle_master', insertMap, updateMap);
     await pool.query(sql, values);
+}
+
+function normalizeLifecycleStatus(value) {
+    return String(value || '').trim().toLowerCase();
+}
+
+function isDoneLifecycleStatus(value) {
+    return ['completed', 'complete', 'approved', 'active'].includes(normalizeLifecycleStatus(value));
+}
+
+async function updateLifecycleMasterStage(courseCode, courseTitle, stage) {
+    const normalizedCode = String(courseCode || '').trim();
+    const normalizedTitle = String(courseTitle || '').trim();
+
+    if (!normalizedCode && !normalizedTitle) {
+        return;
+    }
+
+    if (normalizedCode) {
+        await pool.query(
+            'UPDATE course_lifecycle_master SET current_stage = ?, updated_at = CURRENT_TIMESTAMP WHERE course_code = ?',
+            [stage, normalizedCode]
+        );
+        return;
+    }
+
+    await pool.query(
+        'UPDATE course_lifecycle_master SET current_stage = ?, updated_at = CURRENT_TIMESTAMP WHERE course_title = ?',
+        [stage, normalizedTitle]
+    );
+}
+
+async function recalculateAccreditationProgress(accreditationId) {
+    const [accreditationRows] = await pool.query(
+        'SELECT * FROM course_accreditations WHERE id = ? LIMIT 1',
+        [accreditationId]
+    );
+
+    if (!accreditationRows.length) {
+        return null;
+    }
+
+    const accreditation = accreditationRows[0];
+    const [summaryRows] = await pool.query(
+        `SELECT
+            COUNT(*) AS total_tasks,
+            SUM(CASE WHEN LOWER(TRIM(status)) IN ('completed', 'complete', 'approved', 'done') THEN 1 ELSE 0 END) AS done_tasks
+         FROM accreditation_tasks
+         WHERE accreditation_id = ?`,
+        [accreditationId]
+    );
+
+    const summary = summaryRows[0] || {};
+    const totalTasks = Number(summary.total_tasks || 0);
+    const doneTasks = Number(summary.done_tasks || 0);
+    const completionPercentage = totalTasks > 0
+        ? Math.max(0, Math.min(100, Math.round((doneTasks / totalTasks) * 100)))
+        : 0;
+
+    let derivedStatus = 'Not Started';
+    if (completionPercentage >= 100 && totalTasks > 0) {
+        derivedStatus = 'Completed';
+    } else if (completionPercentage > 0 || totalTasks > 0) {
+        derivedStatus = 'In Progress';
+    }
+
+    const currentStatus = String(accreditation.overall_status || '').trim();
+    const isApproved = normalizeLifecycleStatus(currentStatus) === 'approved';
+    const nextStatus = isApproved ? currentStatus || 'Approved' : derivedStatus;
+
+    await pool.query(
+        'UPDATE course_accreditations SET completion_percentage = ?, overall_status = ? WHERE id = ?',
+        [completionPercentage, nextStatus, accreditationId]
+    );
+
+    const [updatedRows] = await pool.query('SELECT * FROM course_accreditations WHERE id = ?', [accreditationId]);
+    const updated = updatedRows[0] || null;
+
+    if (updated) {
+        await upsertLifecycleMasterFromAccreditation(updated);
+        if (isDoneLifecycleStatus(updated.overall_status)) {
+            await updateLifecycleMasterStage(updated.course_code, updated.course_title, 'accreditation_done');
+        }
+    }
+
+    return updated;
 }
 
 router.get('/master-courses', async (req, res) => {
@@ -817,6 +908,11 @@ router.put('/:id', async (req, res) => {
 
         const [rows] = await pool.query('SELECT * FROM course_accreditations WHERE id = ?', [id]);
         await upsertLifecycleMasterFromAccreditation(rows[0]);
+
+        if (rows[0] && isDoneLifecycleStatus(rows[0].overall_status)) {
+            await updateLifecycleMasterStage(rows[0].course_code, rows[0].course_title, 'accreditation_done');
+        }
+
         res.json({ success: true, data: rows[0], message: 'Accreditation updated successfully' });
     } catch (error) {
         console.error('Error updating accreditation:', error.message);
@@ -870,6 +966,8 @@ router.post('/:id/tasks', async (req, res) => {
             'INSERT INTO accreditation_tasks (accreditation_id, section_number, section_title, task_name, description, evidence_required, source_reference, responsible_person, status, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
             [id, section_number, sectionTitles[section_number] || '', area || '', description || '', evidence || '', source || '', responsible || '', status || 'Not Started', notes || null]
         );
+
+        await recalculateAccreditationProgress(id);
 
         const [rows] = await pool.query('SELECT * FROM accreditation_tasks WHERE id = ?', [result.insertId]);
         res.status(201).json({ success: true, data: rows[0] });
@@ -934,6 +1032,8 @@ router.put('/:id/tasks/:taskId', async (req, res) => {
             params
         );
 
+        await recalculateAccreditationProgress(id);
+
         const [rows] = await pool.query('SELECT * FROM accreditation_tasks WHERE id = ?', [taskId]);
         res.json({ success: true, data: rows[0] });
     } catch (error) {
@@ -954,6 +1054,8 @@ router.delete('/:id/tasks/:taskId', async (req, res) => {
             'DELETE FROM accreditation_tasks WHERE id = ? AND accreditation_id = ?',
             [taskId, id]
         );
+
+        await recalculateAccreditationProgress(id);
 
         res.json({ success: true, message: 'Task deleted' });
     } catch (error) {

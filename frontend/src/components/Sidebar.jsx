@@ -80,7 +80,6 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
                 ]
             },
             { name: 'Course Lifecycle', icon: LayoutDashboard, path: '/course-lifecycle' },
-            { name: 'Course Registrations', icon: GraduationCap, path: '/course-registrations' },
             { name: 'Access LMS', icon: GraduationCap, isSSO: true },
             { name: 'Settings', icon: Settings, path: '/settings' }
         ]

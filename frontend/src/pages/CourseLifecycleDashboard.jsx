@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { Loader2, RefreshCw, CheckCircle2, Clock3, CircleDashed, XCircle, X, Plus, Trash2 } from 'lucide-react';
+import { Loader2, RefreshCw, CheckCircle2, Clock3, CircleDashed, XCircle, X, Plus, Trash2, Lock } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
 
@@ -10,7 +10,8 @@ const STATUS_STYLES = {
     in_progress: 'bg-amber-100 text-amber-800',
     completed: 'bg-emerald-100 text-emerald-800',
     approved: 'bg-green-100 text-green-800',
-    rejected: 'bg-red-100 text-red-800'
+    rejected: 'bg-red-100 text-red-800',
+    locked: 'bg-slate-100 text-slate-700'
 };
 
 const STATUS_LABELS = {
@@ -18,7 +19,8 @@ const STATUS_LABELS = {
     in_progress: 'In Progress',
     completed: 'Completed',
     approved: 'Approved',
-    rejected: 'Rejected'
+    rejected: 'Rejected',
+    locked: 'Locked'
 };
 
 const TAB_KEYS = ['accreditation', 'visit', 'induction', 'registration'];
@@ -46,27 +48,23 @@ const statusIcon = (status) => {
     }
 };
 
-const getOverallCourseStatus = (course) => {
-    const stepStatuses = [
-        course?.accreditation_status,
-        course?.visit_status,
-        course?.induction_status,
-        course?.registration_status
-    ];
+const isDoneStatus = (status) => ['completed', 'approved'].includes(String(status || '').toLowerCase());
 
-    if (stepStatuses.some((status) => status === 'rejected')) {
-        return 'rejected';
+const isStepUnlocked = (course, stepKey) => {
+    if (!course) return false;
+    if (stepKey === 'accreditation') return true;
+    if (stepKey === 'visit') return isDoneStatus(course.accreditation_status);
+    if (stepKey === 'induction') return isDoneStatus(course.visit_status);
+    if (stepKey === 'registration') return isDoneStatus(course.induction_status);
+    return false;
+};
+
+const getDisplayStepStatus = (course, stepKey) => {
+    const currentStatus = String(course?.[`${stepKey}_status`] || 'not_started').toLowerCase();
+    if (currentStatus === 'not_started' && !isStepUnlocked(course, stepKey)) {
+        return 'locked';
     }
-
-    if (stepStatuses.every((status) => ['completed', 'approved'].includes(status))) {
-        return 'completed';
-    }
-
-    if (stepStatuses.some((status) => ['completed', 'approved', 'in_progress'].includes(status))) {
-        return 'in_progress';
-    }
-
-    return 'not_started';
+    return currentStatus;
 };
 
 const formatDate = (value) => {
@@ -128,6 +126,29 @@ const buildInductionCreatePath = (course) => {
     return query ? `/course-inductions/new?${query}` : '/course-inductions/new';
 };
 
+const getOverallCourseStatus = (course) => {
+    const stepStatuses = [
+        course?.accreditation_status,
+        course?.visit_status,
+        course?.induction_status,
+        course?.registration_status
+    ];
+
+    if (stepStatuses.some((status) => status === 'rejected')) {
+        return 'rejected';
+    }
+
+    if (stepStatuses.every((status) => ['completed', 'approved'].includes(status))) {
+        return 'completed';
+    }
+
+    if (stepStatuses.some((status) => ['completed', 'approved', 'in_progress'].includes(status))) {
+        return 'in_progress';
+    }
+
+    return 'not_started';
+};
+
 const CourseLifecycleDashboard = () => {
     const navigate = useNavigate();
     const [loading, setLoading] = useState(true);
@@ -146,7 +167,6 @@ const CourseLifecycleDashboard = () => {
     const [details, setDetails] = useState(null);
     const [activeTab, setActiveTab] = useState('accreditation');
     const [deleting, setDeleting] = useState(false);
-
     const fetchDashboard = async () => {
         try {
             setLoading(true);
@@ -209,6 +229,9 @@ const CourseLifecycleDashboard = () => {
 
     const selectedDoc = tabSections[activeTab]?.document || null;
     const overallCourseStatus = selectedCourse ? getOverallCourseStatus(selectedCourse) : 'not_started';
+    const visitUnlocked = isStepUnlocked(selectedCourse, 'visit');
+    const inductionUnlocked = isStepUnlocked(selectedCourse, 'induction');
+    const registrationUnlocked = isStepUnlocked(selectedCourse, 'registration');
 
     const closeModal = () => {
         setSelectedCourse(null);
@@ -342,216 +365,229 @@ const CourseLifecycleDashboard = () => {
                                         </td>
                                         <td className="px-4 py-3 text-sm">
                                             <div className="flex items-center gap-2">
-                                                {statusIcon(course.accreditation_status)}
-                                                {statusBadge(course.accreditation_status)}
+                                                {statusIcon(getDisplayStepStatus(course, 'accreditation'))}
+                                                {statusBadge(getDisplayStepStatus(course, 'accreditation'))}
                                             </div>
                                         </td>
                                         <td className="px-4 py-3 text-sm">
                                             <div className="flex items-center gap-2">
-                                                {statusIcon(course.visit_status)}
-                                                {statusBadge(course.visit_status)}
+                                                {statusIcon(getDisplayStepStatus(course, 'visit'))}
+                                                {statusBadge(getDisplayStepStatus(course, 'visit'))}
                                             </div>
                                         </td>
                                         <td className="px-4 py-3 text-sm">
                                             <div className="flex items-center gap-2">
-                                                {statusIcon(course.induction_status)}
-                                                {statusBadge(course.induction_status)}
+                                                {statusIcon(getDisplayStepStatus(course, 'induction'))}
+                                                {statusBadge(getDisplayStepStatus(course, 'induction'))}
                                             </div>
                                         </td>
                                         <td className="px-4 py-3 text-sm">
                                             <div className="flex items-center gap-2">
-                                                {statusIcon(course.registration_status)}
-                                                {statusBadge(course.registration_status)}
+                                                {statusIcon(getDisplayStepStatus(course, 'registration'))}
+                                                {statusBadge(getDisplayStepStatus(course, 'registration'))}
                                             </div>
                                         </td>
                                         <td className="px-4 py-3 text-xs text-gray-500">{formatDate(course.last_updated_at)}</td>
                                     </tr>
                                 ))}
+
+                                {/* Detail Modal */}
+                                {selectedCourse && (
+                                    <div
+                                        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50"
+                                        onClick={(e) => { if (e.target === e.currentTarget) closeModal(); }}
+                                    >
+                                        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+                                            {/* Modal Header */}
+                                            <div className="flex items-start justify-between p-6 border-b border-gray-200">
+                                                <div>
+                                                    <h2 className="text-xl font-bold text-gray-900">{selectedCourse.course_title || 'Untitled Course'}</h2>
+                                                    <p className="text-sm text-gray-500 mt-0.5">{selectedCourse.course_code || 'No Code'}</p>
+                                                    <div className="flex items-center gap-3 mt-3">
+                                                        <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                                                            <span>Overall Course:</span>
+                                                            {statusBadge(overallCourseStatus)}
+                                                        </div>
+                                                        <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                                                            <span>Accreditation:</span>
+                                                            {statusBadge(selectedCourse.accreditation_status)}
+                                                        </div>
+                                                        <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                                                            <span>Induction:</span>
+                                                            {statusBadge(selectedCourse.induction_status)}
+                                                        </div>
+                                                        <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                                                            <span>Visit:</span>
+                                                            {statusBadge(selectedCourse.visit_status)}
+                                                        </div>
+                                                        <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                                                            <span>Registration:</span>
+                                                            {statusBadge(selectedCourse.registration_status)}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div className="flex gap-2">
+                                                    <button
+                                                        onClick={handleDeleteCourse}
+                                                        disabled={deleting}
+                                                        className="p-2 rounded-lg text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50"
+                                                        title="Delete this course"
+                                                    >
+                                                        <Trash2 className="w-5 h-5" />
+                                                    </button>
+                                                    <button
+                                                        onClick={closeModal}
+                                                        className="p-2 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+                                                    >
+                                                        <X className="w-5 h-5" />
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            {/* Tabs */}
+                                            <div className="flex gap-1 px-6 pt-4">
+                                                {TAB_KEYS.map((key) => (
+                                                    <button
+                                                        key={key}
+                                                        onClick={() => setActiveTab(key)}
+                                                        className={`px-4 py-2 text-sm rounded-lg font-semibold capitalize transition-colors ${
+                                                            activeTab === key
+                                                                ? 'bg-scl-purple text-white'
+                                                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                                        }`}
+                                                    >
+                                                        {key}
+                                                    </button>
+                                                ))}
+                                            </div>
+
+                                            {/* Modal Body */}
+                                            <div className="flex-1 overflow-y-auto p-6 space-y-4">
+                                                {detailsLoading ? (
+                                                    <div className="text-center py-12">
+                                                        <Loader2 className="w-6 h-6 animate-spin mx-auto text-scl-purple" />
+                                                        <p className="text-sm text-gray-500 mt-2">Loading details...</p>
+                                                    </div>
+                                                ) : !selectedDoc ? (
+                                                    <div className="rounded-lg bg-gray-50 border border-gray-200 p-4 text-sm text-gray-600 text-center">
+                                                        No {activeTab} record exists for this course yet.
+                                                    </div>
+                                                ) : (
+                                                    <>
+                                                        <div className="rounded-lg bg-gray-50 border border-gray-200 p-4 space-y-2.5 text-sm">
+                                                            {Object.entries(selectedDoc)
+                                                                .filter(([key]) => key !== 'id')
+                                                                .slice(0, 12)
+                                                                .map(([key, value]) => (
+                                                                    <div key={key} className="grid grid-cols-2 gap-4">
+                                                                        <span className="text-gray-500 capitalize">{key.replace(/_/g, ' ')}</span>
+                                                                        <span className="text-gray-900 font-medium break-words">{formatFieldValue(key, value)}</span>
+                                                                    </div>
+                                                                ))}
+                                                        </div>
+
+                                                        {activeTab === 'accreditation' && (
+                                                            <div className="grid grid-cols-3 gap-3 text-sm">
+                                                                <div className="rounded-lg bg-gray-100 p-3 text-center">
+                                                                    <p className="text-xs text-gray-500 mb-1">Tasks</p>
+                                                                    <p className="text-xl font-bold text-gray-800">{tabSections.accreditation.tasks?.length || 0}</p>
+                                                                </div>
+                                                                <div className="rounded-lg bg-gray-100 p-3 text-center">
+                                                                    <p className="text-xs text-gray-500 mb-1">Risks</p>
+                                                                    <p className="text-xl font-bold text-gray-800">{tabSections.accreditation.risks?.length || 0}</p>
+                                                                </div>
+                                                                <div className="rounded-lg bg-gray-100 p-3 text-center">
+                                                                    <p className="text-xs text-gray-500 mb-1">Sign-offs</p>
+                                                                    <p className="text-xl font-bold text-gray-800">{tabSections.accreditation.signoffs?.length || 0}</p>
+                                                                </div>
+                                                            </div>
+                                                        )}
+
+                                                        {activeTab === 'induction' && (
+                                                            <div className="grid grid-cols-4 gap-3 text-sm">
+                                                                <div className="rounded-lg bg-gray-100 p-3 text-center">
+                                                                    <p className="text-xs text-gray-500 mb-1">Requirements</p>
+                                                                    <p className="text-xl font-bold text-gray-800">{tabSections.induction.requirements?.length || 0}</p>
+                                                                </div>
+                                                                <div className="rounded-lg bg-gray-100 p-3 text-center">
+                                                                    <p className="text-xs text-gray-500 mb-1">Conditions</p>
+                                                                    <p className="text-xl font-bold text-gray-800">{tabSections.induction.conditions?.length || 0}</p>
+                                                                </div>
+                                                                <div className="rounded-lg bg-gray-100 p-3 text-center">
+                                                                    <p className="text-xs text-gray-500 mb-1">Risks</p>
+                                                                    <p className="text-xl font-bold text-gray-800">{tabSections.induction.risks?.length || 0}</p>
+                                                                </div>
+                                                                <div className="rounded-lg bg-gray-100 p-3 text-center">
+                                                                    <p className="text-xs text-gray-500 mb-1">Sign-offs</p>
+                                                                    <p className="text-xl font-bold text-gray-800">{tabSections.induction.signoffs?.length || 0}</p>
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                    </>
+                                                )}
+                                            </div>
+
+                                            {/* Modal Footer */}
+                                            <div className="flex flex-wrap gap-2 p-6 border-t border-gray-200 bg-gray-50 rounded-b-2xl">
+                                                <button
+                                                    onClick={() => navigate(selectedCourse.accreditation_id ? `/course-accreditations/${selectedCourse.accreditation_id}` : buildAccreditationCreatePath(selectedCourse))}
+                                                    className="px-4 py-2 text-sm font-semibold rounded-lg bg-scl-purple text-white hover:bg-scl-purple/90 transition-colors"
+                                                >
+                                                    Open Accreditation
+                                                </button>
+                                                <button
+                                                    onClick={() => navigate(selectedCourse.visit_id ? `/course-visits/${selectedCourse.visit_id}` : buildVisitCreatePath(selectedCourse))}
+                                                    disabled={!selectedCourse.visit_id && !visitUnlocked}
+                                                    title={!selectedCourse.visit_id && !visitUnlocked ? 'Complete Accreditation first' : 'Open Visit'}
+                                                    className="px-4 py-2 text-sm font-semibold rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                                                >
+                                                    {!selectedCourse.visit_id && !visitUnlocked ? <Lock className="w-4 h-4 inline mr-1" /> : null}
+                                                    Open Visit
+                                                </button>
+                                                <button
+                                                    onClick={() => navigate(selectedCourse.induction_id ? `/course-inductions/${selectedCourse.induction_id}` : buildInductionCreatePath(selectedCourse))}
+                                                    disabled={!selectedCourse.induction_id && !inductionUnlocked}
+                                                    title={!selectedCourse.induction_id && !inductionUnlocked ? 'Complete Visit first' : 'Open Induction'}
+                                                    className="px-4 py-2 text-sm font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                                                >
+                                                    {!selectedCourse.induction_id && !inductionUnlocked ? <Lock className="w-4 h-4 inline mr-1" /> : null}
+                                                    Open Induction
+                                                </button>
+                                                <button
+                                                    onClick={() => {
+                                                        const params = new URLSearchParams({
+                                                            auto_open: '1',
+                                                            form_only: '1',
+                                                            course_code: String(selectedCourse.course_code || ''),
+                                                            course_title: String(selectedCourse.course_title || ''),
+                                                            awarding_body: String(selectedCourse.awarding_body || ''),
+                                                            qualification_level: String(selectedCourse.qualification_level || '')
+                                                        });
+                                                        navigate(`/course-registrations?${params.toString()}`);
+                                                    }}
+                                                    disabled={!selectedCourse.registration_id && !registrationUnlocked}
+                                                    title={!selectedCourse.registration_id && !registrationUnlocked ? 'Complete Induction first' : 'Open Registration'}
+                                                    className="px-4 py-2 text-sm font-semibold rounded-lg bg-green-600 text-white hover:bg-green-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                                                >
+                                                    {!selectedCourse.registration_id && !registrationUnlocked ? <Lock className="w-4 h-4 inline mr-1" /> : null}
+                                                    Open Registration
+                                                </button>
+                                                <button
+                                                    onClick={closeModal}
+                                                    className="ml-auto px-4 py-2 text-sm font-semibold rounded-lg bg-white border border-gray-200 text-gray-700 hover:bg-gray-100 transition-colors"
+                                                >
+                                                    Close
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
                             </tbody>
                         </table>
                     </div>
                 </div>
             )}
 
-            {/* Detail Modal */}
-            {selectedCourse && (
-                <div
-                    className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50"
-                    onClick={(e) => { if (e.target === e.currentTarget) closeModal(); }}
-                >
-                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
-                        {/* Modal Header */}
-                        <div className="flex items-start justify-between p-6 border-b border-gray-200">
-                            <div>
-                                <h2 className="text-xl font-bold text-gray-900">{selectedCourse.course_title || 'Untitled Course'}</h2>
-                                <p className="text-sm text-gray-500 mt-0.5">{selectedCourse.course_code || 'No Code'}</p>
-                                <div className="flex items-center gap-3 mt-3">
-                                    <div className="flex items-center gap-1.5 text-xs text-gray-500">
-                                        <span>Overall Course:</span>
-                                        {statusBadge(overallCourseStatus)}
-                                    </div>
-                                    <div className="flex items-center gap-1.5 text-xs text-gray-500">
-                                        <span>Accreditation:</span>
-                                        {statusBadge(selectedCourse.accreditation_status)}
-                                    </div>
-                                    <div className="flex items-center gap-1.5 text-xs text-gray-500">
-                                        <span>Induction:</span>
-                                        {statusBadge(selectedCourse.induction_status)}
-                                    </div>
-                                    <div className="flex items-center gap-1.5 text-xs text-gray-500">
-                                        <span>Visit:</span>
-                                        {statusBadge(selectedCourse.visit_status)}
-                                    </div>
-                                    <div className="flex items-center gap-1.5 text-xs text-gray-500">
-                                        <span>Registration:</span>
-                                        {statusBadge(selectedCourse.registration_status)}
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="flex gap-2">
-                                <button
-                                    onClick={handleDeleteCourse}
-                                    disabled={deleting}
-                                    className="p-2 rounded-lg text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50"
-                                    title="Delete this course"
-                                >
-                                    <Trash2 className="w-5 h-5" />
-                                </button>
-                                <button
-                                    onClick={closeModal}
-                                    className="p-2 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
-                                >
-                                    <X className="w-5 h-5" />
-                                </button>
-                            </div>
-                        </div>
-
-                        {/* Tabs */}
-                        <div className="flex gap-1 px-6 pt-4">
-                            {TAB_KEYS.map((key) => (
-                                <button
-                                    key={key}
-                                    onClick={() => setActiveTab(key)}
-                                    className={`px-4 py-2 text-sm rounded-lg font-semibold capitalize transition-colors ${
-                                        activeTab === key
-                                            ? 'bg-scl-purple text-white'
-                                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                                    }`}
-                                >
-                                    {key}
-                                </button>
-                            ))}
-                        </div>
-
-                        {/* Modal Body */}
-                        <div className="flex-1 overflow-y-auto p-6 space-y-4">
-                            {detailsLoading ? (
-                                <div className="text-center py-12">
-                                    <Loader2 className="w-6 h-6 animate-spin mx-auto text-scl-purple" />
-                                    <p className="text-sm text-gray-500 mt-2">Loading details...</p>
-                                </div>
-                            ) : !selectedDoc ? (
-                                <div className="rounded-lg bg-gray-50 border border-gray-200 p-4 text-sm text-gray-600 text-center">
-                                    No {activeTab} record exists for this course yet.
-                                </div>
-                            ) : (
-                                <>
-                                    <div className="rounded-lg bg-gray-50 border border-gray-200 p-4 space-y-2.5 text-sm">
-                                        {Object.entries(selectedDoc)
-                                            .filter(([key]) => key !== 'id')
-                                            .slice(0, 12)
-                                            .map(([key, value]) => (
-                                                <div key={key} className="grid grid-cols-2 gap-4">
-                                                    <span className="text-gray-500 capitalize">{key.replace(/_/g, ' ')}</span>
-                                                    <span className="text-gray-900 font-medium break-words">{formatFieldValue(key, value)}</span>
-                                                </div>
-                                            ))}
-                                    </div>
-
-                                    {activeTab === 'accreditation' && (
-                                        <div className="grid grid-cols-3 gap-3 text-sm">
-                                            <div className="rounded-lg bg-gray-100 p-3 text-center">
-                                                <p className="text-xs text-gray-500 mb-1">Tasks</p>
-                                                <p className="text-xl font-bold text-gray-800">{tabSections.accreditation.tasks?.length || 0}</p>
-                                            </div>
-                                            <div className="rounded-lg bg-gray-100 p-3 text-center">
-                                                <p className="text-xs text-gray-500 mb-1">Risks</p>
-                                                <p className="text-xl font-bold text-gray-800">{tabSections.accreditation.risks?.length || 0}</p>
-                                            </div>
-                                            <div className="rounded-lg bg-gray-100 p-3 text-center">
-                                                <p className="text-xs text-gray-500 mb-1">Sign-offs</p>
-                                                <p className="text-xl font-bold text-gray-800">{tabSections.accreditation.signoffs?.length || 0}</p>
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {activeTab === 'induction' && (
-                                        <div className="grid grid-cols-4 gap-3 text-sm">
-                                            <div className="rounded-lg bg-gray-100 p-3 text-center">
-                                                <p className="text-xs text-gray-500 mb-1">Requirements</p>
-                                                <p className="text-xl font-bold text-gray-800">{tabSections.induction.requirements?.length || 0}</p>
-                                            </div>
-                                            <div className="rounded-lg bg-gray-100 p-3 text-center">
-                                                <p className="text-xs text-gray-500 mb-1">Conditions</p>
-                                                <p className="text-xl font-bold text-gray-800">{tabSections.induction.conditions?.length || 0}</p>
-                                            </div>
-                                            <div className="rounded-lg bg-gray-100 p-3 text-center">
-                                                <p className="text-xs text-gray-500 mb-1">Risks</p>
-                                                <p className="text-xl font-bold text-gray-800">{tabSections.induction.risks?.length || 0}</p>
-                                            </div>
-                                            <div className="rounded-lg bg-gray-100 p-3 text-center">
-                                                <p className="text-xs text-gray-500 mb-1">Sign-offs</p>
-                                                <p className="text-xl font-bold text-gray-800">{tabSections.induction.signoffs?.length || 0}</p>
-                                            </div>
-                                        </div>
-                                    )}
-                                </>
-                            )}
-                        </div>
-
-                        {/* Modal Footer */}
-                        <div className="flex flex-wrap gap-2 p-6 border-t border-gray-200 bg-gray-50 rounded-b-2xl">
-                            <button
-                                onClick={() => navigate(selectedCourse.accreditation_id ? `/course-accreditations/${selectedCourse.accreditation_id}` : buildAccreditationCreatePath(selectedCourse))}
-                                className="px-4 py-2 text-sm font-semibold rounded-lg bg-scl-purple text-white hover:bg-scl-purple/90 transition-colors"
-                            >
-                                Open Accreditation
-                            </button>
-                            <button
-                                onClick={() => navigate(selectedCourse.visit_id ? `/course-visits/${selectedCourse.visit_id}` : buildVisitCreatePath(selectedCourse))}
-                                className="px-4 py-2 text-sm font-semibold rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 transition-colors"
-                            >
-                                Open Visit
-                            </button>
-                            <button
-                                onClick={() => navigate(selectedCourse.induction_id ? `/course-inductions/${selectedCourse.induction_id}` : buildInductionCreatePath(selectedCourse))}
-                                className="px-4 py-2 text-sm font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors"
-                            >
-                                Open Induction
-                            </button>
-                            <button
-                                onClick={() => {
-                                    const params = new URLSearchParams({
-                                        auto_open: '1',
-                                        course_code: String(selectedCourse.course_code || ''),
-                                        course_title: String(selectedCourse.course_title || '')
-                                    });
-                                    navigate(`/course-registrations?${params.toString()}`);
-                                }}
-                                className="px-4 py-2 text-sm font-semibold rounded-lg bg-green-600 text-white hover:bg-green-700 transition-colors"
-                            >
-                                Open Registration
-                            </button>
-                            <button
-                                onClick={closeModal}
-                                className="ml-auto px-4 py-2 text-sm font-semibold rounded-lg bg-white border border-gray-200 text-gray-700 hover:bg-gray-100 transition-colors"
-                            >
-                                Close
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
         </div>
     );
 };

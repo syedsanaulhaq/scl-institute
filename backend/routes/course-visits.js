@@ -79,6 +79,114 @@ function startVisitInitWithRetry(attempt = 1) {
 
 startVisitInitWithRetry();
 
+function normalizeLifecycleStatus(value) {
+    return String(value || '').trim().toLowerCase();
+}
+
+function isDoneLifecycleStatus(value) {
+    return ['completed', 'complete', 'approved', 'active'].includes(normalizeLifecycleStatus(value));
+}
+
+async function findLatestAccreditation(courseCode, courseTitle) {
+    const normalizedCode = String(courseCode || '').trim();
+    const normalizedTitle = String(courseTitle || '').trim();
+
+    if (normalizedCode) {
+        const [rows] = await pool.query(
+            'SELECT * FROM course_accreditations WHERE course_code = ? ORDER BY updated_at DESC, created_at DESC LIMIT 1',
+            [normalizedCode]
+        );
+        if (rows.length > 0) {
+            return rows[0];
+        }
+    }
+
+    if (normalizedTitle) {
+        const [rows] = await pool.query(
+            'SELECT * FROM course_accreditations WHERE course_title = ? ORDER BY updated_at DESC, created_at DESC LIMIT 1',
+            [normalizedTitle]
+        );
+        if (rows.length > 0) {
+            return rows[0];
+        }
+
+        const [normalizedRows] = await pool.query(
+            'SELECT * FROM course_accreditations WHERE LOWER(TRIM(course_title)) = LOWER(TRIM(?)) ORDER BY updated_at DESC, created_at DESC LIMIT 1',
+            [normalizedTitle]
+        );
+        if (normalizedRows.length > 0) {
+            return normalizedRows[0];
+        }
+    }
+
+    if (normalizedCode) {
+        const [normalizedRows] = await pool.query(
+            'SELECT * FROM course_accreditations WHERE LOWER(TRIM(course_code)) = LOWER(TRIM(?)) ORDER BY updated_at DESC, created_at DESC LIMIT 1',
+            [normalizedCode]
+        );
+        if (normalizedRows.length > 0) {
+            return normalizedRows[0];
+        }
+    }
+
+    return null;
+}
+
+async function isAccreditationEligibleForVisit(accreditation) {
+    if (!accreditation) {
+        return false;
+    }
+
+    if (isDoneLifecycleStatus(accreditation.overall_status)) {
+        return true;
+    }
+
+    if (Number(accreditation.completion_percentage || 0) >= 100) {
+        return true;
+    }
+
+    if (!accreditation.id) {
+        return false;
+    }
+
+    const [taskSummaryRows] = await pool.query(
+        `SELECT
+            COUNT(*) AS total_tasks,
+            SUM(CASE WHEN LOWER(TRIM(status)) IN ('completed', 'complete', 'approved', 'done') THEN 1 ELSE 0 END) AS done_tasks
+         FROM accreditation_tasks
+         WHERE accreditation_id = ?`,
+        [accreditation.id]
+    );
+
+    const summary = taskSummaryRows[0] || {};
+    const totalTasks = Number(summary.total_tasks || 0);
+    const doneTasks = Number(summary.done_tasks || 0);
+
+    return totalTasks > 0 && doneTasks >= totalTasks;
+}
+
+async function updateLifecycleMasterStage(courseCode, courseTitle, stage) {
+    const normalizedCode = String(courseCode || '').trim();
+    const normalizedTitle = String(courseTitle || '').trim();
+
+    if (!normalizedCode && !normalizedTitle) {
+        return;
+    }
+
+    if (normalizedCode) {
+        await pool.query(
+            'UPDATE course_lifecycle_master SET current_stage = ?, updated_at = CURRENT_TIMESTAMP WHERE course_code = ?',
+            [stage, normalizedCode]
+        );
+        return;
+    }
+
+    await pool.query(
+        'UPDATE course_lifecycle_master SET current_stage = ?, updated_at = CURRENT_TIMESTAMP WHERE course_title = ?',
+        [stage, normalizedTitle]
+    );
+}
+
 router.get('/', async (req, res) => {
     try {
         const [rows] = await pool.query('SELECT * FROM course_visits ORDER BY updated_at DESC, created_at DESC');
@@ -92,6 +200,22 @@ router.get('/', async (req, res) => {
 router.post('/', async (req, res) => {
     try {
         const dc = req.body.documentControl || req.body;
+        const accreditation = await findLatestAccreditation(dc.course_code, dc.course_title);
+
+        if (!accreditation) {
+            return res.status(403).json({
+                success: false,
+                message: 'Visit is locked. Complete accreditation first.'
+            });
+        }
+
+        if (!(await isAccreditationEligibleForVisit(accreditation))) {
+            return res.status(403).json({
+                success: false,
+                message: 'Visit is locked. Accreditation must be completed before creating a visit.'
+            });
+        }
+
         const [result] = await pool.query(
             `INSERT INTO course_visits (
                 course_title, course_code, awarding_body, visit_type, visit_date,
@@ -128,6 +252,11 @@ router.post('/', async (req, res) => {
         );
 
         const [rows] = await pool.query('SELECT * FROM course_visits WHERE id = ?', [result.insertId]);
+
+        if (rows[0] && isDoneLifecycleStatus(rows[0].overall_status)) {
+            await updateLifecycleMasterStage(rows[0].course_code, rows[0].course_title, 'visit_done');
+        }
+
         res.status(201).json({ success: true, data: rows[0], message: 'Course visit created successfully' });
     } catch (error) {
         console.error('Error creating course visit:', error.message);
@@ -181,6 +310,10 @@ router.put('/:id', async (req, res) => {
         const [rows] = await pool.query('SELECT * FROM course_visits WHERE id = ?', [req.params.id]);
         if (!rows.length) {
             return res.status(404).json({ success: false, message: 'Course visit not found' });
+        }
+
+        if (isDoneLifecycleStatus(rows[0].overall_status)) {
+            await updateLifecycleMasterStage(rows[0].course_code, rows[0].course_title, 'visit_done');
         }
 
         res.json({ success: true, data: rows[0], message: 'Course visit updated successfully' });
