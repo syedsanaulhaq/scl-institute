@@ -662,7 +662,8 @@ const CourseMasterDetail = () => {
         }
     };
 
-    const handleSave = async () => {
+    const handleSave = async (options = {}) => {
+        const syncToMoodle = options.syncToMoodle !== false;
         const hierarchyFromCode = deriveHierarchyFromCourseCode(formData.course_code);
         const hasExplicitStructure = Boolean(
             formData.programme_type_name?.trim() &&
@@ -697,7 +698,9 @@ const CourseMasterDetail = () => {
 
         const pathPreview = `${effectiveStructure.programme_type_name} > ${effectiveStructure.program_name} > ${effectiveStructure.academic_year} > ${effectiveStructure.semester_name}`;
         const confirmSave = window.confirm(
-            `Moodle path:\n${pathPreview}\n\nCourse:\n${formData.course_title} (${formData.course_code})\n\nContinue save and sync?`
+            syncToMoodle
+                ? `Moodle path:\n${pathPreview}\n\nCourse:\n${formData.course_title} (${formData.course_code})\n\nContinue save and sync to Moodle?`
+                : `Moodle path:\n${pathPreview}\n\nCourse:\n${formData.course_title} (${formData.course_code})\n\nContinue import to SCL only (no Moodle update)?`
         );
         if (!confirmSave) {
             return;
@@ -706,23 +709,32 @@ const CourseMasterDetail = () => {
         try {
             setSaving(true);
 
-            const syncPayload = {
-                ...formData,
-                ...effectiveStructure,
-                ...selectedCategoryIds
+            let resolvedCategoryIds = {
+                programme_type_category_id: selectedCategoryIds.programme_type_category_id || null,
+                program_category_id: selectedCategoryIds.program_category_id || null,
+                year_category_id: selectedCategoryIds.year_category_id || null,
+                semester_category_id: selectedCategoryIds.semester_category_id || null
             };
 
-            const syncRes = await axios.post(`${API_URL}/students/moodle/sync-master-course`, syncPayload);
-            if (!syncRes.data?.success) {
-                throw new Error(syncRes.data?.message || 'Failed to sync course to Moodle');
+            if (syncToMoodle) {
+                const syncPayload = {
+                    ...formData,
+                    ...effectiveStructure,
+                    ...selectedCategoryIds
+                };
+
+                const syncRes = await axios.post(`${API_URL}/students/moodle/sync-master-course`, syncPayload);
+                if (!syncRes.data?.success) {
+                    throw new Error(syncRes.data?.message || 'Failed to sync course to Moodle');
+                }
+
+                resolvedCategoryIds = {
+                    programme_type_category_id: syncRes.data?.data?.resolved_category_ids?.programme_type_category_id || null,
+                    program_category_id: syncRes.data?.data?.resolved_category_ids?.program_category_id || null,
+                    year_category_id: syncRes.data?.data?.resolved_category_ids?.year_category_id || null,
+                    semester_category_id: syncRes.data?.data?.resolved_category_ids?.semester_category_id || null
+                };
             }
-
-            const resolvedCategoryIds = {
-                programme_type_category_id: syncRes.data?.data?.resolved_category_ids?.programme_type_category_id || null,
-                program_category_id: syncRes.data?.data?.resolved_category_ids?.program_category_id || null,
-                year_category_id: syncRes.data?.data?.resolved_category_ids?.year_category_id || null,
-                semester_category_id: syncRes.data?.data?.resolved_category_ids?.semester_category_id || null
-            };
 
             setSelectedCategoryIds(resolvedCategoryIds);
 
@@ -734,7 +746,7 @@ const CourseMasterDetail = () => {
 
             await axios.post(`${API_URL}/accreditations/master-courses`, payload);
 
-            alert('Course and Moodle categories saved successfully');
+            alert(syncToMoodle ? 'Course and Moodle categories saved successfully' : 'Course imported to SCL successfully (Moodle unchanged)');
             navigate('/course-lifecycle');
         } catch (error) {
             console.error('Failed to save course master:', error);
@@ -1011,6 +1023,15 @@ const CourseMasterDetail = () => {
                     <button onClick={() => navigate('/course-lifecycle')} className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-semibold">
                         Cancel
                     </button>
+                    {selectedExistingCourse && (
+                        <button
+                            onClick={() => handleSave({ syncToMoodle: false })}
+                            disabled={saving}
+                            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold disabled:opacity-50"
+                        >
+                            {saving ? 'Saving...' : 'Import to SCL Only'}
+                        </button>
+                    )}
                     <button onClick={handleSave} disabled={saving} className="px-4 py-2 bg-scl-purple text-white rounded-lg hover:bg-scl-purple/90 font-semibold disabled:opacity-50">
                         {saving ? 'Saving...' : 'Save Common Data'}
                     </button>
