@@ -39,7 +39,7 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
         if (hasTeaching) return 'Teacher Menu';
         return 'General Menu';
     });
-    const [activeSubMenuKey, setActiveSubMenuKey] = useState('student-admission');
+    const [activeSubMenuKey, setActiveSubMenuKey] = useState(null);
 
     const handleAccessLMS = async () => {
         try {
