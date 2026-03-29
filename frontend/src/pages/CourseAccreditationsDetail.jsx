@@ -1010,40 +1010,39 @@ const CourseAccreditationsDetail = () => {
         
         const taskId = `temp_${Date.now()}_${Math.random()}`;
 
-        setFormData(prev => {
-            const newData = { ...prev };
-            if (!newData.sections[sectionNum]) {
-                newData.sections[sectionNum] = [];
-            }
-            
-            if (editingRowIdx !== null && editingSection === sectionNum) {
-                // Update existing
-                const existingId = newData.sections[sectionNum][editingRowIdx]?.id;
-                newData.sections[sectionNum][editingRowIdx] = { 
+        const nextSections = { ...(formData.sections || {}) };
+        const sectionRows = Array.isArray(nextSections[sectionNum]) ? [...nextSections[sectionNum]] : [];
+        let alertMessage = '';
+
+        if (editingRowIdx !== null && editingSection === sectionNum) {
+            const existingId = sectionRows[editingRowIdx]?.id;
+            sectionRows[editingRowIdx] = {
+                ...currentForm,
+                id: existingId
+            };
+            alertMessage = 'Record updated in the section';
+        } else {
+            const isDuplicate = sectionRows.some(
+                (task) => task.area === currentForm.area
+                    && task.description === currentForm.description
+                    && task.responsible === currentForm.responsible
+            );
+
+            if (!isDuplicate) {
+                sectionRows.push({
                     ...currentForm,
-                    id: existingId
-                };
-                alert('Record updated in the section');
-            } else {
-                // Check if this exact task was just added (prevent duplicates from double-rendering)
-                const isDuplicate = newData.sections[sectionNum].some(
-                    task => task.area === currentForm.area &&
-                            task.description === currentForm.description &&
-                            task.responsible === currentForm.responsible
-                );
-                
-                if (!isDuplicate) {
-                    // Add new
-                    const newTask = { 
-                        ...currentForm,
-                        tempId: taskId
-                    };
-                    newData.sections[sectionNum].push(newTask);
-                    alert('Record added to the section successfully');
-                }
+                    tempId: taskId
+                });
+                alertMessage = 'Record added to the section successfully';
             }
-            return newData;
-        });
+        }
+
+        nextSections[sectionNum] = sectionRows;
+        setFormData((prev) => ({ ...prev, sections: nextSections }));
+
+        if (alertMessage) {
+            alert(alertMessage);
+        }
         
         handleFormReset();
     };
