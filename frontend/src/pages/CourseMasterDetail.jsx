@@ -356,16 +356,22 @@ const CourseMasterDetail = () => {
 
     const handleCourseTitleInput = (value) => {
         const matchedCourse = suggestionCourses.find((course) => normalizeValue(course.course_title) === normalizeValue(value));
-        setFormData((prev) => ({
-            ...prev,
-            course_title: value,
-            course_code: matchedCourse?.course_code ? String(matchedCourse.course_code) : prev.course_code
-        }));
-
-        // Typing a new title should resume structure-based auto code generation.
-        setIsCourseCodeManuallyEdited(false);
-
+        
         if (matchedCourse?.course_code) {
+            // Existing course: use its code
+            setFormData((prev) => ({
+                ...prev,
+                course_title: value,
+                course_code: String(matchedCourse.course_code)
+            }));
+            setIsCourseCodeManuallyEdited(false);
+        } else {
+            // New course: clear code to trigger auto-generation based on structure
+            setFormData((prev) => ({
+                ...prev,
+                course_title: value,
+                course_code: '' // Clear to force auto-generation
+            }));
             setIsCourseCodeManuallyEdited(false);
         }
     };
@@ -381,7 +387,16 @@ const CourseMasterDetail = () => {
     };
 
     const selectCourseTitleOption = (value) => {
-        handleCourseTitleInput(value);
+        // When selecting from dropdown, find the course and set both title and code immediately
+        const matchedCourse = suggestionCourses.find((course) => normalizeValue(course.course_title) === normalizeValue(value));
+        
+        setFormData((prev) => ({
+            ...prev,
+            course_title: value,
+            course_code: matchedCourse?.course_code ? String(matchedCourse.course_code) : prev.course_code
+        }));
+        
+        // Mark that code is from existing course (not manually edited)
         setIsCourseCodeManuallyEdited(false);
         setShowCourseTitleSuggestions(false);
     };
@@ -938,19 +953,24 @@ const CourseMasterDetail = () => {
                             />
                             {showCourseTitleSuggestions && filteredCourseTitleOptions.length > 0 && (
                                 <div className="absolute z-20 mt-1 w-full max-h-56 overflow-auto rounded-lg border border-gray-200 bg-white shadow-lg">
-                                    {filteredCourseTitleOptions.slice(0, 50).map((option) => (
-                                        <button
-                                            key={option.id || option.name}
-                                            type="button"
-                                            onMouseDown={(e) => {
-                                                e.preventDefault();
-                                                selectCourseTitleOption(option.name);
-                                            }}
-                                            className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100"
-                                        >
-                                            {option.name}
-                                        </button>
-                                    ))}
+                                    {filteredCourseTitleOptions.slice(0, 50).map((option) => {
+                                        const courseData = suggestionCourses.find((c) => normalizeValue(c.course_title) === normalizeValue(option.name));
+                                        const courseCode = courseData?.course_code || '';
+                                        return (
+                                            <button
+                                                key={option.id || option.name}
+                                                type="button"
+                                                onMouseDown={(e) => {
+                                                    e.preventDefault();
+                                                    selectCourseTitleOption(option.name);
+                                                }}
+                                                className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 border-b border-gray-100 last:border-b-0"
+                                            >
+                                                <div className="font-medium">{option.name}</div>
+                                                {courseCode && <div className="text-xs text-gray-500">{courseCode}</div>}
+                                            </button>
+                                        );
+                                    })}
                                 </div>
                             )}
                             </div>
