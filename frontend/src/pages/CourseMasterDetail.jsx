@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { ArrowLeft } from 'lucide-react';
@@ -96,24 +96,45 @@ const CourseMasterDetail = () => {
     const [modalInput, setModalInput] = useState('');
     const [modalLoading, setModalLoading] = useState(false);
 
+    const fetchHierarchy = useCallback(async () => {
+        try {
+            const [hierarchyRes, masterRes] = await Promise.all([
+                axios.get(`${API_URL}/students/moodle/category-hierarchy?include_inactive=false`),
+                axios.get(`${API_URL}/accreditations/master-courses`).catch(() => ({ data: { data: [] } }))
+            ]);
+            setMoodleProgrammeTypes(Array.isArray(hierarchyRes.data?.data?.programme_types) ? hierarchyRes.data.data.programme_types : []);
+            setMasterCourses(Array.isArray(masterRes.data?.data) ? masterRes.data.data : []);
+        } catch (error) {
+            console.error('Failed to load Moodle category hierarchy:', error);
+            setMoodleProgrammeTypes([]);
+            setMasterCourses([]);
+        }
+    }, []);
+
     useEffect(() => {
-        const fetchHierarchy = async () => {
-            try {
-                const [hierarchyRes, masterRes] = await Promise.all([
-                    axios.get(`${API_URL}/students/moodle/category-hierarchy?include_inactive=false`),
-                    axios.get(`${API_URL}/accreditations/master-courses`).catch(() => ({ data: { data: [] } }))
-                ]);
-                setMoodleProgrammeTypes(Array.isArray(hierarchyRes.data?.data?.programme_types) ? hierarchyRes.data.data.programme_types : []);
-                setMasterCourses(Array.isArray(masterRes.data?.data) ? masterRes.data.data : []);
-            } catch (error) {
-                console.error('Failed to load Moodle category hierarchy:', error);
-                setMoodleProgrammeTypes([]);
-                setMasterCourses([]);
+        fetchHierarchy();
+    }, [fetchHierarchy]);
+
+    // Keep form data fresh: re-check DB when user returns to this tab/window.
+    useEffect(() => {
+        const handleFocus = () => {
+            fetchHierarchy();
+        };
+
+        const handleVisibilityChange = () => {
+            if (!document.hidden) {
+                fetchHierarchy();
             }
         };
 
-        fetchHierarchy();
-    }, []);
+        window.addEventListener('focus', handleFocus);
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+
+        return () => {
+            window.removeEventListener('focus', handleFocus);
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+        };
+    }, [fetchHierarchy]);
 
     const programmeTypeOptions = useMemo(() => uniqueByName(moodleProgrammeTypes), [moodleProgrammeTypes]);
 
