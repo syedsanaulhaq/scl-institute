@@ -72,6 +72,13 @@ const buildDocumentDownloadUrl = (href, label) => {
     return `${API_URL}/accreditations/task-documents/download?${query.toString()}`;
 };
 
+const buildFallbackDocumentDataUrl = (label) => {
+    const displayLabel = String(label || '').trim();
+    if (!displayLabel) return '';
+
+    return `data:text/plain;charset=utf-8,${encodeURIComponent(`Document reference: ${displayLabel}`)}`;
+};
+
 const serializeDocumentValue = ({ label, href }) => {
     const normalizedLabel = String(label || '').trim();
     const normalizedHref = String(href || '').trim();
@@ -1184,27 +1191,26 @@ const CourseAccreditationsDetail = () => {
     const renderDocumentLink = (label, href) => {
         const displayLabel = String(label || '').trim();
         const resolvedHref = buildDocumentUrl(href);
-        const downloadHref = buildDocumentDownloadUrl(href, displayLabel);
+        const fallbackHref = buildFallbackDocumentDataUrl(displayLabel);
+        const downloadHref = buildDocumentDownloadUrl(href, displayLabel) || fallbackHref;
+        const previewHref = resolvedHref || fallbackHref;
 
         if (!displayLabel) {
             return <span className="text-gray-400">-</span>;
         }
 
-        if (!resolvedHref) {
-            return <span className="text-xs text-gray-700 break-all">{displayLabel}</span>;
-        }
-
         return (
             <div className="flex flex-col gap-1">
                 <a
-                    href={downloadHref || resolvedHref}
+                    href={downloadHref}
+                    download={displayLabel}
                     className="text-xs text-blue-600 hover:text-blue-800 underline break-all"
                 >
                     {displayLabel}
                 </a>
-                {resolvedHref && (
+                {previewHref && (
                     <a
-                        href={resolvedHref}
+                        href={previewHref}
                         target="_blank"
                         rel="noreferrer"
                         className="text-xs text-gray-500 hover:text-gray-700"
@@ -1666,7 +1672,7 @@ const CourseAccreditationsDetail = () => {
                                                         }}
                                                         className="w-full text-xs"
                                                     />
-                                                    {currentForm.source && <p className="text-xs text-gray-600 mt-0.5">✓ {currentForm.source.substring(0, 20)}</p>}
+                                                    {currentForm.source && <div className="mt-0.5">{renderDocumentLink(currentForm.source, currentForm.sourceUrl)}</div>}
                                                 </div>
                                                 <div>
                                                     <label className="block text-xs font-semibold text-gray-700 mb-0.5">Evidence (File)</label>
@@ -1684,7 +1690,7 @@ const CourseAccreditationsDetail = () => {
                                                         }}
                                                         className="w-full text-xs"
                                                     />
-                                                    {currentForm.evidence && <p className="text-xs text-gray-600 mt-0.5">✓ {currentForm.evidence.substring(0, 20)}</p>}
+                                                    {currentForm.evidence && <div className="mt-0.5">{renderDocumentLink(currentForm.evidence, currentForm.evidenceUrl)}</div>}
                                                 </div>
                                                 <div>
                                                     <label className="block text-xs font-semibold text-gray-700 mb-0.5">Review Notes</label>
