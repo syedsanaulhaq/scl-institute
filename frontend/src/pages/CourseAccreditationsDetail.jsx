@@ -60,6 +60,18 @@ const buildDocumentUrl = (value) => {
     return `${BACKEND_URL}/${href}`;
 };
 
+const buildDocumentDownloadUrl = (href, label) => {
+    const normalizedHref = String(href || '').trim();
+    if (!normalizedHref) return '';
+
+    const query = new URLSearchParams({
+        path: normalizedHref,
+        name: String(label || getFileNameFromPath(normalizedHref) || 'document').trim()
+    });
+
+    return `${API_URL}/accreditations/task-documents/download?${query.toString()}`;
+};
+
 const serializeDocumentValue = ({ label, href }) => {
     const normalizedLabel = String(label || '').trim();
     const normalizedHref = String(href || '').trim();
@@ -1172,6 +1184,7 @@ const CourseAccreditationsDetail = () => {
     const renderDocumentLink = (label, href) => {
         const displayLabel = String(label || '').trim();
         const resolvedHref = buildDocumentUrl(href);
+        const downloadHref = buildDocumentDownloadUrl(href, displayLabel);
 
         if (!displayLabel) {
             return <span className="text-gray-400">-</span>;
@@ -1184,20 +1197,21 @@ const CourseAccreditationsDetail = () => {
         return (
             <div className="flex flex-col gap-1">
                 <a
-                    href={resolvedHref}
-                    target="_blank"
-                    rel="noreferrer"
+                    href={downloadHref || resolvedHref}
                     className="text-xs text-blue-600 hover:text-blue-800 underline break-all"
                 >
                     {displayLabel}
                 </a>
-                <a
-                    href={resolvedHref}
-                    download={displayLabel}
-                    className="text-xs text-gray-500 hover:text-gray-700"
-                >
-                    Download
-                </a>
+                {resolvedHref && (
+                    <a
+                        href={resolvedHref}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-xs text-gray-500 hover:text-gray-700"
+                    >
+                        Open
+                    </a>
+                )}
             </div>
         );
     };
