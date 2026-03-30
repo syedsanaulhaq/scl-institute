@@ -1,9 +1,35 @@
 const express = require('express');
+const fs = require('fs');
+const multer = require('multer');
+const path = require('path');
 const pool = require('../db');
 
 const router = express.Router();
 const INIT_MAX_RETRIES = 30;
 const INIT_RETRY_DELAY_MS = 5000;
+const accreditationUploadDir = path.join(__dirname, '../uploads/accreditation-documents');
+
+fs.mkdirSync(accreditationUploadDir, { recursive: true });
+
+const accreditationDocumentStorage = multer.diskStorage({
+    destination: (_req, _file, cb) => {
+        cb(null, accreditationUploadDir);
+    },
+    filename: (_req, file, cb) => {
+        const safeBaseName = path.basename(file.originalname, path.extname(file.originalname))
+            .replace(/[^a-zA-Z0-9-_]/g, '_')
+            .slice(0, 80);
+        const extension = path.extname(file.originalname || '').slice(0, 20);
+        cb(null, `${Date.now()}-${safeBaseName || 'document'}${extension}`);
+    }
+});
+
+const accreditationDocumentUpload = multer({
+    storage: accreditationDocumentStorage,
+    limits: {
+        fileSize: 20 * 1024 * 1024
+    }
+});
 
 // ===============================================
 // Initialize Course Accreditation Tables
@@ -166,6 +192,27 @@ CREATE TABLE IF NOT EXISTS accreditation_signoffs (
         throw error;
     }
 }
+
+router.post('/task-documents/upload', accreditationDocumentUpload.single('file'), async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ success: false, message: 'No file uploaded' });
+        }
+
+        res.status(201).json({
+            success: true,
+            data: {
+                name: req.file.originalname,
+                path: `/uploads/accreditation-documents/${req.file.filename}`,
+                mime_type: req.file.mimetype,
+                size: req.file.size
+            }
+        });
+    } catch (error) {
+        console.error('Error uploading accreditation document:', error.message);
+        res.status(500).json({ success: false, message: 'Failed to upload document', error: error.message });
+    }
+});
 
 function shouldRetryInit(error) {
     const message = String(error?.message || '').toLowerCase();

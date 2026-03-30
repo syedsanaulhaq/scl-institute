@@ -5,6 +5,7 @@ const bodyParser = require('body-parser');
 const mysql = require('mysql2/promise');
 const axios = require('axios');
 const crypto = require('crypto');
+const path = require('path');
 const { v4: uuidv4 } = require('uuid');
 console.log("Backend process starting...");
 const studentsRouter = require('./routes/students');
@@ -24,6 +25,8 @@ process.on('uncaughtException', (err) => {
 const app = express();
 const PORT = process.env.PORT || 4000;
 const moodleTablePrefix = process.env.MOODLE_TABLE_PREFIX || 'mdl_';
+
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Database Connection Definition
 const pool = mysql.createPool({

@@ -4,6 +4,7 @@ import axios from 'axios';
 import { ChevronDown, ChevronUp, ArrowLeft } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
+const BACKEND_URL = API_URL.replace(/\/api\/?$/, '');
 
 // Utility function to format dates for HTML5 date input (yyyy-MM-dd)
 const formatDateForInput = (dateString) => {
@@ -11,6 +12,64 @@ const formatDateForInput = (dateString) => {
     const date = new Date(dateString);
     if (isNaN(date.getTime())) return '';
     return date.toISOString().split('T')[0];
+};
+
+const getFileNameFromPath = (value) => {
+    const normalized = String(value || '').trim();
+    if (!normalized) return '';
+    const cleanValue = normalized.split('?')[0];
+    return decodeURIComponent(cleanValue.split('/').pop() || cleanValue);
+};
+
+const parseDocumentValue = (value) => {
+    const rawValue = String(value || '').trim();
+    if (!rawValue) {
+        return { label: '', href: '' };
+    }
+
+    try {
+        const parsed = JSON.parse(rawValue);
+        if (parsed && typeof parsed === 'object') {
+            return {
+                label: parsed.name || parsed.label || getFileNameFromPath(parsed.path || parsed.url || ''),
+                href: parsed.path || parsed.url || ''
+            };
+        }
+    } catch (_error) {
+        // Keep backward compatibility with older plain-string values.
+    }
+
+    if (/^https?:\/\//i.test(rawValue) || rawValue.startsWith('/')) {
+        return {
+            label: getFileNameFromPath(rawValue),
+            href: rawValue
+        };
+    }
+
+    return {
+        label: rawValue,
+        href: ''
+    };
+};
+
+const buildDocumentUrl = (value) => {
+    const href = String(value || '').trim();
+    if (!href) return '';
+    if (href.startsWith('blob:') || /^https?:\/\//i.test(href)) return href;
+    if (href.startsWith('/')) return `${BACKEND_URL}${href}`;
+    return `${BACKEND_URL}/${href}`;
+};
+
+const serializeDocumentValue = ({ label, href }) => {
+    const normalizedLabel = String(label || '').trim();
+    const normalizedHref = String(href || '').trim();
+    if (!normalizedLabel && !normalizedHref) return '';
+    if (!normalizedHref) return normalizedLabel;
+
+    return JSON.stringify({
+        name: normalizedLabel || getFileNameFromPath(normalizedHref),
+        path: normalizedHref
+    });
 };
 
 const SECTION_CONFIG = {
@@ -107,7 +166,11 @@ const CourseAccreditationsDetail = () => {
         area: '',
         description: '',
         source: '',
+        sourceUrl: '',
+        sourceFile: null,
         evidence: '',
+        evidenceUrl: '',
+        evidenceFile: null,
         responsible: '',
         status: false,
         notes: ''
@@ -210,12 +273,18 @@ const CourseAccreditationsDetail = () => {
                                         const taskKey = `${task.id}|${task.task_name}|${task.description}`;
                                         if (!taskKeys.has(taskKey)) {
                                             taskKeys.add(taskKey);
+                                            const sourceDoc = parseDocumentValue(task.source_reference);
+                                            const evidenceDoc = parseDocumentValue(task.evidence_required);
                                             sectionsByNum[sectionNum].push({
                                                 id: task.id,
                                                 area: task.task_name || '',
                                                 description: task.description || '',
-                                                source: task.source_reference || '',
-                                                evidence: task.evidence_required || '',
+                                                source: sourceDoc.label,
+                                                sourceUrl: sourceDoc.href,
+                                                sourceFile: null,
+                                                evidence: evidenceDoc.label,
+                                                evidenceUrl: evidenceDoc.href,
+                                                evidenceFile: null,
                                                 responsible: task.responsible_person || '',
                                                 status: task.status === 'Completed',
                                                 notes: task.notes || ''
@@ -348,7 +417,11 @@ const CourseAccreditationsDetail = () => {
             area: '',
             description: '',
             source: '',
+            sourceUrl: '',
+            sourceFile: null,
             evidence: '',
+            evidenceUrl: '',
+            evidenceFile: null,
             responsible: '',
             status: false,
             notes: ''
@@ -393,12 +466,18 @@ const CourseAccreditationsDetail = () => {
                         const taskKey = `${task.id}|${task.task_name}|${task.description}`;
                         if (!taskKeys.has(taskKey)) {
                             taskKeys.add(taskKey);
+                            const sourceDoc = parseDocumentValue(task.source_reference);
+                            const evidenceDoc = parseDocumentValue(task.evidence_required);
                             sectionsByNum[sectionNum].push({
                                 id: task.id,
                                 area: task.task_name || '',
                                 description: task.description || '',
-                                source: task.source_reference || '',
-                                evidence: task.evidence_required || '',
+                                source: sourceDoc.label,
+                                sourceUrl: sourceDoc.href,
+                                sourceFile: null,
+                                evidence: evidenceDoc.label,
+                                evidenceUrl: evidenceDoc.href,
+                                evidenceFile: null,
                                 responsible: task.responsible_person || '',
                                 status: task.status === 'Completed',
                                 notes: task.notes || ''
@@ -467,7 +546,11 @@ const CourseAccreditationsDetail = () => {
                 area: '',
                 description: '',
                 source: '',
+                sourceUrl: '',
+                sourceFile: null,
                 evidence: '',
+                evidenceUrl: '',
+                evidenceFile: null,
                 responsible: '',
                 status: false,
                 notes: ''
@@ -672,16 +755,7 @@ const CourseAccreditationsDetail = () => {
                         const tasks = (formData.sections[sectionNum] || []).filter(task => task.area);
                         
                         for (const task of tasks) {
-                            const taskData = {
-                                section_number: sectionNum,
-                                area: task.area,
-                                description: task.description,
-                                responsible: task.responsible,
-                                status: task.status ? 'Completed' : 'Not Started',
-                                notes: task.notes,
-                                source: task.source,
-                                evidence: task.evidence
-                            };
+                            const taskData = await buildTaskPayload(task, sectionNum);
 
                             if (task.id) {
                                 await axios.put(
@@ -758,16 +832,7 @@ const CourseAccreditationsDetail = () => {
                         const tasks = (formData.sections[sectionNum] || []).filter(task => task.area);
                         console.log(`Saving ${tasks.length} tasks for section ${sectionNum}`);
                         for (const task of tasks) {
-                            const taskData = {
-                                section_number: sectionNum,
-                                area: task.area,
-                                description: task.description,
-                                responsible: task.responsible,
-                                status: task.status ? 'Completed' : 'Not Started',
-                                notes: task.notes,
-                                source: task.source,
-                                evidence: task.evidence
-                            };
+                            const taskData = await buildTaskPayload(task, sectionNum);
 
                             if (task.id) {
                                 await axios.put(
@@ -842,16 +907,7 @@ const CourseAccreditationsDetail = () => {
                     const tasks = (formData.sections[sectionNum] || []).filter(task => task.area);
                     console.log(`Saving ${tasks.length} tasks for section ${sectionNum}`);
                     for (const task of tasks) {
-                        const taskData = {
-                            section_number: sectionNum,
-                            area: task.area,
-                            description: task.description,
-                            responsible: task.responsible,
-                            status: task.status ? 'Completed' : 'Not Started',
-                            notes: task.notes,
-                            source: task.source,
-                            evidence: task.evidence
-                        };
+                        const taskData = await buildTaskPayload(task, sectionNum);
 
                         if (task.id) {
                             await axios.put(
@@ -1076,12 +1132,86 @@ const CourseAccreditationsDetail = () => {
         });
     };
 
+    const uploadTaskDocument = async (file) => {
+        if (!file) return null;
+
+        const payload = new FormData();
+        payload.append('file', file);
+
+        const response = await axios.post(`${API_URL}/accreditations/task-documents/upload`, payload, {
+            headers: {
+                'Content-Type': 'multipart/form-data'
+            }
+        });
+
+        return response.data?.data || null;
+    };
+
+    const buildTaskPayload = async (task, sectionNum) => {
+        const sourceUpload = task.sourceFile ? await uploadTaskDocument(task.sourceFile) : null;
+        const evidenceUpload = task.evidenceFile ? await uploadTaskDocument(task.evidenceFile) : null;
+
+        return {
+            section_number: sectionNum,
+            area: task.area,
+            description: task.description,
+            responsible: task.responsible,
+            status: task.status ? 'Completed' : 'Not Started',
+            notes: task.notes,
+            source: serializeDocumentValue({
+                label: sourceUpload?.name || task.source,
+                href: sourceUpload?.path || task.sourceUrl
+            }),
+            evidence: serializeDocumentValue({
+                label: evidenceUpload?.name || task.evidence,
+                href: evidenceUpload?.path || task.evidenceUrl
+            })
+        };
+    };
+
+    const renderDocumentLink = (label, href) => {
+        const displayLabel = String(label || '').trim();
+        const resolvedHref = buildDocumentUrl(href);
+
+        if (!displayLabel) {
+            return <span className="text-gray-400">-</span>;
+        }
+
+        if (!resolvedHref) {
+            return <span className="text-xs text-gray-700 break-all">{displayLabel}</span>;
+        }
+
+        return (
+            <div className="flex flex-col gap-1">
+                <a
+                    href={resolvedHref}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-xs text-blue-600 hover:text-blue-800 underline break-all"
+                >
+                    {displayLabel}
+                </a>
+                <a
+                    href={resolvedHref}
+                    download={displayLabel}
+                    className="text-xs text-gray-500 hover:text-gray-700"
+                >
+                    Download
+                </a>
+            </div>
+        );
+    };
+
     const handleFormReset = () => {
         setCurrentForm({
             area: '',
             description: '',
             source: '',
+            sourceUrl: '',
+            sourceFile: null,
             evidence: '',
+            evidenceUrl: '',
+            evidenceFile: null,
             responsible: '',
             status: false,
             notes: ''
@@ -1511,7 +1641,15 @@ const CourseAccreditationsDetail = () => {
                                                     <input
                                                         ref={sourceInputRef}
                                                         type="file"
-                                                        onChange={(e) => setCurrentForm(prev => ({ ...prev, source: e.target.files ? e.target.files[0].name : '' }))}
+                                                        onChange={(e) => {
+                                                            const file = e.target.files?.[0] || null;
+                                                            setCurrentForm(prev => ({
+                                                                ...prev,
+                                                                source: file ? file.name : '',
+                                                                sourceUrl: file ? URL.createObjectURL(file) : '',
+                                                                sourceFile: file
+                                                            }));
+                                                        }}
                                                         className="w-full text-xs"
                                                     />
                                                     {currentForm.source && <p className="text-xs text-gray-600 mt-0.5">✓ {currentForm.source.substring(0, 20)}</p>}
@@ -1521,7 +1659,15 @@ const CourseAccreditationsDetail = () => {
                                                     <input
                                                         ref={evidenceInputRef}
                                                         type="file"
-                                                        onChange={(e) => setCurrentForm(prev => ({ ...prev, evidence: e.target.files ? e.target.files[0].name : '' }))}
+                                                        onChange={(e) => {
+                                                            const file = e.target.files?.[0] || null;
+                                                            setCurrentForm(prev => ({
+                                                                ...prev,
+                                                                evidence: file ? file.name : '',
+                                                                evidenceUrl: file ? URL.createObjectURL(file) : '',
+                                                                evidenceFile: file
+                                                            }));
+                                                        }}
                                                         className="w-full text-xs"
                                                     />
                                                     {currentForm.evidence && <p className="text-xs text-gray-600 mt-0.5">✓ {currentForm.evidence.substring(0, 20)}</p>}
@@ -1577,6 +1723,8 @@ const CourseAccreditationsDetail = () => {
                                                             <th className="border border-gray-300 px-3 py-2 text-left font-semibold">Task Area</th>
                                                             <th className="border border-gray-300 px-3 py-2 text-left font-semibold">Description</th>
                                                             <th className="border border-gray-300 px-3 py-2 text-left font-semibold">Responsible</th>
+                                                            <th className="border border-gray-300 px-3 py-2 text-left font-semibold">Source</th>
+                                                            <th className="border border-gray-300 px-3 py-2 text-left font-semibold">Evidence</th>
                                                             <th className="border border-gray-300 px-3 py-2 text-center font-semibold">Status</th>
                                                             <th className="border border-gray-300 px-3 py-2 text-center font-semibold">Actions</th>
                                                         </tr>
@@ -1587,6 +1735,8 @@ const CourseAccreditationsDetail = () => {
                                                                 <td className="border border-gray-300 px-3 py-2 text-sm font-medium">{task.area}</td>
                                                                 <td className="border border-gray-300 px-3 py-2 text-sm">{task.description.substring(0, 50)}...</td>
                                                                 <td className="border border-gray-300 px-3 py-2 text-sm">{task.responsible}</td>
+                                                                <td className="border border-gray-300 px-3 py-2 align-top">{renderDocumentLink(task.source, task.sourceUrl)}</td>
+                                                                <td className="border border-gray-300 px-3 py-2 align-top">{renderDocumentLink(task.evidence, task.evidenceUrl)}</td>
                                                                 <td className="border border-gray-300 px-3 py-2 text-center">
                                                                     {task.status ? <span className="text-green-600 font-semibold">✓</span> : <span className="text-gray-400">○</span>}
                                                                 </td>
