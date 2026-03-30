@@ -144,10 +144,12 @@ async function ensureCourseRegistrationTables() {
                 program_name VARCHAR(255) NULL,
                 academic_year VARCHAR(50) NULL,
                 semester_name VARCHAR(50) NULL,
+                cohort_label VARCHAR(100) NULL,
                 programme_type_category_id INT NULL,
                 program_category_id INT NULL,
                 year_category_id INT NULL,
                 semester_category_id INT NULL,
+                cohort_category_id INT NULL,
                 course_type VARCHAR(100) NULL,
                 awarding_body_accreditation VARCHAR(255) NULL,
                 regulation_level VARCHAR(100) NULL,
@@ -198,10 +200,12 @@ async function ensureCourseRegistrationTables() {
             { name: 'program_name', sql: 'ALTER TABLE course_registrations ADD COLUMN program_name VARCHAR(255) NULL AFTER course_code' },
             { name: 'academic_year', sql: 'ALTER TABLE course_registrations ADD COLUMN academic_year VARCHAR(50) NULL AFTER program_name' },
             { name: 'semester_name', sql: 'ALTER TABLE course_registrations ADD COLUMN semester_name VARCHAR(50) NULL AFTER academic_year' },
+            { name: 'cohort_label', sql: 'ALTER TABLE course_registrations ADD COLUMN cohort_label VARCHAR(100) NULL AFTER semester_name' },
             { name: 'programme_type_category_id', sql: 'ALTER TABLE course_registrations ADD COLUMN programme_type_category_id INT NULL AFTER semester_name' },
             { name: 'program_category_id', sql: 'ALTER TABLE course_registrations ADD COLUMN program_category_id INT NULL AFTER semester_name' },
             { name: 'year_category_id', sql: 'ALTER TABLE course_registrations ADD COLUMN year_category_id INT NULL AFTER program_category_id' },
-            { name: 'semester_category_id', sql: 'ALTER TABLE course_registrations ADD COLUMN semester_category_id INT NULL AFTER year_category_id' }
+            { name: 'semester_category_id', sql: 'ALTER TABLE course_registrations ADD COLUMN semester_category_id INT NULL AFTER year_category_id' },
+            { name: 'cohort_category_id', sql: 'ALTER TABLE course_registrations ADD COLUMN cohort_category_id INT NULL AFTER semester_category_id' }
         ];
 
         for (const column of requiredColumns) {
@@ -2819,7 +2823,7 @@ router.post('/course-registrations', async (req, res) => {
 
         const [result] = await db.execute(
             `INSERT INTO course_registrations (
-                course_title, course_code, programme_type_name, program_name, academic_year, semester_name, programme_type_category_id, program_category_id, year_category_id, semester_category_id, course_type, awarding_body_accreditation, regulation_level,
+                course_title, course_code, programme_type_name, program_name, academic_year, semester_name, cohort_label, programme_type_category_id, program_category_id, year_category_id, semester_category_id, cohort_category_id, course_type, awarding_body_accreditation, regulation_level,
                 mode_of_delivery, start_date, end_date_or_duration, subject_area_discipline,
                 course_description, learning_outcomes, units_modules_covered, assessment_methods,
                 entry_requirements, tuition_fee_gbp, additional_costs, funding_options,
@@ -2827,7 +2831,7 @@ router.post('/course-registrations', async (req, res) => {
                 course_leader_programme_director, internal_verification_contact, ukvi_approved_course,
                 approval_date, review_date, special_admission_considerations, progression_opportunities,
                 industry_partnerships, application_status, moodle_sync_status
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
             [
                 payload.course_title,
                 payload.course_code,
@@ -2835,10 +2839,12 @@ router.post('/course-registrations', async (req, res) => {
                 payload.program_name,
                 payload.academic_year,
                 payload.semester_name,
+                payload.cohort_label,
                 payload.programme_type_category_id,
                 payload.program_category_id,
                 payload.year_category_id,
                 payload.semester_category_id,
+                payload.cohort_category_id,
                 payload.course_type,
                 payload.awarding_body_accreditation,
                 payload.regulation_level,
@@ -2927,10 +2933,12 @@ router.put('/course-registrations/:id', async (req, res) => {
                  program_name = ?,
                  academic_year = ?,
                  semester_name = ?,
+                 cohort_label = ?,
                  programme_type_category_id = ?,
                  program_category_id = ?,
                  year_category_id = ?,
                  semester_category_id = ?,
+                 cohort_category_id = ?,
                  course_type = ?,
                  awarding_body_accreditation = ?,
                  regulation_level = ?,
@@ -2967,10 +2975,12 @@ router.put('/course-registrations/:id', async (req, res) => {
                 payload.program_name,
                 payload.academic_year,
                 payload.semester_name,
+                payload.cohort_label,
                 payload.programme_type_category_id,
                 payload.program_category_id,
                 payload.year_category_id,
                 payload.semester_category_id,
+                payload.cohort_category_id,
                 payload.course_type,
                 payload.awarding_body_accreditation,
                 payload.regulation_level,
@@ -5574,10 +5584,12 @@ function normalizeCourseRegistrationPayload(rawPayload) {
         program_name: String(payload.program_name || '').trim() || null,
         academic_year: String(payload.academic_year || '').trim() || null,
         semester_name: String(payload.semester_name || '').trim() || null,
+        cohort_label: String(payload.cohort_label || '').trim() || null,
         programme_type_category_id: parseNullableInt(payload.programme_type_category_id),
         program_category_id: parseNullableInt(payload.program_category_id),
         year_category_id: parseNullableInt(payload.year_category_id),
         semester_category_id: parseNullableInt(payload.semester_category_id),
+        cohort_category_id: parseNullableInt(payload.cohort_category_id),
         course_type: payload.course_type || null,
         awarding_body_accreditation: payload.awarding_body_accreditation || null,
         regulation_level: payload.regulation_level || null,
@@ -5854,12 +5866,25 @@ function deriveCourseDates(registration) {
 }
 
 function deriveMoodleShortname(registration) {
-    const title = String(registration.course_title || '').trim();
-    if (title) {
-        return title.slice(0, 255);
+    const baseCode = String(registration.course_code || '').trim();
+    const cohortToken = toCategorySlug(registration.cohort_label || '').toUpperCase();
+    if (baseCode && cohortToken) {
+        return `${baseCode}-${cohortToken}`.slice(0, 255);
+    }
+    if (baseCode) {
+        return baseCode.slice(0, 255);
     }
 
-    return String(registration.course_code || '').trim().slice(0, 255);
+    return String(registration.course_title || '').trim().slice(0, 255);
+}
+
+function deriveMoodleCourseIdNumber(registration) {
+    const baseCode = String(registration.course_code || '').trim();
+    const cohortToken = toCategorySlug(registration.cohort_label || '').toUpperCase();
+    if (baseCode && cohortToken) {
+        return `${baseCode}-${cohortToken}`.slice(0, 255);
+    }
+    return baseCode.slice(0, 255);
 }
 
 function getMoodleRestConfig() {
@@ -6327,6 +6352,11 @@ async function findOrCreateMoodleCategory(name, parentId, idNumberPrefix, explic
 }
 
 async function resolveMoodleCategoryIdForRegistration(registration) {
+    const cohortCategoryId = Number(registration.cohort_category_id || 0);
+    if (cohortCategoryId > 0) {
+        return cohortCategoryId;
+    }
+
     const semesterCategoryId = Number(registration.semester_category_id || 0);
     if (semesterCategoryId > 0) {
         return semesterCategoryId;
@@ -6352,11 +6382,12 @@ async function resolveMoodleCategoryIdForRegistration(registration) {
     const programName = String(registration.program_name || '').trim();
     const academicYear = String(registration.academic_year || '').trim();
     const semesterName = String(registration.semester_name || '').trim();
+    const cohortLabel = String(registration.cohort_label || '').trim();
     const hierarchyCodes = buildHierarchyCodePattern(registration.course_code, programmeTypeName, programName, academicYear, semesterName);
 
     const codeParts = parseCourseCodeStructure(registration.course_code);
 
-    if (!programmeTypeName && !programName && !academicYear && !semesterName && !codeParts) {
+    if (!programmeTypeName && !programName && !academicYear && !semesterName && !cohortLabel && !codeParts) {
         return fallbackCategoryId;
     }
 
@@ -6395,6 +6426,12 @@ async function resolveMoodleCategoryIdForRegistration(registration) {
             parentId = await findOrCreateMoodleCategory(semesterName, parentId, 'semester', hierarchyCodes.semesterCode);
         }
 
+        if (cohortLabel) {
+            const cohortSlug = toCategorySlug(cohortLabel).toUpperCase().slice(0, 20);
+            const cohortCode = [hierarchyCodes.semesterCode, cohortSlug].filter(Boolean).join('-').slice(0, 100);
+            parentId = await findOrCreateMoodleCategory(cohortLabel, parentId, 'cohort', cohortCode || null);
+        }
+
         return parentId;
     } catch (error) {
         console.warn(`[COURSE REGISTRATION] Category hierarchy fallback: ${error.message}`);
@@ -6403,7 +6440,8 @@ async function resolveMoodleCategoryIdForRegistration(registration) {
 }
 
 async function createOrUpdateMoodleCourseCore(registration) {
-    const existingCourse = await getMoodleCourseByCode(registration.course_code);
+    const moodleIdNumber = deriveMoodleCourseIdNumber(registration);
+    const existingCourse = await getMoodleCourseByCode(moodleIdNumber);
     const summary = buildCourseSummaryFromRegistration(registration);
     const { startDateEpoch, endDateEpoch } = deriveCourseDates(registration);
     const shortname = deriveMoodleShortname(registration);
@@ -6417,7 +6455,7 @@ async function createOrUpdateMoodleCourseCore(registration) {
                     categoryid: categoryId,
                     fullname: registration.course_title,
                     shortname,
-                    idnumber: registration.course_code,
+                    idnumber: moodleIdNumber,
                     summary,
                     summaryformat: 1,
                     startdate: startDateEpoch,
@@ -6443,7 +6481,7 @@ async function createOrUpdateMoodleCourseCore(registration) {
             courses: [{
                 fullname: registration.course_title,
                 shortname,
-                idnumber: registration.course_code,
+                idnumber: moodleIdNumber,
                 categoryid: categoryId,
                 summary,
                 summaryformat: 1,
@@ -6468,7 +6506,7 @@ async function createOrUpdateMoodleCourseCore(registration) {
                 showgrades, newsitems, startdate, enddate, marker, maxbytes, legacyfiles, showreports,
                 visible, visibleold, groupmode, groupmodeforce, defaultgroupingid, timecreated, timemodified
             ) VALUES (?, 0, ?, ?, ?, ?, 1, 'topics', 1, 5, ?, ?, 0, 0, 0, 0, 1, 1, 0, 0, 0, ?, ?)`,
-            [categoryId, registration.course_title, shortname, registration.course_code, summary, startDateEpoch, endDateEpoch, now, now]
+            [categoryId, registration.course_title, shortname, moodleIdNumber, summary, startDateEpoch, endDateEpoch, now, now]
         );
 
         return { moodleCourseId: Number(insertResult.insertId), created: true };
@@ -6498,9 +6536,6 @@ async function ensureManualEnrolmentForCourse(courseId) {
 }
 
 const COURSE_CUSTOM_FIELD_ALIASES = {
-    program_name: ['program_name', 'programme_name', 'program', 'programme'],
-    academic_year: ['academic_year', 'year', 'course_year'],
-    semester_name: ['semester_name', 'semester', 'term'],
     course_type: ['course_type', 'course_type_id', 'type_of_course'],
     awarding_body_accreditation: ['awarding_body_accreditation', 'awarding_body', 'accreditation'],
     regulation_level: ['regulation_level', 'rqf_level'],

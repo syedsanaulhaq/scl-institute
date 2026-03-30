@@ -80,6 +80,7 @@ function buildInitialFormData(acc, structure) {
         program_name: structure.program_name || '',
         academic_year: structure.academic_year || '',
         semester_name: structure.semester_name || '',
+        cohort_label: '',
         programme_type_category_id: structure.programme_type_category_id,
         program_category_id: structure.program_category_id,
         year_category_id: structure.year_category_id,
@@ -121,6 +122,7 @@ const REGISTRATION_FORM_FIELDS = [
     'program_name',
     'academic_year',
     'semester_name',
+    'cohort_label',
     'programme_type_category_id',
     'program_category_id',
     'year_category_id',
@@ -599,6 +601,7 @@ const CourseRegistrations = () => {
             mode_of_delivery: prev.mode_of_delivery || 'Blended',
             start_date: startDate,
             end_date_or_duration: '12 months',
+            cohort_label: prev.cohort_label || `${new Date(startDate).getFullYear()}-Sep`,
             subject_area_discipline: prev.subject_area_discipline || 'Business',
             course_description: prev.course_description || `${selectedAccreditation.course_title || 'This course'} prepares learners with practical and academic skills for progression and employment.`,
             learning_outcomes: prev.learning_outcomes || 'Apply subject knowledge in practical scenarios; demonstrate critical thinking and communication skills.',
@@ -882,6 +885,15 @@ const CourseRegistrations = () => {
                                 <div>
                                     <label className="block text-xs font-semibold text-gray-600 uppercase mb-1">Course Code / ID</label>
                                     <input value={selectedAccreditation.course_code || ''} readOnly className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-100" />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-semibold text-gray-600 uppercase mb-1">Cohort Label</label>
+                                    <input
+                                        value={registrationForm.cohort_label}
+                                        onChange={(e) => handleFormChange('cohort_label', e.target.value)}
+                                        placeholder="e.g. 2026-Sep"
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                                    />
                                 </div>
                                 <div>
                                     <label className="block text-xs font-semibold text-gray-600 uppercase mb-1">Course Type</label>
