@@ -176,6 +176,8 @@ async function ensureCourseRegistrationTables() {
                 special_admission_considerations TEXT NULL,
                 progression_opportunities TEXT NULL,
                 industry_partnerships TEXT NULL,
+                parent_registration_id INT NULL,
+                is_master TINYINT(1) DEFAULT 1,
                 application_status ENUM('draft', 'submitted', 'approved', 'rejected') DEFAULT 'submitted',
                 reviewer_name VARCHAR(255) NULL,
                 reviewer_notes TEXT NULL,
@@ -187,6 +189,8 @@ async function ensureCourseRegistrationTables() {
                 last_synced_at DATETIME NULL,
                 created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                INDEX idx_course_reg_parent (parent_registration_id),
+                INDEX idx_course_reg_master (is_master),
                 INDEX idx_course_reg_code (course_code),
                 INDEX idx_course_reg_status (application_status),
                 INDEX idx_course_reg_sync (moodle_sync_status)
@@ -205,7 +209,9 @@ async function ensureCourseRegistrationTables() {
             { name: 'program_category_id', sql: 'ALTER TABLE course_registrations ADD COLUMN program_category_id INT NULL AFTER semester_name' },
             { name: 'year_category_id', sql: 'ALTER TABLE course_registrations ADD COLUMN year_category_id INT NULL AFTER program_category_id' },
             { name: 'semester_category_id', sql: 'ALTER TABLE course_registrations ADD COLUMN semester_category_id INT NULL AFTER year_category_id' },
-            { name: 'cohort_category_id', sql: 'ALTER TABLE course_registrations ADD COLUMN cohort_category_id INT NULL AFTER semester_category_id' }
+            { name: 'cohort_category_id', sql: 'ALTER TABLE course_registrations ADD COLUMN cohort_category_id INT NULL AFTER semester_category_id' },
+            { name: 'parent_registration_id', sql: 'ALTER TABLE course_registrations ADD COLUMN parent_registration_id INT NULL AFTER industry_partnerships' },
+            { name: 'is_master', sql: 'ALTER TABLE course_registrations ADD COLUMN is_master TINYINT(1) DEFAULT 1 AFTER parent_registration_id' }
         ];
 
         for (const column of requiredColumns) {
@@ -2821,6 +2827,8 @@ router.post('/course-registrations', async (req, res) => {
             return res.status(403).json({ success: false, message: gateCheck.message });
         }
 
+        const { parentRegistrationId, isMaster } = await resolveRegistrationMasterLink(payload.course_code, payload.course_title);
+
         const [result] = await db.execute(
             `INSERT INTO course_registrations (
                 course_title, course_code, programme_type_name, program_name, academic_year, semester_name, cohort_label, programme_type_category_id, program_category_id, year_category_id, semester_category_id, cohort_category_id, course_type, awarding_body_accreditation, regulation_level,
@@ -2830,8 +2838,8 @@ router.post('/course-registrations', async (req, res) => {
                 learning_resources_provided, special_equipment_needed, work_placement_included,
                 course_leader_programme_director, internal_verification_contact, ukvi_approved_course,
                 approval_date, review_date, special_admission_considerations, progression_opportunities,
-                industry_partnerships, application_status, moodle_sync_status
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
+                industry_partnerships, parent_registration_id, is_master, application_status, moodle_sync_status
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
             [
                 payload.course_title,
                 payload.course_code,
@@ -2871,6 +2879,8 @@ router.post('/course-registrations', async (req, res) => {
                 payload.special_admission_considerations,
                 payload.progression_opportunities,
                 payload.industry_partnerships,
+                parentRegistrationId,
+                isMaster,
                 payload.application_status
             ]
         );
@@ -5674,6 +5684,52 @@ async function ensureRegistrationGateFromInduction(courseCode, courseTitle) {
     }
 
     return { allowed: true };
+}
+
+async function resolveRegistrationMasterLink(courseCode, courseTitle) {
+    const normalizedCode = String(courseCode || '').trim();
+    const normalizedTitle = String(courseTitle || '').trim();
+
+    let rows = [];
+    if (normalizedCode) {
+        [rows] = await db.execute(
+            `SELECT id, is_master
+             FROM course_registrations
+             WHERE course_code = ?
+             ORDER BY created_at ASC, id ASC`,
+            [normalizedCode]
+        );
+    }
+
+    if ((!rows || rows.length === 0) && normalizedTitle) {
+        [rows] = await db.execute(
+            `SELECT id, is_master
+             FROM course_registrations
+             WHERE course_title = ?
+             ORDER BY created_at ASC, id ASC`,
+            [normalizedTitle]
+        );
+    }
+
+    if (!rows || rows.length === 0) {
+        return { parentRegistrationId: null, isMaster: 1 };
+    }
+
+    const explicitMaster = rows.find((row) => Number(row.is_master) === 1);
+    const masterId = Number(explicitMaster?.id || rows[0]?.id || 0);
+
+    if (!explicitMaster && masterId > 0) {
+        await db.execute(
+            'UPDATE course_registrations SET is_master = 1, parent_registration_id = NULL WHERE id = ?',
+            [masterId]
+        );
+    }
+
+    if (masterId <= 0) {
+        return { parentRegistrationId: null, isMaster: 1 };
+    }
+
+    return { parentRegistrationId: masterId, isMaster: 0 };
 }
 
 async function updateLifecycleMasterStageByCourse(courseCode, courseTitle, stage) {
