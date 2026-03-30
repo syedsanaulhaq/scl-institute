@@ -1,9 +1,35 @@
 const express = require('express');
+const fs = require('fs');
+const multer = require('multer');
+const path = require('path');
 const pool = require('../db');
 
 const router = express.Router();
 const INIT_MAX_RETRIES = 30;
 const INIT_RETRY_DELAY_MS = 5000;
+const inductionUploadDir = path.join(__dirname, '../uploads/induction-documents');
+
+fs.mkdirSync(inductionUploadDir, { recursive: true });
+
+const inductionDocumentStorage = multer.diskStorage({
+    destination: (_req, _file, cb) => {
+        cb(null, inductionUploadDir);
+    },
+    filename: (_req, file, cb) => {
+        const safeBaseName = path.basename(file.originalname, path.extname(file.originalname))
+            .replace(/[^a-zA-Z0-9-_]/g, '_')
+            .slice(0, 80);
+        const extension = path.extname(file.originalname || '').slice(0, 20);
+        cb(null, `${Date.now()}-${safeBaseName || 'document'}${extension}`);
+    }
+});
+
+const inductionDocumentUpload = multer({
+    storage: inductionDocumentStorage,
+    limits: {
+        fileSize: 20 * 1024 * 1024
+    }
+});
 
 // ===============================================
 // Initialize Course Inductions Tables
@@ -126,6 +152,59 @@ function shouldRetryInit(error) {
         message.includes('can\'t connect')
     );
 }
+
+router.post('/requirement-documents/upload', inductionDocumentUpload.single('file'), async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ success: false, message: 'No file uploaded' });
+        }
+
+        return res.status(201).json({
+            success: true,
+            data: {
+                name: req.file.originalname,
+                path: `/uploads/induction-documents/${req.file.filename}`,
+                mime_type: req.file.mimetype,
+                size: req.file.size
+            }
+        });
+    } catch (error) {
+        console.error('Error uploading induction document:', error.message);
+        return res.status(500).json({ success: false, message: 'Failed to upload document', error: error.message });
+    }
+});
+
+router.get('/requirement-documents/download', async (req, res) => {
+    try {
+        const rawDocumentPath = String(req.query.path || '').trim();
+        const requestedName = String(req.query.name || '').trim();
+
+        if (!rawDocumentPath) {
+            return res.status(400).json({ success: false, message: 'Document path is required' });
+        }
+
+        const normalizedRelativePath = rawDocumentPath
+            .replace(/^\/+/, '')
+            .replace(/^uploads\//i, '');
+
+        const absolutePath = path.resolve(path.join(__dirname, '../uploads', normalizedRelativePath));
+        const uploadsRoot = path.resolve(path.join(__dirname, '../uploads'));
+
+        if (!absolutePath.startsWith(uploadsRoot)) {
+            return res.status(400).json({ success: false, message: 'Invalid document path' });
+        }
+
+        if (!fs.existsSync(absolutePath)) {
+            return res.status(404).json({ success: false, message: 'Document not found' });
+        }
+
+        const downloadName = requestedName || path.basename(absolutePath);
+        return res.download(absolutePath, downloadName);
+    } catch (error) {
+        console.error('Error downloading induction document:', error.message);
+        return res.status(500).json({ success: false, message: 'Failed to download document', error: error.message });
+    }
+});
 
 function startInductionInitWithRetry(attempt = 1) {
     ensureCourseInductionTables()

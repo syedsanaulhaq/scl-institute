@@ -4,12 +4,89 @@ import axios from 'axios';
 import { ChevronDown, ChevronUp, ArrowLeft } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
+const BACKEND_URL = API_URL.replace(/\/api\/?$/, '');
 
 const formatDateForInput = (dateString) => {
     if (!dateString) return '';
     const date = new Date(dateString);
     if (isNaN(date.getTime())) return '';
     return date.toISOString().split('T')[0];
+};
+
+const getFileNameFromPath = (value) => {
+    const normalized = String(value || '').trim();
+    if (!normalized) return '';
+    const cleanValue = normalized.split('?')[0];
+    return decodeURIComponent(cleanValue.split('/').pop() || cleanValue);
+};
+
+const parseDocumentValue = (value) => {
+    const rawValue = String(value || '').trim();
+    if (!rawValue) {
+        return { label: '', href: '' };
+    }
+
+    try {
+        const parsed = JSON.parse(rawValue);
+        if (parsed && typeof parsed === 'object') {
+            return {
+                label: parsed.name || parsed.label || getFileNameFromPath(parsed.path || parsed.url || ''),
+                href: parsed.path || parsed.url || ''
+            };
+        }
+    } catch (_error) {
+        // Backward-compatible plain text values.
+    }
+
+    if (/^https?:\/\//i.test(rawValue) || rawValue.startsWith('/')) {
+        return {
+            label: getFileNameFromPath(rawValue),
+            href: rawValue
+        };
+    }
+
+    return {
+        label: rawValue,
+        href: ''
+    };
+};
+
+const buildDocumentUrl = (value) => {
+    const href = String(value || '').trim();
+    if (!href) return '';
+    if (href.startsWith('blob:') || /^https?:\/\//i.test(href)) return href;
+    if (href.startsWith('/')) return `${BACKEND_URL}${href}`;
+    return `${BACKEND_URL}/${href}`;
+};
+
+const buildDocumentDownloadUrl = (href, label) => {
+    const normalizedHref = String(href || '').trim();
+    if (!normalizedHref) return '';
+
+    const query = new URLSearchParams({
+        path: normalizedHref,
+        name: String(label || getFileNameFromPath(normalizedHref) || 'document').trim()
+    });
+
+    return `${API_URL}/course-inductions/requirement-documents/download?${query.toString()}`;
+};
+
+const buildFallbackDocumentDataUrl = (label) => {
+    const displayLabel = String(label || '').trim();
+    if (!displayLabel) return '';
+    return `data:text/plain;charset=utf-8,${encodeURIComponent(`Document reference: ${displayLabel}`)}`;
+};
+
+const serializeDocumentValue = ({ label, href }) => {
+    const normalizedLabel = String(label || '').trim();
+    const normalizedHref = String(href || '').trim();
+    if (!normalizedLabel && !normalizedHref) return '';
+    if (!normalizedHref) return normalizedLabel;
+
+    return JSON.stringify({
+        name: normalizedLabel || getFileNameFromPath(normalizedHref),
+        path: normalizedHref
+    });
 };
 
 // Section configuration based on Course Inductions CSV
@@ -130,7 +207,11 @@ const CourseInductionsDetail = () => {
         area: '',
         description: '',
         source: '',
+        sourceUrl: '',
+        sourceFile: null,
         evidence: '',
+        evidenceUrl: '',
+        evidenceFile: null,
         responsible: '',
         status: false,
         notes: '',
@@ -188,12 +269,18 @@ const CourseInductionsDetail = () => {
                 requirements.forEach(req => {
                     const sectionNum = req.section_number || 1;
                     if (sectionsByNum[sectionNum]) {
+                        const sourceDoc = parseDocumentValue(req.source_reference);
+                        const evidenceDoc = parseDocumentValue(req.evidence_held);
                         sectionsByNum[sectionNum].push({
                             id: req.id,
                             area: req.requirement_area || '',
                             description: req.description || '',
-                            source: req.source_reference || '',
-                            evidence: req.evidence_held || '',
+                            source: sourceDoc.label,
+                            sourceUrl: sourceDoc.href,
+                            sourceFile: null,
+                            evidence: evidenceDoc.label,
+                            evidenceUrl: evidenceDoc.href,
+                            evidenceFile: null,
                             responsible: req.responsible_person || '',
                             status: req.compliance_status === 'Completed',
                             notes: req.review_notes || ''
@@ -360,17 +447,7 @@ const CourseInductionsDetail = () => {
                 const items = (formData.sections[sectionNum] || []).filter(item => item.area);
                 
                 for (const item of items) {
-                    const reqData = {
-                        section_number: sectionNum,
-                        section_title: SECTION_CONFIG[sectionNum].title,
-                        requirement_area: item.area,
-                        description: item.description,
-                        source_reference: item.source,
-                        evidence_held: item.evidence,
-                        responsible_person: item.responsible,
-                        compliance_status: item.status ? 'Completed' : 'Not Started',
-                        review_notes: item.notes
-                    };
+                    const reqData = await buildRequirementPayload(item, sectionNum);
                     
                     if (item.id && !isNew) {
                         await axios.put(
@@ -494,7 +571,11 @@ const CourseInductionsDetail = () => {
                 area: req.area,
                 description: req.description,
                 source: `Policy ref ${sectionNum}.${idx + 1}`,
+                sourceUrl: '',
+                sourceFile: null,
                 evidence: `Evidence file ${sectionNum}.${idx + 1}`,
+                evidenceUrl: '',
+                evidenceFile: null,
                 responsible: 'Programme Team',
                 status: idx % 2 === 0,
                 notes: 'Auto-filled test data'
@@ -637,7 +718,11 @@ const CourseInductionsDetail = () => {
             area: '',
             description: '',
             source: '',
+            sourceUrl: '',
+            sourceFile: null,
             evidence: '',
+            evidenceUrl: '',
+            evidenceFile: null,
             responsible: '',
             status: false,
             notes: '',
@@ -650,6 +735,78 @@ const CourseInductionsDetail = () => {
         if (evidenceInputRef.current) evidenceInputRef.current.value = '';
         setEditingRowIdx(null);
         setEditingSection(null);
+    };
+
+    const uploadRequirementDocument = async (file) => {
+        if (!file) return null;
+
+        const payload = new FormData();
+        payload.append('file', file);
+
+        const response = await axios.post(`${API_URL}/course-inductions/requirement-documents/upload`, payload, {
+            headers: {
+                'Content-Type': 'multipart/form-data'
+            }
+        });
+
+        return response.data?.data || null;
+    };
+
+    const buildRequirementPayload = async (item, sectionNum) => {
+        const sourceUpload = item.sourceFile ? await uploadRequirementDocument(item.sourceFile) : null;
+        const evidenceUpload = item.evidenceFile ? await uploadRequirementDocument(item.evidenceFile) : null;
+
+        return {
+            section_number: sectionNum,
+            section_title: SECTION_CONFIG[sectionNum].title,
+            requirement_area: item.area,
+            description: item.description,
+            source_reference: serializeDocumentValue({
+                label: sourceUpload?.name || item.source,
+                href: sourceUpload?.path || item.sourceUrl
+            }),
+            evidence_held: serializeDocumentValue({
+                label: evidenceUpload?.name || item.evidence,
+                href: evidenceUpload?.path || item.evidenceUrl
+            }),
+            responsible_person: item.responsible,
+            compliance_status: item.status ? 'Completed' : 'Not Started',
+            review_notes: item.notes
+        };
+    };
+
+    const renderDocumentLink = (label, href) => {
+        const displayLabel = String(label || '').trim();
+        const resolvedHref = buildDocumentUrl(href);
+        const fallbackHref = buildFallbackDocumentDataUrl(displayLabel);
+        const downloadHref = buildDocumentDownloadUrl(href, displayLabel) || fallbackHref;
+        const previewHref = resolvedHref || fallbackHref;
+
+        if (!displayLabel) {
+            return <span className="text-gray-400">-</span>;
+        }
+
+        return (
+            <div className="flex flex-col gap-1">
+                <a
+                    href={downloadHref}
+                    download={displayLabel}
+                    className="text-xs text-blue-600 hover:text-blue-800 underline break-all"
+                >
+                    {displayLabel}
+                </a>
+                {previewHref && (
+                    <a
+                        href={previewHref}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-xs text-gray-500 hover:text-gray-700"
+                    >
+                        Open
+                    </a>
+                )}
+            </div>
+        );
     };
 
     if (loading) {
@@ -875,20 +1032,36 @@ const CourseInductionsDetail = () => {
                                                 <input
                                                     ref={sourceInputRef}
                                                     type="file"
-                                                    onChange={(e) => setCurrentForm(prev => ({ ...prev, source: e.target.files ? e.target.files[0].name : '' }))}
+                                                    onChange={(e) => {
+                                                        const file = e.target.files?.[0] || null;
+                                                        setCurrentForm(prev => ({
+                                                            ...prev,
+                                                            source: file ? file.name : '',
+                                                            sourceUrl: file ? URL.createObjectURL(file) : '',
+                                                            sourceFile: file
+                                                        }));
+                                                    }}
                                                     className="w-full text-xs"
                                                 />
-                                                {currentForm.source && <p className="text-xs text-gray-600 mt-0.5">✓ {currentForm.source.substring(0, 20)}</p>}
+                                                {currentForm.source && <div className="mt-0.5">{renderDocumentLink(currentForm.source, currentForm.sourceUrl)}</div>}
                                             </div>
                                             <div>
                                                 <label className="block text-xs font-semibold text-gray-700 mb-0.5">Evidence (File)</label>
                                                 <input
                                                     ref={evidenceInputRef}
                                                     type="file"
-                                                    onChange={(e) => setCurrentForm(prev => ({ ...prev, evidence: e.target.files ? e.target.files[0].name : '' }))}
+                                                    onChange={(e) => {
+                                                        const file = e.target.files?.[0] || null;
+                                                        setCurrentForm(prev => ({
+                                                            ...prev,
+                                                            evidence: file ? file.name : '',
+                                                            evidenceUrl: file ? URL.createObjectURL(file) : '',
+                                                            evidenceFile: file
+                                                        }));
+                                                    }}
                                                     className="w-full text-xs"
                                                 />
-                                                {currentForm.evidence && <p className="text-xs text-gray-600 mt-0.5">✓ {currentForm.evidence.substring(0, 20)}</p>}
+                                                {currentForm.evidence && <div className="mt-0.5">{renderDocumentLink(currentForm.evidence, currentForm.evidenceUrl)}</div>}
                                             </div>
                                             <div>
                                                 <label className="block text-xs font-semibold text-gray-700 mb-0.5">Review Notes</label>
@@ -1143,6 +1316,8 @@ const CourseInductionsDetail = () => {
                                                             <th className="border border-gray-300 px-3 py-2 text-left font-semibold">Area</th>
                                                             <th className="border border-gray-300 px-3 py-2 text-left font-semibold">Description</th>
                                                             <th className="border border-gray-300 px-3 py-2 text-left font-semibold">Responsible</th>
+                                                            <th className="border border-gray-300 px-3 py-2 text-left font-semibold">Source</th>
+                                                            <th className="border border-gray-300 px-3 py-2 text-left font-semibold">Evidence</th>
                                                             <th className="border border-gray-300 px-3 py-2 text-center font-semibold">Status</th>
                                                             <th className="border border-gray-300 px-3 py-2 text-center font-semibold">Actions</th>
                                                         </>
@@ -1183,6 +1358,8 @@ const CourseInductionsDetail = () => {
                                                                 <td className="border border-gray-300 px-3 py-2 text-sm font-medium">{item.area}</td>
                                                                 <td className="border border-gray-300 px-3 py-2 text-sm">{item.description && item.description.substring(0, 50)}{item.description && item.description.length > 50 ? '...' : ''}</td>
                                                                 <td className="border border-gray-300 px-3 py-2 text-sm">{item.responsible}</td>
+                                                                <td className="border border-gray-300 px-3 py-2 align-top">{renderDocumentLink(item.source, item.sourceUrl)}</td>
+                                                                <td className="border border-gray-300 px-3 py-2 align-top">{renderDocumentLink(item.evidence, item.evidenceUrl)}</td>
                                                                 <td className="border border-gray-300 px-3 py-2 text-center">
                                                                     {item.status ? <span className="text-green-600 font-semibold">✓</span> : <span className="text-gray-400">○</span>}
                                                                 </td>
