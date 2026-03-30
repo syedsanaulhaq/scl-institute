@@ -241,11 +241,22 @@ const CourseRegistrations = () => {
         fetchData();
     }, []);
 
-    const getRegistrationForAcc = (acc) =>
-        registrations.find((r) =>
+    const getRegistrationsForAcc = (acc) => {
+        const matched = registrations.filter((r) =>
             normalizeValue(r.course_code) === normalizeValue(acc.course_code) ||
             normalizeValue(r.course_title) === normalizeValue(acc.course_title)
         );
+
+        return matched.sort((a, b) => Number(b.id || 0) - Number(a.id || 0));
+    };
+
+    const getRegistrationForAcc = (acc) => {
+        const matched = getRegistrationsForAcc(acc);
+        if (!matched.length) return null;
+
+        const master = matched.find((r) => Number(r.is_master) === 1);
+        return master || matched[0];
+    };
 
     const programmeTypeOptions = useMemo(() => uniqueByName(moodleProgrammeTypes), [moodleProgrammeTypes]);
 
@@ -788,12 +799,17 @@ const CourseRegistrations = () => {
                                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Awarding Body</th>
                                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Accreditation</th>
                                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Moodle Status</th>
+                                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Master / Cohorts</th>
                                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Action</th>
                             </tr>
                         </thead>
                         <tbody>
                             {accreditations.map((acc) => {
                                 const reg = getRegistrationForAcc(acc);
+                                const allRegs = getRegistrationsForAcc(acc);
+                                const masterReg = allRegs.find((item) => Number(item.is_master) === 1) || null;
+                                const childCount = allRegs.filter((item) => Number(item.is_master) !== 1).length;
+                                const latestReg = allRegs[0] || null;
                                 const accStatus = (acc.overall_status || 'not_started').toLowerCase().replace(/\s+/g, '_');
                                 const moodleStatus = reg?.moodle_sync_status || null;
 
@@ -819,16 +835,34 @@ const CourseRegistrations = () => {
                                                 badge('Not registered', 'not_started')
                                             )}
                                         </td>
+                                        <td className="px-4 py-3 text-sm text-gray-600">
+                                            {reg ? (
+                                                <div>
+                                                    <div className="font-semibold text-gray-900">{masterReg ? 'Master linked' : 'Master pending'}</div>
+                                                    <div className="text-xs text-gray-500">{childCount} cohort{childCount === 1 ? '' : 's'}</div>
+                                                </div>
+                                            ) : (
+                                                <span className="text-xs text-gray-500">Will create master on first submit</span>
+                                            )}
+                                        </td>
                                         <td className="px-4 py-3 text-sm">
                                             {reg ? (
-                                                <button
-                                                    onClick={() => resyncCourseRegistration(reg.id)}
-                                                    disabled={registeringCourseKey === `resync-${reg.id}`}
-                                                    className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-                                                    title="Re-sync course to Moodle"
-                                                >
-                                                    {registeringCourseKey === `resync-${reg.id}` ? 'Syncing...' : 'Sync Again'}
-                                                </button>
+                                                <div className="flex items-center gap-2">
+                                                    <button
+                                                        onClick={() => openRegistrationForm(acc)}
+                                                        className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-green-600 text-white hover:bg-green-700 transition-colors"
+                                                    >
+                                                        Add Cohort
+                                                    </button>
+                                                    <button
+                                                        onClick={() => latestReg && resyncCourseRegistration(latestReg.id)}
+                                                        disabled={!latestReg || registeringCourseKey === `resync-${latestReg?.id}`}
+                                                        className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                                                        title="Re-sync latest cohort to Moodle"
+                                                    >
+                                                        {registeringCourseKey === `resync-${latestReg?.id}` ? 'Syncing...' : 'Sync Latest'}
+                                                    </button>
+                                                </div>
                                             ) : (
                                                 <button
                                                     onClick={() => openRegistrationForm(acc)}
@@ -877,6 +911,9 @@ const CourseRegistrations = () => {
                         </div>
 
                         <div className={isFormOnlyMode ? 'pt-4 space-y-4' : 'flex-1 overflow-y-auto p-6 space-y-4'}>
+                            <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-xs text-blue-800">
+                                First registration for a course becomes <strong>Master</strong>. Each next submission with a new cohort label becomes a <strong>Child Cohort</strong> linked to that master.
+                            </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-xs font-semibold text-gray-600 uppercase mb-1">Course Title</label>
