@@ -699,7 +699,9 @@ const CourseMasterDetail = () => {
     };
 
     const handleSave = async (options = {}) => {
-        const syncToMoodle = options.syncToMoodle !== false;
+        const syncToMoodle = typeof options.syncToMoodle === 'boolean'
+            ? options.syncToMoodle
+            : !selectedExistingCourse;
         const hierarchyFromCode = deriveHierarchyFromCourseCode(formData.course_code);
         const hasExplicitStructure = Boolean(
             formData.programme_type_name?.trim() &&
@@ -1064,17 +1066,12 @@ const CourseMasterDetail = () => {
                     <button onClick={() => navigate('/course-lifecycle')} className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-semibold">
                         Cancel
                     </button>
-                    {selectedExistingCourse && (
-                        <button
-                            onClick={() => handleSave({ syncToMoodle: false })}
-                            disabled={saving}
-                            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold disabled:opacity-50"
-                        >
-                            {saving ? 'Saving...' : 'Import to SCL Only'}
-                        </button>
-                    )}
                     <button onClick={handleSave} disabled={saving} className="px-4 py-2 bg-scl-purple text-white rounded-lg hover:bg-scl-purple/90 font-semibold disabled:opacity-50">
-                        {saving ? 'Saving...' : 'Save Common Data'}
+                        {saving
+                            ? 'Saving...'
+                            : selectedExistingCourse
+                                ? 'Import to SCL Only'
+                                : 'Save Common Data'}
                     </button>
                 </div>
             </div>
