@@ -554,22 +554,12 @@ const CourseLifecycleDashboard = () => {
                                                     Open Induction
                                                 </button>
                                                 <button
-                                                    onClick={() => {
-                                                        const params = new URLSearchParams({
-                                                            auto_open: '1',
-                                                            form_only: '1',
-                                                            course_code: String(selectedCourse.course_code || ''),
-                                                            course_title: String(selectedCourse.course_title || ''),
-                                                            awarding_body: String(selectedCourse.awarding_body || ''),
-                                                            qualification_level: String(selectedCourse.qualification_level || '')
-                                                        });
-                                                        navigate(`/course-registrations?${params.toString()}`);
-                                                    }}
-                                                    disabled={!selectedCourse.registration_id && !registrationUnlocked}
-                                                    title={!selectedCourse.registration_id && !registrationUnlocked ? 'Complete Induction first' : 'Open Registration'}
+                                                    onClick={() => navigate(`/course-registrations?auto_open=1&course_code=${selectedCourse.course_code}&course_title=${selectedCourse.course_title}`)}
+                                                    disabled={!registrationUnlocked}
+                                                    title={!registrationUnlocked ? 'Complete Induction first' : 'Open Registration'}
                                                     className="px-4 py-2 text-sm font-semibold rounded-lg bg-green-600 text-white hover:bg-green-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                                                 >
-                                                    {!selectedCourse.registration_id && !registrationUnlocked ? <Lock className="w-4 h-4 inline mr-1" /> : null}
+                                                    {!registrationUnlocked ? <Lock className="w-4 h-4 inline mr-1" /> : null}
                                                     Open Registration
                                                 </button>
                                                 <button
