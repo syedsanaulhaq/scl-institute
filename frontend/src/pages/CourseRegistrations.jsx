@@ -553,9 +553,11 @@ const CourseRegistrations = () => {
 
         if (isFormOnlyMode) {
             openRegistrationForm(courseToOpen);
+        } else {
+            // For the main dashboard, just select the course.
+            // The user can then choose to add a cohort.
+            setSelectedAccreditation(courseToOpen);
         }
-        
-        setAutoOpenHandled(true);
     }, [loading, autoOpenHandled, queryParams, accreditations, registrations, isFormOnlyMode]);
 
     const handleFormChange = (field, value) => {
@@ -884,9 +886,7 @@ const CourseRegistrations = () => {
                                                     <button
                                                         onClick={() => {
                                                             setSelectedAccreditation(acc);
-                                                            setShowRegistrationForm(false);
-                                                            setRegistrationForm(null);
-                                                            setEditingRegistrationId(null);
+                                                            clearRegistrationEditor();
                                                         }}
                                                         className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-100 transition-colors"
                                                     >
@@ -903,7 +903,10 @@ const CourseRegistrations = () => {
                                                 </div>
                                             ) : (
                                                 <button
-                                                    onClick={() => openRegistrationForm(acc)}
+                                                    onClick={() => {
+                                                        setSelectedAccreditation(acc);
+                                                        clearRegistrationEditor();
+                                                    }}
                                                     disabled={registeringCourseKey === buildCourseKey(acc)}
                                                     className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-green-600 text-white hover:bg-green-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                                                 >
