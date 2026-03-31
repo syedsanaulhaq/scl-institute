@@ -268,6 +268,11 @@ const CourseRegistrations = () => {
         return cohortRegistrationsForSelected.find((r) => Number(r.is_master) === 1) || cohortRegistrationsForSelected[0];
     }, [cohortRegistrationsForSelected]);
 
+    const selectedCourseStructure = useMemo(() => {
+        if (!selectedAccreditation) return null;
+        return resolveStructureForCourse(selectedAccreditation);
+    }, [selectedAccreditation, structureInput, structureIds]);
+
     const programmeTypeOptions = useMemo(() => uniqueByName(moodleProgrammeTypes), [moodleProgrammeTypes]);
 
     const selectedProgrammeType = useMemo(() => {
@@ -433,18 +438,25 @@ const CourseRegistrations = () => {
         };
     };
 
-    const closeRegistrationForm = () => {
+    const clearRegistrationEditor = () => {
         setShowRegistrationForm(false);
-        setSelectedAccreditation(null);
         setRegistrationForm(null);
         setEditingRegistrationId(null);
     };
 
+    const closeRegistrationDashboard = () => {
+        clearRegistrationEditor();
+        setSelectedAccreditation(null);
+    };
+
     const dismissRegistrationForm = () => {
-        closeRegistrationForm();
         if (isFormOnlyMode) {
+            closeRegistrationDashboard();
             navigate('/course-lifecycle');
+            return;
         }
+
+        clearRegistrationEditor();
     };
 
     const openRegistrationForm = (acc, existingRegistration = null) => {
@@ -464,7 +476,7 @@ const CourseRegistrations = () => {
             : initialData;
 
         setEditingRegistrationId(existingRegistration?.id ? Number(existingRegistration.id) : null);
-        setSelectedAccreditation(registrationSeed);
+        setSelectedAccreditation(acc);
         setRegistrationForm(prefixedData);
         setShowRegistrationForm(true);
     };
@@ -601,7 +613,11 @@ const CourseRegistrations = () => {
         if (!selectedAccreditation || !registrationForm) return;
         const success = await registerCourseToMoodle(selectedAccreditation, registrationForm, editingRegistrationId);
         if (success) {
-            dismissRegistrationForm();
+            if (isFormOnlyMode) {
+                dismissRegistrationForm();
+            } else {
+                clearRegistrationEditor();
+            }
         }
     };
 
@@ -822,9 +838,10 @@ const CourseRegistrations = () => {
                                 const latestReg = allRegs[0] || null;
                                 const accStatus = (acc.overall_status || 'not_started').toLowerCase().replace(/\s+/g, '_');
                                 const moodleStatus = reg?.moodle_sync_status || null;
+                                const isSelectedCourse = buildCourseKey(selectedAccreditation) === buildCourseKey(acc);
 
                                 return (
-                                    <tr key={acc.id} className="border-b border-gray-100 hover:bg-gray-50">
+                                    <tr key={acc.id} className={`border-b border-gray-100 hover:bg-gray-50 ${isSelectedCourse ? 'bg-blue-50' : ''}`}>
                                         <td className="px-4 py-3 text-sm">
                                             <div className="font-semibold text-gray-900">{acc.course_title || 'Untitled'}</div>
                                             <div className="text-xs text-gray-500">{acc.course_code || '-'}</div>
@@ -865,6 +882,17 @@ const CourseRegistrations = () => {
                                                         Add Cohort
                                                     </button>
                                                     <button
+                                                        onClick={() => {
+                                                            setSelectedAccreditation(acc);
+                                                            setShowRegistrationForm(false);
+                                                            setRegistrationForm(null);
+                                                            setEditingRegistrationId(null);
+                                                        }}
+                                                        className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-100 transition-colors"
+                                                    >
+                                                        Open Dashboard
+                                                    </button>
+                                                    <button
                                                         onClick={() => latestReg && resyncCourseRegistration(latestReg.id)}
                                                         disabled={!latestReg || registeringCourseKey === `resync-${latestReg?.id}`}
                                                         className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
@@ -879,7 +907,7 @@ const CourseRegistrations = () => {
                                                     disabled={registeringCourseKey === buildCourseKey(acc)}
                                                     className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-green-600 text-white hover:bg-green-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                                                 >
-                                                    Register to Moodle
+                                                    Add Registration
                                                 </button>
                                             )}
                                         </td>
@@ -891,21 +919,22 @@ const CourseRegistrations = () => {
                 </div>
             ) : null}
 
-            {showRegistrationForm && registrationForm && selectedAccreditation && (
-                <div
-                    className={isFormOnlyMode ? 'w-full' : 'fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50'}
-                    onClick={(e) => {
-                        if (!isFormOnlyMode && e.target === e.currentTarget) {
-                            dismissRegistrationForm();
-                        }
-                    }}
-                >
-                    <div className={isFormOnlyMode ? 'w-full' : 'bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col'}>
-                        <div className={isFormOnlyMode ? 'flex items-start justify-between pb-4 border-b border-gray-200' : 'flex items-start justify-between p-6 border-b border-gray-200'}>
-                            <div>
-                                <h2 className="text-xl font-bold text-gray-900">Course Registration Form</h2>
-                                <p className="text-sm text-gray-500 mt-1">Complete full registration fields to create and configure the Moodle course.</p>
-                            </div>
+            {selectedAccreditation && (
+                <div className={isFormOnlyMode ? 'w-full' : 'bg-white border border-gray-200 rounded-2xl overflow-hidden'}>
+                    <div className={isFormOnlyMode ? 'flex items-start justify-between pb-4 border-b border-gray-200' : 'flex items-start justify-between p-6 border-b border-gray-200 bg-gray-50'}>
+                        <div>
+                            <h2 className="text-xl font-bold text-gray-900">Course Registration Dashboard</h2>
+                            <p className="text-sm text-gray-500 mt-1">Main course details stay read-only here. Add or update cohort records underneath.</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            {!isFormOnlyMode && !showRegistrationForm && (
+                                <button
+                                    onClick={() => openRegistrationForm(selectedAccreditation)}
+                                    className="px-4 py-2 text-sm font-semibold rounded-lg bg-green-600 text-white hover:bg-green-700 transition-colors"
+                                >
+                                    Add Cohort
+                                </button>
+                            )}
                             {isFormOnlyMode ? (
                                 <button
                                     onClick={dismissRegistrationForm}
@@ -914,84 +943,148 @@ const CourseRegistrations = () => {
                                     Back to Lifecycle
                                 </button>
                             ) : (
-                                <button onClick={dismissRegistrationForm} className="p-2 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors">
+                                <button
+                                    onClick={closeRegistrationDashboard}
+                                    className="p-2 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-white transition-colors"
+                                >
                                     <X className="w-5 h-5" />
                                 </button>
                             )}
                         </div>
+                    </div>
 
-                        <div className={isFormOnlyMode ? 'pt-4 space-y-4' : 'flex-1 overflow-y-auto p-6 space-y-4'}>
-                            <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-xs text-blue-800">
-                                First registration for a course becomes <strong>Master</strong>. Each next submission with a new cohort label becomes a <strong>Child Cohort</strong> linked to that master.
+                    <div className={isFormOnlyMode ? 'pt-4 space-y-4' : 'p-6 space-y-6'}>
+                        <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-xs text-blue-800">
+                            First registration for a course becomes <strong>Master</strong>. Each next submission with a new cohort label becomes a <strong>Child Cohort</strong> linked to that master.
+                        </div>
+
+                        <div className="rounded-xl border border-gray-200 overflow-hidden">
+                            <div className="px-4 py-3 border-b border-gray-200 bg-white">
+                                <h3 className="text-sm font-semibold text-gray-900">Course Main</h3>
+                                <p className="text-xs text-gray-500 mt-0.5">These values are read-only and act as the parent course for all cohorts.</p>
                             </div>
-
-                            {cohortRegistrationsForSelected.length > 0 && (
-                                <div className="rounded-lg border border-gray-200 bg-white">
-                                    <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
-                                        <div>
-                                            <h3 className="text-sm font-semibold text-gray-900">Master and Cohorts</h3>
-                                            <p className="text-xs text-gray-500 mt-0.5">
-                                                {cohortRegistrationsForSelected.length} registration record{cohortRegistrationsForSelected.length === 1 ? '' : 's'} for this course
-                                            </p>
+                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 p-4 bg-gray-50">
+                                {[
+                                    ['Course Title', selectedAccreditation.course_title || '-'],
+                                    ['Course Code / ID', selectedAccreditation.course_code || '-'],
+                                    ['Awarding Body', selectedAccreditation.awarding_body || '-'],
+                                    ['Qualification Level', selectedAccreditation.qualification_level || '-'],
+                                    ['Programme Type', selectedCourseStructure?.programme_type_name || '-'],
+                                    ['Program', selectedCourseStructure?.program_name || '-'],
+                                    ['Academic Year', selectedCourseStructure?.academic_year || '-'],
+                                    ['Semester', selectedCourseStructure?.semester_name || '-']
+                                ].map(([label, value]) => (
+                                    <div key={label}>
+                                        <label className="block text-xs font-semibold text-gray-600 uppercase mb-1">{label}</label>
+                                        <div className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white text-gray-700 min-h-[42px] flex items-center">
+                                            {value}
                                         </div>
-                                        {selectedMasterRegistration && (
-                                            <span className="text-xs px-2 py-1 rounded-full bg-indigo-50 text-indigo-700 font-semibold">
-                                                Master #{selectedMasterRegistration.id}
-                                            </span>
-                                        )}
                                     </div>
-                                    <div className="overflow-x-auto">
-                                        <table className="w-full min-w-[680px]">
-                                            <thead>
-                                                <tr className="bg-gray-50 border-b border-gray-200">
-                                                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Type</th>
-                                                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Registration ID</th>
-                                                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Cohort</th>
-                                                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Moodle</th>
-                                                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Action</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {cohortRegistrationsForSelected.map((item) => {
-                                                    const isMaster = Number(item.is_master) === 1;
-                                                    const isCurrent = Number(editingRegistrationId) === Number(item.id);
-                                                    return (
-                                                        <tr key={item.id} className={`border-b border-gray-100 ${isCurrent ? 'bg-blue-50' : 'hover:bg-gray-50'}`}>
-                                                            <td className="px-3 py-2 text-sm">
-                                                                {isMaster
-                                                                    ? <span className="text-xs px-2 py-1 rounded-full bg-indigo-100 text-indigo-800 font-semibold">Master</span>
-                                                                    : <span className="text-xs px-2 py-1 rounded-full bg-emerald-100 text-emerald-800 font-semibold">Child</span>}
-                                                            </td>
-                                                            <td className="px-3 py-2 text-sm text-gray-700">#{item.id}</td>
-                                                            <td className="px-3 py-2 text-sm text-gray-700">{item.cohort_label || '-'}</td>
-                                                            <td className="px-3 py-2 text-sm">{badge(item.moodle_sync_status || 'pending', item.moodle_sync_status || 'pending')}</td>
-                                                            <td className="px-3 py-2 text-sm">
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => openRegistrationForm(selectedAccreditation, item)}
-                                                                    className="px-2 py-1 text-xs font-semibold rounded-md border border-gray-300 text-gray-700 hover:bg-gray-100"
-                                                                >
-                                                                    {isCurrent ? 'Editing' : 'Open'}
-                                                                </button>
-                                                            </td>
-                                                        </tr>
-                                                    );
-                                                })}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                            )}
+                                ))}
+                            </div>
+                        </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
+                            <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between gap-3">
                                 <div>
-                                    <label className="block text-xs font-semibold text-gray-600 uppercase mb-1">Course Title</label>
-                                    <input value={selectedAccreditation.course_title || ''} readOnly className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-100" />
+                                    <h3 className="text-sm font-semibold text-gray-900">Course Cohorts</h3>
+                                    <p className="text-xs text-gray-500 mt-0.5">
+                                        {cohortRegistrationsForSelected.length} registration record{cohortRegistrationsForSelected.length === 1 ? '' : 's'} for this course
+                                    </p>
                                 </div>
-                                <div>
-                                    <label className="block text-xs font-semibold text-gray-600 uppercase mb-1">Course Code / ID</label>
-                                    <input value={selectedAccreditation.course_code || ''} readOnly className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-100" />
+                                <div className="flex items-center gap-2">
+                                    {selectedMasterRegistration && (
+                                        <span className="text-xs px-2 py-1 rounded-full bg-indigo-50 text-indigo-700 font-semibold">
+                                            Master #{selectedMasterRegistration.id}
+                                        </span>
+                                    )}
+                                    {!isFormOnlyMode && (
+                                        <button
+                                            type="button"
+                                            onClick={() => openRegistrationForm(selectedAccreditation)}
+                                            className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-green-600 text-white hover:bg-green-700 transition-colors"
+                                        >
+                                            Add Cohort
+                                        </button>
+                                    )}
                                 </div>
+                            </div>
+                            <div className="overflow-x-auto">
+                                <table className="w-full min-w-[680px]">
+                                    <thead>
+                                        <tr className="bg-gray-50 border-b border-gray-200">
+                                            <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Type</th>
+                                            <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Registration ID</th>
+                                            <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Cohort</th>
+                                            <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Moodle</th>
+                                            <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {cohortRegistrationsForSelected.length > 0 ? cohortRegistrationsForSelected.map((item) => {
+                                            const isMaster = Number(item.is_master) === 1;
+                                            const isCurrent = Number(editingRegistrationId) === Number(item.id);
+                                            return (
+                                                <tr key={item.id} className={`border-b border-gray-100 ${isCurrent ? 'bg-blue-50' : 'hover:bg-gray-50'}`}>
+                                                    <td className="px-3 py-2 text-sm">
+                                                        {isMaster
+                                                            ? <span className="text-xs px-2 py-1 rounded-full bg-indigo-100 text-indigo-800 font-semibold">Master</span>
+                                                            : <span className="text-xs px-2 py-1 rounded-full bg-emerald-100 text-emerald-800 font-semibold">Child</span>}
+                                                    </td>
+                                                    <td className="px-3 py-2 text-sm text-gray-700">#{item.id}</td>
+                                                    <td className="px-3 py-2 text-sm text-gray-700">{item.cohort_label || '-'}</td>
+                                                    <td className="px-3 py-2 text-sm">{badge(item.moodle_sync_status || 'pending', item.moodle_sync_status || 'pending')}</td>
+                                                    <td className="px-3 py-2 text-sm">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => openRegistrationForm(selectedAccreditation, item)}
+                                                            className="px-2 py-1 text-xs font-semibold rounded-md border border-gray-300 text-gray-700 hover:bg-gray-100"
+                                                        >
+                                                            {isCurrent ? 'Editing' : 'Open'}
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        }) : (
+                                            <tr>
+                                                <td colSpan={5} className="px-4 py-8 text-center text-sm text-gray-500">
+                                                    No cohorts added yet. Use <strong>Add Cohort</strong> to create the master registration.
+                                                </td>
+                                            </tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        {showRegistrationForm && registrationForm && (
+                            <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
+                                <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between gap-3">
+                                    <div>
+                                        <h3 className="text-sm font-semibold text-gray-900">
+                                            {editingRegistrationId ? 'Edit Course Cohort' : 'Add Course Cohort'}
+                                        </h3>
+                                        <p className="text-xs text-gray-500 mt-0.5">Only cohort-specific registration fields are editable here.</p>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            onClick={fillDemoRegistrationData}
+                                            type="button"
+                                            className="px-4 py-2 text-sm font-semibold rounded-lg border border-purple-200 bg-purple-50 text-purple-700 hover:bg-purple-100 transition-colors"
+                                        >
+                                            Fill Test Data
+                                        </button>
+                                        <button
+                                            onClick={dismissRegistrationForm}
+                                            className="px-4 py-2 text-sm font-semibold rounded-lg bg-white border border-gray-300 text-gray-700 hover:bg-gray-100 transition-colors"
+                                        >
+                                            Cancel
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div className="p-4 md:p-6 space-y-4">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-xs font-semibold text-gray-600 uppercase mb-1">Cohort Label</label>
                                     <input
@@ -1133,29 +1226,21 @@ const CourseRegistrations = () => {
                                 <label className="block text-xs font-semibold text-gray-600 uppercase mb-1">Industry Partnerships</label>
                                 <textarea value={registrationForm.industry_partnerships} onChange={(e) => handleFormChange('industry_partnerships', e.target.value)} rows={2} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
                             </div>
-                        </div>
+                                </div>
 
-                        <div className={isFormOnlyMode ? 'py-6 border-t border-gray-200 flex justify-end gap-2' : 'p-6 border-t border-gray-200 bg-gray-50 flex justify-end gap-2'}>
-                            <button
-                                onClick={fillDemoRegistrationData}
-                                type="button"
-                                className="px-4 py-2 text-sm font-semibold rounded-lg border border-purple-200 bg-purple-50 text-purple-700 hover:bg-purple-100 transition-colors"
-                            >
-                                Fill Test Data
-                            </button>
-                            <button onClick={dismissRegistrationForm} className="px-4 py-2 text-sm font-semibold rounded-lg bg-white border border-gray-300 text-gray-700 hover:bg-gray-100 transition-colors">
-                                Cancel
-                            </button>
-                            <button
-                                onClick={handleSubmitRegistration}
-                                disabled={registeringCourseKey === buildCourseKey(selectedAccreditation)}
-                                className="px-4 py-2 text-sm font-semibold rounded-lg bg-green-600 text-white hover:bg-green-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-                            >
-                                {registeringCourseKey === buildCourseKey(selectedAccreditation)
-                                    ? (editingRegistrationId ? 'Updating...' : 'Registering...')
-                                    : (editingRegistrationId ? 'Update Registration & Sync Moodle' : 'Submit Registration & Sync Moodle')}
-                            </button>
-                        </div>
+                                <div className="px-4 py-4 md:px-6 border-t border-gray-200 bg-gray-50 flex justify-end gap-2">
+                                    <button
+                                        onClick={handleSubmitRegistration}
+                                        disabled={registeringCourseKey === buildCourseKey(selectedAccreditation)}
+                                        className="px-4 py-2 text-sm font-semibold rounded-lg bg-green-600 text-white hover:bg-green-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                                    >
+                                        {registeringCourseKey === buildCourseKey(selectedAccreditation)
+                                            ? (editingRegistrationId ? 'Updating...' : 'Registering...')
+                                            : (editingRegistrationId ? 'Update Cohort & Sync Moodle' : 'Submit Cohort & Sync Moodle')}
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
             )}
