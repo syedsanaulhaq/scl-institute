@@ -258,6 +258,24 @@ const CourseRegistrations = () => {
         return master || matched[0];
     };
 
+    const resolveStructureForCourse = (course) => {
+        const programmeTypeName = String(structureInput.programme_type_name || '').trim() || deriveProgrammeTypeName(course);
+        const programName = String(structureInput.program_name || '').trim() || deriveProgramName(course);
+        const academicYear = String(structureInput.academic_year || '').trim() || deriveAcademicYear(course);
+        const semesterName = String(structureInput.semester_name || '').trim() || deriveSemesterName(course);
+
+        return {
+            programme_type_name: programmeTypeName,
+            program_name: programName,
+            academic_year: academicYear,
+            semester_name: semesterName,
+            programme_type_category_id: structureIds.programme_type_category_id,
+            program_category_id: structureIds.program_category_id,
+            year_category_id: structureIds.year_category_id,
+            semester_category_id: structureIds.semester_category_id
+        };
+    };
+
     const cohortRegistrationsForSelected = useMemo(() => {
         if (!selectedAccreditation) return [];
         return getRegistrationsForAcc(selectedAccreditation);
@@ -418,24 +436,6 @@ const CourseRegistrations = () => {
             if (prev[field] === null) return prev;
             return { ...prev, [field]: null };
         });
-    };
-
-    const resolveStructureForCourse = (course) => {
-        const programmeTypeName = String(structureInput.programme_type_name || '').trim() || deriveProgrammeTypeName(course);
-        const programName = String(structureInput.program_name || '').trim() || deriveProgramName(course);
-        const academicYear = String(structureInput.academic_year || '').trim() || deriveAcademicYear(course);
-        const semesterName = String(structureInput.semester_name || '').trim() || deriveSemesterName(course);
-
-        return {
-            programme_type_name: programmeTypeName,
-            program_name: programName,
-            academic_year: academicYear,
-            semester_name: semesterName,
-            programme_type_category_id: structureIds.programme_type_category_id,
-            program_category_id: structureIds.program_category_id,
-            year_category_id: structureIds.year_category_id,
-            semester_category_id: structureIds.semester_category_id
-        };
     };
 
     const clearRegistrationEditor = () => {
