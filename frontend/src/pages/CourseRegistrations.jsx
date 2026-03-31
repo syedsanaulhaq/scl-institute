@@ -258,6 +258,16 @@ const CourseRegistrations = () => {
         return master || matched[0];
     };
 
+    const cohortRegistrationsForSelected = useMemo(() => {
+        if (!selectedAccreditation) return [];
+        return getRegistrationsForAcc(selectedAccreditation);
+    }, [selectedAccreditation, registrations]);
+
+    const selectedMasterRegistration = useMemo(() => {
+        if (!cohortRegistrationsForSelected.length) return null;
+        return cohortRegistrationsForSelected.find((r) => Number(r.is_master) === 1) || cohortRegistrationsForSelected[0];
+    }, [cohortRegistrationsForSelected]);
+
     const programmeTypeOptions = useMemo(() => uniqueByName(moodleProgrammeTypes), [moodleProgrammeTypes]);
 
     const selectedProgrammeType = useMemo(() => {
@@ -914,6 +924,65 @@ const CourseRegistrations = () => {
                             <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-xs text-blue-800">
                                 First registration for a course becomes <strong>Master</strong>. Each next submission with a new cohort label becomes a <strong>Child Cohort</strong> linked to that master.
                             </div>
+
+                            {cohortRegistrationsForSelected.length > 0 && (
+                                <div className="rounded-lg border border-gray-200 bg-white">
+                                    <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
+                                        <div>
+                                            <h3 className="text-sm font-semibold text-gray-900">Master and Cohorts</h3>
+                                            <p className="text-xs text-gray-500 mt-0.5">
+                                                {cohortRegistrationsForSelected.length} registration record{cohortRegistrationsForSelected.length === 1 ? '' : 's'} for this course
+                                            </p>
+                                        </div>
+                                        {selectedMasterRegistration && (
+                                            <span className="text-xs px-2 py-1 rounded-full bg-indigo-50 text-indigo-700 font-semibold">
+                                                Master #{selectedMasterRegistration.id}
+                                            </span>
+                                        )}
+                                    </div>
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full min-w-[680px]">
+                                            <thead>
+                                                <tr className="bg-gray-50 border-b border-gray-200">
+                                                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Type</th>
+                                                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Registration ID</th>
+                                                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Cohort</th>
+                                                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Moodle</th>
+                                                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Action</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {cohortRegistrationsForSelected.map((item) => {
+                                                    const isMaster = Number(item.is_master) === 1;
+                                                    const isCurrent = Number(editingRegistrationId) === Number(item.id);
+                                                    return (
+                                                        <tr key={item.id} className={`border-b border-gray-100 ${isCurrent ? 'bg-blue-50' : 'hover:bg-gray-50'}`}>
+                                                            <td className="px-3 py-2 text-sm">
+                                                                {isMaster
+                                                                    ? <span className="text-xs px-2 py-1 rounded-full bg-indigo-100 text-indigo-800 font-semibold">Master</span>
+                                                                    : <span className="text-xs px-2 py-1 rounded-full bg-emerald-100 text-emerald-800 font-semibold">Child</span>}
+                                                            </td>
+                                                            <td className="px-3 py-2 text-sm text-gray-700">#{item.id}</td>
+                                                            <td className="px-3 py-2 text-sm text-gray-700">{item.cohort_label || '-'}</td>
+                                                            <td className="px-3 py-2 text-sm">{badge(item.moodle_sync_status || 'pending', item.moodle_sync_status || 'pending')}</td>
+                                                            <td className="px-3 py-2 text-sm">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => openRegistrationForm(selectedAccreditation, item)}
+                                                                    className="px-2 py-1 text-xs font-semibold rounded-md border border-gray-300 text-gray-700 hover:bg-gray-100"
+                                                                >
+                                                                    {isCurrent ? 'Editing' : 'Open'}
+                                                                </button>
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                })}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            )}
+
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-xs font-semibold text-gray-600 uppercase mb-1">Course Title</label>
