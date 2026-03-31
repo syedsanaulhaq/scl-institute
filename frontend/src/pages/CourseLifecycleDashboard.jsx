@@ -393,11 +393,9 @@ const CourseLifecycleDashboard = () => {
 
                                 {/* Detail Modal */}
                                 {selectedCourse && (
-                                    <div
-                                        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50"
-                                        onClick={(e) => { if (e.target === e.currentTarget) closeModal(); }}
-                                    >
-                                        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col">
+                                    <tr className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={(e) => { if (e.target === e.currentTarget) closeModal(); }}>
+                                        <td colSpan="6" className="w-full">
+                                            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col">
                                             {/* Modal Header */}
                                             <div className="flex items-start justify-between p-6 border-b border-gray-200">
                                                 <div>
@@ -569,8 +567,9 @@ const CourseLifecycleDashboard = () => {
                                                     Close
                                                 </button>
                                             </div>
-                                        </div>
-                                    </div>
+                                            </div>
+                                        </td>
+                                    </tr>
                                 )}
                             </tbody>
                         </table>
