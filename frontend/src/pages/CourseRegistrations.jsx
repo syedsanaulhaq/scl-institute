@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import { CheckCircle2, Clock3, CircleDashed, Loader2, RefreshCw, X } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import CohortFormModal from './CohortFormModal';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
 
@@ -15,15 +16,6 @@ const STATUS_COLORS = {
     synced: 'bg-green-100 text-green-800',
     failed: 'bg-red-100 text-red-800'
 };
-
-const COURSE_TYPE_OPTIONS = ['HND', 'Degree', 'Vocational', 'Short Course', 'CPD', 'Professional Qualification'];
-const AWARDING_BODY_OPTIONS = ['Pearson', 'City & Guilds', 'In-house', 'NCFE', 'Other'];
-const REGULATION_LEVEL_OPTIONS = ['RQF Level 1', 'RQF Level 2', 'RQF Level 3', 'RQF Level 4', 'RQF Level 5', 'RQF Level 6', 'RQF Level 7', 'RQF Level 8', 'Non-accredited'];
-const MODE_OF_DELIVERY_OPTIONS = ['Full-time', 'Part-time', 'Online', 'Blended', 'Evening/Weekend'];
-const SUBJECT_AREA_OPTIONS = ['Business', 'Engineering', 'IT', 'Creative Arts', 'Health & Social Care', 'Hospitality & Tourism', 'Other'];
-const ASSESSMENT_METHOD_OPTIONS = ['Exam', 'Coursework', 'Portfolio', 'Practical', 'Mixed'];
-const FUNDING_OPTIONS = ['Self-funded', 'Employer-funded', 'Student Loan', 'Scholarship'];
-const YES_NO_OPTIONS = ['Yes', 'No'];
 
 const badge = (label, colorKey) => (
     <span className={`px-2 py-1 text-xs font-semibold rounded-full ${STATUS_COLORS[colorKey] || STATUS_COLORS.not_started}`}>
@@ -503,7 +495,7 @@ const CourseRegistrations = () => {
 
         // In form-only mode, open immediately from URL params while data is loading,
         // then replace with saved registration data once registrations are available.
-        if (isFormOnlyMode && loading && !showRegistrationForm) {
+        if (isFormOnlyMode && loading && !selectedAccreditation) {
             const immediateFallback = {
                 id: `auto-${requestedCode || requestedTitle || Date.now()}`,
                 course_code: params.get('course_code') || '',
@@ -513,6 +505,7 @@ const CourseRegistrations = () => {
             };
 
             if (immediateFallback.course_code || immediateFallback.course_title) {
+                setSelectedAccreditation(immediateFallback);
                 openRegistrationForm(immediateFallback);
                 return;
             }
@@ -543,9 +536,13 @@ const CourseRegistrations = () => {
             return;
         }
 
+        // Instead of opening the form, just select the course to show its dashboard.
+        setSelectedAccreditation(courseToOpen);
+
         const existingRegistration = getRegistrationForAcc(courseToOpen);
         if (existingRegistration) {
             if (isFormOnlyMode) {
+                // In form-only mode, we still need to open the form directly.
                 openRegistrationForm(courseToOpen, existingRegistration);
             } else {
                 setMessage(`This course is already registered in Moodle (status: ${existingRegistration.moodle_sync_status || 'pending'}).`);
@@ -554,7 +551,10 @@ const CourseRegistrations = () => {
             return;
         }
 
-        openRegistrationForm(courseToOpen);
+        if (isFormOnlyMode) {
+            openRegistrationForm(courseToOpen);
+        }
+        
         setAutoOpenHandled(true);
     }, [loading, autoOpenHandled, queryParams, accreditations, registrations, isFormOnlyMode]);
 
@@ -1058,188 +1058,17 @@ const CourseRegistrations = () => {
                         </div>
 
                         {showRegistrationForm && registrationForm && (
-                            <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
-                                <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between gap-3">
-                                    <div>
-                                        <h3 className="text-sm font-semibold text-gray-900">
-                                            {editingRegistrationId ? 'Edit Course Cohort' : 'Add Course Cohort'}
-                                        </h3>
-                                        <p className="text-xs text-gray-500 mt-0.5">Only cohort-specific registration fields are editable here.</p>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <button
-                                            onClick={fillDemoRegistrationData}
-                                            type="button"
-                                            className="px-4 py-2 text-sm font-semibold rounded-lg border border-purple-200 bg-purple-50 text-purple-700 hover:bg-purple-100 transition-colors"
-                                        >
-                                            Fill Test Data
-                                        </button>
-                                        <button
-                                            onClick={dismissRegistrationForm}
-                                            className="px-4 py-2 text-sm font-semibold rounded-lg bg-white border border-gray-300 text-gray-700 hover:bg-gray-100 transition-colors"
-                                        >
-                                            Cancel
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <div className="p-4 md:p-6 space-y-4">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-xs font-semibold text-gray-600 uppercase mb-1">Cohort Label</label>
-                                    <input
-                                        value={registrationForm.cohort_label}
-                                        onChange={(e) => handleFormChange('cohort_label', e.target.value)}
-                                        placeholder="e.g. 2026-Sep"
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-semibold text-gray-600 uppercase mb-1">Course Type</label>
-                                    <select value={registrationForm.course_type} onChange={(e) => handleFormChange('course_type', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
-                                        <option value="">Select</option>
-                                        {COURSE_TYPE_OPTIONS.map((option) => <option key={option} value={option}>{option}</option>)}
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-semibold text-gray-600 uppercase mb-1">Awarding Body / Accreditation</label>
-                                    <select value={registrationForm.awarding_body_accreditation} onChange={(e) => handleFormChange('awarding_body_accreditation', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
-                                        <option value="">Select</option>
-                                        {AWARDING_BODY_OPTIONS.map((option) => <option key={option} value={option}>{option}</option>)}
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-semibold text-gray-600 uppercase mb-1">Regulation Level</label>
-                                    <select value={registrationForm.regulation_level} onChange={(e) => handleFormChange('regulation_level', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
-                                        <option value="">Select</option>
-                                        {REGULATION_LEVEL_OPTIONS.map((option) => <option key={option} value={option}>{option}</option>)}
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-semibold text-gray-600 uppercase mb-1">Mode of Delivery</label>
-                                    <select value={registrationForm.mode_of_delivery} onChange={(e) => handleFormChange('mode_of_delivery', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
-                                        <option value="">Select</option>
-                                        {MODE_OF_DELIVERY_OPTIONS.map((option) => <option key={option} value={option}>{option}</option>)}
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-semibold text-gray-600 uppercase mb-1">Start Date</label>
-                                    <input type="date" value={registrationForm.start_date} onChange={(e) => handleFormChange('start_date', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-semibold text-gray-600 uppercase mb-1">End Date / Duration</label>
-                                    <input value={registrationForm.end_date_or_duration} onChange={(e) => handleFormChange('end_date_or_duration', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-semibold text-gray-600 uppercase mb-1">Subject Area / Discipline</label>
-                                    <select value={registrationForm.subject_area_discipline} onChange={(e) => handleFormChange('subject_area_discipline', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
-                                        <option value="">Select</option>
-                                        {SUBJECT_AREA_OPTIONS.map((option) => <option key={option} value={option}>{option}</option>)}
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-semibold text-gray-600 uppercase mb-1">Assessment Methods</label>
-                                    <select value={registrationForm.assessment_methods} onChange={(e) => handleFormChange('assessment_methods', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
-                                        <option value="">Select</option>
-                                        {ASSESSMENT_METHOD_OPTIONS.map((option) => <option key={option} value={option}>{option}</option>)}
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-semibold text-gray-600 uppercase mb-1">Tuition Fee (GBP)</label>
-                                    <input type="number" value={registrationForm.tuition_fee_gbp} onChange={(e) => handleFormChange('tuition_fee_gbp', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-semibold text-gray-600 uppercase mb-1">Additional Costs</label>
-                                    <input value={registrationForm.additional_costs} onChange={(e) => handleFormChange('additional_costs', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-semibold text-gray-600 uppercase mb-1">Funding Options</label>
-                                    <select value={registrationForm.funding_options} onChange={(e) => handleFormChange('funding_options', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
-                                        <option value="">Select</option>
-                                        {FUNDING_OPTIONS.map((option) => <option key={option} value={option}>{option}</option>)}
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-semibold text-gray-600 uppercase mb-1">Special Equipment Needed</label>
-                                    <input value={registrationForm.special_equipment_needed} onChange={(e) => handleFormChange('special_equipment_needed', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-semibold text-gray-600 uppercase mb-1">Work Placement / Internship Included</label>
-                                    <select value={registrationForm.work_placement_included} onChange={(e) => handleFormChange('work_placement_included', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
-                                        <option value="">Select</option>
-                                        {YES_NO_OPTIONS.map((option) => <option key={option} value={option}>{option}</option>)}
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-semibold text-gray-600 uppercase mb-1">Course Leader / Programme Director</label>
-                                    <input value={registrationForm.course_leader_programme_director} onChange={(e) => handleFormChange('course_leader_programme_director', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-semibold text-gray-600 uppercase mb-1">Internal Verification Contact</label>
-                                    <input value={registrationForm.internal_verification_contact} onChange={(e) => handleFormChange('internal_verification_contact', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-semibold text-gray-600 uppercase mb-1">UKVI Approved Course?</label>
-                                    <select value={registrationForm.ukvi_approved_course} onChange={(e) => handleFormChange('ukvi_approved_course', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
-                                        <option value="">Select</option>
-                                        {YES_NO_OPTIONS.map((option) => <option key={option} value={option}>{option}</option>)}
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-semibold text-gray-600 uppercase mb-1">Approval Date</label>
-                                    <input type="date" value={registrationForm.approval_date} onChange={(e) => handleFormChange('approval_date', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-semibold text-gray-600 uppercase mb-1">Review Date</label>
-                                    <input type="date" value={registrationForm.review_date} onChange={(e) => handleFormChange('review_date', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
-                                </div>
-                            </div>
-                            <div>
-                                <label className="block text-xs font-semibold text-gray-600 uppercase mb-1">Course Description</label>
-                                <textarea value={registrationForm.course_description} onChange={(e) => handleFormChange('course_description', e.target.value)} rows={3} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
-                            </div>
-                            <div>
-                                <label className="block text-xs font-semibold text-gray-600 uppercase mb-1">Learning Outcomes</label>
-                                <textarea value={registrationForm.learning_outcomes} onChange={(e) => handleFormChange('learning_outcomes', e.target.value)} rows={3} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
-                            </div>
-                            <div>
-                                <label className="block text-xs font-semibold text-gray-600 uppercase mb-1">Units / Modules Covered</label>
-                                <textarea value={registrationForm.units_modules_covered} onChange={(e) => handleFormChange('units_modules_covered', e.target.value)} rows={3} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
-                            </div>
-                            <div>
-                                <label className="block text-xs font-semibold text-gray-600 uppercase mb-1">Entry Requirements</label>
-                                <textarea value={registrationForm.entry_requirements} onChange={(e) => handleFormChange('entry_requirements', e.target.value)} rows={2} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
-                            </div>
-                            <div>
-                                <label className="block text-xs font-semibold text-gray-600 uppercase mb-1">Learning Resources Provided</label>
-                                <textarea value={registrationForm.learning_resources_provided} onChange={(e) => handleFormChange('learning_resources_provided', e.target.value)} rows={2} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
-                            </div>
-                            <div>
-                                <label className="block text-xs font-semibold text-gray-600 uppercase mb-1">Special Admission Considerations</label>
-                                <textarea value={registrationForm.special_admission_considerations} onChange={(e) => handleFormChange('special_admission_considerations', e.target.value)} rows={2} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
-                            </div>
-                            <div>
-                                <label className="block text-xs font-semibold text-gray-600 uppercase mb-1">Progression Opportunities</label>
-                                <textarea value={registrationForm.progression_opportunities} onChange={(e) => handleFormChange('progression_opportunities', e.target.value)} rows={2} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
-                            </div>
-                            <div>
-                                <label className="block text-xs font-semibold text-gray-600 uppercase mb-1">Industry Partnerships</label>
-                                <textarea value={registrationForm.industry_partnerships} onChange={(e) => handleFormChange('industry_partnerships', e.target.value)} rows={2} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
-                            </div>
-                                </div>
-
-                                <div className="px-4 py-4 md:px-6 border-t border-gray-200 bg-gray-50 flex justify-end gap-2">
-                                    <button
-                                        onClick={handleSubmitRegistration}
-                                        disabled={registeringCourseKey === buildCourseKey(selectedAccreditation)}
-                                        className="px-4 py-2 text-sm font-semibold rounded-lg bg-green-600 text-white hover:bg-green-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-                                    >
-                                        {registeringCourseKey === buildCourseKey(selectedAccreditation)
-                                            ? (editingRegistrationId ? 'Updating...' : 'Registering...')
-                                            : (editingRegistrationId ? 'Update Cohort & Sync Moodle' : 'Submit Cohort & Sync Moodle')}
-                                    </button>
-                                </div>
-                            </div>
+                           <CohortFormModal
+                                isOpen={showRegistrationForm}
+                                onClose={dismissRegistrationForm}
+                                onSubmit={handleSubmitRegistration}
+                                formData={registrationForm}
+                                onFormChange={handleFormChange}
+                                onFillTestData={fillDemoRegistrationData}
+                                isSubmitting={registeringCourseKey === buildCourseKey(selectedAccreditation)}
+                                isEditing={!!editingRegistrationId}
+                                course={selectedAccreditation}
+                            />
                         )}
                     </div>
                 </div>
