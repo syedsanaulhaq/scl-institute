@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { Loader2, RefreshCw, CheckCircle2, Clock3, CircleDashed, XCircle, X, Plus, Trash2, Lock } from 'lucide-react';
+import { Loader2, RefreshCw, CheckCircle2, Clock3, CircleDashed, XCircle, X, Plus, Trash2, Lock, ChevronDown, ChevronRight } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
 
@@ -57,6 +57,34 @@ const isStepUnlocked = (course, stepKey) => {
     if (stepKey === 'induction') return isDoneStatus(course.visit_status);
     if (stepKey === 'registration') return isDoneStatus(course.induction_status);
     return false;
+};
+
+const groupCoursesHierarchical = (courses) => {
+    const grouped = {};
+    
+    courses.forEach(course => {
+        const programmeType = course.programme_type_name || 'Other';
+        const program = course.program_name || 'Unassigned';
+        const year = course.academic_year || 'Year 0';
+        const semester = course.semester_name || 'Semester 0';
+        
+        if (!grouped[programmeType]) {
+            grouped[programmeType] = {};
+        }
+        if (!grouped[programmeType][program]) {
+            grouped[programmeType][program] = {};
+        }
+        if (!grouped[programmeType][program][year]) {
+            grouped[programmeType][program][year] = {};
+        }
+        if (!grouped[programmeType][program][year][semester]) {
+            grouped[programmeType][program][year][semester] = [];
+        }
+        
+        grouped[programmeType][program][year][semester].push(course);
+    });
+    
+    return grouped;
 };
 
 const getDisplayStepStatus = (course, stepKey) => {
@@ -167,6 +195,13 @@ const CourseLifecycleDashboard = () => {
     const [details, setDetails] = useState(null);
     const [activeTab, setActiveTab] = useState('accreditation');
     const [deleting, setDeleting] = useState(false);
+    const [expandedSections, setExpandedSections] = useState({});
+    const [searchQuery, setSearchQuery] = useState('');
+    const [filterProgrammeType, setFilterProgrammeType] = useState('');
+    const [filterProgram, setFilterProgram] = useState('');
+    const [filterYear, setFilterYear] = useState('');
+    const [filterSemester, setFilterSemester] = useState('');
+    const [filterCourse, setFilterCourse] = useState('');
     const fetchDashboard = async () => {
         try {
             setLoading(true);
@@ -227,6 +262,76 @@ const CourseLifecycleDashboard = () => {
         registration: details?.registration || {}
     }), [details]);
 
+    const filteredCourses = useMemo(() => {
+        let filtered = courses;
+        
+        // Apply program type filter
+        if (filterProgrammeType) {
+            filtered = filtered.filter(c => c.programme_type_name === filterProgrammeType);
+        }
+        
+        // Apply program filter
+        if (filterProgram) {
+            filtered = filtered.filter(c => c.program_name === filterProgram);
+        }
+        
+        // Apply year filter
+        if (filterYear) {
+            filtered = filtered.filter(c => c.academic_year === filterYear);
+        }
+        
+        // Apply semester filter
+        if (filterSemester) {
+            filtered = filtered.filter(c => c.semester_name === filterSemester);
+        }
+        
+        // Apply course filter
+        if (filterCourse) {
+            filtered = filtered.filter(c => 
+                (c.course_code || '').toLowerCase().includes(filterCourse.toLowerCase()) ||
+                (c.course_title || '').toLowerCase().includes(filterCourse.toLowerCase())
+            );
+        }
+        
+        return filtered;
+    }, [courses, filterProgrammeType, filterProgram, filterYear, filterSemester, filterCourse]);
+
+    // Get unique values for filter dropdowns
+    const getUniqueValues = (field) => {
+        const values = courses
+            .map(c => c[field])
+            .filter((v, i, arr) => v && arr.indexOf(v) === i)
+            .sort();
+        return values;
+    };
+
+    const programmeTypes = useMemo(() => getUniqueValues('programme_type_name'), [courses]);
+    const programs = useMemo(() => {
+        const filtered = filterProgrammeType 
+            ? courses.filter(c => c.programme_type_name === filterProgrammeType)
+            : courses;
+        return getUniqueValues('program_name');
+    }, [courses, filterProgrammeType]);
+    const years = useMemo(() => getUniqueValues('academic_year'), [courses]);
+    const semesters = useMemo(() => getUniqueValues('semester_name'), [courses]);
+
+    const groupedCourses = useMemo(() => groupCoursesHierarchical(filteredCourses), [filteredCourses]);
+
+    const handleClearFilters = () => {
+        setFilterProgrammeType('');
+        setFilterProgram('');
+        setFilterYear('');
+        setFilterSemester('');
+        setFilterCourse('');
+    };
+
+    const toggleSection = (sectionKey) => {
+        setExpandedSections(prev => ({
+            ...prev,
+            [sectionKey]: !prev[sectionKey]
+        }));
+    };
+
     const selectedDoc = tabSections[activeTab]?.document || null;
     const overallCourseStatus = selectedCourse ? getOverallCourseStatus(selectedCourse) : 'not_started';
     const visitUnlocked = isStepUnlocked(selectedCourse, 'visit');
@@ -277,12 +382,13 @@ const CourseLifecycleDashboard = () => {
 
     return (
         <div className="space-y-6">
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-                <div>
-                    <h1 className="text-2xl font-bold text-gray-900">Course Lifecycle Dashboard</h1>
-                    <p className="text-sm text-gray-500">One place to track accreditation, visit, induction, and registration status for every course.</p>
-                </div>
-                <div className="flex gap-2">
+            <div className="flex flex-col gap-4">
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                    <div>
+                        <h1 className="text-2xl font-bold text-gray-900">Course Lifecycle Dashboard</h1>
+                        <p className="text-sm text-gray-500">One place to track accreditation, visit, induction, and registration status for every course.</p>
+                    </div>
+                    <div className="flex gap-2">
                     <button
                         onClick={() => navigate('/course-master/new')}
                         className="px-4 py-2 rounded-lg text-sm font-semibold bg-scl-purple text-white hover:bg-scl-purple/90 flex items-center gap-2"
@@ -297,6 +403,88 @@ const CourseLifecycleDashboard = () => {
                         <RefreshCw className="w-4 h-4 inline mr-2" />
                         Refresh
                     </button>
+                    </div>
+                </div>
+                <div className="w-full">
+                    <div className="space-y-3 bg-white rounded-lg border border-gray-200 p-4">
+                        <div className="flex items-center justify-between">
+                            <h3 className="text-sm font-semibold text-gray-900">Filters</h3>
+                            {(filterProgrammeType || filterProgram || filterYear || filterSemester || filterCourse) && (
+                                <button
+                                    onClick={handleClearFilters}
+                                    className="text-xs text-scl-purple hover:text-scl-purple/80 font-medium"
+                                >
+                                    Clear All
+                                </button>
+                            )}
+                        </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
+                            {/* Programme Type Filter */}
+                            <select
+                                value={filterProgrammeType}
+                                onChange={(e) => {
+                                    setFilterProgrammeType(e.target.value);
+                                    setFilterProgram(''); // Reset program when programme type changes
+                                }}
+                                className="px-3 py-2 rounded-lg border border-gray-300 focus:border-scl-purple focus:outline-none focus:ring-2 focus:ring-scl-purple/20 text-sm bg-white"
+                            >
+                                <option value="">All Programme Types</option>
+                                {programmeTypes.map(type => (
+                                    <option key={type} value={type}>{type}</option>
+                                ))}
+                            </select>
+
+                            {/* Program Filter */}
+                            <select
+                                value={filterProgram}
+                                onChange={(e) => setFilterProgram(e.target.value)}
+                                className="px-3 py-2 rounded-lg border border-gray-300 focus:border-scl-purple focus:outline-none focus:ring-2 focus:ring-scl-purple/20 text-sm bg-white"
+                            >
+                                <option value="">All Programmes</option>
+                                {programs.map(prog => (
+                                    <option key={prog} value={prog}>{prog}</option>
+                                ))}
+                            </select>
+
+                            {/* Year Filter */}
+                            <select
+                                value={filterYear}
+                                onChange={(e) => setFilterYear(e.target.value)}
+                                className="px-3 py-2 rounded-lg border border-gray-300 focus:border-scl-purple focus:outline-none focus:ring-2 focus:ring-scl-purple/20 text-sm bg-white"
+                            >
+                                <option value="">All Years</option>
+                                {years.map(year => (
+                                    <option key={year} value={year}>{year}</option>
+                                ))}
+                            </select>
+
+                            {/* Semester Filter */}
+                            <select
+                                value={filterSemester}
+                                onChange={(e) => setFilterSemester(e.target.value)}
+                                className="px-3 py-2 rounded-lg border border-gray-300 focus:border-scl-purple focus:outline-none focus:ring-2 focus:ring-scl-purple/20 text-sm bg-white"
+                            >
+                                <option value="">All Semesters</option>
+                                {semesters.map(sem => (
+                                    <option key={sem} value={sem}>{sem}</option>
+                                ))}
+                            </select>
+
+                            {/* Course Filter */}
+                            <input
+                                type="text"
+                                placeholder="Search course code or title..."
+                                value={filterCourse}
+                                onChange={(e) => setFilterCourse(e.target.value)}
+                                className="px-3 py-2 rounded-lg border border-gray-300 focus:border-scl-purple focus:outline-none focus:ring-2 focus:ring-scl-purple/20 text-sm"
+                            />
+                        </div>
+                        
+                        <p className="text-xs text-gray-500">
+                            Found <span className="font-semibold text-gray-900">{filteredCourses.length}</span> course{filteredCourses.length !== 1 ? 's' : ''}
+                        </p>
+                    </div>
                 </div>
             </div>
 
@@ -336,66 +524,161 @@ const CourseLifecycleDashboard = () => {
                 <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-red-700 text-sm">{error}</div>
             ) : (
                 <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-                    <div className="overflow-x-auto">
-                        <table className="w-full min-w-[900px]">
-                            <thead>
-                                <tr className="bg-gray-50 border-b border-gray-200">
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Course</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Accreditation</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Visit</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Induction</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Registration</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Updated</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {courses.length === 0 ? (
-                                    <tr>
-                                        <td colSpan="6" className="px-4 py-8 text-center text-sm text-gray-500">No courses entered yet.</td>
-                                    </tr>
-                                ) : courses.map((course) => (
-                                    <tr
-                                        key={course.lifecycle_key}
-                                        onClick={() => handleSelectCourse(course)}
-                                        className="border-b border-gray-100 cursor-pointer hover:bg-scl-purple/5 transition-colors"
-                                    >
-                                        <td className="px-4 py-3 text-sm">
-                                            <div className="font-semibold text-gray-900">{course.course_title || 'Untitled Course'}</div>
-                                            <div className="text-xs text-gray-500">{course.course_code || 'No Code'}</div>
-                                        </td>
-                                        <td className="px-4 py-3 text-sm">
-                                            <div className="flex items-center gap-2">
-                                                {statusIcon(getDisplayStepStatus(course, 'accreditation'))}
-                                                {statusBadge(getDisplayStepStatus(course, 'accreditation'))}
-                                            </div>
-                                        </td>
-                                        <td className="px-4 py-3 text-sm">
-                                            <div className="flex items-center gap-2">
-                                                {statusIcon(getDisplayStepStatus(course, 'visit'))}
-                                                {statusBadge(getDisplayStepStatus(course, 'visit'))}
-                                            </div>
-                                        </td>
-                                        <td className="px-4 py-3 text-sm">
-                                            <div className="flex items-center gap-2">
-                                                {statusIcon(getDisplayStepStatus(course, 'induction'))}
-                                                {statusBadge(getDisplayStepStatus(course, 'induction'))}
-                                            </div>
-                                        </td>
-                                        <td className="px-4 py-3 text-sm">
-                                            <div className="flex items-center gap-2">
-                                                {statusIcon(getDisplayStepStatus(course, 'registration'))}
-                                                {statusBadge(getDisplayStepStatus(course, 'registration'))}
-                                            </div>
-                                        </td>
-                                        <td className="px-4 py-3 text-xs text-gray-500">{formatDate(course.last_updated_at)}</td>
-                                    </tr>
-                                ))}
+                    {courses.length === 0 ? (
+                        <div className="px-4 py-8 text-center text-sm text-gray-500">No courses entered yet.</div>
+                    ) : filteredCourses.length === 0 ? (
+                        <div className="px-4 py-8 text-center text-sm text-gray-500">
+                            <p>No courses match your search.</p>
+                            <button 
+                                onClick={() => setSearchQuery('')}
+                                className="text-scl-purple hover:underline text-sm mt-2"
+                            >
+                                Clear search
+                            </button>
+                        </div>
+                    ) : (
+                        <div className="space-y-0">
+                            {Object.entries(groupedCourses).map(([programmeType, programs]) => {
+                                const programmeTypeKey = `type-${programmeType}`;
+                                const isExpanded = expandedSections[programmeTypeKey];
+                                return (
+                                    <div key={programmeTypeKey} className="border-b border-gray-200 last:border-b-0">
+                                        <button
+                                            onClick={() => toggleSection(programmeTypeKey)}
+                                            className="w-full px-6 py-4 bg-gray-50 hover:bg-gray-100 flex items-center gap-3 transition-colors font-semibold text-gray-900"
+                                        >
+                                            {isExpanded ? <ChevronDown className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
+                                            <span>{programmeType}</span>
+                                            <span className="ml-auto text-xs font-normal text-gray-500">
+                                                {Object.values(programs).flat(3).length} courses
+                                            </span>
+                                        </button>
 
-                                {/* Detail Modal */}
-                                {selectedCourse && (
-                                    <tr className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={(e) => { if (e.target === e.currentTarget) closeModal(); }}>
-                                        <td colSpan="6" className="w-full">
-                                            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col">
+                                        {isExpanded && (
+                                            <div className="space-y-0">
+                                                {Object.entries(programs).map(([program, years]) => {
+                                                    const programKey = `prog-${programmeType}-${program}`;
+                                                    const isProgExpanded = expandedSections[programKey];
+                                                    return (
+                                                        <div key={programKey} className="border-b border-gray-100 last:border-b-0">
+                                                            <button
+                                                                onClick={() => toggleSection(programKey)}
+                                                                className="w-full px-10 py-3 hover:bg-gray-50 flex items-center gap-3 transition-colors font-medium text-gray-800 text-sm"
+                                                            >
+                                                                {isProgExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                                                                <span>{program}</span>
+                                                                <span className="ml-auto text-xs font-normal text-gray-500">
+                                                                    {Object.values(years).flat(2).length} courses
+                                                                </span>
+                                                            </button>
+
+                                                            {isProgExpanded && (
+                                                                <div className="space-y-0">
+                                                                    {Object.entries(years).map(([year, semesters]) => {
+                                                                        const yearKey = `year-${programmeType}-${program}-${year}`;
+                                                                        const isYearExpanded = expandedSections[yearKey];
+                                                                        return (
+                                                                            <div key={yearKey} className="border-b border-gray-100 last:border-b-0">
+                                                                                <button
+                                                                                    onClick={() => toggleSection(yearKey)}
+                                                                                    className="w-full px-14 py-2.5 hover:bg-gray-50 flex items-center gap-3 transition-colors font-medium text-gray-700 text-sm"
+                                                                                >
+                                                                                    {isYearExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                                                                                    <span>{year}</span>
+                                                                                    <span className="ml-auto text-xs font-normal text-gray-500">
+                                                                                        {Object.values(semesters).flat().length} courses
+                                                                                    </span>
+                                                                                </button>
+
+                                                                                {isYearExpanded && (
+                                                                                    <div className="space-y-0">
+                                                                                        {Object.entries(semesters).map(([semester, semesterCourses]) => {
+                                                                                            const semesterKey = `sem-${programmeType}-${program}-${year}-${semester}`;
+                                                                                            const isSemExpanded = expandedSections[semesterKey];
+                                                                                            return (
+                                                                                                <div key={semesterKey}>
+                                                                                                    <button
+                                                                                                        onClick={() => toggleSection(semesterKey)}
+                                                                                                        className="w-full px-16 py-2 hover:bg-gray-50 flex items-center gap-3 transition-colors font-medium text-gray-600 text-sm"
+                                                                                                    >
+                                                                                                        {isSemExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                                                                                                        <span>{semester}</span>
+                                                                                                        <span className="ml-auto text-xs font-normal text-gray-500">
+                                                                                                            {semesterCourses.length} courses
+                                                                                                        </span>
+                                                                                                    </button>
+
+                                                                                                    {isSemExpanded && (
+                                                                                                        <div className="space-y-1 px-16 py-2 bg-gray-50">
+                                                                                                            {semesterCourses.map((course) => (
+                                                                                                                <div
+                                                                                                                    key={course.lifecycle_key}
+                                                                                                                    onClick={() => handleSelectCourse(course)}
+                                                                                                                    className="p-3 rounded border border-gray-200 bg-white hover:border-scl-purple hover:bg-scl-purple/5 cursor-pointer transition-all"
+                                                                                                                >
+                                                                                                                    <div className="flex items-center justify-between gap-3">
+                                                                                                                        <div className="flex-1 min-w-0">
+                                                                                                                            <div className="font-medium text-gray-900 text-sm">{course.course_title || 'Untitled'}</div>
+                                                                                                                            <div className="text-xs text-gray-500">{course.course_code || 'No Code'}</div>
+                                                                                                                        </div>
+                                                                                                                        <div className="flex items-center gap-4 ml-4 flex-shrink-0">
+                                                                                                                            <div className="text-center">
+                                                                                                                                <div className="text-xs text-gray-500">Accred.</div>
+                                                                                                                                <div className="flex justify-center mt-0.5">
+                                                                                                                                    {statusIcon(getDisplayStepStatus(course, 'accreditation'))}
+                                                                                                                                </div>
+                                                                                                                            </div>
+                                                                                                                            <div className="text-center">
+                                                                                                                                <div className="text-xs text-gray-500">Visit</div>
+                                                                                                                                <div className="flex justify-center mt-0.5">
+                                                                                                                                    {statusIcon(getDisplayStepStatus(course, 'visit'))}
+                                                                                                                                </div>
+                                                                                                                            </div>
+                                                                                                                            <div className="text-center">
+                                                                                                                                <div className="text-xs text-gray-500">Induct.</div>
+                                                                                                                                <div className="flex justify-center mt-0.5">
+                                                                                                                                    {statusIcon(getDisplayStepStatus(course, 'induction'))}
+                                                                                                                                </div>
+                                                                                                                            </div>
+                                                                                                                            <div className="text-center">
+                                                                                                                                <div className="text-xs text-gray-500">Reg.</div>
+                                                                                                                                <div className="flex justify-center mt-0.5">
+                                                                                                                                    {statusIcon(getDisplayStepStatus(course, 'registration'))}
+                                                                                                                                </div>
+                                                                                                                            </div>
+                                                                                                                        </div>
+                                                                                                                    </div>
+                                                                                                                </div>
+                                                                                                            ))}
+                                                                                                        </div>
+                                                                                                    )}
+                                                                                                </div>
+                                                                                            );
+                                                                                        })}
+                                                                                    </div>
+                                                                                )}
+                                                                            </div>
+                                                                        );
+                                                                    })}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* Detail Modal */}
+            {selectedCourse && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={(e) => { if (e.target === e.currentTarget) closeModal(); }}>
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col">
                                             {/* Modal Header */}
                                             <div className="flex items-start justify-between p-6 border-b border-gray-200">
                                                 <div>
@@ -567,13 +850,7 @@ const CourseLifecycleDashboard = () => {
                                                     Close
                                                 </button>
                                             </div>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
+                                    </div>
                 </div>
             )}
 

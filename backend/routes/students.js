@@ -373,7 +373,7 @@ router.get('/my-moodle-courses', async (req, res) => {
         if (enrolledRows.length === 0) {
             try {
                 const [acceptedApps] = await db.execute(
-                    `SELECT id, email, first_name, last_name, course_code
+                    `SELECT id, email, first_name, last_name, course_code, intake_start_date
                      FROM student_applications
                      WHERE email = ? AND application_status = 'accepted' AND is_deleted = FALSE
                      ORDER BY created_at DESC
@@ -391,7 +391,8 @@ router.get('/my-moodle-courses', async (req, res) => {
                                 acceptedApp.email,
                                 acceptedApp.first_name,
                                 acceptedApp.last_name,
-                                acceptedCourseCode
+                                acceptedCourseCode,
+                                acceptedApp.intake_start_date
                             )
                             : await enrollStudentInMoodle(
                                 acceptedApp.email,
@@ -1441,7 +1442,8 @@ router.put('/applications/:id', upload.fields([
                     email || previousApplication.email,
                     first_name || previousApplication.first_name,
                     last_name || previousApplication.last_name,
-                    course_code
+                    course_code,
+                    intake_start_date
                 );
             } else {
                 moodleReenrollment = await enrollStudentInMoodle(
@@ -3092,7 +3094,22 @@ router.get('/course-registrations/:id', async (req, res) => {
 
 router.get('/course-lifecycle/dashboard', async (req, res) => {
     try {
-        const lifecycleMaster = await safeSelectRows('SELECT * FROM course_lifecycle_master ORDER BY updated_at DESC, created_at DESC');
+        // Get course lifecycle data from the Moodle database
+        const lifecycleCourses = await safeMoodleSelectRows(`
+            SELECT DISTINCT
+                course_id,
+                course_name,
+                course_code,
+                course_type,
+                programme_type_name,
+                program_name,
+                academic_year,
+                semester_name
+            FROM course_lifecycle
+            ORDER BY programme_type_name, program_name, academic_year, semester_name
+        `);
+        
+        const lifecycleMaster = await safeMoodleSelectRows('SELECT * FROM course_lifecycle_master ORDER BY updated_at DESC, created_at DESC');
         const accreditations = await safeSelectRows('SELECT * FROM course_accreditations ORDER BY updated_at DESC, created_at DESC');
         const visits = await safeSelectRows('SELECT * FROM course_visits ORDER BY updated_at DESC, created_at DESC');
         const inductions = await safeSelectRows('SELECT * FROM course_inductions ORDER BY updated_at DESC, created_at DESC');
@@ -3120,6 +3137,10 @@ router.get('/course-lifecycle/dashboard', async (req, res) => {
                     master_id: null,
                     course_code: String(courseCode || '').trim(),
                     course_title: String(courseTitle || '').trim() || 'Untitled Course',
+                    programme_type_name: null,
+                    program_name: null,
+                    academic_year: null,
+                    semester_name: null,
                     awarding_body: null,
                     qualification_level: null,
                     application_type: null,
@@ -3154,9 +3175,26 @@ router.get('/course-lifecycle/dashboard', async (req, res) => {
             return courseMap.get(key);
         };
 
+        // Populate from course_lifecycle table first
+        for (const course of lifecycleCourses) {
+            const item = ensureCourseRow(course.course_code, course.course_name);
+            item.course_type = course.course_type || item.course_type;
+            item.programme_type_name = course.programme_type_name || item.programme_type_name;
+            item.program_name = course.program_name || item.program_name;
+            item.academic_year = course.academic_year || item.academic_year;
+            item.semester_name = course.semester_name || item.semester_name;
+            item.entry_created_at = new Date().toISOString();
+        }
+
+        // Merge data from course_lifecycle_master
         for (const master of lifecycleMaster) {
-            const item = ensureCourseRow(master.course_code, master.course_title);
+            const courseTitle = master.course_name || master.course_title;
+            const item = ensureCourseRow(master.course_code, courseTitle);
             item.master_id = master.id || item.master_id;
+            item.programme_type_name = master.programme_type_name || item.programme_type_name;
+            item.program_name = master.program_name || item.program_name;
+            item.academic_year = master.academic_year || item.academic_year;
+            item.semester_name = master.semester_name || item.semester_name;
             item.awarding_body = master.awarding_body || item.awarding_body;
             item.qualification_level = master.qualification_level || item.qualification_level;
             item.application_type = master.application_type || item.application_type;
@@ -3778,7 +3816,7 @@ router.post('/applications/:id/review', async (req, res) => {
         if (newStatus === 'accepted') {
             try {
                 const [appRows] = await db.execute(
-                    'SELECT email, first_name, last_name, course_code FROM student_applications WHERE id = ? LIMIT 1',
+                    'SELECT email, first_name, last_name, course_code, intake_start_date FROM student_applications WHERE id = ? LIMIT 1',
                     [id]
                 );
 
@@ -3791,7 +3829,8 @@ router.post('/applications/:id/review', async (req, res) => {
                             app.email,
                             app.first_name,
                             app.last_name,
-                            normalizedCourseCode
+                            normalizedCourseCode,
+                            app.intake_start_date
                         );
                     } else if (normalizedCourseCode) {
                         moodleEnrollment = await enrollStudentInMoodle(
@@ -4050,7 +4089,8 @@ router.post('/applications/:id/review-decision', async (req, res) => {
                             email,
                             first_name,
                             last_name,
-                            course_code
+                            course_code,
+                            intake_start_date
                         );
                         if (moodleResult.success) {
                             console.log(`[MOODLE] Student ${email} enrolled in ${moodleResult.courseCount} programme courses`);
@@ -5474,6 +5514,209 @@ async function getCompletedCourseIdsByEmail(email, courseIds) {
     return new Set(rows.map((row) => Number(row.course)));
 }
 
+// Enroll student in all course-specific cohorts for their programme and year
+async function enrollStudentInCourseCohorts(email, firstName, lastName, programmeCode, intakeStartDate) {
+    try {
+        if (!email || !programmeCode || !intakeStartDate) {
+            return {
+                success: false,
+                message: 'Missing email, programme code, or intake date for course cohort enrollment',
+                cohorts: []
+            };
+        }
+
+        // Get Moodle user ID
+        const moodleUserId = await getMoodleUserIdByEmail(email);
+        if (!moodleUserId) {
+            return { success: false, message: 'User not found in Moodle', cohorts: [] };
+        }
+
+        // Derive intake year from intake date
+        const intakeDate = new Date(intakeStartDate);
+        const intakeMonth = intakeDate.getMonth() + 1;
+        const intakeYear = intakeDate.getFullYear();
+        const cohortYear = intakeMonth >= 8 ? intakeYear : intakeYear - 1;
+
+        // Query course_registrations for all courses in this programme
+        const [courseRegRows] = await db.execute(
+            `SELECT DISTINCT 
+                cr.course_code,
+                cr.cohort_label,
+                cr.type,
+                cr.year_category_id
+            FROM course_registrations cr
+            WHERE UPPER(cr.course_code) LIKE ?
+              AND cr.course_code IS NOT NULL
+              AND cr.cohort_label IS NOT NULL
+            ORDER BY cr.course_code`,
+            [`${programmeCode}%`]
+        );
+
+        if (courseRegRows.length === 0) {
+            console.warn(`[COURSE COHORT] No course registrations found for programme ${programmeCode}`);
+            return {
+                success: false, 
+                message: 'No course registrations found for this programme',
+                cohorts: []
+            };
+        }
+
+        const axios = require('axios');
+        const moodleToken = process.env.MOODLE_TOKEN || 'e86dd021aaa42f78114e6c67cc9d8ff1';
+        const moodleUrl = process.env.MOODLE_INTERNAL_URL || 'http://scli-moodle-dev:8080';
+        const cohortResults = [];
+
+        // Add student to each distinct cohort
+        for (const courseReg of courseRegRows) {
+            const cohortLabel = String(courseReg.cohort_label || '').trim();
+            if (!cohortLabel) continue;
+
+            try {
+                // Create cohort if it doesn't exist
+                try {
+                    await axios.post(
+                        `${moodleUrl}/webservice/rest/server.php`,
+                        {
+                            wstoken: moodleToken,
+                            wsfunction: 'core_cohort_create_cohorts',
+                            cohorts: [{
+                                contextid: 1,
+                                name: cohortLabel,
+                                idnumber: cohortLabel,
+                                description: `${programmeCode} ${cohortLabel} cohort`
+                            }],
+                            moodlewsrestformat: 'json'
+                        }
+                    );
+                    console.log(`[COURSE COHORT] Created cohort ${cohortLabel}`);
+                } catch (createErr) {
+                    console.log(`[COURSE COHORT] Cohort ${cohortLabel} may already exist`);
+                }
+
+                // Get cohort ID
+                let cohortId = null;
+                
+                // Try REST API first
+                try {
+                    const cohortResponse = await axios.post(
+                        `${moodleUrl}/webservice/rest/server.php`,
+                        {
+                            wstoken: moodleToken,
+                            wsfunction: 'core_cohort_get_cohorts',
+                            moodlewsrestformat: 'json'
+                        }
+                    );
+
+                    const cohort = (cohortResponse.data || []).find(c => c.idnumber === cohortLabel);
+                    if (cohort) {
+                        cohortId = cohort.id;
+                    }
+                } catch (err) {
+                    console.log(`[COURSE COHORT] REST API failed, trying DB`);
+                }
+
+                // Fallback to database
+                if (!cohortId) {
+                    const [cohortRows] = await moodleDbPool.execute(
+                        `SELECT id FROM mdl_cohort WHERE idnumber = ? LIMIT 1`,
+                        [cohortLabel]
+                    );
+                    if (cohortRows.length > 0) {
+                        cohortId = cohortRows[0].id;
+                    }
+                }
+
+                // If still no cohort, create it directly in DB
+                if (!cohortId) {
+                    const now = Math.floor(Date.now() / 1000);
+                    await moodleDbPool.execute(
+                        `INSERT INTO mdl_cohort
+                            (contextid, name, idnumber, description, descriptionformat, visible, component, timecreated, timemodified)
+                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                         ON DUPLICATE KEY UPDATE
+                            name = VALUES(name),
+                            description = VALUES(description),
+                            timemodified = VALUES(timemodified)`,
+                        [
+                            1,
+                            cohortLabel,
+                            cohortLabel,
+                            `${programmeCode} ${cohortLabel} cohort`,
+                            1,
+                            1,
+                            '',
+                            now,
+                            now
+                        ]
+                    );
+
+                    const [newCohortRows] = await moodleDbPool.execute(
+                        `SELECT id FROM mdl_cohort WHERE idnumber = ? LIMIT 1`,
+                        [cohortLabel]
+                    );
+                    if (newCohortRows.length > 0) {
+                        cohortId = newCohortRows[0].id;
+                        console.log(`[COURSE COHORT] Created cohort ${cohortLabel} via DB`);
+                    }
+                }
+
+                // Add student to cohort
+                if (cohortId) {
+                    try {
+                        await axios.post(
+                            `${moodleUrl}/webservice/rest/server.php`,
+                            {
+                                wstoken: moodleToken,
+                                wsfunction: 'core_cohort_add_cohort_members',
+                                members: [{
+                                    cohortid: cohortId,
+                                    userid: moodleUserId
+                                }],
+                                moodlewsrestformat: 'json'
+                            }
+                        );
+                        console.log(`[COURSE COHORT] Added ${email} to cohort ${cohortLabel}`);
+                        cohortResults.push({ cohortLabel, success: true });
+                    } catch (addErr) {
+                        // Fallback to DB insert
+                        const now = Math.floor(Date.now() / 1000);
+                        try {
+                            await moodleDbPool.execute(
+                                `INSERT INTO mdl_cohort_members (cohortid, userid, timeadded)
+                                 VALUES (?, ?, ?)
+                                 ON DUPLICATE KEY UPDATE timeadded = VALUES(timeadded)`,
+                                [cohortId, moodleUserId, now]
+                            );
+                            console.log(`[COURSE COHORT] Added ${email} to cohort ${cohortLabel} via DB`);
+                            cohortResults.push({ cohortLabel, success: true, method: 'db' });
+                        } catch (dbErr) {
+                            console.error(`[COURSE COHORT] Failed to add ${email} to ${cohortLabel}:`, dbErr.message);
+                            cohortResults.push({ cohortLabel, success: false, error: dbErr.message });
+                        }
+                    }
+                }
+            } catch (cohortErr) {
+                console.error(`[COURSE COHORT] Error processing cohort ${cohortLabel}:`, cohortErr.message);
+                cohortResults.push({ cohortLabel, success: false, error: cohortErr.message });
+            }
+        }
+
+        return {
+            success: true,
+            message: `Enrolled student in ${cohortResults.length} course cohorts`,
+            cohorts: cohortResults
+        };
+
+    } catch (error) {
+        console.error('[COURSE COHORT ENROLLMENT ERROR]', error.message);
+        return {
+            success: false,
+            message: `Course cohort enrollment failed: ${error.message}`,
+            cohorts: []
+        };
+    }
+}
+
 async function getMoodleUserIdByEmail(email) {
     const normalizedEmail = String(email || '').trim();
     if (!normalizedEmail) {
@@ -5840,6 +6083,24 @@ function minDate(a, b) {
     if (!a) return b || null;
     if (!b) return a || null;
     return new Date(a).getTime() <= new Date(b).getTime() ? a : b;
+}
+
+async function safeMoodleSelectRows(query, params = []) {
+    try {
+        const connection = await moodleDbPool.getConnection();
+        try {
+            const [rows] = await connection.execute(query, params);
+            return rows;
+        } finally {
+            connection.release();
+        }
+    } catch (error) {
+        if (error && (error.code === 'ER_NO_SUCH_TABLE' || String(error.message || '').includes("doesn't exist"))) {
+            return [];
+        }
+        console.error('Moodle DB Error:', error);
+        throw error;
+    }
 }
 
 async function safeSelectRows(query, params = []) {
@@ -6661,7 +6922,15 @@ async function upsertMoodleCourseCustomFields(courseId, registration) {
         const charValue = valueText.slice(0, 255);
         const numericValue = Number(rawValue);
         const intValue = Number.isInteger(numericValue) ? numericValue : 0;
-        const decValue = Number.isFinite(numericValue) ? numericValue : 0;
+        
+        // Safely convert to decimal with range validation (DECIMAL(15,2) range: -9999999999.99 to 9999999999.99)
+        let decValue = 0;
+        if (Number.isFinite(numericValue)) {
+            // Round to 2 decimal places for currency/monetary fields
+            decValue = Math.round(numericValue * 100) / 100;
+            // Clamp to valid DECIMAL(15,2) range
+            decValue = Math.max(-9999999999.99, Math.min(9999999999.99, decValue));
+        }
         const now = Math.floor(Date.now() / 1000);
 
         await moodleDbPool.execute(
@@ -7635,7 +7904,7 @@ async function unenrollStudentFromSingleCourse(email, courseCode) {
 }
 
 // Helper function to enroll student in ALL module courses of their programme
-async function enrollStudentInProgrammeCourses(email, firstName, lastName, infoCourseCode) {
+async function enrollStudentInProgrammeCourses(email, firstName, lastName, infoCourseCode, intakeStartDate) {
     try {
         const axios = require('axios');
         const moodleToken = process.env.MOODLE_TOKEN || 'e86dd021aaa42f78114e6c67cc9d8ff1';
@@ -7709,6 +7978,18 @@ async function enrollStudentInProgrammeCourses(email, firstName, lastName, infoC
             }
         );
 
+        // Step 6: Add student to cohorts for each course
+        let cohortResults = [];
+        if (intakeStartDate) {
+            cohortResults = await enrollStudentInCourseCohorts(
+                email,
+                firstName,
+                lastName,
+                programmeCode,
+                intakeStartDate
+            );
+        }
+
         let progressionResult = null;
         try {
             progressionResult = await enforceProgrammeProgressionLocks(email, programmeCode);
@@ -7723,6 +8004,7 @@ async function enrollStudentInProgrammeCourses(email, firstName, lastName, infoC
             courseCount: allCourses.length,
             moodleUserId,
             enrolledCourses: allCourses.map(c => ({ id: c.id, name: c.fullname })),
+            cohorts: cohortResults,
             progression: progressionResult
         };
 
@@ -7732,6 +8014,18 @@ async function enrollStudentInProgrammeCourses(email, firstName, lastName, infoC
             const programmeCode = extractProgrammeCode(infoCourseCode);
             const allCourses = await getProgrammeModuleCourses(programmeCode);
             const fallbackResult = await fallbackEnrollStudentInCourseIds(email, allCourses.map((course) => course.id));
+            
+            let cohortResults = [];
+            if (intakeStartDate) {
+                cohortResults = await enrollStudentInCourseCohorts(
+                    email,
+                    firstName,
+                    lastName,
+                    programmeCode,
+                    intakeStartDate
+                );
+            }
+            
             let progressionResult = null;
             try {
                 progressionResult = await enforceProgrammeProgressionLocks(email, programmeCode);
@@ -7741,6 +8035,7 @@ async function enrollStudentInProgrammeCourses(email, firstName, lastName, infoC
             return {
                 ...fallbackResult,
                 enrolledCourses: allCourses.map((course) => ({ id: course.id, name: course.fullname })),
+                cohorts: cohortResults,
                 progression: progressionResult
             };
         } catch (fallbackError) {
@@ -7956,7 +8251,8 @@ router.post('/bulk-approve', async (req, res) => {
                         app.email,
                         app.first_name,
                         app.last_name,
-                        app.course_code
+                        app.course_code,
+                        app.intake_start_date
                     );
                 } else {
                     // Fallback: enrol in single course
@@ -8626,7 +8922,8 @@ router.post('/sync-moodle-programme', async (req, res) => {
                 application.email,
                 application.first_name,
                 application.last_name,
-                application.course_code
+                application.course_code,
+                application.intake_start_date
             );
             try {
                 progressionResult = await enforceProgrammeProgressionLocks(application.email, currentProgrammeCode);
@@ -10085,7 +10382,8 @@ router.post('/course-change-requests/:requestId/review', async (req, res) => {
                         requestRecord.email,
                         requestRecord.first_name,
                         requestRecord.last_name,
-                        targetCourseCode
+                        targetCourseCode,
+                        requestRecord.intake_start_date
                     );
                     progressionResult = await enforceProgrammeProgressionLocks(requestRecord.email, newProgrammeCode);
                 } else {

@@ -1,0 +1,55 @@
+Ignoring invalid configuration option passed to Connection: acquireTimeout. This is currently a warning, but in future versions of MySQL2, an error will be thrown if you pass an invalid configuration option to a Connection
+[DB] Notifications table init failed: getaddrinfo ENOTFOUND scli-mysql-dev
+[DB] Announcements table init failed: getaddrinfo ENOTFOUND scli-mysql-dev
+[DB] Announcements table init failed: getaddrinfo ENOTFOUND scli-mysql-dev
+[TEACHER REGISTRATION] Failed to ensure tables: getaddrinfo ENOTFOUND scli-mysql-dev
+[COURSE REGISTRATION] Failed to ensure table: getaddrinfo ENOTFOUND scli-mysql-dev
+Error initializing course induction tables: getaddrinfo ENOTFOUND scli-mysql-dev
+[INIT] Course induction table init failed permanently after attempt 1: getaddrinfo ENOTFOUND scli-mysql-dev
+Error initializing course accreditation tables: connect ETIMEDOUT
+[INIT] Course accreditation table init retry 1/30 in 5000ms
+Error initializing course visit tables: connect ETIMEDOUT
+[INIT] Course visit table init retry 1/30 in 5000ms
+[DB] Connection failed: connect ETIMEDOUT
+[NOTIFICATION] Get failed: getaddrinfo ENOTFOUND scli-mysql-dev
+Error creating course registration: Error: getaddrinfo ENOTFOUND scli-mysql-dev
+    at PromisePool.execute (C:\SCL System\scl-institute\backend\node_modules\mysql2\lib\promise\pool.js:54:22)
+    at findLatestInductionForCourse (C:\SCL System\scl-institute\backend\routes\students.js:5648:33)
+    at ensureRegistrationGateFromInduction (C:\SCL System\scl-institute\backend\routes\students.js:5671:29)
+    at C:\SCL System\scl-institute\backend\routes\students.js:2825:33
+    at Layer.handle [as handle_request] (C:\SCL System\scl-institute\backend\node_modules\express\lib\router\layer.js:95:5)
+    at next (C:\SCL System\scl-institute\backend\node_modules\express\lib\router\route.js:149:13)
+    at Route.dispatch (C:\SCL System\scl-institute\backend\node_modules\express\lib\router\route.js:119:3)
+    at Layer.handle [as handle_request] (C:\SCL System\scl-institute\backend\node_modules\express\lib\router\layer.js:95:5)
+    at C:\SCL System\scl-institute\backend\node_modules\express\lib\router\index.js:284:15
+    at Function.process_params (C:\SCL System\scl-institute\backend\node_modules\express\lib\router\index.js:346:12) {
+  code: 'ENOTFOUND',
+  errno: -3008,
+  sql: undefined,
+  sqlState: undefined,
+  sqlMessage: undefined
+}
+[NOTIFICATION] Count failed: getaddrinfo ENOTFOUND scli-mysql-dev
+Error initializing course accreditation tables: getaddrinfo ENOTFOUND scli-mysql-dev
+[INIT] Course accreditation table init failed permanently after attempt 2: getaddrinfo ENOTFOUND scli-mysql-dev
+Error initializing course visit tables: getaddrinfo ENOTFOUND scli-mysql-dev
+[INIT] Course visit table init failed permanently after attempt 2: getaddrinfo ENOTFOUND scli-mysql-dev
+Error creating course registration: Error: getaddrinfo ENOTFOUND scli-mysql-dev
+    at PromisePool.execute (C:\SCL System\scl-institute\backend\node_modules\mysql2\lib\promise\pool.js:54:22)
+    at findLatestInductionForCourse (C:\SCL System\scl-institute\backend\routes\students.js:5648:33)
+    at ensureRegistrationGateFromInduction (C:\SCL System\scl-institute\backend\routes\students.js:5671:29)
+    at C:\SCL System\scl-institute\backend\routes\students.js:2825:33
+    at Layer.handle [as handle_request] (C:\SCL System\scl-institute\backend\node_modules\express\lib\router\layer.js:95:5)
+    at next (C:\SCL System\scl-institute\backend\node_modules\express\lib\router\route.js:149:13)
+    at Route.dispatch (C:\SCL System\scl-institute\backend\node_modules\express\lib\router\route.js:119:3)
+    at Layer.handle [as handle_request] (C:\SCL System\scl-institute\backend\node_modules\express\lib\router\layer.js:95:5)
+    at C:\SCL System\scl-institute\backend\node_modules\express\lib\router\index.js:284:15
+    at Function.process_params (C:\SCL System\scl-institute\backend\node_modules\express\lib\router\index.js:346:12) {
+  code: 'ENOTFOUND',
+  errno: -3008,
+  sql: undefined,
+  sqlState: undefined,
+  sqlMessage: undefined
+}
+[NOTIFICATION] Get failed: getaddrinfo ENOTFOUND scli-mysql-dev
+[NOTIFICATION] Count failed: getaddrinfo ENOTFOUND scli-mysql-dev
