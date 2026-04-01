@@ -264,9 +264,7 @@ const CourseRegistrations = () => {
     const getRegistrationForAcc = (acc) => {
         const matched = getRegistrationsForAcc(acc);
         if (!matched.length) return null;
-
-        const master = matched.find((r) => Number(r.is_master) === 1);
-        return master || matched[0];
+        return matched[0];
     };
 
     const resolveStructureForCourse = (course) => {
@@ -291,11 +289,6 @@ const CourseRegistrations = () => {
         if (!selectedAccreditation) return [];
         return getRegistrationsForAcc(selectedAccreditation);
     }, [selectedAccreditation, registrations]);
-
-    const selectedMasterRegistration = useMemo(() => {
-        if (!cohortRegistrationsForSelected.length) return null;
-        return cohortRegistrationsForSelected.find((r) => Number(r.is_master) === 1) || cohortRegistrationsForSelected[0];
-    }, [cohortRegistrationsForSelected]);
 
     const selectedCourseStructure = useMemo(() => {
         if (!selectedAccreditation) return null;
@@ -870,7 +863,7 @@ const CourseRegistrations = () => {
                                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Awarding Body</th>
                                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Accreditation</th>
                                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Moodle Status</th>
-                                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Master / Cohorts</th>
+                                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Registrations</th>
                                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Action</th>
                             </tr>
                         </thead>
@@ -878,8 +871,7 @@ const CourseRegistrations = () => {
                             {accreditations.map((acc) => {
                                 const reg = getRegistrationForAcc(acc);
                                 const allRegs = getRegistrationsForAcc(acc);
-                                const masterReg = allRegs.find((item) => Number(item.is_master) === 1) || null;
-                                const childCount = allRegs.filter((item) => Number(item.is_master) !== 1).length;
+                                const cohortCount = allRegs.length;
                                 const latestReg = allRegs[0] || null;
                                 const accStatus = (acc.overall_status || 'not_started').toLowerCase().replace(/\s+/g, '_');
                                 const moodleStatus = reg?.moodle_sync_status || null;
@@ -910,11 +902,11 @@ const CourseRegistrations = () => {
                                         <td className="px-4 py-3 text-sm text-gray-600">
                                             {reg ? (
                                                 <div>
-                                                    <div className="font-semibold text-gray-900">{masterReg ? 'Master linked' : 'Master pending'}</div>
-                                                    <div className="text-xs text-gray-500">{childCount} cohort{childCount === 1 ? '' : 's'}</div>
+                                                    <div className="font-semibold text-gray-900">{cohortCount} registration{cohortCount === 1 ? '' : 's'}</div>
+                                                    <div className="text-xs text-gray-500">{reg.moodle_course_id ? 'Synced to Moodle' : 'Pending sync'}</div>
                                                 </div>
                                             ) : (
-                                                <span className="text-xs text-gray-500">Will create master on first submit</span>
+                                                <span className="text-xs text-gray-500">No registrations yet</span>
                                             )}
                                         </td>
                                         <td className="px-4 py-3 text-sm">
@@ -1001,7 +993,7 @@ const CourseRegistrations = () => {
 
                     <div className={isFormOnlyMode ? 'pt-4 space-y-4' : 'p-6 space-y-6'}>
                         <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-xs text-blue-800">
-                            First registration for a course becomes <strong>Master</strong>. Each next submission with a new cohort label becomes a <strong>Child Cohort</strong> linked to that master.
+                            Each registration creates a cohort in Moodle. Use different cohort labels to organize students by intake, year, or semester.
                         </div>
 
                         <div className="rounded-xl border border-gray-200 overflow-hidden">
@@ -1039,11 +1031,6 @@ const CourseRegistrations = () => {
                                     </p>
                                 </div>
                                 <div className="flex items-center gap-2">
-                                    {selectedMasterRegistration && (
-                                        <span className="text-xs px-2 py-1 rounded-full bg-indigo-50 text-indigo-700 font-semibold">
-                                            Master #{selectedMasterRegistration.id}
-                                        </span>
-                                    )}
                                     {!isFormOnlyMode && (
                                         <button
                                             type="button"
@@ -1068,14 +1055,11 @@ const CourseRegistrations = () => {
                                     </thead>
                                     <tbody>
                                         {cohortRegistrationsForSelected.length > 0 ? cohortRegistrationsForSelected.map((item) => {
-                                            const isMaster = Number(item.is_master) === 1;
                                             const isCurrent = Number(editingRegistrationId) === Number(item.id);
                                             return (
                                                 <tr key={item.id} className={`border-b border-gray-100 ${isCurrent ? 'bg-blue-50' : 'hover:bg-gray-50'}`}>
                                                     <td className="px-3 py-2 text-sm">
-                                                        {isMaster
-                                                            ? <span className="text-xs px-2 py-1 rounded-full bg-indigo-100 text-indigo-800 font-semibold">Master</span>
-                                                            : <span className="text-xs px-2 py-1 rounded-full bg-emerald-100 text-emerald-800 font-semibold">Child</span>}
+                                                        <span className="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-800 font-semibold">Cohort</span>
                                                     </td>
                                                     <td className="px-3 py-2 text-sm text-gray-700">#{item.id}</td>
                                                     <td className="px-3 py-2 text-sm text-gray-700">{item.cohort_label || '-'}</td>
@@ -1089,23 +1073,21 @@ const CourseRegistrations = () => {
                                                         >
                                                             {isCurrent ? 'Editing' : 'Open'}
                                                         </button>
-                                                        {!isMaster && (
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => deleteRegistration(item.id)}
-                                                                disabled={registeringCourseKey.startsWith('delete-') || registeringCourseKey.startsWith('resync-')}
-                                                                className="px-2 py-1 text-xs font-semibold rounded-md border border-red-300 text-red-700 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                                                            >
-                                                                {registeringCourseKey === `delete-${item.id}` ? 'Deleting...' : 'Delete'}
-                                                            </button>
-                                                        )}
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => deleteRegistration(item.id)}
+                                                            disabled={registeringCourseKey.startsWith('delete-') || registeringCourseKey.startsWith('resync-')}
+                                                            className="px-2 py-1 text-xs font-semibold rounded-md border border-red-300 text-red-700 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                        >
+                                                            {registeringCourseKey === `delete-${item.id}` ? 'Deleting...' : 'Delete'}
+                                                        </button>
                                                     </td>
                                                 </tr>
                                             );
                                         }) : (
                                             <tr>
                                                 <td colSpan={5} className="px-4 py-8 text-center text-sm text-gray-500">
-                                                    No cohorts added yet. Use <strong>Add Cohort</strong> to create the master registration.
+                                                    No cohorts added yet. Use <strong>Add Cohort</strong> to create the first registration.
                                                 </td>
                                             </tr>
                                         )}
