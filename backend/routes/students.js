@@ -3110,14 +3110,7 @@ router.get('/course-lifecycle/dashboard', async (req, res) => {
         `);
         
         // Get course lifecycle master with full program names from Moodle categories
-        const lifecycleMaster = await safeMoodleSelectRows(`
-            SELECT 
-                clm.*,
-                COALESCE(mcc.name, clm.program_name) as program_full_name
-            FROM course_lifecycle_master clm
-            LEFT JOIN mdl_course_categories mcc ON clm.program_category_id = mcc.id
-            ORDER BY clm.updated_at DESC, clm.created_at DESC
-        `);
+        const lifecycleMaster = await safeMoodleSelectRows('SELECT * FROM course_lifecycle_master ORDER BY updated_at DESC, created_at DESC');
         const accreditations = await safeSelectRows('SELECT * FROM course_accreditations ORDER BY updated_at DESC, created_at DESC');
         const visits = await safeSelectRows('SELECT * FROM course_visits ORDER BY updated_at DESC, created_at DESC');
         const inductions = await safeSelectRows('SELECT * FROM course_inductions ORDER BY updated_at DESC, created_at DESC');
