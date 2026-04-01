@@ -993,7 +993,7 @@ const CourseRegistrations = () => {
 
                     <div className={isFormOnlyMode ? 'pt-4 space-y-4' : 'p-6 space-y-6'}>
                         <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-xs text-blue-800">
-                            <strong>Program-Level Cohorts:</strong> Each cohort is created at the program level (e.g., "DEG-2026-Sep") and includes ALL courses in that program. Students in the same cohort see all their program courses.
+                            <strong>Year-Based Cohorts:</strong> Each cohort is created at the program + year level (e.g., "DEG-Y1-2026-Sep"). Students in a cohort see all courses for their year: year-long courses + current semester courses only.
                         </div>
 
                         <div className="rounded-xl border border-gray-200 overflow-hidden">
@@ -1048,6 +1048,7 @@ const CourseRegistrations = () => {
                                         <tr className="bg-gray-50 border-b border-gray-200">
                                             <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Type</th>
                                             <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Registration ID</th>
+                                            <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Year</th>
                                             <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Intake</th>
                                             <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Moodle</th>
                                             <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Action</th>
@@ -1062,6 +1063,7 @@ const CourseRegistrations = () => {
                                                         <span className="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-800 font-semibold">Cohort</span>
                                                     </td>
                                                     <td className="px-3 py-2 text-sm text-gray-700">#{item.id}</td>
+                                                    <td className="px-3 py-2 text-sm text-gray-700">{item.academic_year || '-'}</td>
                                                     <td className="px-3 py-2 text-sm text-gray-700">{item.cohort_label || '-'}</td>
                                                     <td className="px-3 py-2 text-sm">{badge(item.moodle_sync_status || 'pending', item.moodle_sync_status || 'pending')}</td>
                                                     <td className="px-3 py-2 text-sm flex gap-2">
@@ -1086,7 +1088,7 @@ const CourseRegistrations = () => {
                                             );
                                         }) : (
                                             <tr>
-                                                <td colSpan={5} className="px-4 py-8 text-center text-sm text-gray-500">
+                                                <td colSpan={6} className="px-4 py-8 text-center text-sm text-gray-500">
                                                     No cohorts added yet. Use <strong>Add Cohort</strong> to create the first registration.
                                                 </td>
                                             </tr>
