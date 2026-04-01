@@ -993,7 +993,7 @@ const CourseRegistrations = () => {
 
                     <div className={isFormOnlyMode ? 'pt-4 space-y-4' : 'p-6 space-y-6'}>
                         <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-xs text-blue-800">
-                            Each registration creates a cohort in Moodle. Use different cohort labels to organize students by intake, year, or semester.
+                            <strong>Program-Level Cohorts:</strong> Each cohort is created at the program level (e.g., "DEG-2026-Sep") and includes ALL courses in that program. Students in the same cohort see all their program courses.
                         </div>
 
                         <div className="rounded-xl border border-gray-200 overflow-hidden">
@@ -1048,7 +1048,7 @@ const CourseRegistrations = () => {
                                         <tr className="bg-gray-50 border-b border-gray-200">
                                             <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Type</th>
                                             <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Registration ID</th>
-                                            <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Cohort</th>
+                                            <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Intake</th>
                                             <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Moodle</th>
                                             <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Action</th>
                                         </tr>

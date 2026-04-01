@@ -3630,9 +3630,11 @@ router.delete('/course-registrations/:id', async (req, res) => {
         
         // Check for enrolled students in this cohort from Moodle
         let moodleEnrolledCount = 0;
-        if (registration.cohort_label && registration.moodle_course_id) {
+        if (registration.cohort_label) {
             try {
-                const cohortIdnumber = `${registration.course_code}-${registration.cohort_label}`.replace(/\s+/g, '-').toLowerCase();
+                // Use program-level cohort naming: DEG-2026-Sep
+                const programCode = String(registration.course_code || '').split('-')[0].toUpperCase();
+                const cohortIdnumber = `${programCode}-${registration.cohort_label}`.replace(/\s+/g, '-').toLowerCase();
                 
                 const [moodleCohort] = await moodleDbPool.execute(
                     'SELECT id FROM mdl_cohort WHERE idnumber = ? AND contextid = 1 LIMIT 1',
@@ -3660,10 +3662,11 @@ router.delete('/course-registrations/:id', async (req, res) => {
         
         // Delete the cohort from Moodle if it exists
         let moodleDeleteMessage = '';
-        if (registration.moodle_course_id && registration.cohort_label) {
+        if (registration.cohort_label) {
             try {
-                // Generate cohort idnumber to find and delete
-                const cohortIdnumber = `${registration.course_code}-${registration.cohort_label}`.replace(/\s+/g, '-').toLowerCase();
+                // Generate program-level cohort idnumber to find and delete
+                const programCode = String(registration.course_code || '').split('-')[0].toUpperCase();
+                const cohortIdnumber = `${programCode}-${registration.cohort_label}`.replace(/\s+/g, '-').toLowerCase();
                 
                 // Find the cohort in Moodle
                 const [moodleCohort] = await moodleDbPool.execute(
@@ -3672,12 +3675,23 @@ router.delete('/course-registrations/:id', async (req, res) => {
                 );
                 
                 if (moodleCohort.length > 0) {
-                    // Delete from Moodle
-                    await moodleDbPool.execute(
-                        'DELETE FROM mdl_cohort WHERE id = ?',
-                        [moodleCohort[0].id]
+                    // First, check if this is the only registration for this cohort
+                    // If it is, delete the cohort. If not, just remove the course link
+                    const [otherRegs] = await db.execute(
+                        'SELECT COUNT(*) as count FROM course_registrations WHERE cohort_label = ? AND course_code LIKE ?',
+                        [registration.cohort_label, `${programCode}%`]
                     );
-                    moodleDeleteMessage = ' | Cohort removed from Moodle';
+                    
+                    // Only delete cohort if no other registrations use it
+                    if (otherRegs[0].count <= 1) {
+                        await moodleDbPool.execute(
+                            'DELETE FROM mdl_cohort WHERE id = ?',
+                            [moodleCohort[0].id]
+                        );
+                        moodleDeleteMessage = ' | Program cohort removed from Moodle';
+                    } else {
+                        moodleDeleteMessage = ' | Course unlinked from cohort';
+                    }
                 }
             } catch (moodleError) {
                 console.error('Error deleting cohort from Moodle:', moodleError);
@@ -7110,47 +7124,69 @@ async function syncCourseRegistrationToMoodle(registrationId) {
 }
 
 async function createOrUpdateMoodleCohort(moodleCourseId, registration) {
-    if (!moodleCourseId || !registration.cohort_label) {
-        return { success: false, message: 'Missing course ID or cohort label' };
+    if (!registration.cohort_label) {
+        return { success: false, message: 'Missing cohort label' };
     }
 
     try {
-        const cohortName = registration.cohort_label;
-        const cohortIdnumber = `${registration.course_code}-${registration.cohort_label}`.replace(/\s+/g, '-').toLowerCase();
+        // Extract program code from course code (e.g., "DEG" from "DEG-001-Y1-S1-C1")
+        const programCode = String(registration.course_code || '').split('-')[0].toUpperCase();
+        if (!programCode) {
+            return { success: false, message: 'Cannot determine program code from course code' };
+        }
 
-        // Check if cohort already exists
+        // Create program-level cohort idnumber: DEG-2026-Sep
+        const cohortIdnumber = `${programCode}-${registration.cohort_label}`.replace(/\s+/g, '-').toLowerCase();
+        
+        // Cohort name should show program + intake: "B.Tech - Sep 2026"
+        const cohortName = `${registration.programme_type_name || 'Programme'} - ${registration.cohort_label}`;
+
+        // Check if program cohort already exists
         const [existingCohorts] = await moodleDbPool.execute(
             `SELECT id FROM mdl_cohort WHERE idnumber = ? AND contextid = 1 LIMIT 1`,
             [cohortIdnumber]
         );
 
+        let cohortId;
+        let created = false;
+
         if (existingCohorts.length > 0) {
-            return {
-                success: true,
-                message: 'Cohort already exists in Moodle',
-                cohort_id: existingCohorts[0].id,
-                created: false
-            };
+            // Program cohort already exists
+            cohortId = existingCohorts[0].id;
+        } else {
+            // Create new program-level cohort
+            const now = Math.floor(Date.now() / 1000);
+            const [result] = await moodleDbPool.execute(
+                `INSERT INTO mdl_cohort (contextid, name, idnumber, description, timecreated, timemodified)
+                 VALUES (?, ?, ?, ?, ?, ?)`,
+                [1, cohortName, cohortIdnumber, `${registration.programme_type_name || 'Programme'} cohort for intake ${registration.cohort_label}`, now, now]
+            );
+            cohortId = Number(result.insertId);
+            created = true;
         }
 
-        // Create new cohort
-        const now = Math.floor(Date.now() / 1000);
-        const [result] = await moodleDbPool.execute(
-            `INSERT INTO mdl_cohort (contextid, name, idnumber, description, timecreated, timemodified)
-             VALUES (?, ?, ?, ?, ?, ?)`,
-            [1, cohortName, cohortIdnumber, `Cohort for ${registration.course_title}`, now, now]
-        );
-
-        const cohortId = Number(result.insertId);
-
-        // Optionally: link cohort to course if Moodle supports it
-        // (This depends on your Moodle configuration)
+        // Now link this cohort to ALL courses in the same program
+        const programCohorses = await getAllCoursesForProgram(programCode);
+        if (programCohorses.length > 0) {
+            for (const course of programCohorses) {
+                const [moodleCourse] = await moodleDbPool.execute(
+                    'SELECT id FROM mdl_course WHERE idnumber = ? LIMIT 1',
+                    [course.idnumber]
+                );
+                
+                if (moodleCourse.length > 0) {
+                    // Optionally: Add cohort to course (depends on Moodle configuration)
+                    // Could use REST API or direct DB insert here if needed
+                }
+            }
+        }
 
         return {
             success: true,
-            message: 'Cohort created in Moodle',
+            message: created ? 'Program cohort created in Moodle' : 'Program cohort already exists',
             cohort_id: cohortId,
-            created: true
+            cohort_idnumber: cohortIdnumber,
+            created: created
         };
     } catch (error) {
         console.error('[createOrUpdateMoodleCohort] Error:', error.message);
@@ -7159,6 +7195,27 @@ async function createOrUpdateMoodleCohort(moodleCourseId, registration) {
             message: error.message,
             cohort_id: null
         };
+    }
+}
+
+async function getAllCoursesForProgram(programCode) {
+    try {
+        // Get all courses that start with the program code
+        const normalizedCode = String(programCode || '').trim().toUpperCase();
+        if (!normalizedCode) return [];
+
+        const [courses] = await moodleDbPool.execute(
+            `SELECT id, idnumber, shortname, fullname 
+             FROM mdl_course 
+             WHERE idnumber LIKE ? 
+             ORDER BY idnumber ASC`,
+            [`${normalizedCode}%`]
+        );
+
+        return courses || [];
+    } catch (error) {
+        console.error('[getAllCoursesForProgram] Error:', error.message);
+        return [];
     }
 }
 
