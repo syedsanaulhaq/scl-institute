@@ -7003,32 +7003,67 @@ async function syncCourseRegistrationToMoodle(registrationId) {
     const registration = rows[0];
 
     try {
-        const courseSync = await createOrUpdateMoodleCourseCore(registration);
-        await ensureManualEnrolmentForCourse(courseSync.moodleCourseId);
-        const customFieldSync = await upsertMoodleCourseCustomFields(courseSync.moodleCourseId, registration);
-        const sectionSync = await upsertMoodleCourseSections(courseSync.moodleCourseId, registration.units_modules_covered);
+        // Check if this is a child cohort (has parent_registration_id) or new master registration
+        const isChildCohort = Number(registration.parent_registration_id) > 0;
+        
+        // Check if course already exists in Moodle
+        const existingMoodleCourse = await getMoodleCourseByCode(registration.course_code);
+        const courseAlreadyExists = Boolean(existingMoodleCourse?.id);
+
+        let moodleCourseId = existingMoodleCourse?.id || null;
+        let courseSync = null;
+        let customFieldSync = null;
+        let sectionSync = null;
+        let courseMessage = '';
+
+        // Only sync course to Moodle if:
+        // 1. It's the master registration (not a child cohort), OR
+        // 2. The course doesn't exist in Moodle yet
+        if (!isChildCohort || !courseAlreadyExists) {
+            courseSync = await createOrUpdateMoodleCourseCore(registration);
+            moodleCourseId = courseSync.moodleCourseId;
+            courseMessage = courseSync.created ? 'Course created in Moodle' : 'Course updated in Moodle';
+            
+            // Only sync these if we're syncing the course
+            customFieldSync = await upsertMoodleCourseCustomFields(moodleCourseId, registration);
+            sectionSync = await upsertMoodleCourseSections(moodleCourseId, registration.units_modules_covered);
+            await ensureManualEnrolmentForCourse(moodleCourseId);
+        } else {
+            // For child cohorts with existing course, just get the course ID
+            courseMessage = 'Course already exists in Moodle (parent cohort)';
+        }
+
+        // If this is a child cohort, create/update the cohort
+        let cohortSync = null;
+        if (isChildCohort && registration.cohort_label) {
+            cohortSync = await createOrUpdateMoodleCohort(moodleCourseId, registration);
+        }
 
         const syncMessage = [
-            courseSync.created ? 'Course created/updated in Moodle' : 'Course updated in Moodle',
-            customFieldSync.message,
-            sectionSync.message
-        ].join(' | ');
+            courseMessage,
+            customFieldSync?.message || '',
+            sectionSync?.message || '',
+            cohortSync?.message || ''
+        ].filter(Boolean).join(' | ');
 
         await db.execute(
             `UPDATE course_registrations
              SET moodle_course_id = ?, moodle_sync_status = 'synced', moodle_sync_message = ?, last_synced_at = NOW()
              WHERE id = ?`,
-            [courseSync.moodleCourseId, syncMessage, registrationId]
+            [moodleCourseId, syncMessage, registrationId]
         );
 
         return {
             success: true,
             message: syncMessage,
             registration_id: registrationId,
-            moodle_course_id: courseSync.moodleCourseId,
-            created_in_moodle: Boolean(courseSync.created),
-            custom_fields_updated: customFieldSync.updated,
-            sections_synced: sectionSync.updated
+            moodle_course_id: moodleCourseId,
+            created_in_moodle: courseSync?.created || false,
+            is_child_cohort: isChildCohort,
+            course_already_existed: courseAlreadyExists,
+            custom_fields_updated: customFieldSync?.updated || false,
+            sections_synced: sectionSync?.updated || false,
+            cohort_created_or_updated: Boolean(cohortSync?.success)
         };
     } catch (error) {
         await db.execute(
@@ -7042,6 +7077,59 @@ async function syncCourseRegistrationToMoodle(registrationId) {
             success: false,
             message: error.message || 'Moodle sync failed',
             registration_id: registrationId
+        };
+    }
+}
+
+async function createOrUpdateMoodleCohort(moodleCourseId, registration) {
+    if (!moodleCourseId || !registration.cohort_label) {
+        return { success: false, message: 'Missing course ID or cohort label' };
+    }
+
+    try {
+        const cohortName = registration.cohort_label;
+        const cohortIdnumber = `${registration.course_code}-${registration.cohort_label}`.replace(/\s+/g, '-').toLowerCase();
+
+        // Check if cohort already exists
+        const [existingCohorts] = await moodleDbPool.execute(
+            `SELECT id FROM mdl_cohort WHERE idnumber = ? AND contextid = 1 LIMIT 1`,
+            [cohortIdnumber]
+        );
+
+        if (existingCohorts.length > 0) {
+            return {
+                success: true,
+                message: 'Cohort already exists in Moodle',
+                cohort_id: existingCohorts[0].id,
+                created: false
+            };
+        }
+
+        // Create new cohort
+        const now = Math.floor(Date.now() / 1000);
+        const [result] = await moodleDbPool.execute(
+            `INSERT INTO mdl_cohort (contextid, name, idnumber, description, timecreated, timemodified)
+             VALUES (?, ?, ?, ?, ?, ?)`,
+            [1, cohortName, cohortIdnumber, `Cohort for ${registration.course_title}`, now, now]
+        );
+
+        const cohortId = Number(result.insertId);
+
+        // Optionally: link cohort to course if Moodle supports it
+        // (This depends on your Moodle configuration)
+
+        return {
+            success: true,
+            message: 'Cohort created in Moodle',
+            cohort_id: cohortId,
+            created: true
+        };
+    } catch (error) {
+        console.error('[createOrUpdateMoodleCohort] Error:', error.message);
+        return {
+            success: false,
+            message: error.message,
+            cohort_id: null
         };
     }
 }
