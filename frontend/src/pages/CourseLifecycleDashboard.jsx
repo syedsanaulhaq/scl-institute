@@ -202,6 +202,7 @@ const CourseLifecycleDashboard = () => {
     const [filterYear, setFilterYear] = useState('');
     const [filterSemester, setFilterSemester] = useState('');
     const [filterCourse, setFilterCourse] = useState('');
+    const [filterStatus, setFilterStatus] = useState(''); // 'accreditation', 'visit', 'induction', 'registration', 'fully_active'
     const fetchDashboard = async () => {
         try {
             setLoading(true);
@@ -293,8 +294,23 @@ const CourseLifecycleDashboard = () => {
             );
         }
         
+        // Apply status filter
+        if (filterStatus) {
+            if (filterStatus === 'accreditation') {
+                filtered = filtered.filter(c => isDoneStatus(c.accreditation_status));
+            } else if (filterStatus === 'visit') {
+                filtered = filtered.filter(c => isDoneStatus(c.visit_status));
+            } else if (filterStatus === 'induction') {
+                filtered = filtered.filter(c => isDoneStatus(c.induction_status));
+            } else if (filterStatus === 'registration') {
+                filtered = filtered.filter(c => isDoneStatus(c.registration_status));
+            } else if (filterStatus === 'fully_active') {
+                filtered = filtered.filter(c => getOverallCourseStatus(c) === 'completed');
+            }
+        }
+        
         return filtered;
-    }, [courses, filterProgrammeType, filterProgram, filterYear, filterSemester, filterCourse]);
+    }, [courses, filterProgrammeType, filterProgram, filterYear, filterSemester, filterCourse, filterStatus]);
 
     // Get unique values for filter dropdowns
     const getUniqueValues = (field) => {
@@ -317,12 +333,46 @@ const CourseLifecycleDashboard = () => {
 
     const groupedCourses = useMemo(() => groupCoursesHierarchical(filteredCourses), [filteredCourses]);
 
+    // Auto-expand sections when filters are applied
+    useEffect(() => {
+        const hasActiveFilters = filterProgrammeType || filterProgram || filterYear || filterSemester || filterCourse || filterStatus;
+        
+        if (hasActiveFilters && Object.keys(groupedCourses).length > 0) {
+            // Build all section keys to expand
+            const sectionsToExpand = {};
+            
+            Object.entries(groupedCourses).forEach(([programmeType, programs]) => {
+                const typeKey = `type-${programmeType}`;
+                sectionsToExpand[typeKey] = true;
+                
+                Object.entries(programs).forEach(([program, years]) => {
+                    const progKey = `prog-${programmeType}-${program}`;
+                    sectionsToExpand[progKey] = true;
+                    
+                    Object.entries(years).forEach(([year, semesters]) => {
+                        const yearKey = `year-${programmeType}-${program}-${year}`;
+                        sectionsToExpand[yearKey] = true;
+                        
+                        Object.keys(semesters).forEach(semester => {
+                            const semKey = `sem-${programmeType}-${program}-${year}-${semester}`;
+                            sectionsToExpand[semKey] = true;
+                        });
+                    });
+                });
+            });
+            
+            setExpandedSections(sectionsToExpand);
+        }
+    }, [filterProgrammeType, filterProgram, filterYear, filterSemester, filterCourse, filterStatus, groupedCourses]);
+
     const handleClearFilters = () => {
         setFilterProgrammeType('');
         setFilterProgram('');
         setFilterYear('');
         setFilterSemester('');
         setFilterCourse('');
+        setFilterStatus('');
+        setExpandedSections({}); // Collapse all sections when filters are cleared
     };
 
     const toggleSection = (sectionKey) => {
@@ -409,7 +459,7 @@ const CourseLifecycleDashboard = () => {
                     <div className="space-y-3 bg-white rounded-lg border border-gray-200 p-4">
                         <div className="flex items-center justify-between">
                             <h3 className="text-sm font-semibold text-gray-900">Filters</h3>
-                            {(filterProgrammeType || filterProgram || filterYear || filterSemester || filterCourse) && (
+                            {(filterProgrammeType || filterProgram || filterYear || filterSemester || filterCourse || filterStatus) && (
                                 <button
                                     onClick={handleClearFilters}
                                     className="text-xs text-scl-purple hover:text-scl-purple/80 font-medium"
@@ -489,30 +539,60 @@ const CourseLifecycleDashboard = () => {
             </div>
 
             <div className="grid grid-cols-2 lg:grid-cols-6 gap-3">
-                <div className="rounded-xl border border-gray-200 bg-white p-4">
+                <button
+                    onClick={() => setFilterStatus('')}
+                    className={`rounded-xl border p-4 transition-all cursor-pointer ${
+                        filterStatus === '' ? 'border-scl-purple bg-scl-purple/5 ring-2 ring-scl-purple/20' : 'border-gray-200 bg-white hover:border-scl-purple/30'
+                    }`}
+                >
                     <p className="text-xs text-gray-500 uppercase">Total Courses</p>
                     <p className="text-2xl font-bold text-gray-900">{summary.total_courses || 0}</p>
-                </div>
-                <div className="rounded-xl border border-gray-200 bg-white p-4">
+                </button>
+                <button
+                    onClick={() => setFilterStatus('accreditation')}
+                    className={`rounded-xl border p-4 transition-all cursor-pointer ${
+                        filterStatus === 'accreditation' ? 'border-scl-purple bg-scl-purple/5 ring-2 ring-scl-purple/20' : 'border-gray-200 bg-white hover:border-scl-purple/30'
+                    }`}
+                >
                     <p className="text-xs text-gray-500 uppercase">Accreditation Done</p>
                     <p className="text-2xl font-bold text-scl-purple">{summary.accreditation_completed || 0}</p>
-                </div>
-                <div className="rounded-xl border border-gray-200 bg-white p-4">
+                </button>
+                <button
+                    onClick={() => setFilterStatus('visit')}
+                    className={`rounded-xl border p-4 transition-all cursor-pointer ${
+                        filterStatus === 'visit' ? 'border-scl-purple bg-scl-purple/5 ring-2 ring-scl-purple/20' : 'border-gray-200 bg-white hover:border-scl-purple/30'
+                    }`}
+                >
                     <p className="text-xs text-gray-500 uppercase">Visit Done</p>
                     <p className="text-2xl font-bold text-scl-purple">{summary.visit_completed || 0}</p>
-                </div>
-                <div className="rounded-xl border border-gray-200 bg-white p-4">
+                </button>
+                <button
+                    onClick={() => setFilterStatus('induction')}
+                    className={`rounded-xl border p-4 transition-all cursor-pointer ${
+                        filterStatus === 'induction' ? 'border-scl-purple bg-scl-purple/5 ring-2 ring-scl-purple/20' : 'border-gray-200 bg-white hover:border-scl-purple/30'
+                    }`}
+                >
                     <p className="text-xs text-gray-500 uppercase">Induction Done</p>
                     <p className="text-2xl font-bold text-scl-purple">{summary.induction_completed || 0}</p>
-                </div>
-                <div className="rounded-xl border border-gray-200 bg-white p-4">
+                </button>
+                <button
+                    onClick={() => setFilterStatus('registration')}
+                    className={`rounded-xl border p-4 transition-all cursor-pointer ${
+                        filterStatus === 'registration' ? 'border-scl-purple bg-scl-purple/5 ring-2 ring-scl-purple/20' : 'border-gray-200 bg-white hover:border-scl-purple/30'
+                    }`}
+                >
                     <p className="text-xs text-gray-500 uppercase">Registration Done</p>
                     <p className="text-2xl font-bold text-scl-purple">{summary.registration_completed || 0}</p>
-                </div>
-                <div className="rounded-xl border border-gray-200 bg-white p-4">
+                </button>
+                <button
+                    onClick={() => setFilterStatus('fully_active')}
+                    className={`rounded-xl border p-4 transition-all cursor-pointer ${
+                        filterStatus === 'fully_active' ? 'border-green-600 bg-green-50 ring-2 ring-green-200' : 'border-gray-200 bg-white hover:border-green-300'
+                    }`}
+                >
                     <p className="text-xs text-gray-500 uppercase">Fully Active</p>
                     <p className="text-2xl font-bold text-green-700">{summary.fully_active || 0}</p>
-                </div>
+                </button>
             </div>
 
             {loading ? (

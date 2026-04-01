@@ -52,6 +52,25 @@ function deriveProgramName(course) {
     return String(course?.course_title || 'General Programme').trim() || 'General Programme';
 }
 
+function getFullProgramName(programCode, moodleProgrammeTypes) {
+    if (!programCode || !moodleProgrammeTypes?.length) return programCode;
+    
+    // Search through the hierarchy to find the matching program
+    for (const progType of moodleProgrammeTypes) {
+        if (progType.programs?.length) {
+            const foundProgram = progType.programs.find(p => 
+                String(p.name || '').startsWith(programCode) || 
+                String(p.idnumber || '').startsWith(programCode)
+            );
+            if (foundProgram) {
+                return foundProgram.name;
+            }
+        }
+    }
+    
+    return programCode;
+}
+
 function deriveProgrammeTypeName(course) {
     return String(course?.programme_type_name || '').trim() || 'Degree';
 }
@@ -971,9 +990,9 @@ const CourseRegistrations = () => {
                                     ['Course Title', selectedAccreditation.course_title || '-'],
                                     ['Course Code / ID', selectedAccreditation.course_code || '-'],
                                     ['Awarding Body', selectedAccreditation.awarding_body || '-'],
-                                    ['Qualification Level', selectedAccreditation.qualification_level || '-'],
+                                    ['Qualification Level', selectedAccreditation.qualification_level || selectedAccreditation.course_type || '-'],
                                     ['Programme Type', selectedCourseStructure?.programme_type_name || '-'],
-                                    ['Program', selectedCourseStructure?.program_name || '-'],
+                                    ['Program', getFullProgramName(selectedCourseStructure?.program_name, moodleProgrammeTypes) || '-'],
                                     ['Academic Year', selectedCourseStructure?.academic_year || '-'],
                                     ['Semester', selectedCourseStructure?.semester_name || '-']
                                 ].map(([label, value]) => (
