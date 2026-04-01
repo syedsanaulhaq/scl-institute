@@ -3622,6 +3622,113 @@ router.post('/course-registrations/:id/sync-moodle', async (req, res) => {
     }
 });
 
+router.delete('/course-registrations/:id', async (req, res) => {
+    try {
+        const registrationId = Number(req.params.id);
+        
+        // Fetch the registration to get details
+        const [registrations] = await db.execute(
+            'SELECT * FROM course_registrations WHERE id = ? LIMIT 1',
+            [registrationId]
+        );
+        
+        if (registrations.length === 0) {
+            return res.status(404).json({ success: false, message: 'Course registration not found' });
+        }
+        
+        const registration = registrations[0];
+        const isMasterRegistration = Number(registration.is_master) === 1;
+        
+        // Check if this is a master registration
+        if (isMasterRegistration) {
+            // Check if there are child cohorts
+            const [childCohorts] = await db.execute(
+                'SELECT COUNT(*) as count FROM course_registrations WHERE parent_registration_id = ?',
+                [registrationId]
+            );
+            
+            if (childCohorts[0].count > 0) {
+                return res.status(400).json({ 
+                    success: false, 
+                    message: 'Cannot delete master registration: it has child cohorts. Delete child cohorts first.' 
+                });
+            }
+        }
+        
+        // Check for enrolled students in this cohort from Moodle
+        let moodleEnrolledCount = 0;
+        if (registration.cohort_label && registration.moodle_course_id) {
+            try {
+                const cohortIdnumber = `${registration.course_code}-${registration.cohort_label}`.replace(/\s+/g, '-').toLowerCase();
+                
+                const [moodleCohort] = await moodleDbPool.execute(
+                    'SELECT id FROM mdl_cohort WHERE idnumber = ? AND contextid = 1 LIMIT 1',
+                    [cohortIdnumber]
+                );
+                
+                if (moodleCohort.length > 0) {
+                    const [enrolledCount] = await moodleDbPool.execute(
+                        'SELECT COUNT(*) as count FROM mdl_cohort_members WHERE cohortid = ?',
+                        [moodleCohort[0].id]
+                    );
+                    moodleEnrolledCount = enrolledCount[0].count;
+                }
+            } catch (moodleError) {
+                console.error('Error checking Moodle enrollments:', moodleError);
+            }
+        }
+        
+        if (moodleEnrolledCount > 0) {
+            return res.status(400).json({ 
+                success: false, 
+                message: `Cannot delete: ${moodleEnrolledCount} student(s) enrolled in this cohort in Moodle. Remove enrollments first.` 
+            });
+        }
+        
+        // Delete the cohort from Moodle if it exists
+        let moodleDeleteMessage = '';
+        if (registration.moodle_course_id && registration.cohort_label) {
+            try {
+                // Generate cohort idnumber to find and delete
+                const cohortIdnumber = `${registration.course_code}-${registration.cohort_label}`.replace(/\s+/g, '-').toLowerCase();
+                
+                // Find the cohort in Moodle
+                const [moodleCohort] = await moodleDbPool.execute(
+                    'SELECT id FROM mdl_cohort WHERE idnumber = ? AND contextid = 1 LIMIT 1',
+                    [cohortIdnumber]
+                );
+                
+                if (moodleCohort.length > 0) {
+                    // Delete from Moodle
+                    await moodleDbPool.execute(
+                        'DELETE FROM mdl_cohort WHERE id = ?',
+                        [moodleCohort[0].id]
+                    );
+                    moodleDeleteMessage = ' | Cohort removed from Moodle';
+                }
+            } catch (moodleError) {
+                console.error('Error deleting cohort from Moodle:', moodleError);
+                moodleDeleteMessage = ' | Warning: Could not remove cohort from Moodle';
+            }
+        }
+        
+        // Delete from SCL database
+        await db.execute('DELETE FROM course_registrations WHERE id = ?', [registrationId]);
+        
+        const successMessage = `Course registration #${registrationId} deleted successfully${moodleDeleteMessage}`;
+        
+        return res.status(200).json({
+            success: true,
+            message: successMessage,
+            deleted_registration_id: registrationId
+        });
+        
+    } catch (error) {
+        console.error('Error deleting course registration:', error);
+        return res.status(500).json({ success: false, message: 'Failed to delete course registration', error: error.message });
+    }
+});
+
 // ===============================================
 // ROUTE 4: GET /api/students/applications
 // Get applications list (for admissions staff)

@@ -711,6 +711,30 @@ const CourseRegistrations = () => {
         }
     };
 
+    const deleteRegistration = async (registrationId) => {
+        if (!registrationId || !window.confirm('Are you sure you want to delete this cohort? This will also remove it from Moodle. This action cannot be undone.')) return;
+
+        try {
+            setRegisteringCourseKey(`delete-${registrationId}`);
+            setMessage('Deleting cohort...');
+
+            const res = await axios.delete(`${API_URL}/students/course-registrations/${registrationId}`);
+            const deleteSuccess = Boolean(res.data?.success);
+
+            if (deleteSuccess) {
+                setMessage(`${res.data?.message || 'Cohort deleted successfully'}`);
+            } else {
+                setMessage(`Delete failed: ${res.data?.message || 'Unknown error'}`);
+            }
+
+            await fetchData();
+        } catch (err) {
+            setMessage(`Error: ${err.response?.data?.message || err.message}`);
+        } finally {
+            setRegisteringCourseKey('');
+        }
+    };
+
     return (
         <div className="space-y-6">
             {!isFormOnlyMode && (
@@ -1056,14 +1080,25 @@ const CourseRegistrations = () => {
                                                     <td className="px-3 py-2 text-sm text-gray-700">#{item.id}</td>
                                                     <td className="px-3 py-2 text-sm text-gray-700">{item.cohort_label || '-'}</td>
                                                     <td className="px-3 py-2 text-sm">{badge(item.moodle_sync_status || 'pending', item.moodle_sync_status || 'pending')}</td>
-                                                    <td className="px-3 py-2 text-sm">
+                                                    <td className="px-3 py-2 text-sm flex gap-2">
                                                         <button
                                                             type="button"
                                                             onClick={() => openRegistrationForm(selectedAccreditation, item)}
-                                                            className="px-2 py-1 text-xs font-semibold rounded-md border border-gray-300 text-gray-700 hover:bg-gray-100"
+                                                            disabled={registeringCourseKey === `delete-${item.id}`}
+                                                            className="px-2 py-1 text-xs font-semibold rounded-md border border-gray-300 text-gray-700 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
                                                         >
                                                             {isCurrent ? 'Editing' : 'Open'}
                                                         </button>
+                                                        {!isMaster && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => deleteRegistration(item.id)}
+                                                                disabled={registeringCourseKey.startsWith('delete-') || registeringCourseKey.startsWith('resync-')}
+                                                                className="px-2 py-1 text-xs font-semibold rounded-md border border-red-300 text-red-700 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                            >
+                                                                {registeringCourseKey === `delete-${item.id}` ? 'Deleting...' : 'Delete'}
+                                                            </button>
+                                                        )}
                                                     </td>
                                                 </tr>
                                             );
