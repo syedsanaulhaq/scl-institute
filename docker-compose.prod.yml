@@ -94,8 +94,12 @@ services:
     build:
       context: ./public-portal
       dockerfile: Dockerfile.prod
+      args:
+        - VITE_API_URL=http://sclsandbox.xyz/api
     container_name: scli-public-portal-prod
     restart: always
+    environment:
+      - VITE_API_URL=http://sclsandbox.xyz/api
     networks:
       - scl-network-prod
     healthcheck:
