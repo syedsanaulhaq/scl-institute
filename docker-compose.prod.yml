@@ -38,16 +38,18 @@ services:
       - DB_PASS=SclSecurePass2024!
       - DB_NAME=scl_institute
       - MOODLE_URL=http://185.211.6.60:8888
-      - MOODLE_DATABASE_HOST=127.0.0.1
-      - MOODLE_DATABASE_PORT=3306
-      - MOODLE_DATABASE_USER=moodleuser
-      - MOODLE_DATABASE_PASSWORD=moodlepass
-      - MOODLE_DATABASE_NAME=moodle
+      - MOODLE_DATABASE_HOST=${MOODLE_DATABASE_HOST:-host.docker.internal}
+      - MOODLE_DATABASE_PORT=${MOODLE_DATABASE_PORT:-3306}
+      - MOODLE_DATABASE_USER=${MOODLE_DATABASE_USER:-moodleuser}
+      - MOODLE_DATABASE_PASSWORD=${MOODLE_DATABASE_PASSWORD:-moodlepass}
+      - MOODLE_DATABASE_NAME=${MOODLE_DATABASE_NAME:-moodle}
       - SSO_SECRET=supersecretkey
       - VITE_API_URL=http://system.sclsandbox.xyz/api
     volumes:
       - ./backend:/app:cached
       - /app/node_modules
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       scli-mysql:
         condition: service_healthy
