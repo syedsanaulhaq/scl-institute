@@ -2578,11 +2578,12 @@ router.get('/moodle/category-hierarchy', async (req, res) => {
     try {
         const includeInactiveParam = String(req.query.include_inactive || 'false').trim().toLowerCase();
         const includeInactive = includeInactiveParam === 'true' || includeInactiveParam === '1' || includeInactiveParam === 'yes';
-        const [rows] = await moodleDbPool.execute(
+        const rows = await safeMoodleSelectRows(
             `SELECT id, parent, name, sortorder, depth, path, visible
              FROM mdl_course_categories
              ${includeInactive ? '' : 'WHERE COALESCE(visible, 1) = 1'}
-             ORDER BY depth ASC, parent ASC, sortorder ASC, name ASC`
+             ORDER BY depth ASC, parent ASC, sortorder ASC, name ASC`,
+            []
         );
 
         const categories = (rows || []).map((row) => ({
