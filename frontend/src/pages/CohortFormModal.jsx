@@ -1,8 +1,10 @@
 import { Loader2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import axios from 'axios';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
 
-const COURSE_TYPE_OPTIONS = ['HND', 'Degree', 'Vocational', 'Short Course', 'CPD', 'Professional Qualification'];
+const COURSE_TYPE_OPTIONS_FALLBACK = ['HND', 'Degree', 'Vocational', 'Short Course', 'CPD', 'Professional Qualification'];
 const AWARDING_BODY_OPTIONS = ['Pearson', 'City & Guilds', 'In-house', 'NCFE', 'Other'];
 const REGULATION_LEVEL_OPTIONS = ['RQF Level 1', 'RQF Level 2', 'RQF Level 3', 'RQF Level 4', 'RQF Level 5', 'RQF Level 6', 'RQF Level 7', 'RQF Level 8', 'Non-accredited'];
 const MODE_OF_DELIVERY_OPTIONS = ['Full-time', 'Part-time', 'Online', 'Blended', 'Evening/Weekend'];
@@ -21,7 +23,68 @@ const CohortFormModal = ({
     isSubmitting,
     isEditing,
     course,
+    programmeTypes = [],
 }) => {
+    const [availableIntakes, setAvailableIntakes] = useState([]);
+    const [loadingIntakes, setLoadingIntakes] = useState(false);
+    const [showNewCohortInput, setShowNewCohortInput] = useState(false);
+
+    // Fields that are pre-filled from course master and should be read-only
+    const isFromMaster = (field) => {
+        if (!course) return false;
+        const masterFields = {
+            course_type: course.course_type || course.programme_type_name,
+            awarding_body_accreditation: course.awarding_body,
+            regulation_level: course.qualification_level,
+            mode_of_delivery: course.mode_of_delivery,
+            subject_area_discipline: course.subject_area_discipline,
+        };
+        return !!(masterFields[field] && String(masterFields[field]).trim());
+    };
+
+    const readOnlyStyle = 'w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 text-gray-700 cursor-not-allowed';
+
+    // Use programme types from DB, fall back to hardcoded if empty
+    const courseTypeOptions = programmeTypes.length > 0
+        ? programmeTypes.map(t => t.name).filter(Boolean)
+        : COURSE_TYPE_OPTIONS_FALLBACK;
+
+    useEffect(() => {
+        if (!isOpen || !course) return;
+        setShowNewCohortInput(false);
+
+        // Fetch existing programme intakes for this programme
+        const fetchIntakes = async () => {
+            try {
+                setLoadingIntakes(true);
+                const progType = String(course?.programme_type_name || '').trim();
+                const progName = String(course?.program_name || '').trim();
+                
+                if (!progType || !progName) {
+                    setAvailableIntakes([]);
+                    return;
+                }
+
+                const res = await axios.get(`${API_URL}/students/programme-intakes`, {
+                    params: { programme_type_name: progType, program_name: progName }
+                });
+                
+                if (res.data?.success && Array.isArray(res.data.data)) {
+                    setAvailableIntakes(res.data.data);
+                } else {
+                    setAvailableIntakes([]);
+                }
+            } catch (error) {
+                console.warn('Failed to fetch programme intakes:', error.message);
+                setAvailableIntakes([]);
+            } finally {
+                setLoadingIntakes(false);
+            }
+        };
+
+        fetchIntakes();
+    }, [isOpen, course]);
+
     if (!isOpen) return null;
 
     return (
@@ -57,41 +120,116 @@ const CohortFormModal = ({
                     {/* Form fields will go here */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <label className="block text-xs font-semibold text-gray-600 uppercase mb-1">Cohort Label</label>
-                            <input
-                                value={formData.cohort_label}
-                                onChange={(e) => onFormChange('cohort_label', e.target.value)}
-                                placeholder="e.g. 2026-Sep"
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                            />
+                            <label className="block text-xs font-semibold text-gray-600 uppercase mb-1">Intake / Cohort</label>
+                            {loadingIntakes ? (
+                                <div className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm flex items-center gap-2">
+                                    <Loader2 size={14} className="animate-spin" />
+                                    <span className="text-gray-500">Loading existing intakes...</span>
+                                </div>
+                            ) : !showNewCohortInput && availableIntakes.length > 0 ? (
+                                <div className="space-y-2">
+                                    <select
+                                        value={formData.intake_id || ''}
+                                        onChange={(e) => {
+                                            const val = e.target.value;
+                                            if (val === '__new__') {
+                                                setShowNewCohortInput(true);
+                                                onFormChange('intake_id', '');
+                                                onFormChange('cohort_label', '');
+                                            } else {
+                                                const selectedIntake = availableIntakes.find(i => String(i.id) === val);
+                                                if (selectedIntake) {
+                                                    onFormChange('intake_id', selectedIntake.id);
+                                                    onFormChange('cohort_label', selectedIntake.intake_label);
+                                                }
+                                            }
+                                        }}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                                    >
+                                        <option value="">Select an existing intake</option>
+                                        {availableIntakes.map((intake) => (
+                                            <option key={intake.id} value={intake.id}>
+                                                {intake.intake_label} — {intake.courses?.length || 0} courses ({intake.status})
+                                                {intake.moodle_cohort_idnumber ? ` [${intake.moodle_cohort_idnumber}]` : ''}
+                                            </option>
+                                        ))}
+                                        <option value="__new__">+ Create new intake label...</option>
+                                    </select>
+                                    {formData.intake_id && (
+                                        <p className="text-xs text-green-600 font-medium">
+                                            Linked to intake: <strong>{formData.cohort_label}</strong>. This course will share the same Moodle cohort as all other courses in this intake.
+                                        </p>
+                                    )}
+                                    <p className="text-xs text-gray-500">
+                                        Existing intakes for <strong>{course?.programme_type_name} → {course?.program_name}</strong>. Select one or create new.
+                                    </p>
+                                </div>
+                            ) : (
+                                <div className="space-y-2">
+                                    <input
+                                        value={formData.cohort_label}
+                                        onChange={(e) => onFormChange('cohort_label', e.target.value)}
+                                        placeholder="e.g. Sep-2025, Jan-2026"
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                                    />
+                                    {availableIntakes.length > 0 && (
+                                        <button
+                                            type="button"
+                                            onClick={() => { setShowNewCohortInput(false); onFormChange('cohort_label', ''); onFormChange('intake_id', ''); }}
+                                            className="text-xs text-scl-purple hover:underline"
+                                        >
+                                            ← Back to existing intakes
+                                        </button>
+                                    )}
+                                    <p className="text-xs text-gray-500">
+                                        Enter the intake period, e.g. <strong>Sep-2025</strong>. A new Moodle cohort will be created.
+                                    </p>
+                                </div>
+                            )}
                         </div>
                         <div>
                             <label className="block text-xs font-semibold text-gray-600 uppercase mb-1">Course Type</label>
-                            <select value={formData.course_type} onChange={(e) => onFormChange('course_type', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
-                                <option value="">Select</option>
-                                {COURSE_TYPE_OPTIONS.map((option) => <option key={option} value={option}>{option}</option>)}
-                            </select>
+                            {isFromMaster('course_type') ? (
+                                <input value={formData.course_type} readOnly className={readOnlyStyle} />
+                            ) : (
+                                <select value={formData.course_type} onChange={(e) => onFormChange('course_type', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                                    <option value="">Select</option>
+                                    {courseTypeOptions.map((option) => <option key={option} value={option}>{option}</option>)}
+                                </select>
+                            )}
                         </div>
                         <div>
                             <label className="block text-xs font-semibold text-gray-600 uppercase mb-1">Awarding Body / Accreditation</label>
-                            <select value={formData.awarding_body_accreditation} onChange={(e) => onFormChange('awarding_body_accreditation', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
-                                <option value="">Select</option>
-                                {AWARDING_BODY_OPTIONS.map((option) => <option key={option} value={option}>{option}</option>)}
-                            </select>
+                            {isFromMaster('awarding_body_accreditation') ? (
+                                <input value={formData.awarding_body_accreditation} readOnly className={readOnlyStyle} />
+                            ) : (
+                                <select value={formData.awarding_body_accreditation} onChange={(e) => onFormChange('awarding_body_accreditation', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                                    <option value="">Select</option>
+                                    {AWARDING_BODY_OPTIONS.map((option) => <option key={option} value={option}>{option}</option>)}
+                                </select>
+                            )}
                         </div>
                         <div>
                             <label className="block text-xs font-semibold text-gray-600 uppercase mb-1">Regulation Level</label>
-                            <select value={formData.regulation_level} onChange={(e) => onFormChange('regulation_level', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
-                                <option value="">Select</option>
-                                {REGULATION_LEVEL_OPTIONS.map((option) => <option key={option} value={option}>{option}</option>)}
-                            </select>
+                            {isFromMaster('regulation_level') ? (
+                                <input value={formData.regulation_level} readOnly className={readOnlyStyle} />
+                            ) : (
+                                <select value={formData.regulation_level} onChange={(e) => onFormChange('regulation_level', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                                    <option value="">Select</option>
+                                    {REGULATION_LEVEL_OPTIONS.map((option) => <option key={option} value={option}>{option}</option>)}
+                                </select>
+                            )}
                         </div>
                         <div>
                             <label className="block text-xs font-semibold text-gray-600 uppercase mb-1">Mode of Delivery</label>
-                            <select value={formData.mode_of_delivery} onChange={(e) => onFormChange('mode_of_delivery', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
-                                <option value="">Select</option>
-                                {MODE_OF_DELIVERY_OPTIONS.map((option) => <option key={option} value={option}>{option}</option>)}
-                            </select>
+                            {isFromMaster('mode_of_delivery') ? (
+                                <input value={formData.mode_of_delivery} readOnly className={readOnlyStyle} />
+                            ) : (
+                                <select value={formData.mode_of_delivery} onChange={(e) => onFormChange('mode_of_delivery', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                                    <option value="">Select</option>
+                                    {MODE_OF_DELIVERY_OPTIONS.map((option) => <option key={option} value={option}>{option}</option>)}
+                                </select>
+                            )}
                         </div>
                         <div>
                             <label className="block text-xs font-semibold text-gray-600 uppercase mb-1">Start Date</label>
@@ -103,10 +241,14 @@ const CohortFormModal = ({
                         </div>
                         <div>
                             <label className="block text-xs font-semibold text-gray-600 uppercase mb-1">Subject Area / Discipline</label>
-                            <select value={formData.subject_area_discipline} onChange={(e) => onFormChange('subject_area_discipline', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
-                                <option value="">Select</option>
-                                {SUBJECT_AREA_OPTIONS.map((option) => <option key={option} value={option}>{option}</option>)}
-                            </select>
+                            {isFromMaster('subject_area_discipline') ? (
+                                <input value={formData.subject_area_discipline} readOnly className={readOnlyStyle} />
+                            ) : (
+                                <select value={formData.subject_area_discipline} onChange={(e) => onFormChange('subject_area_discipline', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                                    <option value="">Select</option>
+                                    {SUBJECT_AREA_OPTIONS.map((option) => <option key={option} value={option}>{option}</option>)}
+                                </select>
+                            )}
                         </div>
                         <div>
                             <label className="block text-xs font-semibold text-gray-600 uppercase mb-1">Assessment Methods</label>

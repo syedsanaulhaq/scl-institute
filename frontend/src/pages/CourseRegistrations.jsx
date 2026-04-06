@@ -72,19 +72,20 @@ function getFullProgramName(programCode, moodleProgrammeTypes) {
 }
 
 function deriveProgrammeTypeName(course) {
-    return String(course?.programme_type_name || '').trim() || 'Degree';
+    return String(course?.programme_type_name || '').trim() || '';
 }
 
 function deriveAcademicYear(course) {
-    return String(course?.academic_year || '').trim() || 'Year 1';
+    return String(course?.academic_year || '').trim() || '';
 }
 
 function deriveSemesterName(course) {
-    return String(course?.semester_name || '').trim() || 'Semester 1';
+    return String(course?.semester_name || '').trim() || '';
 }
 
 function buildInitialFormData(acc, structure) {
     return {
+        intake_id: '',
         course_title: acc?.course_title || '',
         course_code: acc?.course_code || '',
         programme_type_name: structure.programme_type_name || '',
@@ -96,10 +97,10 @@ function buildInitialFormData(acc, structure) {
         program_category_id: structure.program_category_id,
         year_category_id: structure.year_category_id,
         semester_category_id: structure.semester_category_id,
-        course_type: acc?.course_type || 'Degree',
+        course_type: acc?.course_type || acc?.programme_type_name || '',
         awarding_body_accreditation: acc?.awarding_body || '',
-        regulation_level: acc?.qualification_level || 'RQF Level 6',
-        mode_of_delivery: acc?.mode_of_delivery || 'Blended',
+        regulation_level: acc?.qualification_level || '',
+        mode_of_delivery: acc?.mode_of_delivery || '',
         start_date: '',
         end_date_or_duration: '',
         subject_area_discipline: acc?.subject_area_discipline || '',
@@ -230,14 +231,69 @@ const CourseRegistrations = () => {
     const fetchData = async () => {
         try {
             setLoading(true);
-            const [accRes, regRes, hierarchyRes] = await Promise.all([
+            const [accRes, regRes, hierarchyRes, masterRes] = await Promise.all([
                 axios.get(`${API_URL}/accreditations?active_only=true`),
                 axios.get(`${API_URL}/students/course-registrations`).catch(() => ({ data: { data: [] } })),
-                axios.get(`${API_URL}/students/moodle/category-hierarchy?include_inactive=false`).catch(() => ({ data: { data: { programme_types: [] } } }))
+                axios.get(`${API_URL}/students/moodle/category-hierarchy?include_inactive=false`).catch(() => ({ data: { data: { programme_types: [] } } })),
+                axios.get(`${API_URL}/accreditations/master-courses`).catch(() => ({ data: { data: [] } }))
             ]);
 
             const allAcc = accRes.data?.data || [];
-            const eligible = allAcc.filter((a) => !!(a.course_title || a.course_code));
+            const masterCourses = masterRes.data?.data || [];
+
+            // Merge master course hierarchy info into accreditations
+            const masterByCode = new Map();
+            for (const mc of masterCourses) {
+                const code = normalizeValue(mc.course_code);
+                if (code) masterByCode.set(code, mc);
+            }
+
+            const enriched = allAcc.map(acc => {
+                const master = masterByCode.get(normalizeValue(acc.course_code));
+                if (!master) return acc;
+                return {
+                    ...acc,
+                    programme_type_name: acc.programme_type_name || master.programme_type_name,
+                    program_name: acc.program_name || master.program_name,
+                    academic_year: acc.academic_year || master.academic_year,
+                    semester_name: acc.semester_name || master.semester_name,
+                    programme_type_category_id: acc.programme_type_category_id || master.programme_type_category_id,
+                    program_category_id: acc.program_category_id || master.program_category_id,
+                    year_category_id: acc.year_category_id || master.year_category_id,
+                    semester_category_id: acc.semester_category_id || master.semester_category_id,
+                    course_type: acc.course_type || master.course_type,
+                    mode_of_delivery: acc.mode_of_delivery || master.mode_of_delivery,
+                    subject_area_discipline: acc.subject_area_discipline || master.subject_area_discipline,
+                };
+            });
+
+            // Also add master courses not in accreditations (so they appear as registerable)
+            const accCodes = new Set(enriched.map(a => normalizeValue(a.course_code)));
+            for (const mc of masterCourses) {
+                const code = normalizeValue(mc.course_code);
+                if (code && !accCodes.has(code)) {
+                    enriched.push({
+                        id: `master-${mc.id}`,
+                        course_code: mc.course_code,
+                        course_title: mc.course_title,
+                        programme_type_name: mc.programme_type_name,
+                        program_name: mc.program_name,
+                        academic_year: mc.academic_year,
+                        semester_name: mc.semester_name,
+                        programme_type_category_id: mc.programme_type_category_id,
+                        program_category_id: mc.program_category_id,
+                        year_category_id: mc.year_category_id,
+                        semester_category_id: mc.semester_category_id,
+                        awarding_body: mc.awarding_body,
+                        qualification_level: mc.qualification_level,
+                        course_type: mc.course_type,
+                        mode_of_delivery: mc.mode_of_delivery,
+                        subject_area_discipline: mc.subject_area_discipline,
+                    });
+                }
+            }
+
+            const eligible = enriched.filter((a) => !!(a.course_title || a.course_code));
             setAccreditations(eligible);
             setRegistrations(regRes.data?.data?.registrations || []);
             setMoodleProgrammeTypes(Array.isArray(hierarchyRes.data?.data?.programme_types) ? hierarchyRes.data.data.programme_types : []);
@@ -251,6 +307,19 @@ const CourseRegistrations = () => {
     useEffect(() => {
         fetchData();
     }, []);
+
+    // When auto_open=1 with a course_code, only show that specific course in the table
+    const displayedAccreditations = useMemo(() => {
+        const autoOpen = queryParams.get('auto_open') === '1';
+        const targetCode = normalizeValue(queryParams.get('course_code'));
+        const targetTitle = normalizeValue(queryParams.get('course_title'));
+        if (!autoOpen || (!targetCode && !targetTitle)) return accreditations;
+        const filtered = accreditations.filter(acc =>
+            (targetCode && normalizeValue(acc.course_code) === targetCode) ||
+            (targetTitle && normalizeValue(acc.course_title) === targetTitle)
+        );
+        return filtered.length > 0 ? filtered : accreditations;
+    }, [accreditations, queryParams]);
 
     const getRegistrationsForAcc = (acc) => {
         const matched = registrations.filter((r) =>
@@ -473,6 +542,34 @@ const CourseRegistrations = () => {
             }
             : acc;
 
+        // Auto-fill structure from course/accreditation/registration data
+        const seedProgrammeType = String(registrationSeed.programme_type_name || '').trim();
+        const seedProgramName = String(registrationSeed.program_name || '').trim();
+        const seedYear = String(registrationSeed.academic_year || '').trim();
+        const seedSemester = String(registrationSeed.semester_name || '').trim();
+
+        if (seedProgrammeType || seedProgramName || seedYear || seedSemester) {
+            setStructureInput({
+                programme_type_name: seedProgrammeType || structureInput.programme_type_name,
+                program_name: seedProgramName || structureInput.program_name,
+                academic_year: seedYear || structureInput.academic_year,
+                semester_name: seedSemester || structureInput.semester_name
+            });
+
+            // Resolve category IDs from hierarchy
+            const matchedType = moodleProgrammeTypes.find(t => normalizeValue(t.name) === normalizeValue(seedProgrammeType));
+            const matchedProgram = matchedType?.programs?.find(p => normalizeValue(p.name) === normalizeValue(seedProgramName));
+            const matchedYear = matchedProgram?.years?.find(y => normalizeValue(y.name) === normalizeValue(seedYear));
+            const matchedSemester = matchedYear?.semesters?.find(s => normalizeValue(s.name) === normalizeValue(seedSemester));
+
+            setStructureIds({
+                programme_type_category_id: registrationSeed.programme_type_category_id || (matchedType ? Number(matchedType.id) : null),
+                program_category_id: registrationSeed.program_category_id || (matchedProgram ? Number(matchedProgram.id) : null),
+                year_category_id: registrationSeed.year_category_id || (matchedYear ? Number(matchedYear.id) : null),
+                semester_category_id: registrationSeed.semester_category_id || (matchedSemester ? Number(matchedSemester.id) : null)
+            });
+        }
+
         const structure = resolveStructureForCourse(registrationSeed);
         const initialData = buildInitialFormData(registrationSeed, structure);
         const prefixedData = existingRegistration
@@ -625,6 +722,25 @@ const CourseRegistrations = () => {
 
     const handleSubmitRegistration = async () => {
         if (!selectedAccreditation || !registrationForm) return;
+
+        // Frontend validation: check for duplicate cohort intake
+        if (registrationForm.cohort_label && !editingRegistrationId) {
+            const courseCode = selectedAccreditation.course_code || '';
+            const cohortLabel = registrationForm.cohort_label.trim();
+            
+            // Check if any existing registration (that's not rejected) has the same course code and cohort label
+            const duplicateReg = registrations.find(reg => 
+                String(reg.course_code || '').trim() === courseCode &&
+                String(reg.cohort_label || '').trim() === cohortLabel &&
+                reg.application_status !== 'rejected'
+            );
+
+            if (duplicateReg) {
+                setMessage(`⚠️ This intake period "${cohortLabel}" already exists for this course. Please select a different intake period or edit cohort #${duplicateReg.id}.`);
+                return;
+            }
+        }
+
         const success = await registerCourseToMoodle(selectedAccreditation, registrationForm, editingRegistrationId);
         if (success) {
             if (isFormOnlyMode) {
@@ -848,7 +964,7 @@ const CourseRegistrations = () => {
                     <Loader2 className="w-6 h-6 animate-spin mx-auto text-scl-purple" />
                     <p className="text-sm text-gray-500 mt-2">Loading...</p>
                 </div>
-            ) : accreditations.length === 0 && !isFormOnlyMode ? (
+            ) : displayedAccreditations.length === 0 && !isFormOnlyMode ? (
                 <div className="bg-white border border-gray-200 rounded-xl p-10 text-center">
                     <CircleDashed className="w-10 h-10 mx-auto text-gray-300 mb-3" />
                     <p className="text-gray-600 font-semibold">No approved courses yet</p>
@@ -868,7 +984,7 @@ const CourseRegistrations = () => {
                             </tr>
                         </thead>
                         <tbody>
-                            {accreditations.map((acc) => {
+                            {displayedAccreditations.map((acc) => {
                                 const reg = getRegistrationForAcc(acc);
                                 const allRegs = getRegistrationsForAcc(acc);
                                 const cohortCount = allRegs.length;
@@ -1050,6 +1166,7 @@ const CourseRegistrations = () => {
                                             <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Registration ID</th>
                                             <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Year</th>
                                             <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Intake</th>
+                                            <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Linked</th>
                                             <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Moodle</th>
                                             <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Action</th>
                                         </tr>
@@ -1065,6 +1182,15 @@ const CourseRegistrations = () => {
                                                     <td className="px-3 py-2 text-sm text-gray-700">#{item.id}</td>
                                                     <td className="px-3 py-2 text-sm text-gray-700">{item.academic_year || '-'}</td>
                                                     <td className="px-3 py-2 text-sm text-gray-700">{item.cohort_label || '-'}</td>
+                                                    <td className="px-3 py-2 text-sm">
+                                                        {item.intake_id ? (
+                                                            <span className="text-xs px-2 py-1 rounded-full bg-purple-100 text-purple-800 font-semibold" title={`Linked to programme intake #${item.intake_id}`}>
+                                                                Intake #{item.intake_id}
+                                                            </span>
+                                                        ) : (
+                                                            <span className="text-xs text-gray-400">standalone</span>
+                                                        )}
+                                                    </td>
                                                     <td className="px-3 py-2 text-sm">{badge(item.moodle_sync_status || 'pending', item.moodle_sync_status || 'pending')}</td>
                                                     <td className="px-3 py-2 text-sm flex gap-2">
                                                         <button
@@ -1088,7 +1214,7 @@ const CourseRegistrations = () => {
                                             );
                                         }) : (
                                             <tr>
-                                                <td colSpan={6} className="px-4 py-8 text-center text-sm text-gray-500">
+                                                <td colSpan={7} className="px-4 py-8 text-center text-sm text-gray-500">
                                                     No cohorts added yet. Use <strong>Add Cohort</strong> to create the first registration.
                                                 </td>
                                             </tr>
@@ -1109,6 +1235,7 @@ const CourseRegistrations = () => {
                                 isSubmitting={registeringCourseKey === buildCourseKey(selectedAccreditation)}
                                 isEditing={!!editingRegistrationId}
                                 course={selectedAccreditation}
+                                programmeTypes={moodleProgrammeTypes}
                             />
                         )}
                     </div>

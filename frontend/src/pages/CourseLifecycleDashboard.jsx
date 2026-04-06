@@ -203,6 +203,8 @@ const CourseLifecycleDashboard = () => {
     const [filterSemester, setFilterSemester] = useState('');
     const [filterCourse, setFilterCourse] = useState('');
     const [filterStatus, setFilterStatus] = useState(''); // 'accreditation', 'visit', 'induction', 'registration', 'fully_active'
+    const [moodleHierarchy, setMoodleHierarchy] = useState([]);
+    
     const fetchDashboard = async () => {
         try {
             setLoading(true);
@@ -218,6 +220,17 @@ const CourseLifecycleDashboard = () => {
                 registration_completed: 0,
                 fully_active: 0
             });
+            
+            // Fetch Moodle category hierarchy for cascading filter dropdowns
+            try {
+                const hierResponse = await axios.get(`${API_URL}/students/moodle/category-hierarchy?include_inactive=false`);
+                const types = hierResponse.data?.data?.programme_types;
+                if (Array.isArray(types)) {
+                    setMoodleHierarchy(types);
+                }
+            } catch (hierErr) {
+                console.warn('Failed to fetch hierarchy:', hierErr.message);
+            }
 
         } catch (err) {
             console.error('Failed to fetch lifecycle dashboard:', err);
@@ -312,24 +325,34 @@ const CourseLifecycleDashboard = () => {
         return filtered;
     }, [courses, filterProgrammeType, filterProgram, filterYear, filterSemester, filterCourse, filterStatus]);
 
-    // Get unique values for filter dropdowns
-    const getUniqueValues = (field) => {
-        const values = courses
-            .map(c => c[field])
-            .filter((v, i, arr) => v && arr.indexOf(v) === i)
-            .sort();
-        return values;
-    };
+    // Cascading hierarchy filter options from Moodle categories
+    const programmeTypes = useMemo(() => {
+        return moodleHierarchy.map(t => t.name).filter(Boolean).sort();
+    }, [moodleHierarchy]);
 
-    const programmeTypes = useMemo(() => getUniqueValues('programme_type_name'), [courses]);
     const programs = useMemo(() => {
-        const filtered = filterProgrammeType 
-            ? courses.filter(c => c.programme_type_name === filterProgrammeType)
-            : courses;
-        return getUniqueValues('program_name');
-    }, [courses, filterProgrammeType]);
-    const years = useMemo(() => getUniqueValues('academic_year'), [courses]);
-    const semesters = useMemo(() => getUniqueValues('semester_name'), [courses]);
+        if (!filterProgrammeType) return [];
+        const typeNode = moodleHierarchy.find(t => t.name === filterProgrammeType);
+        if (!typeNode?.programs) return [];
+        return typeNode.programs.map(p => p.name).filter(Boolean).sort();
+    }, [moodleHierarchy, filterProgrammeType]);
+
+    const years = useMemo(() => {
+        if (!filterProgrammeType || !filterProgram) return [];
+        const typeNode = moodleHierarchy.find(t => t.name === filterProgrammeType);
+        const progNode = typeNode?.programs?.find(p => p.name === filterProgram);
+        if (!progNode?.years) return [];
+        return progNode.years.map(y => y.name).filter(Boolean).sort();
+    }, [moodleHierarchy, filterProgrammeType, filterProgram]);
+
+    const semesters = useMemo(() => {
+        if (!filterProgrammeType || !filterProgram || !filterYear) return [];
+        const typeNode = moodleHierarchy.find(t => t.name === filterProgrammeType);
+        const progNode = typeNode?.programs?.find(p => p.name === filterProgram);
+        const yearNode = progNode?.years?.find(y => y.name === filterYear);
+        if (!yearNode?.semesters) return [];
+        return yearNode.semesters.map(s => s.name).filter(Boolean).sort();
+    }, [moodleHierarchy, filterProgrammeType, filterProgram, filterYear]);
 
     const groupedCourses = useMemo(() => groupCoursesHierarchical(filteredCourses), [filteredCourses]);
 
@@ -475,7 +498,9 @@ const CourseLifecycleDashboard = () => {
                                 value={filterProgrammeType}
                                 onChange={(e) => {
                                     setFilterProgrammeType(e.target.value);
-                                    setFilterProgram(''); // Reset program when programme type changes
+                                    setFilterProgram('');
+                                    setFilterYear('');
+                                    setFilterSemester('');
                                 }}
                                 className="px-3 py-2 rounded-lg border border-gray-300 focus:border-scl-purple focus:outline-none focus:ring-2 focus:ring-scl-purple/20 text-sm bg-white"
                             >
@@ -488,10 +513,15 @@ const CourseLifecycleDashboard = () => {
                             {/* Program Filter */}
                             <select
                                 value={filterProgram}
-                                onChange={(e) => setFilterProgram(e.target.value)}
-                                className="px-3 py-2 rounded-lg border border-gray-300 focus:border-scl-purple focus:outline-none focus:ring-2 focus:ring-scl-purple/20 text-sm bg-white"
+                                onChange={(e) => {
+                                    setFilterProgram(e.target.value);
+                                    setFilterYear('');
+                                    setFilterSemester('');
+                                }}
+                                disabled={!filterProgrammeType}
+                                className={`px-3 py-2 rounded-lg border border-gray-300 focus:border-scl-purple focus:outline-none focus:ring-2 focus:ring-scl-purple/20 text-sm bg-white ${!filterProgrammeType ? 'opacity-50 cursor-not-allowed' : ''}`}
                             >
-                                <option value="">All Programmes</option>
+                                <option value="">{filterProgrammeType ? 'All Programmes' : 'Select Programme Type first'}</option>
                                 {programs.map(prog => (
                                     <option key={prog} value={prog}>{prog}</option>
                                 ))}
@@ -500,10 +530,14 @@ const CourseLifecycleDashboard = () => {
                             {/* Year Filter */}
                             <select
                                 value={filterYear}
-                                onChange={(e) => setFilterYear(e.target.value)}
-                                className="px-3 py-2 rounded-lg border border-gray-300 focus:border-scl-purple focus:outline-none focus:ring-2 focus:ring-scl-purple/20 text-sm bg-white"
+                                onChange={(e) => {
+                                    setFilterYear(e.target.value);
+                                    setFilterSemester('');
+                                }}
+                                disabled={!filterProgram}
+                                className={`px-3 py-2 rounded-lg border border-gray-300 focus:border-scl-purple focus:outline-none focus:ring-2 focus:ring-scl-purple/20 text-sm bg-white ${!filterProgram ? 'opacity-50 cursor-not-allowed' : ''}`}
                             >
-                                <option value="">All Years</option>
+                                <option value="">{filterProgram ? 'All Years' : 'Select Programme first'}</option>
                                 {years.map(year => (
                                     <option key={year} value={year}>{year}</option>
                                 ))}
@@ -513,9 +547,10 @@ const CourseLifecycleDashboard = () => {
                             <select
                                 value={filterSemester}
                                 onChange={(e) => setFilterSemester(e.target.value)}
-                                className="px-3 py-2 rounded-lg border border-gray-300 focus:border-scl-purple focus:outline-none focus:ring-2 focus:ring-scl-purple/20 text-sm bg-white"
+                                disabled={!filterYear}
+                                className={`px-3 py-2 rounded-lg border border-gray-300 focus:border-scl-purple focus:outline-none focus:ring-2 focus:ring-scl-purple/20 text-sm bg-white ${!filterYear ? 'opacity-50 cursor-not-allowed' : ''}`}
                             >
-                                <option value="">All Semesters</option>
+                                <option value="">{filterYear ? 'All Semesters' : 'Select Year first'}</option>
                                 {semesters.map(sem => (
                                     <option key={sem} value={sem}>{sem}</option>
                                 ))}
@@ -922,6 +957,13 @@ const CourseLifecycleDashboard = () => {
                                                 >
                                                     {!registrationUnlocked ? <Lock className="w-4 h-4 inline mr-1" /> : null}
                                                     Open Registration
+                                                </button>
+                                                <button
+                                                    onClick={() => navigate(`/programme-intakes`)}
+                                                    className="px-4 py-2 text-sm font-semibold rounded-lg bg-amber-600 text-white hover:bg-amber-700 transition-colors"
+                                                    title="View programme intakes"
+                                                >
+                                                    View Intakes
                                                 </button>
                                                 <button
                                                     onClick={closeModal}

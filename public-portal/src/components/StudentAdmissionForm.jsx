@@ -29,6 +29,10 @@ const StudentAdmissionForm = ({ onSubmitSuccess, isEditMode = false }) => {
   const [confirmedProgrammeSwitchCode, setConfirmedProgrammeSwitchCode] = useState('');
   const [courses, setCourses] = useState([]);
   const [loadingCourses, setLoadingCourses] = useState(true);
+  const [programmeTypes, setProgrammeTypes] = useState({});
+  const [availablePrograms, setAvailablePrograms] = useState([]);
+  const [availableIntakes, setAvailableIntakes] = useState([]);
+  const [loadingIntakes, setLoadingIntakes] = useState(false);
   const [submissionResult, setSubmissionResult] = useState(null);
   const [formData, setFormData] = useState({
     firstName: '',
@@ -46,6 +50,9 @@ const StudentAdmissionForm = ({ onSubmitSuccess, isEditMode = false }) => {
     countryOfResidence: '',
     
     // Course Selection
+    programmeTypeName: '',
+    programName: '',
+    intakeId: '',
     courseTitle: '',
     courseCode: '',
     courseType: '',
@@ -99,32 +106,29 @@ const StudentAdmissionForm = ({ onSubmitSuccess, isEditMode = false }) => {
     }
   };
 
-  // Fetch courses from API
+  // Fetch programmes from API
   useEffect(() => {
-    const fetchCourses = async () => {
+    const fetchProgrammes = async () => {
       try {
-        console.log('🔄 Fetching courses from API:', `${API_URL}/students/courses?scope=admissions&activeOnly=true`);
         setLoadingCourses(true);
-        const response = await axios.get(`${API_URL}/students/courses?scope=admissions&activeOnly=true`);
-        console.log('✅ API Response:', response.data);
-        if (response.data.success) {
-          setCourses(response.data.data);
-          console.log('✅ Courses loaded:', response.data.data.length, 'courses');
-        } else {
-          console.error('❌ Failed to fetch courses:', response.data.message);
-          // Fallback to empty array
-          setCourses([]);
+        // Fetch programme hierarchy
+        const progRes = await axios.get(`${API_URL}/students/programmes`);
+        if (progRes.data.success) {
+          setProgrammeTypes(progRes.data.data);
+        }
+        // Also fetch flat course list as fallback for backward compat
+        const courseRes = await axios.get(`${API_URL}/students/courses?scope=admissions&activeOnly=true`);
+        if (courseRes.data.success) {
+          setCourses(courseRes.data.data);
         }
       } catch (error) {
-        console.error('❌ Error fetching courses:', error);
-        // Fallback to empty array
-        setCourses([]);
+        console.error('Error fetching programmes:', error);
       } finally {
         setLoadingCourses(false);
       }
     };
 
-    fetchCourses();
+    fetchProgrammes();
   }, []);
 
   // Load existing application data when in edit mode
@@ -164,6 +168,9 @@ const StudentAdmissionForm = ({ onSubmitSuccess, isEditMode = false }) => {
             townCity: app.town_city || '',
             postcode: app.postcode || '',
             countryOfResidence: app.country_of_residence || '',
+            programmeTypeName: app.programme_type_name || '',
+            programName: app.program_name || '',
+            intakeId: app.intake_id || '',
             courseTitle: app.course_title || '',
             courseCode: app.course_code || '',
             courseType: app.course_type || '',
@@ -272,6 +279,24 @@ const StudentAdmissionForm = ({ onSubmitSuccess, isEditMode = false }) => {
     }));
   };
 
+  const fetchIntakesForProgramme = async (programmeType, programName) => {
+    if (!programmeType || !programName) {
+      setAvailableIntakes([]);
+      return;
+    }
+    setLoadingIntakes(true);
+    try {
+      const res = await axios.get(`${API_URL}/students/programme-intakes?programme_type_name=${encodeURIComponent(programmeType)}&program_name=${encodeURIComponent(programName)}&status=active`);
+      if (res.data.success) {
+        setAvailableIntakes(res.data.data);
+      }
+    } catch (err) {
+      console.error('Error fetching intakes:', err);
+    } finally {
+      setLoadingIntakes(false);
+    }
+  };
+
   const handleInputChange = (field, value) => {
     if ((field === 'courseTitle' || field === 'courseCode') && confirmedProgrammeSwitchCode) {
       setConfirmedProgrammeSwitchCode('');
@@ -282,8 +307,48 @@ const StudentAdmissionForm = ({ onSubmitSuccess, isEditMode = false }) => {
       [field]: value
     }));
     
-    // Auto-fill course code when course is selected
-    if (field === 'courseTitle') {
+    // Cascade: programme type → programmes
+    if (field === 'programmeTypeName') {
+      const programs = programmeTypes[value] || [];
+      setAvailablePrograms(programs);
+      setAvailableIntakes([]);
+      setFormData(prev => ({
+        ...prev,
+        programmeTypeName: value,
+        programName: '',
+        intakeId: '',
+        courseTitle: '',
+        courseCode: '',
+        courseType: value || ''
+      }));
+    }
+
+    // Cascade: programme → fetch intakes
+    if (field === 'programName') {
+      setFormData(prev => ({
+        ...prev,
+        programName: value,
+        intakeId: '',
+        courseTitle: value || '',
+        courseCode: ''
+      }));
+      fetchIntakesForProgramme(formData.programmeTypeName, value);
+    }
+
+    // Cascade: intake selection
+    if (field === 'intakeId') {
+      const intake = availableIntakes.find(i => String(i.id) === String(value));
+      if (intake) {
+        setFormData(prev => ({
+          ...prev,
+          intakeId: value,
+          courseCode: intake.moodle_cohort_idnumber || ''
+        }));
+      }
+    }
+
+    // Auto-fill course code when course is selected (backward compat)
+    if (field === 'courseTitle' && !formData.programmeTypeName) {
       const selectedCourse = courses.find(course => course.course_title === value);
       if (selectedCourse) {
         setFormData(prev => ({
@@ -474,40 +539,65 @@ const StudentAdmissionForm = ({ onSubmitSuccess, isEditMode = false }) => {
 
   const renderCourseSelection = () => (
     <div className="space-y-6">
+      {/* Programme Type & Programme */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Course Title * {courses.length > 0 && `(${courses.length} available)`}
-          </label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Programme Type *</label>
           <select
-            value={formData.courseTitle}
-            onChange={(e) => handleInputChange('courseTitle', e.target.value)}
+            value={formData.programmeTypeName}
+            onChange={(e) => handleInputChange('programmeTypeName', e.target.value)}
             disabled={loadingCourses}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 disabled:bg-gray-100"
           >
             <option value="">
-              {loadingCourses ? 'Loading courses...' : `Select a course ${courses.length > 0 ? `(${courses.length} available)` : '(No courses found)'}`}
+              {loadingCourses ? 'Loading...' : 'Select programme type'}
             </option>
-            {courses.map(course => (
-              <option key={course.course_code} value={course.course_title}>
-                {course.course_title}
-              </option>
+            {Object.keys(programmeTypes).map(pt => (
+              <option key={pt} value={pt}>{pt}</option>
             ))}
           </select>
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Course Code</label>
-          <input
-            type="text"
-            value={formData.courseCode}
-            readOnly
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-600"
-            placeholder="Auto-filled"
-          />
+          <label className="block text-sm font-medium text-gray-700 mb-2">Programme *</label>
+          <select
+            value={formData.programName}
+            onChange={(e) => handleInputChange('programName', e.target.value)}
+            disabled={!formData.programmeTypeName}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 disabled:bg-gray-100"
+          >
+            <option value="">Select programme</option>
+            {availablePrograms.map(p => (
+              <option key={p} value={p}>{p}</option>
+            ))}
+          </select>
         </div>
       </div>
 
+      {/* Intake selection */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Intake *</label>
+          <select
+            value={formData.intakeId}
+            onChange={(e) => handleInputChange('intakeId', e.target.value)}
+            disabled={!formData.programName || loadingIntakes}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 disabled:bg-gray-100"
+          >
+            <option value="">
+              {loadingIntakes ? 'Loading intakes...' : availableIntakes.length > 0 ? 'Select intake' : 'No intakes available'}
+            </option>
+            {availableIntakes.map(intake => (
+              <option key={intake.id} value={intake.id}>
+                {intake.intake_label} ({intake.courses?.length || 0} courses)
+              </option>
+            ))}
+          </select>
+          {formData.intakeId && availableIntakes.find(i => String(i.id) === String(formData.intakeId)) && (
+            <p className="mt-1 text-xs text-purple-600">
+              Cohort: {availableIntakes.find(i => String(i.id) === String(formData.intakeId))?.moodle_cohort_idnumber}
+            </p>
+          )}
+        </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">Course Type</label>
           <input
@@ -515,9 +605,13 @@ const StudentAdmissionForm = ({ onSubmitSuccess, isEditMode = false }) => {
             value={formData.courseType}
             readOnly
             className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-600"
-            placeholder="Auto-filled"
+            placeholder="Auto-filled from programme type"
           />
         </div>
+      </div>
+
+      {/* Mode of Study & Entry Route */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">Mode of Study *</label>
           <select
@@ -531,18 +625,6 @@ const StudentAdmissionForm = ({ onSubmitSuccess, isEditMode = false }) => {
             <option value="Online">Online</option>
             <option value="Blended">Blended</option>
           </select>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Intake / Start Date *</label>
-          <input
-            type="date"
-            value={formData.intakeStartDate}
-            onChange={(e) => handleInputChange('intakeStartDate', e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-          />
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">Entry Route *</label>
@@ -558,6 +640,37 @@ const StudentAdmissionForm = ({ onSubmitSuccess, isEditMode = false }) => {
           </select>
         </div>
       </div>
+
+      {/* Intake Start Date */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Intake / Start Date *</label>
+          <input
+            type="date"
+            value={formData.intakeStartDate}
+            onChange={(e) => handleInputChange('intakeStartDate', e.target.value)}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+          />
+        </div>
+      </div>
+
+      {/* Show selected intake courses */}
+      {formData.intakeId && (() => {
+        const intake = availableIntakes.find(i => String(i.id) === String(formData.intakeId));
+        return intake?.courses?.length > 0 ? (
+          <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+            <h4 className="text-sm font-medium text-purple-800 mb-2">Courses in this Intake ({intake.courses.length})</h4>
+            <div className="space-y-1">
+              {intake.courses.map(c => (
+                <div key={c.id} className="flex justify-between text-xs text-purple-700">
+                  <span>{c.course_title}</span>
+                  <span className="text-purple-500">{c.course_code} • {c.academic_year} • {c.semester_name}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null;
+      })()}
     </div>
   );
 
@@ -877,7 +990,7 @@ const StudentAdmissionForm = ({ onSubmitSuccess, isEditMode = false }) => {
       case 1:
         return formData.firstName && formData.lastName && formData.email && formData.contactNumber;
       case 2:
-        return formData.courseTitle && formData.modeOfStudy && formData.intakeStartDate;
+        return formData.programmeTypeName && formData.programName && formData.intakeId && formData.modeOfStudy && formData.intakeStartDate;
       case 3:
         return formData.highestQualification && formData.institutionName;
       case 4:
@@ -890,16 +1003,7 @@ const StudentAdmissionForm = ({ onSubmitSuccess, isEditMode = false }) => {
   };
 
   const normalizeCourseType = (courseType) => {
-    const allowed = ['HND', 'Degree', 'Vocational', 'Short Course', 'CPD'];
-    if (allowed.includes(courseType)) return courseType;
-
-    const value = (courseType || '').toLowerCase();
-    if (value.includes('hnd')) return 'HND';
-    if (value.includes('vocational')) return 'Vocational';
-    if (value.includes('short')) return 'Short Course';
-    if (value.includes('degree') || value.includes('bachelor') || value.includes('master')) return 'Degree';
-    if (value.includes('professional') || value.includes('qualification')) return 'CPD';
-    return 'CPD';
+    return courseType || '';
   };
 
   const submitApplicationRequest = async () => {
@@ -919,9 +1023,12 @@ const StudentAdmissionForm = ({ onSubmitSuccess, isEditMode = false }) => {
     formDataWithFiles.append('postcode', formData.postcode);
     formDataWithFiles.append('country_of_residence', formData.countryOfResidence);
 
-    formDataWithFiles.append('course_title', formData.courseTitle);
+    formDataWithFiles.append('course_title', formData.courseTitle || formData.programName);
     formDataWithFiles.append('course_code', formData.courseCode);
     formDataWithFiles.append('course_type', normalizeCourseType(formData.courseType));
+    formDataWithFiles.append('programme_type_name', formData.programmeTypeName);
+    formDataWithFiles.append('program_name', formData.programName);
+    formDataWithFiles.append('intake_id', formData.intakeId);
     formDataWithFiles.append('mode_of_study', formData.modeOfStudy);
     formDataWithFiles.append('intake_start_date', formData.intakeStartDate);
     formDataWithFiles.append('entry_route', formData.entryRoute);

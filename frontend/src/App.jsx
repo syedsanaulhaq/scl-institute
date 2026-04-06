@@ -43,6 +43,7 @@ import CourseVisits from './pages/CourseVisits';
 import CourseVisitsDetail from './pages/CourseVisitsDetail';
 import CourseLifecycleDashboard from './pages/CourseLifecycleDashboard';
 import CourseRegistrations from './pages/CourseRegistrations';
+import ProgrammeIntakes from './pages/ProgrammeIntakes';
 import ManagerCourseChangeRequests from './components/ManagerCourseChangeRequests';
 import AccountSettings from './components/AccountSettings';
 import TeacherRegistrationForm from './components/TeacherRegistrationForm';
@@ -397,6 +398,15 @@ function App() {
                     user && canAccessManagementPortal ? (
                         <Layout user={user} onLogout={handleLogout}>
                             <CourseRegistrations user={user} />
+                        </Layout>
+                    ) : (
+                        <LoginPage onLoginSuccess={handleLoginSuccess} />
+                    )
+                } />
+                <Route path="/programme-intakes" element={
+                    user && canAccessManagementPortal ? (
+                        <Layout user={user} onLogout={handleLogout}>
+                            <ProgrammeIntakes user={user} />
                         </Layout>
                     ) : (
                         <LoginPage onLoginSuccess={handleLoginSuccess} />
