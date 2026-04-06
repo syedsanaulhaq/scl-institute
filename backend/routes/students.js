@@ -6741,6 +6741,15 @@ async function safeMoodleSelectRows(query, params = []) {
         if (error && (error.code === 'ER_NO_SUCH_TABLE' || String(error.message || '').includes("doesn't exist"))) {
             return [];
         }
+        if (error && (
+            error.code === 'ER_ACCESS_DENIED_ERROR' ||
+            error.code === 'ECONNREFUSED' ||
+            error.code === 'ENOTFOUND' ||
+            error.code === 'ETIMEDOUT'
+        )) {
+            console.warn('Moodle DB unavailable for query, returning empty rows:', error.code || error.message);
+            return [];
+        }
         console.error('Moodle DB Error:', error);
         throw error;
     }
