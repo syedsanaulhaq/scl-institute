@@ -38,7 +38,7 @@ services:
       - DB_PASS=SclSecurePass2024!
       - DB_NAME=scl_institute
       - MOODLE_URL=http://185.211.6.60:8888
-      - MOODLE_DATABASE_HOST=185.211.6.60
+      - MOODLE_DATABASE_HOST=host.docker.internal
       - MOODLE_DATABASE_PORT=3306
       - MOODLE_DATABASE_USER=moodleuser
       - MOODLE_DATABASE_PASSWORD=moodlepass
