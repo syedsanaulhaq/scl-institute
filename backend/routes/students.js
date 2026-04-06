@@ -1120,15 +1120,48 @@ router.get('/moodle-course/:courseId/sections', async (req, res) => {
 
 // ===============================================
 // ROUTE: GET /api/students/programmes
-// Returns distinct programme types and programmes from course_lifecycle_master
+// Returns programme types and programmes from Moodle category hierarchy
 // Used by admissions form for programme-based selection
+// Falls back to SCL database if Moodle unavailable
 // ===============================================
 router.get('/programmes', async (req, res) => {
     try {
         const { programme_type_name } = req.query;
 
+        // Try to get Moodle category hierarchy first (more complete)
+        try {
+            const moodleRows = await safeMoodleSelectRows(
+                `SELECT id, parent, name, visible FROM mdl_course_categories WHERE parent = 0 ORDER BY sortorder, id`,
+                []
+            );
+            
+            if (moodleRows && moodleRows.length > 0) {
+                // Found Moodle data - return it in grouped format
+                const grouped = {};
+                
+                for (const cat of moodleRows) {
+                    const catName = cat.name;
+                    
+                    // Get sub-categories (programmes under this type)
+                    const subCats = await safeMoodleSelectRows(
+                        `SELECT id, parent, name FROM mdl_course_categories WHERE parent = ? ORDER BY sortorder, id`,
+                        [cat.id]
+                    );
+                    
+                    grouped[catName] = subCats.map(s => s.name);
+                }
+                
+                if (Object.keys(grouped).length > 0) {
+                    return res.json({ success: true, data: grouped });
+                }
+            }
+        } catch (moodleError) {
+            console.warn('[programmes GET] Moodle fetch failed, falling back to SCL data:', moodleError.message);
+        }
+
+        // Fallback to SCL database data
         if (programme_type_name) {
-            // Return distinct programs for a given programme type
+            // Return distinct programs for a given programme type from SCL
             const [rows] = await db.execute(
                 `SELECT DISTINCT program_name FROM course_lifecycle_master WHERE programme_type_name = ? ORDER BY program_name`,
                 [programme_type_name]
@@ -1136,7 +1169,7 @@ router.get('/programmes', async (req, res) => {
             return res.json({ success: true, data: rows.map(r => r.program_name) });
         }
 
-        // Return all programme types with their programs
+        // Return all programme types with their programs from SCL
         const [rows] = await db.execute(
             `SELECT DISTINCT programme_type_name, program_name FROM course_lifecycle_master ORDER BY programme_type_name, program_name`
         );
