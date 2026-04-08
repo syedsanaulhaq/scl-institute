@@ -63,10 +63,10 @@ const groupCoursesHierarchical = (courses) => {
     const grouped = {};
     
     courses.forEach(course => {
-        const programmeType = course.programme_type_name || 'Other';
-        const program = course.program_name || 'Unassigned';
-        const year = course.academic_year || 'Year 0';
-        const semester = course.semester_name || 'Semester 0';
+        const programmeType = (course.programme_type_name || 'Other').trim();
+        const program = (course.program_name || 'Unassigned').trim();
+        const year = (course.academic_year || 'Year 0').trim();
+        const semester = (course.semester_name || 'Semester 0').trim();
         
         if (!grouped[programmeType]) {
             grouped[programmeType] = {};

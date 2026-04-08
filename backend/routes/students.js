@@ -3955,14 +3955,14 @@ router.get('/course-lifecycle/dashboard', async (req, res) => {
             return courseMap.get(key);
         };
 
-        // Populate from course_lifecycle table first
+        // Populate from Moodle category hierarchy first
         for (const course of lifecycleCourses) {
             const item = ensureCourseRow(course.course_code, course.course_name);
             item.course_type = course.course_type || item.course_type;
-            item.programme_type_name = course.programme_type_name || item.programme_type_name;
-            item.program_name = course.program_name || item.program_name;
-            item.academic_year = course.academic_year || item.academic_year;
-            item.semester_name = course.semester_name || item.semester_name;
+            item.programme_type_name = (course.programme_type_name || '').trim() || item.programme_type_name;
+            item.program_name = (course.program_name || '').trim() || item.program_name;
+            item.academic_year = (course.academic_year || '').trim() || item.academic_year;
+            item.semester_name = (course.semester_name || '').trim() || item.semester_name;
             item.entry_created_at = new Date().toISOString();
         }
 
