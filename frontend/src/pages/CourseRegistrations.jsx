@@ -128,6 +128,7 @@ function buildInitialFormData(acc, structure) {
 }
 
 const REGISTRATION_FORM_FIELDS = [
+    'intake_id',
     'course_title',
     'course_code',
     'programme_type_name',

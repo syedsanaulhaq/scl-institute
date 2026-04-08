@@ -129,7 +129,7 @@ const CohortFormModal = ({
                             ) : !showNewCohortInput && availableIntakes.length > 0 ? (
                                 <div className="space-y-2">
                                     <select
-                                        value={formData.intake_id || ''}
+                                        value={String(formData.intake_id || '')}
                                         onChange={(e) => {
                                             const val = e.target.value;
                                             if (val === '__new__') {
@@ -148,7 +148,7 @@ const CohortFormModal = ({
                                     >
                                         <option value="">Select an existing intake</option>
                                         {availableIntakes.map((intake) => (
-                                            <option key={intake.id} value={intake.id}>
+                                            <option key={intake.id} value={String(intake.id)}>
                                                 {intake.intake_label} — {intake.courses?.length || 0} courses ({intake.status})
                                                 {intake.moodle_cohort_idnumber ? ` [${intake.moodle_cohort_idnumber}]` : ''}
                                             </option>

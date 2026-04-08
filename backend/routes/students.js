@@ -577,6 +577,18 @@ router.post('/programme-intakes', async (req, res) => {
         );
 
         // 4. Create a course_registration row per course, linked to this intake
+        // Copy all 22 custom fields from any existing registration with the same course_code
+        const DETAIL_FIELDS = [
+            'regulation_level', 'mode_of_delivery', 'start_date', 'end_date_or_duration',
+            'subject_area_discipline', 'course_description', 'learning_outcomes',
+            'units_modules_covered', 'assessment_methods', 'entry_requirements',
+            'tuition_fee_gbp', 'additional_costs', 'funding_options',
+            'learning_resources_provided', 'special_equipment_needed', 'work_placement_included',
+            'course_leader_programme_director', 'internal_verification_contact',
+            'ukvi_approved_course', 'approval_date', 'review_date',
+            'special_admission_considerations', 'progression_opportunities', 'industry_partnerships'
+        ];
+
         const registrationIds = [];
         for (const mc of masterCourses) {
             // Skip if a registration already exists for this course + intake_label
@@ -589,13 +601,33 @@ router.post('/programme-intakes', async (req, res) => {
                 continue;
             }
 
+            // Look up an existing registration with same course_code that has detail fields filled
+            let sourceReg = null;
+            const [existingRegs] = await db.execute(
+                `SELECT * FROM course_registrations
+                 WHERE course_code = ? AND intake_id != ?
+                   AND (regulation_level IS NOT NULL OR mode_of_delivery IS NOT NULL
+                        OR learning_outcomes IS NOT NULL OR course_description IS NOT NULL
+                        OR entry_requirements IS NOT NULL)
+                 ORDER BY id DESC LIMIT 1`,
+                [mc.course_code, intakeId]
+            );
+            if (existingRegs.length > 0) {
+                sourceReg = existingRegs[0];
+            }
+
+            // Build the INSERT with all detail fields included
+            const detailColumns = DETAIL_FIELDS.join(', ');
+            const detailPlaceholders = DETAIL_FIELDS.map(() => '?').join(', ');
+
             const [regResult] = await db.execute(
                 `INSERT INTO course_registrations
                  (intake_id, course_title, course_code, programme_type_name, program_name,
                   academic_year, semester_name, cohort_label,
                   programme_type_category_id, program_category_id, year_category_id, semester_category_id,
-                  course_type, awarding_body_accreditation, application_status, moodle_sync_status)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'submitted', 'pending')`,
+                  course_type, awarding_body_accreditation, ${detailColumns},
+                  application_status, moodle_sync_status)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ${detailPlaceholders}, 'submitted', 'pending')`,
                 [
                     intakeId,
                     mc.course_title,
@@ -610,13 +642,18 @@ router.post('/programme-intakes', async (req, res) => {
                     mc.year_category_id || null,
                     mc.semester_category_id || null,
                     mc.course_type || mc.programme_type_name || null,
-                    mc.awarding_body || null
+                    mc.awarding_body || null,
+                    // Copy detail fields from source registration (if any)
+                    ...DETAIL_FIELDS.map(f => (sourceReg && sourceReg[f] != null) ? sourceReg[f] : null)
                 ]
             );
             const regId = Number(regResult.insertId);
             const regRef = `CRS-${String(regId).padStart(6, '0')}`;
             await db.execute('UPDATE course_registrations SET registration_reference = ? WHERE id = ?', [regRef, regId]);
             registrationIds.push(regId);
+            if (sourceReg) {
+                console.log(`[INTAKE] Copied ${DETAIL_FIELDS.filter(f => sourceReg[f] != null).length} detail fields from reg #${sourceReg.id} to new reg #${regId} (${mc.course_code})`);
+            }
         }
 
         // 5. Sync each registration to Moodle
@@ -3453,9 +3490,12 @@ router.put('/course-registrations/:id', async (req, res) => {
             return res.status(404).json({ success: false, message: 'Course registration not found' });
         }
 
-        const gateCheck = await ensureRegistrationGateFromInduction(payload.course_code, payload.course_title);
-        if (!gateCheck.allowed) {
-            return res.status(403).json({ success: false, message: gateCheck.message });
+        // Skip induction gate for existing cohort registrations (intake_id set means created via intake system)
+        if (!existingRows[0].intake_id) {
+            const gateCheck = await ensureRegistrationGateFromInduction(payload.course_code, payload.course_title);
+            if (!gateCheck.allowed) {
+                return res.status(403).json({ success: false, message: gateCheck.message });
+            }
         }
 
         const shouldSyncNow = Boolean(req.body?.sync_to_moodle) || payload.application_status === 'approved';
@@ -7828,20 +7868,22 @@ async function syncCourseRegistrationToMoodle(registrationId) {
         let sectionSync = null;
         let courseMessage = '';
 
-        // Only sync course to Moodle if it doesn't already exist
+        // Only create course in Moodle if it doesn't already exist
         if (!courseAlreadyExists) {
             courseSync = await createOrUpdateMoodleCourseCore(registration);
             moodleCourseId = courseSync.moodleCourseId;
             courseMessage = courseSync.created ? 'Course created in Moodle' : 'Course updated in Moodle';
-            
-            // Sync custom fields and sections
-            customFieldSync = await upsertMoodleCourseCustomFields(moodleCourseId, registration);
-            sectionSync = await upsertMoodleCourseSections(moodleCourseId, registration.units_modules_covered);
             await ensureManualEnrolmentForCourse(moodleCourseId);
         } else {
             // Course already exists, just get the ID
+            moodleCourseId = existingMoodleCourse.id;
             courseMessage = 'Course already exists in Moodle';
         }
+
+        // Always sync custom fields and sections (even for existing courses)
+        // This ensures each intake's course gets the 22 detail fields pushed to Moodle
+        customFieldSync = await upsertMoodleCourseCustomFields(moodleCourseId, registration);
+        sectionSync = await upsertMoodleCourseSections(moodleCourseId, registration.units_modules_covered);
 
         // Create cohort if cohort_label provided (applies to any registration)
         let cohortSync = null;
