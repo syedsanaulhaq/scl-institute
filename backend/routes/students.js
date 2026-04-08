@@ -3388,6 +3388,68 @@ router.delete('/moodle/delete-category/:id', async (req, res) => {
     }
 });
 
+// PUT /api/students/moodle/rename-category/:id
+// Rename a Moodle category (or local SCL category) by updating the name directly in the DB
+router.put('/moodle/rename-category/:id', async (req, res) => {
+    try {
+        const rawId = Number(req.params.id);
+        const newName = String(req.body.name || '').trim();
+        if (!rawId || !Number.isInteger(rawId)) {
+            return res.status(400).json({ success: false, message: 'Invalid category ID' });
+        }
+        if (!newName) {
+            return res.status(400).json({ success: false, message: 'Name is required' });
+        }
+
+        if (rawId < 0) {
+            // Local SCL category
+            const localId = Math.abs(rawId);
+            await db.execute('UPDATE scl_local_categories SET name = ? WHERE id = ?', [newName, localId]);
+            return res.json({ success: true, message: `Local category renamed to "${newName}"` });
+        }
+
+        // Moodle category — update directly in Moodle DB
+        const moodleConn = await moodleDbPool.getConnection();
+        try {
+            await moodleConn.execute('UPDATE mdl_course_categories SET name = ? WHERE id = ?', [newName, rawId]);
+        } finally {
+            moodleConn.release();
+        }
+        console.log(`[rename-category] Category #${rawId} renamed to "${newName}"`);
+        return res.json({ success: true, message: `Category renamed to "${newName}"` });
+    } catch (error) {
+        console.error('[rename-category] ERROR:', error.message);
+        return res.status(500).json({ success: false, message: 'Failed to rename category', error: error.message });
+    }
+});
+
+// PUT /api/students/moodle/rename-course/:id
+// Rename a Moodle course by updating fullname directly in the DB
+router.put('/moodle/rename-course/:id', async (req, res) => {
+    try {
+        const courseId = Number(req.params.id);
+        const newName = String(req.body.name || '').trim();
+        if (!courseId || !Number.isInteger(courseId)) {
+            return res.status(400).json({ success: false, message: 'Invalid course ID' });
+        }
+        if (!newName) {
+            return res.status(400).json({ success: false, message: 'Name is required' });
+        }
+
+        const moodleConn = await moodleDbPool.getConnection();
+        try {
+            await moodleConn.execute('UPDATE mdl_course SET fullname = ? WHERE id = ?', [newName, courseId]);
+        } finally {
+            moodleConn.release();
+        }
+        console.log(`[rename-course] Course #${courseId} renamed to "${newName}"`);
+        return res.json({ success: true, message: `Course renamed to "${newName}"` });
+    } catch (error) {
+        console.error('[rename-course] ERROR:', error.message);
+        return res.status(500).json({ success: false, message: 'Failed to rename course', error: error.message });
+    }
+});
+
 router.get('/moodle/courses-by-structure', async (req, res) => {
     try {
         const normalizeLocal = (value) => String(value || '').trim().toLowerCase();
@@ -3915,6 +3977,7 @@ router.get('/course-lifecycle/dashboard', async (req, res) => {
                 courseMap.set(key, {
                     lifecycle_key: key,
                     master_id: null,
+                    moodle_course_id: null,
                     course_code: String(courseCode || '').trim(),
                     course_title: String(courseTitle || '').trim() || 'Untitled Course',
                     programme_type_name: null,
@@ -3958,6 +4021,7 @@ router.get('/course-lifecycle/dashboard', async (req, res) => {
         // Populate from Moodle category hierarchy first
         for (const course of lifecycleCourses) {
             const item = ensureCourseRow(course.course_code, course.course_name);
+            item.moodle_course_id = course.course_id || item.moodle_course_id;
             item.course_type = course.course_type || item.course_type;
             item.programme_type_name = (course.programme_type_name || '').trim() || item.programme_type_name;
             item.program_name = (course.program_name || '').trim() || item.program_name;

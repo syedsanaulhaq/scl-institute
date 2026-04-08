@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { Loader2, RefreshCw, CheckCircle2, Clock3, CircleDashed, XCircle, X, Plus, Trash2, Lock, ChevronDown, ChevronRight } from 'lucide-react';
+import { Loader2, RefreshCw, CheckCircle2, Clock3, CircleDashed, XCircle, X, Plus, Trash2, Lock, ChevronDown, ChevronRight, Pencil, Check } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
 
@@ -205,6 +205,8 @@ const CourseLifecycleDashboard = () => {
     const [filterStatus, setFilterStatus] = useState(''); // 'accreditation', 'visit', 'induction', 'registration', 'fully_active'
     const [moodleHierarchy, setMoodleHierarchy] = useState([]);
     const [deletingCategoryId, setDeletingCategoryId] = useState(null);
+    const [editingItem, setEditingItem] = useState(null); // { type: 'category'|'course', id: number, key: string }
+    const [editingName, setEditingName] = useState('');
     
     const fetchDashboard = async () => {
         try {
@@ -438,6 +440,45 @@ const CourseLifecycleDashboard = () => {
         } finally {
             setDeletingCategoryId(null);
         }
+    };
+
+    const startEditing = (e, type, id, currentName, key) => {
+        e.stopPropagation();
+        setEditingItem({ type, id, key });
+        setEditingName(currentName);
+    };
+
+    const cancelEditing = () => {
+        setEditingItem(null);
+        setEditingName('');
+    };
+
+    const handleRename = async (e) => {
+        e?.stopPropagation();
+        if (!editingItem || !editingName.trim()) return cancelEditing();
+        const { type, id } = editingItem;
+        const newName = editingName.trim();
+        try {
+            const url = type === 'course'
+                ? `${API_URL}/students/moodle/rename-course/${id}`
+                : `${API_URL}/students/moodle/rename-category/${id}`;
+            const res = await axios.put(url, { name: newName });
+            if (res.data?.success) {
+                await fetchDashboard();
+            } else {
+                alert(res.data?.message || 'Rename failed');
+            }
+        } catch (err) {
+            alert(err.response?.data?.message || err.message);
+        } finally {
+            setEditingItem(null);
+            setEditingName('');
+        }
+    };
+
+    const handleEditKeyDown = (e) => {
+        if (e.key === 'Enter') handleRename(e);
+        if (e.key === 'Escape') cancelEditing();
     };
 
     const toggleSection = (sectionKey) => {
@@ -698,26 +739,46 @@ const CourseLifecycleDashboard = () => {
                             {Object.entries(groupedCourses).map(([programmeType, programs]) => {
                                 const programmeTypeKey = `type-${programmeType}`;
                                 const isExpanded = expandedSections[programmeTypeKey];
+                                const ptCatId = findCategoryId(programmeType);
+                                const ptEditing = editingItem?.key === programmeTypeKey;
                                 return (
                                     <div key={programmeTypeKey} className="border-b border-gray-200 last:border-b-0">
                                         <div className="flex items-center bg-gray-50 hover:bg-gray-100 transition-colors">
                                             <button
                                                 onClick={() => toggleSection(programmeTypeKey)}
-                                                className="flex-1 px-6 py-4 flex items-center gap-3 font-semibold text-gray-900"
+                                                className="flex-shrink-0 px-6 py-4"
                                             >
                                                 {isExpanded ? <ChevronDown className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
-                                                <span>{programmeType}</span>
+                                            </button>
+                                            <div className="flex-1 flex items-center gap-3 py-4 pr-2 font-semibold text-gray-900">
+                                                {ptEditing ? (
+                                                    <div className="flex items-center gap-2 flex-1" onClick={e => e.stopPropagation()}>
+                                                        <input
+                                                            autoFocus
+                                                            className="flex-1 px-2 py-1 border border-scl-purple rounded text-sm font-semibold"
+                                                            value={editingName}
+                                                            onChange={e => setEditingName(e.target.value)}
+                                                            onKeyDown={handleEditKeyDown}
+                                                            onBlur={handleRename}
+                                                        />
+                                                    </div>
+                                                ) : (
+                                                    <>
+                                                        <span>{programmeType}</span>
+                                                        <button onClick={(e) => startEditing(e, 'category', ptCatId, programmeType, programmeTypeKey)} className="p-1 rounded hover:bg-gray-200 text-gray-400 hover:text-gray-700" title="Rename"><Pencil className="w-3.5 h-3.5" /></button>
+                                                    </>
+                                                )}
                                                 <span className="ml-auto text-xs font-normal text-gray-500">
                                                     {Object.keys(programs).length} {Object.keys(programs).length === 1 ? 'Programme' : 'Programmes'}
                                                 </span>
-                                            </button>
+                                            </div>
                                             <button
-                                                onClick={(e) => handleDeleteCategory(e, findCategoryId(programmeType), programmeType)}
-                                                disabled={deletingCategoryId != null && deletingCategoryId === findCategoryId(programmeType)}
+                                                onClick={(e) => handleDeleteCategory(e, ptCatId, programmeType)}
+                                                disabled={deletingCategoryId != null && deletingCategoryId === ptCatId}
                                                 className="px-3 py-2 mr-3 rounded hover:bg-red-50 text-gray-400 hover:text-red-600 disabled:opacity-50"
                                                 title={`Delete "${programmeType}"`}
                                             >
-                                                {deletingCategoryId != null && deletingCategoryId === findCategoryId(programmeType) ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                                                {deletingCategoryId != null && deletingCategoryId === ptCatId ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
                                             </button>
                                         </div>
 
@@ -726,26 +787,46 @@ const CourseLifecycleDashboard = () => {
                                                 {Object.entries(programs).map(([program, years]) => {
                                                     const programKey = `prog-${programmeType}-${program}`;
                                                     const isProgExpanded = expandedSections[programKey];
+                                                    const progCatId = findCategoryId(programmeType, program);
+                                                    const progEditing = editingItem?.key === programKey;
                                                     return (
                                                         <div key={programKey} className="border-b border-gray-100 last:border-b-0">
                                                             <div className="flex items-center hover:bg-gray-50 transition-colors">
                                                                 <button
                                                                     onClick={() => toggleSection(programKey)}
-                                                                    className="flex-1 px-10 py-3 flex items-center gap-3 font-medium text-gray-800 text-sm"
+                                                                    className="flex-shrink-0 px-10 py-3"
                                                                 >
                                                                     {isProgExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-                                                                    <span>{program}</span>
+                                                                </button>
+                                                                <div className="flex-1 flex items-center gap-3 py-3 pr-2 font-medium text-gray-800 text-sm">
+                                                                    {progEditing ? (
+                                                                        <div className="flex items-center gap-2 flex-1" onClick={e => e.stopPropagation()}>
+                                                                            <input
+                                                                                autoFocus
+                                                                                className="flex-1 px-2 py-1 border border-scl-purple rounded text-sm"
+                                                                                value={editingName}
+                                                                                onChange={e => setEditingName(e.target.value)}
+                                                                                onKeyDown={handleEditKeyDown}
+                                                                                onBlur={handleRename}
+                                                                            />
+                                                                        </div>
+                                                                    ) : (
+                                                                        <>
+                                                                            <span>{program}</span>
+                                                                            <button onClick={(e) => startEditing(e, 'category', progCatId, program, programKey)} className="p-1 rounded hover:bg-gray-200 text-gray-400 hover:text-gray-700" title="Rename"><Pencil className="w-3 h-3" /></button>
+                                                                        </>
+                                                                    )}
                                                                     <span className="ml-auto text-xs font-normal text-gray-500">
                                                                         {Object.keys(years).length} {Object.keys(years).length === 1 ? 'Year' : 'Years'}
                                                                     </span>
-                                                                </button>
+                                                                </div>
                                                                 <button
-                                                                    onClick={(e) => handleDeleteCategory(e, findCategoryId(programmeType, program), program)}
-                                                                    disabled={deletingCategoryId != null && deletingCategoryId === findCategoryId(programmeType, program)}
+                                                                    onClick={(e) => handleDeleteCategory(e, progCatId, program)}
+                                                                    disabled={deletingCategoryId != null && deletingCategoryId === progCatId}
                                                                     className="px-3 py-2 mr-3 rounded hover:bg-red-50 text-gray-400 hover:text-red-600 disabled:opacity-50"
                                                                     title={`Delete "${program}"`}
                                                                 >
-                                                                    {deletingCategoryId != null && deletingCategoryId === findCategoryId(programmeType, program) ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                                                                    {deletingCategoryId != null && deletingCategoryId === progCatId ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
                                                                 </button>
                                                             </div>
 
@@ -754,26 +835,46 @@ const CourseLifecycleDashboard = () => {
                                                                     {Object.entries(years).map(([year, semesters]) => {
                                                                         const yearKey = `year-${programmeType}-${program}-${year}`;
                                                                         const isYearExpanded = expandedSections[yearKey];
+                                                                        const yearCatId = findCategoryId(programmeType, program, year);
+                                                                        const yearEditing = editingItem?.key === yearKey;
                                                                         return (
                                                                             <div key={yearKey} className="border-b border-gray-100 last:border-b-0">
                                                                                 <div className="flex items-center hover:bg-gray-50 transition-colors">
                                                                                     <button
                                                                                         onClick={() => toggleSection(yearKey)}
-                                                                                        className="flex-1 px-14 py-2.5 flex items-center gap-3 font-medium text-gray-700 text-sm"
+                                                                                        className="flex-shrink-0 px-14 py-2.5"
                                                                                     >
                                                                                         {isYearExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-                                                                                        <span>{year}</span>
+                                                                                    </button>
+                                                                                    <div className="flex-1 flex items-center gap-3 py-2.5 pr-2 font-medium text-gray-700 text-sm">
+                                                                                        {yearEditing ? (
+                                                                                            <div className="flex items-center gap-2 flex-1" onClick={e => e.stopPropagation()}>
+                                                                                                <input
+                                                                                                    autoFocus
+                                                                                                    className="flex-1 px-2 py-1 border border-scl-purple rounded text-sm"
+                                                                                                    value={editingName}
+                                                                                                    onChange={e => setEditingName(e.target.value)}
+                                                                                                    onKeyDown={handleEditKeyDown}
+                                                                                                    onBlur={handleRename}
+                                                                                                />
+                                                                                            </div>
+                                                                                        ) : (
+                                                                                            <>
+                                                                                                <span>{year}</span>
+                                                                                                <button onClick={(e) => startEditing(e, 'category', yearCatId, year, yearKey)} className="p-1 rounded hover:bg-gray-200 text-gray-400 hover:text-gray-700" title="Rename"><Pencil className="w-3 h-3" /></button>
+                                                                                            </>
+                                                                                        )}
                                                                                         <span className="ml-auto text-xs font-normal text-gray-500">
                                                                                             {Object.keys(semesters).length} {Object.keys(semesters).length === 1 ? 'Semester' : 'Semesters'}
                                                                                         </span>
-                                                                                    </button>
+                                                                                    </div>
                                                                                     <button
-                                                                                        onClick={(e) => handleDeleteCategory(e, findCategoryId(programmeType, program, year), year)}
-                                                                                        disabled={deletingCategoryId != null && deletingCategoryId === findCategoryId(programmeType, program, year)}
+                                                                                        onClick={(e) => handleDeleteCategory(e, yearCatId, year)}
+                                                                                        disabled={deletingCategoryId != null && deletingCategoryId === yearCatId}
                                                                                         className="px-3 py-2 mr-3 rounded hover:bg-red-50 text-gray-400 hover:text-red-600 disabled:opacity-50"
                                                                                         title={`Delete "${year}"`}
                                                                                     >
-                                                                                        {deletingCategoryId != null && deletingCategoryId === findCategoryId(programmeType, program, year) ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                                                                                        {deletingCategoryId != null && deletingCategoryId === yearCatId ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
                                                                                     </button>
                                                                                 </div>
 
@@ -782,40 +883,85 @@ const CourseLifecycleDashboard = () => {
                                                                                         {Object.entries(semesters).map(([semester, semesterCourses]) => {
                                                                                             const semesterKey = `sem-${programmeType}-${program}-${year}-${semester}`;
                                                                                             const isSemExpanded = expandedSections[semesterKey];
+                                                                                            const semCatId = findCategoryId(programmeType, program, year, semester);
+                                                                                            const semEditing = editingItem?.key === semesterKey;
                                                                                             return (
                                                                                                 <div key={semesterKey}>
                                                                                                     <div className="flex items-center hover:bg-gray-50 transition-colors">
                                                                                                         <button
                                                                                                             onClick={() => toggleSection(semesterKey)}
-                                                                                                            className="flex-1 px-16 py-2 flex items-center gap-3 font-medium text-gray-600 text-sm"
+                                                                                                            className="flex-shrink-0 px-16 py-2"
                                                                                                         >
                                                                                                             {isSemExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-                                                                                                            <span>{semester}</span>
+                                                                                                        </button>
+                                                                                                        <div className="flex-1 flex items-center gap-3 py-2 pr-2 font-medium text-gray-600 text-sm">
+                                                                                                            {semEditing ? (
+                                                                                                                <div className="flex items-center gap-2 flex-1" onClick={e => e.stopPropagation()}>
+                                                                                                                    <input
+                                                                                                                        autoFocus
+                                                                                                                        className="flex-1 px-2 py-1 border border-scl-purple rounded text-sm"
+                                                                                                                        value={editingName}
+                                                                                                                        onChange={e => setEditingName(e.target.value)}
+                                                                                                                        onKeyDown={handleEditKeyDown}
+                                                                                                                        onBlur={handleRename}
+                                                                                                                    />
+                                                                                                                </div>
+                                                                                                            ) : (
+                                                                                                                <>
+                                                                                                                    <span>{semester}</span>
+                                                                                                                    <button onClick={(e) => startEditing(e, 'category', semCatId, semester, semesterKey)} className="p-1 rounded hover:bg-gray-200 text-gray-400 hover:text-gray-700" title="Rename"><Pencil className="w-3 h-3" /></button>
+                                                                                                                </>
+                                                                                                            )}
                                                                                                             <span className="ml-auto text-xs font-normal text-gray-500">
                                                                                                                 {semesterCourses.length} {semesterCourses.length === 1 ? 'Course' : 'Courses'}
                                                                                                             </span>
-                                                                                                        </button>
+                                                                                                        </div>
                                                                                                         <button
-                                                                                                            onClick={(e) => handleDeleteCategory(e, findCategoryId(programmeType, program, year, semester), semester)}
-                                                                                                            disabled={deletingCategoryId != null && deletingCategoryId === findCategoryId(programmeType, program, year, semester)}
+                                                                                                            onClick={(e) => handleDeleteCategory(e, semCatId, semester)}
+                                                                                                            disabled={deletingCategoryId != null && deletingCategoryId === semCatId}
                                                                                                             className="px-3 py-2 mr-3 rounded hover:bg-red-50 text-gray-400 hover:text-red-600 disabled:opacity-50"
                                                                                                             title={`Delete "${semester}"`}
                                                                                                         >
-                                                                                                            {deletingCategoryId != null && deletingCategoryId === findCategoryId(programmeType, program, year, semester) ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                                                                                                            {deletingCategoryId != null && deletingCategoryId === semCatId ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
                                                                                                         </button>
                                                                                                     </div>
 
                                                                                                     {isSemExpanded && (
                                                                                                         <div className="space-y-1 px-16 py-2 bg-gray-50">
-                                                                                                            {semesterCourses.map((course) => (
+                                                                                                            {semesterCourses.map((course) => {
+                                                                                                                const courseKey = `course-${course.lifecycle_key}`;
+                                                                                                                const courseEditing = editingItem?.key === courseKey;
+                                                                                                                return (
                                                                                                                 <div
                                                                                                                     key={course.lifecycle_key}
-                                                                                                                    onClick={() => handleSelectCourse(course)}
+                                                                                                                    onClick={() => !courseEditing && handleSelectCourse(course)}
                                                                                                                     className="p-3 rounded border border-gray-200 bg-white hover:border-scl-purple hover:bg-scl-purple/5 cursor-pointer transition-all"
                                                                                                                 >
                                                                                                                     <div className="flex items-center justify-between gap-3">
                                                                                                                         <div className="flex-1 min-w-0">
-                                                                                                                            <div className="font-medium text-gray-900 text-sm">{course.course_title || 'Untitled'}</div>
+                                                                                                                            {courseEditing ? (
+                                                                                                                                <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
+                                                                                                                                    <input
+                                                                                                                                        autoFocus
+                                                                                                                                        className="flex-1 px-2 py-1 border border-scl-purple rounded text-sm font-medium"
+                                                                                                                                        value={editingName}
+                                                                                                                                        onChange={e => setEditingName(e.target.value)}
+                                                                                                                                        onKeyDown={handleEditKeyDown}
+                                                                                                                                        onBlur={handleRename}
+                                                                                                                                    />
+                                                                                                                                </div>
+                                                                                                                            ) : (
+                                                                                                                                <div className="flex items-center gap-2">
+                                                                                                                                    <div className="font-medium text-gray-900 text-sm">{course.course_title || 'Untitled'}</div>
+                                                                                                                                    <button
+                                                                                                                                        onClick={(e) => { e.stopPropagation(); startEditing(e, 'course', course.moodle_course_id || course.course_id, course.course_title, courseKey); }}
+                                                                                                                                        className="p-0.5 rounded hover:bg-gray-200 text-gray-400 hover:text-gray-700"
+                                                                                                                                        title="Rename course"
+                                                                                                                                    >
+                                                                                                                                        <Pencil className="w-3 h-3" />
+                                                                                                                                    </button>
+                                                                                                                                </div>
+                                                                                                                            )}
                                                                                                                             <div className="text-xs text-gray-500">{course.course_code || 'No Code'}</div>
                                                                                                                         </div>
                                                                                                                         <div className="flex items-center gap-4 ml-4 flex-shrink-0">
@@ -846,7 +992,8 @@ const CourseLifecycleDashboard = () => {
                                                                                                                         </div>
                                                                                                                     </div>
                                                                                                                 </div>
-                                                                                                            ))}
+                                                                                                                );
+                                                                                                            })}
                                                                                                         </div>
                                                                                                     )}
                                                                                                 </div>
