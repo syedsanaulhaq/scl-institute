@@ -204,6 +204,7 @@ const CourseLifecycleDashboard = () => {
     const [filterCourse, setFilterCourse] = useState('');
     const [filterStatus, setFilterStatus] = useState(''); // 'accreditation', 'visit', 'induction', 'registration', 'fully_active'
     const [moodleHierarchy, setMoodleHierarchy] = useState([]);
+    const [deletingCategoryId, setDeletingCategoryId] = useState(null);
     
     const fetchDashboard = async () => {
         try {
@@ -396,6 +397,47 @@ const CourseLifecycleDashboard = () => {
         setFilterCourse('');
         setFilterStatus('');
         setExpandedSections({}); // Collapse all sections when filters are cleared
+    };
+
+    // Resolve a category name path to its Moodle category ID using the hierarchy
+    const findCategoryId = (programmeTypeName, programName, yearName, semesterName) => {
+        const norm = (s) => String(s || '').trim().toLowerCase();
+        const type = moodleHierarchy.find(t => norm(t.name) === norm(programmeTypeName));
+        if (!type) return null;
+        if (!programName) return type.id;
+        const prog = (type.programs || []).find(p => norm(p.name) === norm(programName));
+        if (!prog) return null;
+        if (!yearName) return prog.id;
+        const yr = (prog.years || []).find(y => norm(y.name) === norm(yearName));
+        if (!yr) return null;
+        if (!semesterName) return yr.id;
+        const sem = (yr.semesters || []).find(s => norm(s.name) === norm(semesterName));
+        return sem ? sem.id : null;
+    };
+
+    const handleDeleteCategory = async (e, categoryId, categoryName) => {
+        e.stopPropagation();
+        if (!categoryId) {
+            alert('Could not resolve Moodle category ID for this entry.');
+            return;
+        }
+        if (!window.confirm(`Delete category "${categoryName}"?\n\nThis will CASCADE delete:\n• All child categories\n• All courses inside them\n• Related accreditations, visits, inductions, registrations & enrollments\n\nThis action cannot be undone.`)) {
+            return;
+        }
+        try {
+            setDeletingCategoryId(categoryId);
+            const res = await axios.delete(`${API_URL}/students/moodle/delete-category/${categoryId}`);
+            if (res.data?.success) {
+                alert(res.data.message || `Category "${categoryName}" deleted successfully.`);
+                await fetchDashboard();
+            } else {
+                alert(res.data?.message || 'Failed to delete category');
+            }
+        } catch (err) {
+            alert(err.response?.data?.message || err.message);
+        } finally {
+            setDeletingCategoryId(null);
+        }
     };
 
     const toggleSection = (sectionKey) => {
@@ -658,16 +700,26 @@ const CourseLifecycleDashboard = () => {
                                 const isExpanded = expandedSections[programmeTypeKey];
                                 return (
                                     <div key={programmeTypeKey} className="border-b border-gray-200 last:border-b-0">
-                                        <button
-                                            onClick={() => toggleSection(programmeTypeKey)}
-                                            className="w-full px-6 py-4 bg-gray-50 hover:bg-gray-100 flex items-center gap-3 transition-colors font-semibold text-gray-900"
-                                        >
-                                            {isExpanded ? <ChevronDown className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
-                                            <span>{programmeType}</span>
-                                            <span className="ml-auto text-xs font-normal text-gray-500">
-                                                {Object.values(programs).flat(3).length} courses
-                                            </span>
-                                        </button>
+                                        <div className="flex items-center bg-gray-50 hover:bg-gray-100 transition-colors">
+                                            <button
+                                                onClick={() => toggleSection(programmeTypeKey)}
+                                                className="flex-1 px-6 py-4 flex items-center gap-3 font-semibold text-gray-900"
+                                            >
+                                                {isExpanded ? <ChevronDown className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
+                                                <span>{programmeType}</span>
+                                                <span className="ml-auto text-xs font-normal text-gray-500">
+                                                    {Object.keys(programs).length} {Object.keys(programs).length === 1 ? 'Programme' : 'Programmes'}
+                                                </span>
+                                            </button>
+                                            <button
+                                                onClick={(e) => handleDeleteCategory(e, findCategoryId(programmeType), programmeType)}
+                                                disabled={deletingCategoryId != null && deletingCategoryId === findCategoryId(programmeType)}
+                                                className="px-3 py-2 mr-3 rounded hover:bg-red-50 text-gray-400 hover:text-red-600 disabled:opacity-50"
+                                                title={`Delete "${programmeType}"`}
+                                            >
+                                                {deletingCategoryId != null && deletingCategoryId === findCategoryId(programmeType) ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                                            </button>
+                                        </div>
 
                                         {isExpanded && (
                                             <div className="space-y-0">
@@ -676,16 +728,26 @@ const CourseLifecycleDashboard = () => {
                                                     const isProgExpanded = expandedSections[programKey];
                                                     return (
                                                         <div key={programKey} className="border-b border-gray-100 last:border-b-0">
-                                                            <button
-                                                                onClick={() => toggleSection(programKey)}
-                                                                className="w-full px-10 py-3 hover:bg-gray-50 flex items-center gap-3 transition-colors font-medium text-gray-800 text-sm"
-                                                            >
-                                                                {isProgExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-                                                                <span>{program}</span>
-                                                                <span className="ml-auto text-xs font-normal text-gray-500">
-                                                                    {Object.values(years).flat(2).length} courses
-                                                                </span>
-                                                            </button>
+                                                            <div className="flex items-center hover:bg-gray-50 transition-colors">
+                                                                <button
+                                                                    onClick={() => toggleSection(programKey)}
+                                                                    className="flex-1 px-10 py-3 flex items-center gap-3 font-medium text-gray-800 text-sm"
+                                                                >
+                                                                    {isProgExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                                                                    <span>{program}</span>
+                                                                    <span className="ml-auto text-xs font-normal text-gray-500">
+                                                                        {Object.keys(years).length} {Object.keys(years).length === 1 ? 'Year' : 'Years'}
+                                                                    </span>
+                                                                </button>
+                                                                <button
+                                                                    onClick={(e) => handleDeleteCategory(e, findCategoryId(programmeType, program), program)}
+                                                                    disabled={deletingCategoryId != null && deletingCategoryId === findCategoryId(programmeType, program)}
+                                                                    className="px-3 py-2 mr-3 rounded hover:bg-red-50 text-gray-400 hover:text-red-600 disabled:opacity-50"
+                                                                    title={`Delete "${program}"`}
+                                                                >
+                                                                    {deletingCategoryId != null && deletingCategoryId === findCategoryId(programmeType, program) ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                                                                </button>
+                                                            </div>
 
                                                             {isProgExpanded && (
                                                                 <div className="space-y-0">
@@ -694,16 +756,26 @@ const CourseLifecycleDashboard = () => {
                                                                         const isYearExpanded = expandedSections[yearKey];
                                                                         return (
                                                                             <div key={yearKey} className="border-b border-gray-100 last:border-b-0">
-                                                                                <button
-                                                                                    onClick={() => toggleSection(yearKey)}
-                                                                                    className="w-full px-14 py-2.5 hover:bg-gray-50 flex items-center gap-3 transition-colors font-medium text-gray-700 text-sm"
-                                                                                >
-                                                                                    {isYearExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-                                                                                    <span>{year}</span>
-                                                                                    <span className="ml-auto text-xs font-normal text-gray-500">
-                                                                                        {Object.values(semesters).flat().length} courses
-                                                                                    </span>
-                                                                                </button>
+                                                                                <div className="flex items-center hover:bg-gray-50 transition-colors">
+                                                                                    <button
+                                                                                        onClick={() => toggleSection(yearKey)}
+                                                                                        className="flex-1 px-14 py-2.5 flex items-center gap-3 font-medium text-gray-700 text-sm"
+                                                                                    >
+                                                                                        {isYearExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                                                                                        <span>{year}</span>
+                                                                                        <span className="ml-auto text-xs font-normal text-gray-500">
+                                                                                            {Object.keys(semesters).length} {Object.keys(semesters).length === 1 ? 'Semester' : 'Semesters'}
+                                                                                        </span>
+                                                                                    </button>
+                                                                                    <button
+                                                                                        onClick={(e) => handleDeleteCategory(e, findCategoryId(programmeType, program, year), year)}
+                                                                                        disabled={deletingCategoryId != null && deletingCategoryId === findCategoryId(programmeType, program, year)}
+                                                                                        className="px-3 py-2 mr-3 rounded hover:bg-red-50 text-gray-400 hover:text-red-600 disabled:opacity-50"
+                                                                                        title={`Delete "${year}"`}
+                                                                                    >
+                                                                                        {deletingCategoryId != null && deletingCategoryId === findCategoryId(programmeType, program, year) ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                                                                                    </button>
+                                                                                </div>
 
                                                                                 {isYearExpanded && (
                                                                                     <div className="space-y-0">
@@ -712,16 +784,26 @@ const CourseLifecycleDashboard = () => {
                                                                                             const isSemExpanded = expandedSections[semesterKey];
                                                                                             return (
                                                                                                 <div key={semesterKey}>
-                                                                                                    <button
-                                                                                                        onClick={() => toggleSection(semesterKey)}
-                                                                                                        className="w-full px-16 py-2 hover:bg-gray-50 flex items-center gap-3 transition-colors font-medium text-gray-600 text-sm"
-                                                                                                    >
-                                                                                                        {isSemExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-                                                                                                        <span>{semester}</span>
-                                                                                                        <span className="ml-auto text-xs font-normal text-gray-500">
-                                                                                                            {semesterCourses.length} courses
-                                                                                                        </span>
-                                                                                                    </button>
+                                                                                                    <div className="flex items-center hover:bg-gray-50 transition-colors">
+                                                                                                        <button
+                                                                                                            onClick={() => toggleSection(semesterKey)}
+                                                                                                            className="flex-1 px-16 py-2 flex items-center gap-3 font-medium text-gray-600 text-sm"
+                                                                                                        >
+                                                                                                            {isSemExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                                                                                                            <span>{semester}</span>
+                                                                                                            <span className="ml-auto text-xs font-normal text-gray-500">
+                                                                                                                {semesterCourses.length} {semesterCourses.length === 1 ? 'Course' : 'Courses'}
+                                                                                                            </span>
+                                                                                                        </button>
+                                                                                                        <button
+                                                                                                            onClick={(e) => handleDeleteCategory(e, findCategoryId(programmeType, program, year, semester), semester)}
+                                                                                                            disabled={deletingCategoryId != null && deletingCategoryId === findCategoryId(programmeType, program, year, semester)}
+                                                                                                            className="px-3 py-2 mr-3 rounded hover:bg-red-50 text-gray-400 hover:text-red-600 disabled:opacity-50"
+                                                                                                            title={`Delete "${semester}"`}
+                                                                                                        >
+                                                                                                            {deletingCategoryId != null && deletingCategoryId === findCategoryId(programmeType, program, year, semester) ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                                                                                                        </button>
+                                                                                                    </div>
 
                                                                                                     {isSemExpanded && (
                                                                                                         <div className="space-y-1 px-16 py-2 bg-gray-50">

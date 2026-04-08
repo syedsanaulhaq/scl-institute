@@ -3204,6 +3204,190 @@ router.post('/moodle/create-category', async (req, res) => {
     }
 });
 
+// DELETE /api/students/moodle/delete-category/:id
+// Cascade-delete a Moodle category: removes all child categories, courses, and related lifecycle records
+router.delete('/moodle/delete-category/:id', async (req, res) => {
+    try {
+        const rawId = Number(req.params.id);
+        if (!rawId || !Number.isInteger(rawId)) {
+            return res.status(400).json({ success: false, message: 'Invalid category ID' });
+        }
+
+        const isLocal = rawId < 0;
+        const localId = Math.abs(rawId);
+
+        if (isLocal) {
+            const [rows] = await db.execute('SELECT id, name, level FROM scl_local_categories WHERE id = ?', [localId]);
+            if (!rows || rows.length === 0) {
+                return res.status(404).json({ success: false, message: 'Local category not found' });
+            }
+            const [children] = await db.execute('SELECT id FROM scl_local_categories WHERE parent_local_id = ? LIMIT 1', [localId]);
+            if (children && children.length > 0) {
+                return res.status(400).json({ success: false, message: 'Cannot delete: this category has child categories. Delete children first.' });
+            }
+            await db.execute('DELETE FROM scl_local_categories WHERE id = ?', [localId]);
+            console.log(`[delete-category] Deleted local category #${localId} (${rows[0].name})`);
+            return res.json({ success: true, message: `Local category "${rows[0].name}" deleted`, data: { id: rawId, name: rows[0].name } });
+        }
+
+        // Moodle category — check it exists
+        const catRows = await safeMoodleSelectRows('SELECT id, name, parent FROM mdl_course_categories WHERE id = ?', [rawId]);
+        if (!catRows || catRows.length === 0) {
+            return res.status(404).json({ success: false, message: 'Moodle category not found' });
+        }
+        const catName = catRows[0].name;
+
+        // ── Collect ALL descendant category IDs (breadth-first) ──
+        const allCatIds = [rawId];
+        let queue = [rawId];
+        while (queue.length > 0) {
+            const parentId = queue.shift();
+            const children = await safeMoodleSelectRows('SELECT id FROM mdl_course_categories WHERE parent = ?', [parentId]);
+            if (children && children.length > 0) {
+                for (const child of children) {
+                    allCatIds.push(child.id);
+                    queue.push(child.id);
+                }
+            }
+        }
+        console.log(`[delete-category] Category "${catName}" (#${rawId}) — found ${allCatIds.length} categories to delete (including self): [${allCatIds.join(', ')}]`);
+
+        // ── Collect ALL courses in these categories ──
+        const allCourses = [];
+        for (const catId of allCatIds) {
+            const courses = await safeMoodleSelectRows('SELECT id, fullname, shortname FROM mdl_course WHERE category = ?', [catId]);
+            if (courses && courses.length > 0) {
+                allCourses.push(...courses);
+            }
+        }
+        console.log(`[delete-category] Found ${allCourses.length} courses to cascade-delete`);
+
+        // ── Delete lifecycle records for each course from SCL database ──
+        const deletedSummary = { accreditations: 0, visits: 0, inductions: 0, registrations: 0, enrollments: 0, courses: 0, categories: 0 };
+
+        for (const course of allCourses) {
+            const moodleCourseId = course.id;
+            const courseTitle = course.fullname;
+            const courseShortname = course.shortname;
+
+            // Delete accreditation records (child tables cascade via ON DELETE CASCADE)
+            try {
+                const [accResult] = await db.execute('DELETE FROM course_accreditations WHERE course_title = ?', [courseTitle]);
+                deletedSummary.accreditations += accResult.affectedRows || 0;
+            } catch (e) { console.warn(`[delete-category] accreditations cleanup error:`, e.message); }
+
+            // Delete visit records
+            try {
+                const [visitResult] = await db.execute('DELETE FROM course_visits WHERE course_title = ? OR course_code = ?', [courseTitle, courseShortname]);
+                deletedSummary.visits += visitResult.affectedRows || 0;
+            } catch (e) { console.warn(`[delete-category] visits cleanup error:`, e.message); }
+
+            // Delete induction records (child tables cascade via ON DELETE CASCADE)
+            try {
+                const [indResult] = await db.execute(
+                    'DELETE FROM course_inductions WHERE moodle_course_id = ? OR course_title = ? OR course_code = ?',
+                    [moodleCourseId, courseTitle, courseShortname]
+                );
+                deletedSummary.inductions += indResult.affectedRows || 0;
+            } catch (e) { console.warn(`[delete-category] inductions cleanup error:`, e.message); }
+
+            // Delete enrollment mappings
+            try {
+                const [enrolResult] = await db.execute('DELETE FROM course_enrollment_mapping WHERE moodle_course_id = ?', [moodleCourseId]);
+                deletedSummary.enrollments += enrolResult.affectedRows || 0;
+            } catch (e) { console.warn(`[delete-category] enrollment cleanup error:`, e.message); }
+
+            // Delete course registrations
+            try {
+                const [regResult] = await db.execute(
+                    'DELETE FROM course_registrations WHERE moodle_course_id = ? OR course_code = ?',
+                    [moodleCourseId, courseShortname]
+                );
+                deletedSummary.registrations += regResult.affectedRows || 0;
+            } catch (e) { console.warn(`[delete-category] registrations cleanup error:`, e.message); }
+
+            // Delete from SCL courses table
+            try {
+                const [courseResult] = await db.execute('DELETE FROM courses WHERE moodle_course_id = ?', [moodleCourseId]);
+                deletedSummary.courses += courseResult.affectedRows || 0;
+            } catch (e) { console.warn(`[delete-category] courses cleanup error:`, e.message); }
+
+            // Delete from moodle_course_mapping
+            try {
+                await db.execute('DELETE FROM moodle_course_mapping WHERE moodle_course_id = ?', [moodleCourseId]);
+            } catch (e) { /* table may not exist */ }
+
+            // Delete from course_lifecycle_master by course title/code
+            try {
+                const [masterResult] = await db.execute('DELETE FROM course_lifecycle_master WHERE course_title = ? OR course_code = ?', [courseTitle, courseShortname]);
+                deletedSummary.lifecycleMaster = (deletedSummary.lifecycleMaster || 0) + (masterResult.affectedRows || 0);
+            } catch (e) { console.warn(`[delete-category] lifecycle_master cleanup error:`, e.message); }
+
+            // Delete the Moodle course itself
+            try {
+                await callMoodleRest('core_course_delete_courses', { 'courseids[0]': moodleCourseId });
+                console.log(`[delete-category] Deleted Moodle course #${moodleCourseId} (${courseTitle}) via REST`);
+            } catch (moodleErr) {
+                console.warn(`[delete-category] REST course delete failed for #${moodleCourseId}, trying direct DB:`, moodleErr.message);
+                try {
+                    await moodleDbPool.execute('DELETE FROM mdl_course WHERE id = ?', [moodleCourseId]);
+                    console.log(`[delete-category] Deleted Moodle course #${moodleCourseId} via direct DB`);
+                } catch (dbErr) {
+                    console.error(`[delete-category] Failed to delete Moodle course #${moodleCourseId}:`, dbErr.message);
+                }
+            }
+        }
+
+        // ── Delete categories bottom-up (deepest children first) ──
+        const reversedCatIds = [...allCatIds].reverse();
+        for (const catId of reversedCatIds) {
+            try {
+                await callMoodleRest('core_course_delete_categories', {
+                    'categories[0][id]': catId,
+                    'categories[0][recursive]': 0
+                });
+                deletedSummary.categories++;
+                console.log(`[delete-category] Deleted Moodle category #${catId} via REST`);
+            } catch (moodleErr) {
+                console.warn(`[delete-category] REST category delete failed for #${catId}, trying direct DB:`, moodleErr.message);
+                try {
+                    await moodleDbPool.execute('DELETE FROM mdl_course_categories WHERE id = ?', [catId]);
+                    deletedSummary.categories++;
+                    console.log(`[delete-category] Deleted Moodle category #${catId} via direct DB`);
+                } catch (dbErr) {
+                    console.error(`[delete-category] Failed to delete category #${catId}:`, dbErr.message);
+                }
+            }
+
+            // Clean up local category references
+            try {
+                await db.execute('DELETE FROM scl_local_categories WHERE moodle_category_id = ?', [catId]);
+            } catch (e) { /* ignore */ }
+        }
+
+        // Final sweep: delete any course_lifecycle_master entries referencing deleted category IDs
+        try {
+            const placeholders = allCatIds.map(() => '?').join(',');
+            await db.execute(
+                `DELETE FROM course_lifecycle_master WHERE programme_type_category_id IN (${placeholders}) OR program_category_id IN (${placeholders}) OR year_category_id IN (${placeholders}) OR semester_category_id IN (${placeholders})`,
+                [...allCatIds, ...allCatIds, ...allCatIds, ...allCatIds]
+            );
+        } catch (e) { console.warn(`[delete-category] lifecycle_master category sweep error:`, e.message); }
+
+        const summary = `Deleted "${catName}": ${deletedSummary.categories} categories, ${allCourses.length} courses, ${deletedSummary.accreditations} accreditations, ${deletedSummary.visits} visits, ${deletedSummary.inductions} inductions, ${deletedSummary.registrations} registrations, ${deletedSummary.enrollments} enrollments`;
+        console.log(`[delete-category] ${summary}`);
+
+        return res.json({
+            success: true,
+            message: summary,
+            data: { id: rawId, name: catName, ...deletedSummary, coursesDeleted: allCourses.length }
+        });
+    } catch (error) {
+        console.error('[delete-category] ERROR:', error.message);
+        return res.status(500).json({ success: false, message: 'Failed to delete category', error: error.message });
+    }
+});
+
 router.get('/moodle/courses-by-structure', async (req, res) => {
     try {
         const normalizeLocal = (value) => String(value || '').trim().toLowerCase();
@@ -3658,18 +3842,45 @@ router.get('/course-registrations/:id', async (req, res) => {
 
 router.get('/course-lifecycle/dashboard', async (req, res) => {
     try {
-        // Get course lifecycle data from the Moodle database
+        // Get course lifecycle data directly from Moodle category hierarchy
+        // Walks up to 4 levels: Programme Type → Programme → Year → Semester → Course
         const lifecycleCourses = await safeMoodleSelectRows(`
-            SELECT DISTINCT
-                course_id,
-                course_name,
-                course_code,
-                course_type,
-                programme_type_name,
-                program_name,
-                academic_year,
-                semester_name
-            FROM course_lifecycle
+            SELECT
+                c.id        AS course_id,
+                c.fullname  AS course_name,
+                c.shortname AS course_code,
+                CASE
+                    WHEN cat4.id IS NOT NULL THEN cat4.name
+                    WHEN cat3.id IS NOT NULL THEN cat3.name
+                    WHEN cat2.id IS NOT NULL THEN cat2.name
+                    ELSE cat1.name
+                END AS programme_type_name,
+                CASE
+                    WHEN cat4.id IS NOT NULL THEN cat3.name
+                    WHEN cat3.id IS NOT NULL THEN cat2.name
+                    WHEN cat2.id IS NOT NULL THEN cat1.name
+                    ELSE NULL
+                END AS program_name,
+                CASE
+                    WHEN cat4.id IS NOT NULL THEN cat2.name
+                    WHEN cat3.id IS NOT NULL THEN cat1.name
+                    ELSE NULL
+                END AS academic_year,
+                CASE
+                    WHEN cat4.id IS NOT NULL THEN cat1.name
+                    ELSE NULL
+                END AS semester_name
+            FROM mdl_course c
+            JOIN mdl_course_categories cat1 ON c.category = cat1.id
+            LEFT JOIN mdl_course_categories cat2 ON cat1.parent = cat2.id AND cat1.parent != 0
+            LEFT JOIN mdl_course_categories cat3 ON cat2.parent = cat3.id AND cat2.parent != 0
+            LEFT JOIN mdl_course_categories cat4 ON cat3.parent = cat4.id AND cat3.parent != 0
+            WHERE c.id != 1
+              AND cat1.depth = 4
+              AND COALESCE(cat1.visible, 1) = 1
+              AND COALESCE(cat2.visible, 1) = 1
+              AND COALESCE(cat3.visible, 1) = 1
+              AND COALESCE(cat4.visible, 1) = 1
             ORDER BY programme_type_name, program_name, academic_year, semester_name
         `);
         
