@@ -201,6 +201,9 @@ const CourseInductionsDetail = () => {
     const [expandedSections, setExpandedSections] = useState({ 1: true });
     const [editingRowIdx, setEditingRowIdx] = useState(null);
     const [editingSection, setEditingSection] = useState(null);
+    const [customAreas, setCustomAreas] = useState({});
+    const [addingCustomArea, setAddingCustomArea] = useState(null);
+    const [customAreaInput, setCustomAreaInput] = useState('');
     const sourceInputRef = useRef(null);
     const evidenceInputRef = useRef(null);
     const [currentForm, setCurrentForm] = useState({
@@ -329,6 +332,22 @@ const CourseInductionsDetail = () => {
                     }));
                 }
                 
+                // Detect custom areas (requirement areas not in SECTION_CONFIG) so dropdown shows them
+                const detectedCustom = {};
+                for (let sNum = 1; sNum <= 8; sNum++) {
+                    const predefined = new Set((SECTION_CONFIG[sNum]?.requirements || []).map(r => r.area));
+                    const customs = (sectionsByNum[sNum] || [])
+                        .filter(t => t.area && !predefined.has(t.area))
+                        .map(t => ({ area: t.area, description: t.description || '' }));
+                    const seen = new Set();
+                    detectedCustom[sNum] = customs.filter(c => {
+                        if (seen.has(c.area)) return false;
+                        seen.add(c.area);
+                        return true;
+                    });
+                }
+                setCustomAreas(detectedCustom);
+
                 setFormData({
                     course_title: induction.course_title || '',
                     course_code: induction.course_code || '',
@@ -735,6 +754,8 @@ const CourseInductionsDetail = () => {
         if (evidenceInputRef.current) evidenceInputRef.current.value = '';
         setEditingRowIdx(null);
         setEditingSection(null);
+        setAddingCustomArea(null);
+        setCustomAreaInput('');
     };
 
     const uploadRequirementDocument = async (file) => {
@@ -982,23 +1003,84 @@ const CourseInductionsDetail = () => {
                                         {/* Row 1: Requirement Area (full width) */}
                                         <div className="mb-2">
                                             <label className="block text-xs font-semibold text-gray-700 mb-0.5">Requirement Area *</label>
-                                            <select
-                                                value={currentForm.area}
-                                                onChange={(e) => {
-                                                    const selectedReq = (SECTION_CONFIG[sectionNum].requirements || []).find(r => r.area === e.target.value);
-                                                    setCurrentForm(prev => ({
-                                                        ...prev,
-                                                        area: e.target.value,
-                                                        description: selectedReq?.description || ''
-                                                    }));
-                                                }}
-                                                className="w-full px-2 py-1 border border-gray-300 rounded text-xs"
-                                            >
-                                                <option value="">Select Area</option>
-                                                {(SECTION_CONFIG[sectionNum].requirements || []).map(req => (
-                                                    <option key={req.area} value={req.area}>{req.area}</option>
-                                                ))}
-                                            </select>
+                                            {addingCustomArea === sectionNum ? (
+                                                <div className="flex gap-2">
+                                                    <input
+                                                        type="text"
+                                                        value={customAreaInput}
+                                                        onChange={(e) => setCustomAreaInput(e.target.value)}
+                                                        placeholder="Enter custom requirement area name"
+                                                        className="flex-1 px-2 py-1 border border-purple-300 rounded text-xs focus:ring-1 focus:ring-purple-500 focus:border-purple-500"
+                                                        autoFocus
+                                                        onKeyDown={(e) => {
+                                                            if (e.key === 'Enter' && customAreaInput.trim()) {
+                                                                e.preventDefault();
+                                                                const trimmed = customAreaInput.trim();
+                                                                setCustomAreas(prev => ({
+                                                                    ...prev,
+                                                                    [sectionNum]: [...(prev[sectionNum] || []), { area: trimmed, description: '' }]
+                                                                }));
+                                                                setCurrentForm(prev => ({ ...prev, area: trimmed, description: '' }));
+                                                                setCustomAreaInput('');
+                                                                setAddingCustomArea(null);
+                                                            }
+                                                        }}
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            if (customAreaInput.trim()) {
+                                                                const trimmed = customAreaInput.trim();
+                                                                setCustomAreas(prev => ({
+                                                                    ...prev,
+                                                                    [sectionNum]: [...(prev[sectionNum] || []), { area: trimmed, description: '' }]
+                                                                }));
+                                                                setCurrentForm(prev => ({ ...prev, area: trimmed, description: '' }));
+                                                            }
+                                                            setCustomAreaInput('');
+                                                            setAddingCustomArea(null);
+                                                        }}
+                                                        className="px-3 py-1 bg-purple-600 text-white rounded text-xs hover:bg-purple-700"
+                                                    >
+                                                        Add
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => { setCustomAreaInput(''); setAddingCustomArea(null); }}
+                                                        className="px-3 py-1 bg-gray-300 text-gray-700 rounded text-xs hover:bg-gray-400"
+                                                    >
+                                                        Cancel
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <select
+                                                    value={currentForm.area}
+                                                    onChange={(e) => {
+                                                        if (e.target.value === '__add_custom__') {
+                                                            setAddingCustomArea(sectionNum);
+                                                            setCustomAreaInput('');
+                                                            return;
+                                                        }
+                                                        const allReqs = [...(SECTION_CONFIG[sectionNum].requirements || []), ...(customAreas[sectionNum] || [])];
+                                                        const selectedReq = allReqs.find(r => r.area === e.target.value);
+                                                        setCurrentForm(prev => ({
+                                                            ...prev,
+                                                            area: e.target.value,
+                                                            description: selectedReq?.description || ''
+                                                        }));
+                                                    }}
+                                                    className="w-full px-2 py-1 border border-gray-300 rounded text-xs"
+                                                >
+                                                    <option value="">Select Area</option>
+                                                    {(SECTION_CONFIG[sectionNum].requirements || []).map(req => (
+                                                        <option key={req.area} value={req.area}>{req.area}</option>
+                                                    ))}
+                                                    {(customAreas[sectionNum] || []).map(req => (
+                                                        <option key={`custom-${req.area}`} value={req.area}>{req.area}</option>
+                                                    ))}
+                                                    <option value="__add_custom__" style={{ color: '#7c3aed', fontWeight: 'bold' }}>+ Add Custom Area</option>
+                                                </select>
+                                            )}
                                         </div>
 
                                         {/* Row 2: Description & Responsible Person */}
