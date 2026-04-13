@@ -697,6 +697,24 @@ router.delete('/programme-intakes/:id', async (req, res) => {
         const intakeId = Number(req.params.id);
         if (!intakeId) return res.status(400).json({ success: false, message: 'Invalid intake ID' });
 
+        // Look up the Moodle cohort ID before deleting the intake
+        const [intakeRows] = await db.execute(
+            'SELECT moodle_cohort_id FROM programme_intakes WHERE id = ?', [intakeId]
+        );
+        const moodleCohortId = intakeRows?.[0]?.moodle_cohort_id;
+
+        // Delete the Moodle cohort and its members if it exists
+        if (moodleCohortId && moodleDbPool) {
+            try {
+                await moodleDbPool.execute('DELETE FROM mdl_cohort_members WHERE cohortid = ?', [moodleCohortId]);
+                await moodleDbPool.execute('DELETE FROM mdl_cohort WHERE id = ?', [moodleCohortId]);
+                console.log(`[programme-intakes DELETE] Deleted Moodle cohort ${moodleCohortId} and its members`);
+            } catch (moodleErr) {
+                console.error(`[programme-intakes DELETE] Failed to delete Moodle cohort ${moodleCohortId}:`, moodleErr.message);
+                // Continue with local deletion even if Moodle cleanup fails
+            }
+        }
+
         // Delete associated registrations
         await db.execute('DELETE FROM course_registrations WHERE intake_id = ?', [intakeId]);
         await db.execute('DELETE FROM programme_intakes WHERE id = ?', [intakeId]);
