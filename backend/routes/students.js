@@ -3433,6 +3433,18 @@ router.put('/moodle/rename-category/:id', async (req, res) => {
         } finally {
             moodleConn.release();
         }
+
+        // Cascade rename to local SCL course_lifecycle_master table
+        // The category ID may be stored in any of the 4 level columns
+        try {
+            await db.execute('UPDATE course_lifecycle_master SET programme_type_name = ? WHERE programme_type_category_id = ?', [newName, rawId]);
+            await db.execute('UPDATE course_lifecycle_master SET program_name = ? WHERE program_category_id = ?', [newName, rawId]);
+            await db.execute('UPDATE course_lifecycle_master SET academic_year = ? WHERE year_category_id = ?', [newName, rawId]);
+            await db.execute('UPDATE course_lifecycle_master SET semester_name = ? WHERE semester_category_id = ?', [newName, rawId]);
+        } catch (localErr) {
+            console.warn('[rename-category] Failed to cascade to course_lifecycle_master:', localErr.message);
+        }
+
         console.log(`[rename-category] Category #${rawId} renamed to "${newName}"`);
         return res.json({ success: true, message: `Category renamed to "${newName}"` });
     } catch (error) {
@@ -3455,11 +3467,29 @@ router.put('/moodle/rename-course/:id', async (req, res) => {
         }
 
         const moodleConn = await moodleDbPool.getConnection();
+        let courseCode = null;
         try {
             await moodleConn.execute('UPDATE mdl_course SET fullname = ? WHERE id = ?', [newName, courseId]);
+            // Get the shortname to cascade rename to local SCL tables
+            const [codeRows] = await moodleConn.execute('SELECT shortname FROM mdl_course WHERE id = ?', [courseId]);
+            courseCode = codeRows?.[0]?.shortname || null;
         } finally {
             moodleConn.release();
         }
+
+        // Cascade rename to local SCL tables using course_code (shortname)
+        if (courseCode) {
+            try {
+                await db.execute('UPDATE course_lifecycle_master SET course_title = ? WHERE course_code = ?', [newName, courseCode]);
+                await db.execute('UPDATE course_accreditations SET course_title = ? WHERE course_code = ?', [newName, courseCode]);
+                await db.execute('UPDATE course_visits SET course_title = ? WHERE course_code = ?', [newName, courseCode]);
+                await db.execute('UPDATE course_inductions SET course_title = ? WHERE course_code = ?', [newName, courseCode]);
+                await db.execute('UPDATE course_registrations SET course_title = ? WHERE course_code = ?', [newName, courseCode]);
+            } catch (localErr) {
+                console.warn('[rename-course] Failed to cascade to local tables:', localErr.message);
+            }
+        }
+
         console.log(`[rename-course] Course #${courseId} renamed to "${newName}"`);
         return res.json({ success: true, message: `Course renamed to "${newName}"` });
     } catch (error) {
