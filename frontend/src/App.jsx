@@ -130,9 +130,7 @@ function App() {
                                 <Dashboard user={user} onLogout={handleLogout} viewMode="teacher" />
                             </Layout>
                         ) : canAccessStudentPortal ? (
-                            <Layout user={user} onLogout={handleLogout}>
-                                <Dashboard user={user} onLogout={handleLogout} viewMode="student" />
-                            </Layout>
+                            <Navigate to="/student/portal" replace />
                         ) : (
                             <Layout user={user} onLogout={handleLogout}>
                                 <Dashboard user={user} onLogout={handleLogout} viewMode="auto" />

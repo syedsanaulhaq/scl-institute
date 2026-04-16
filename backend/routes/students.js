@@ -11780,5 +11780,310 @@ router.post('/course-change-requests/:requestId/review', async (req, res) => {
     }
 });
 
+// ===============================================
+// Student Dashboard — aggregated Moodle + local data
+// Uses direct DB queries since Moodle REST may not be reachable from Docker
+// ===============================================
+router.get('/student-dashboard', async (req, res) => {
+    try {
+        const { email } = req.query;
+        if (!email) {
+            return res.status(400).json({ success: false, message: 'Email is required' });
+        }
+
+        // 1. Get local application data
+        const [apps] = await db.execute(
+            `SELECT id, application_reference, first_name, middle_names, last_name, email,
+                    course_title, course_code, course_type, programme_type_name, program_name,
+                    mode_of_study, intake_start_date, application_status, nationality,
+                    contact_number, date_of_birth, gender
+             FROM student_applications
+             WHERE email = ? AND (is_deleted = 0 OR is_deleted IS NULL)
+             ORDER BY FIELD(application_status, 'accepted', 'conditional_accept', 'under_review', 'submitted', 'rejected'), created_at DESC`,
+            [email]
+        );
+        const acceptedApp = apps.find(a => a.application_status === 'accepted') || apps[0] || null;
+
+        // 2. Resolve Moodle user via direct DB
+        let moodleUser = null;
+        let moodleConn = null;
+        try {
+            moodleConn = await moodleDbPool.getConnection();
+            const [mUsers] = await moodleConn.execute(
+                'SELECT id, username, firstname, lastname, email, city, country, lastaccess, firstaccess FROM mdl_user WHERE email = ? AND deleted = 0 AND suspended = 0 LIMIT 1',
+                [email]
+            );
+            if (mUsers.length > 0) {
+                moodleUser = mUsers[0];
+            }
+        } catch (e) {
+            console.warn('[student-dashboard] Moodle user lookup failed:', e.message);
+        }
+
+        // 3. Get enrolled courses from Moodle DB
+        let courses = [];
+        if (moodleUser && moodleConn) {
+            try {
+                const [enrolledCourses] = await moodleConn.execute(`
+                    SELECT c.id, c.fullname, c.shortname, c.startdate, c.enddate, c.visible, c.category,
+                           ue.timestart AS enrol_start, ue.timeend AS enrol_end,
+                           COALESCE(cmc_done.completed_activities, 0) AS completed_activities,
+                           COALESCE(cmc_total.total_activities, 0) AS total_activities,
+                           ul.timeaccess AS lastaccess
+                    FROM mdl_user_enrolments ue
+                    JOIN mdl_enrol e ON ue.enrolid = e.id
+                    JOIN mdl_course c ON e.courseid = c.id
+                    LEFT JOIN (
+                        SELECT cm.course, COUNT(*) AS completed_activities
+                        FROM mdl_course_modules_completion cmc
+                        JOIN mdl_course_modules cm ON cmc.coursemoduleid = cm.id
+                        WHERE cmc.userid = ? AND cmc.completionstate > 0
+                        GROUP BY cm.course
+                    ) cmc_done ON cmc_done.course = c.id
+                    LEFT JOIN (
+                        SELECT course, COUNT(*) AS total_activities
+                        FROM mdl_course_modules
+                        WHERE completion > 0 AND deletioninprogress = 0
+                        GROUP BY course
+                    ) cmc_total ON cmc_total.course = c.id
+                    LEFT JOIN mdl_user_lastaccess ul ON ul.userid = ue.userid AND ul.courseid = c.id
+                    WHERE ue.userid = ? AND c.id != 1 AND c.visible = 1
+                    ORDER BY c.fullname`,
+                    [moodleUser.id, moodleUser.id]
+                );
+                courses = enrolledCourses.map(c => {
+                    const total = Number(c.total_activities) || 0;
+                    const done = Number(c.completed_activities) || 0;
+                    const progress = total > 0 ? Math.round((done / total) * 100) : null;
+                    return {
+                        id: c.id,
+                        fullname: c.fullname,
+                        shortname: c.shortname,
+                        progress,
+                        completed: total > 0 && done >= total,
+                        startdate: c.startdate ? new Date(c.startdate * 1000).toISOString() : null,
+                        enddate: c.enddate ? new Date(c.enddate * 1000).toISOString() : null,
+                        lastaccess: c.lastaccess ? new Date(c.lastaccess * 1000).toISOString() : null,
+                        visible: c.visible,
+                        category: c.category,
+                        completedActivities: done,
+                        totalActivities: total
+                    };
+                });
+            } catch (e) {
+                console.warn('[student-dashboard] Moodle courses fetch failed:', e.message);
+            }
+        }
+
+        // 4. Get grades from Moodle DB
+        let grades = [];
+        if (moodleUser && moodleConn) {
+            try {
+                const [gradeRows] = await moodleConn.execute(`
+                    SELECT gi.courseid,
+                           ROUND(gg.finalgrade, 2) AS grade,
+                           ROUND(gi.grademax, 2) AS grademax,
+                           gi.itemname
+                    FROM mdl_grade_grades gg
+                    JOIN mdl_grade_items gi ON gg.itemid = gi.id
+                    WHERE gg.userid = ? AND gi.itemtype = 'course'
+                    ORDER BY gi.courseid`,
+                    [moodleUser.id]
+                );
+                grades = gradeRows.map(g => ({
+                    courseid: g.courseid,
+                    grade: g.grade != null ? `${g.grade}` : '-',
+                    grademax: g.grademax,
+                    rawgrade: g.grade
+                }));
+            } catch (e) {
+                console.warn('[student-dashboard] Moodle grades fetch failed:', e.message);
+            }
+        }
+
+        // Merge grades into courses
+        const gradeMap = new Map(grades.map(g => [g.courseid, g]));
+        courses = courses.map(c => ({
+            ...c,
+            grade: gradeMap.get(c.id)?.grade || '-',
+            grademax: gradeMap.get(c.id)?.grademax || null,
+            rawgrade: gradeMap.get(c.id)?.rawgrade || null
+        }));
+
+        // 5. Get notifications from Moodle DB
+        let notifications = [];
+        if (moodleUser && moodleConn) {
+            try {
+                const [notifRows] = await moodleConn.execute(`
+                    SELECT id, subject, smallmessage, fullmessage, component, eventtype,
+                           timecreated, timeread
+                    FROM mdl_notifications
+                    WHERE useridto = ?
+                    ORDER BY timecreated DESC
+                    LIMIT 15`,
+                    [moodleUser.id]
+                );
+                notifications = notifRows.map(n => ({
+                    id: n.id,
+                    subject: n.subject || 'Notification',
+                    text: n.smallmessage || n.fullmessage || '',
+                    timecreated: n.timecreated ? new Date(n.timecreated * 1000).toISOString() : null,
+                    read: n.timeread != null,
+                    type: n.eventtype || n.component || 'notification'
+                }));
+            } catch (e) {
+                console.warn('[student-dashboard] Moodle notifications fetch failed:', e.message);
+            }
+        }
+
+        // 6. Get unread message count from Moodle DB
+        let unreadMessages = 0;
+        if (moodleUser && moodleConn) {
+            try {
+                const [unreadRows] = await moodleConn.execute(`
+                    SELECT COUNT(*) AS cnt
+                    FROM mdl_messages m
+                    JOIN mdl_message_conversation_members mcm ON m.conversationid = mcm.conversationid
+                    LEFT JOIN mdl_message_user_actions mua ON mua.messageid = m.id AND mua.userid = mcm.userid AND mua.action = 1
+                    WHERE mcm.userid = ? AND m.useridfrom != ? AND mua.id IS NULL`,
+                    [moodleUser.id, moodleUser.id]
+                );
+                unreadMessages = unreadRows[0]?.cnt || 0;
+            } catch (e) {
+                console.warn('[student-dashboard] Moodle unread messages failed:', e.message);
+            }
+        }
+
+        // 7. Get upcoming calendar events from Moodle DB
+        let upcomingEvents = [];
+        if (moodleUser && moodleConn) {
+            try {
+                const now = Math.floor(Date.now() / 1000);
+                const [eventRows] = await moodleConn.execute(`
+                    SELECT e.id, e.name, e.description, e.courseid, e.timestart, e.timeduration,
+                           e.eventtype, c.fullname AS coursename
+                    FROM mdl_event e
+                    LEFT JOIN mdl_course c ON e.courseid = c.id
+                    WHERE (e.userid = ? OR e.courseid IN (
+                        SELECT e2.courseid FROM mdl_enrol e2
+                        JOIN mdl_user_enrolments ue2 ON ue2.enrolid = e2.id
+                        WHERE ue2.userid = ?
+                    ) OR e.eventtype = 'site')
+                    AND e.timestart >= ?
+                    ORDER BY e.timestart ASC
+                    LIMIT 10`,
+                    [moodleUser.id, moodleUser.id, now]
+                );
+                upcomingEvents = eventRows.map(ev => ({
+                    id: ev.id,
+                    name: ev.name,
+                    description: (ev.description || '').replace(/<[^>]*>/g, '').substring(0, 200),
+                    coursename: ev.coursename || '',
+                    courseid: ev.courseid,
+                    timestart: ev.timestart ? new Date(ev.timestart * 1000).toISOString() : null,
+                    timeduration: ev.timeduration,
+                    eventtype: ev.eventtype
+                }));
+            } catch (e) {
+                console.warn('[student-dashboard] Moodle events fetch failed:', e.message);
+            }
+        }
+
+        // 8. Get announcements from course news forums via Moodle DB
+        let announcements = [];
+        if (moodleUser && moodleConn && courses.length > 0) {
+            try {
+                const courseIds = courses.slice(0, 10).map(c => c.id);
+                const placeholders = courseIds.map(() => '?').join(',');
+                const [announceRows] = await moodleConn.execute(`
+                    SELECT fd.id, fd.name AS subject, fp.message, fp.modified AS timemodified,
+                           c.fullname AS coursename, c.id AS courseid,
+                           CONCAT(u.firstname, ' ', u.lastname) AS userfullname
+                    FROM mdl_forum f
+                    JOIN mdl_forum_discussions fd ON fd.forum = f.id
+                    JOIN mdl_forum_posts fp ON fp.discussion = fd.id AND fp.parent = 0
+                    JOIN mdl_course c ON f.course = c.id
+                    LEFT JOIN mdl_user u ON fp.userid = u.id
+                    WHERE f.type = 'news' AND f.course IN (${placeholders})
+                    ORDER BY fp.modified DESC
+                    LIMIT 10`,
+                    courseIds
+                );
+                announcements = announceRows.map(a => ({
+                    id: a.id,
+                    subject: a.subject,
+                    message: (a.message || '').replace(/<[^>]*>/g, '').substring(0, 300),
+                    coursename: a.coursename,
+                    courseid: a.courseid,
+                    timemodified: a.timemodified ? new Date(a.timemodified * 1000).toISOString() : null,
+                    userfullname: a.userfullname || 'System'
+                }));
+            } catch (e) {
+                console.warn('[student-dashboard] Moodle announcements fetch failed:', e.message);
+            }
+        }
+
+        // Release Moodle connection
+        if (moodleConn) {
+            try { moodleConn.release(); } catch (_) {}
+        }
+
+        // 9. Calculate summary stats
+        const totalCourses = courses.length;
+        const completedCourses = courses.filter(c => c.completed === true).length;
+        const inProgressCourses = courses.filter(c => c.progress !== null && c.progress > 0 && !c.completed).length;
+        const avgProgress = courses.length > 0
+            ? Math.round(courses.reduce((sum, c) => sum + (c.progress || 0), 0) / courses.length)
+            : 0;
+
+        return res.json({
+            success: true,
+            data: {
+                student: {
+                    name: moodleUser
+                        ? `${moodleUser.firstname} ${moodleUser.lastname}`
+                        : acceptedApp
+                            ? `${acceptedApp.first_name} ${acceptedApp.last_name}`
+                            : 'Student',
+                    email,
+                    moodleId: moodleUser?.id || null,
+                    nationality: acceptedApp?.nationality || null,
+                    phone: acceptedApp?.contact_number || null,
+                    dateOfBirth: acceptedApp?.date_of_birth || null,
+                    gender: acceptedApp?.gender || null,
+                    lastMoodleAccess: moodleUser?.lastaccess ? new Date(moodleUser.lastaccess * 1000).toISOString() : null
+                },
+                application: acceptedApp ? {
+                    id: acceptedApp.id,
+                    reference: acceptedApp.application_reference,
+                    status: acceptedApp.application_status,
+                    courseTitle: acceptedApp.course_title,
+                    courseCode: acceptedApp.course_code,
+                    programmeType: acceptedApp.programme_type_name,
+                    programName: acceptedApp.program_name,
+                    modeOfStudy: acceptedApp.mode_of_study,
+                    intakeStartDate: acceptedApp.intake_start_date
+                } : null,
+                courses,
+                summary: {
+                    totalCourses,
+                    completedCourses,
+                    inProgressCourses,
+                    notStarted: totalCourses - completedCourses - inProgressCourses,
+                    averageProgress: avgProgress
+                },
+                grades,
+                notifications,
+                unreadMessages,
+                upcomingEvents,
+                announcements
+            }
+        });
+    } catch (error) {
+        console.error('[student-dashboard] ERROR:', error);
+        return res.status(500).json({ success: false, message: 'Failed to load student dashboard', error: error.message });
+    }
+});
+
 module.exports = router;
 

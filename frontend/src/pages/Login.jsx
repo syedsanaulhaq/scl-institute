@@ -36,7 +36,7 @@ const LoginPage = ({ onLoginSuccess }) => {
 
             // Student-only users land on student portal; mixed and management users land on main dashboard.
             if (roleContext.canAccessStudentPortal && !roleContext.canAccessManagementPortal) {
-                navigate('/student/dashboard');
+                navigate('/student/portal');
             } else {
                 navigate('/');
             }
