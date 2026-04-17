@@ -1,21 +1,28 @@
 
 // NUCLEAR OPTION - ABSOLUTE OVERRIDE FOR NAV TEXT COLOR
-.navbar-nav .nav-link,
-.navbar .nav-link,
-[role="menuitem"],
-[role="tab"],
+.navbar-brand,
+.navbar-text,
 .navbar a,
 .navbar button,
-nav [role="menuitem"],
-nav [role="tab"],
+.navbar-nav .nav-link,
+.navbar-nav a,
+#page-navbar,
+#page-navbar a,
+[role="navigation"],
+[role="navigation"] a,
+[role="menuitem"],
+[role="tab"],
+nav a,
+header a,
+header button,
 header [role="menuitem"],
 header [role="tab"] {
-    color: #000000 !important;
-    letter-spacing: 0.5px !important;
+    color: black !important;
+    text-decoration: none !important;
 }
 
 .navbar .navbar-nav .nav-item .nav-link {
-    color: #000000 !important;
+    color: white !important;
 }
 
 [role="menuitem"]:hover,
