@@ -89,7 +89,7 @@ header button,
 [role="menubar"] [role="menuitem"],
 .navbar menubar,
 [role="menubar"] {
-    color: white !important;
+    color: white;
 }
 
 /* Submenu items - ENSURE BLACK text */
