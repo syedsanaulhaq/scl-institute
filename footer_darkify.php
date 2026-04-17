@@ -16,15 +16,16 @@ nav.navbar,
     background-color: transparent !important;
 }
 
-/* Navbar text and links - all white (TOP NAVBAR ONLY) */
+/* Navbar text and links - all white (TOP NAVBAR ONLY) - keep it simple */
+.navbar-nav .nav-link {
+    color: white !important;
+}
+
 .navbar-brand,
 .navbar-text,
 .navbar a,
 .navbar button,
 .navbar span,
-.navbar-nav .nav-link,
-.navbar-nav a,
-.navbar-nav span,
 .navbar-dark .navbar-text,
 .navbar svg,
 .navbar i,
@@ -34,8 +35,6 @@ nav.navbar,
 .navbar .far,
 .navbar .fab,
 .navbar-light .navbar-brand,
-.navbar-light .navbar-nav .nav-link,
-.navbar button:not(.btn-close),
 header button,
 [role="navigation"] button,
 .usermenu a,
@@ -51,7 +50,16 @@ header button,
     color: white !important;
 }
 
-/* Ensure submenu items are NOT styled */
+/* Submenu items - ENSURE BLACK text */
+.moremenu,
+.moremenu a,
+.moremenu button,
+.moremenu span,
+.moremenu [role="menuitem"] {
+    color: #000000 !important;
+}
+
+/* Submenu items - BLACK text */
 .moremenu,
 .moremenu.navigation,
 nav.moremenu.navigation,
@@ -60,7 +68,7 @@ nav.moremenu.navigation,
 .moremenu button,
 .moremenu span,
 .moremenu .nav-link {
-    color: inherit !important;
+    color: #000000 !important;
     background-color: transparent !important;
 }
 
@@ -89,27 +97,6 @@ nav[aria-label="Breadcrumb"] span,
     background-color: transparent !important;
 }
 
-/* Force all navbar and navigation children to have white text/color */
-.navbar *,
-[role="navigation"] *,
-.navbar,
-[role="navigation"],
-menuitem,
-[role="menuitem"],
-menubar,
-[role="menubar"] {
-    color: white !important;
-}
-
-/* But exclude moremenu from being white */
-.navbar .moremenu,
-.navbar .moremenu *,
-.navbar .moremenu a,
-.navbar .moremenu button,
-[role="navigation"] .moremenu,
-[role="navigation"] .moremenu * {
-    color: inherit !important;
-}
 </style>
 
 <script>
@@ -119,32 +106,47 @@ document.addEventListener('DOMContentLoaded', function() {
         // Purple background for entire navbar and all sections
         var navbar = document.querySelector('.navbar');
         if (navbar) {
-            navbar.setAttribute('style', 'background-color: rgb(85, 51, 153) !important; background: rgb(85, 51, 153) !important;');
+            navbar.style.backgroundColor = 'rgb(85, 51, 153)';
         }
         
-        var containerFluid = document.querySelector('.navbar .container-fluid');
-        if (containerFluid) {
-            containerFluid.setAttribute('style', 'background-color: transparent !important;');
-        }
+        // Use MutationObserver to watch for style changes and revert them
+        var observer = new MutationObserver(function(mutations) {
+            mutations.forEach(function(mutation) {
+                if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
+                    var el = mutation.target;
+                    
+                    // If it's a nav-link or moremenu item, enforce our color
+                    if (el.matches('.navbar-nav .nav-link') && !el.closest('.moremenu')) {
+                        el.style.color = 'white';
+                    }
+                    if (el.matches('.moremenu, .moremenu *')) {
+                        el.style.color = '#000000';
+                    }
+                }
+            });
+        });
         
-        // White color for navbar links, buttons, text (but NOT moremenu)
-        var navElements = document.querySelectorAll('.navbar a, .navbar button, .navbar span, .navbar [role="menuitem"], .navbar menubar, [role="menubar"], [role="menuitem"], .usermenu a, .usermenu button, .navbar-nav .nav-link');
+        // Observe all navbar elements for attribute changes
+        var navElements = document.querySelectorAll('.navbar-nav .nav-link, .navbar a, .navbar button, .moremenu, .moremenu *');
         navElements.forEach(function(el) {
+            observer.observe(el, {
+                attributes: true,
+                attributeFilter: ['style']
+            });
+        });
+        
+        // Also force colors immediately
+        var navLinks = document.querySelectorAll('.navbar-nav .nav-link');
+        navLinks.forEach(function(el) {
             if (!el.closest('.moremenu')) {
-                el.style.setProperty('color', 'white', 'important');
+                el.style.color = 'white';
             }
         });
         
-        // Fill attribute for SVG icons to be white (but NOT moremenu)
-        var svgs = document.querySelectorAll('.navbar svg:not(.moremenu svg)');
-        svgs.forEach(function(svg) {
-            if (!svg.closest('.moremenu')) {
-                svg.setAttribute('fill', 'white');
-                var paths = svg.querySelectorAll('path, circle, rect, polygon');
-                paths.forEach(function(path) {
-                    path.setAttribute('fill', 'white');
-                });
-            }
+        // Black for moremenu
+        var moremenuItems = document.querySelectorAll('.moremenu, .moremenu a, .moremenu button, .moremenu span');
+        moremenuItems.forEach(function(el) {
+            el.style.color = '#000000';
         });
     }, 100);
 });
