@@ -60,6 +60,24 @@ header button,
     color: #E9D5FF !important;
     opacity: 0.9 !important;
 }
+
+/* Breadcrumb - all black */
+nav[aria-label="Breadcrumb"],
+.breadcrumb,
+.nav-breadcrumb,
+nav[aria-label="Breadcrumb"] *,
+.breadcrumb *,
+.nav-breadcrumb *,
+nav[aria-label="Breadcrumb"] a,
+.breadcrumb a,
+.nav-breadcrumb a,
+nav[aria-label="Breadcrumb"] li,
+.breadcrumb li,
+nav[aria-label="Breadcrumb"] span,
+.breadcrumb span {
+    color: #000000 !important;
+    background-color: transparent !important;
+}
 </style>
 
 <script>
@@ -101,11 +119,23 @@ document.addEventListener('DOMContentLoaded', function() {
     }, 100);
 });
 
-// Make breadcrumb links black (banner area should stay white background)
+// Make breadcrumb links and all breadcrumb elements black
 (function() {
     function fixBreadcrumbs() {
-        var breadcrumbs = document.querySelectorAll('nav[aria-label="Breadcrumb"] a, .breadcrumb a, .nav-breadcrumb a');
-        breadcrumbs.forEach(function(el) {
+        // Make all breadcrumb links and text black
+        var breadcrumbs = document.querySelectorAll('nav[aria-label="Breadcrumb"], .breadcrumb, .nav-breadcrumb');
+        breadcrumbs.forEach(function(bc) {
+            bc.style.color = '#000000';
+            // Make all children black as well
+            var allChildren = bc.querySelectorAll('*');
+            allChildren.forEach(function(child) {
+                child.style.color = '#000000';
+            });
+        });
+        
+        // Specifically target breadcrumb links and items
+        var breadcrumbItems = document.querySelectorAll('nav[aria-label="Breadcrumb"] a, .breadcrumb a, .nav-breadcrumb a, .breadcrumb li, .breadcrumb span');
+        breadcrumbItems.forEach(function(el) {
             el.style.color = '#000000';
         });
     }
@@ -115,5 +145,6 @@ document.addEventListener('DOMContentLoaded', function() {
         fixBreadcrumbs();
     }
     setTimeout(fixBreadcrumbs, 100);
+    setTimeout(fixBreadcrumbs, 500);
 })();
 </script>
