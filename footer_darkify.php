@@ -5,7 +5,10 @@
 .navbar,
 nav.navbar,
 .navbar-expand,
-.navbar-light {
+.navbar-light,
+.navbar .container-fluid,
+.navbar-nav,
+.nav {
     background-color: rgb(85, 51, 153) !important;
     background: rgb(85, 51, 153) !important;
 }
@@ -29,7 +32,24 @@ nav.moremenu.navigation {
 .moremenu a,
 .moremenu button,
 .moremenu span,
-.navbar-dark .navbar-text {
+.navbar-dark .navbar-text,
+.navbar svg,
+.navbar i,
+.navbar .icon,
+.navbar .fa,
+.navbar .fas,
+.navbar .far,
+.navbar .fab,
+.navbar-light .navbar-brand,
+.navbar-light .navbar-nav .nav-link,
+.navbar button:not(.btn-close),
+header button,
+[role="navigation"] button,
+.usermenu a,
+.usermenu button,
+.usermenu span,
+.navbar .dropdown-toggle,
+.navbar .dropdown-toggle::after {
     color: white !important;
 }
 
@@ -43,25 +63,40 @@ nav.moremenu.navigation {
 </style>
 
 <script>
-// Direct moremenu styling - simple and direct
+// Direct navbar styling - ensure entire navbar is purple with white text/icons
 document.addEventListener('DOMContentLoaded', function() {
     setTimeout(function() {
+        // Purple background for entire navbar and all sections
+        var navbar = document.querySelector('.navbar');
+        if (navbar) {
+            navbar.setAttribute('style', 'background-color: rgb(85, 51, 153) !important; background: rgb(85, 51, 153) !important;');
+        }
+        
+        var containerFluid = document.querySelector('.navbar .container-fluid');
+        if (containerFluid) {
+            containerFluid.setAttribute('style', 'background-color: rgb(85, 51, 153) !important;');
+        }
+        
         // Purple background for moremenu
         var moremenu = document.querySelector('.moremenu.navigation, nav.moremenu, .moremenu');
         if (moremenu) {
             moremenu.setAttribute('style', 'background-color: rgb(85, 51, 153) !important; background: rgb(85, 51, 153) !important;');
         }
         
-        // Also style the UL inside if it exists
-        var morenavUl = document.querySelector('.moremenu .nav, .moremenu ul, .moremenu nav');
-        if (morenavUl) {
-            morenavUl.setAttribute('style', 'background-color: rgb(85, 51, 153) !important; background: rgb(85, 51, 153) !important;');
-        }
-        
-        // Color all links white
-        var allLinks = document.querySelectorAll('.moremenu a, .moremenu span, .moremenu button');
-        allLinks.forEach(function(el) {
+        // White color for ALL navbar links, buttons, text
+        var navElements = document.querySelectorAll('.navbar a, .navbar button, .navbar span, .navbar i, .navbar .fa, .navbar svg, .usermenu a, .usermenu button, .navbar-nav .nav-link');
+        navElements.forEach(function(el) {
             el.setAttribute('style', el.getAttribute('style') ? el.getAttribute('style') + '; color: white !important;' : 'color: white !important;');
+        });
+        
+        // Fill attribute for SVG icons to be white
+        var svgs = document.querySelectorAll('.navbar svg');
+        svgs.forEach(function(svg) {
+            svg.setAttribute('fill', 'white');
+            var paths = svg.querySelectorAll('path, circle, rect, polygon');
+            paths.forEach(function(path) {
+                path.setAttribute('fill', 'white');
+            });
         });
     }, 100);
 });
