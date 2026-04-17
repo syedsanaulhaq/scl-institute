@@ -5,12 +5,15 @@
 .navbar,
 nav.navbar,
 .navbar-expand,
-.navbar-light,
-.navbar .container-fluid,
-.navbar-nav,
-.nav {
+.navbar-light {
     background-color: rgb(85, 51, 153) !important;
     background: rgb(85, 51, 153) !important;
+}
+
+/* Navbar container contents - purple background */
+.navbar .container-fluid,
+.navbar-nav {
+    background-color: transparent !important;
 }
 
 /* Navbar text and links - all white (TOP NAVBAR ONLY) */
@@ -18,10 +21,10 @@ nav.navbar,
 .navbar-text,
 .navbar a,
 .navbar button,
+.navbar span,
 .navbar-nav .nav-link,
 .navbar-nav a,
 .navbar-nav span,
-.nav-link,
 .navbar-dark .navbar-text,
 .navbar svg,
 .navbar i,
@@ -39,8 +42,26 @@ header button,
 .usermenu button,
 .usermenu span,
 .navbar .dropdown-toggle,
-.navbar .dropdown-toggle::after {
+.navbar .dropdown-toggle::after,
+.navbar menubar [role="menuitem"],
+.navbar [role="menuitem"],
+[role="menubar"] [role="menuitem"],
+.navbar menubar,
+[role="menubar"] {
     color: white !important;
+}
+
+/* Ensure submenu items are NOT styled */
+.moremenu,
+.moremenu.navigation,
+nav.moremenu.navigation,
+.moremenu *,
+.moremenu a,
+.moremenu button,
+.moremenu span,
+.moremenu .nav-link {
+    color: inherit !important;
+    background-color: transparent !important;
 }
 
 /* Navbar hover state */
@@ -67,6 +88,28 @@ nav[aria-label="Breadcrumb"] span,
     color: #000000 !important;
     background-color: transparent !important;
 }
+
+/* Force all navbar and navigation children to have white text/color */
+.navbar *,
+[role="navigation"] *,
+.navbar,
+[role="navigation"],
+menuitem,
+[role="menuitem"],
+menubar,
+[role="menubar"] {
+    color: white !important;
+}
+
+/* But exclude moremenu from being white */
+.navbar .moremenu,
+.navbar .moremenu *,
+.navbar .moremenu a,
+.navbar .moremenu button,
+[role="navigation"] .moremenu,
+[role="navigation"] .moremenu * {
+    color: inherit !important;
+}
 </style>
 
 <script>
@@ -81,23 +124,27 @@ document.addEventListener('DOMContentLoaded', function() {
         
         var containerFluid = document.querySelector('.navbar .container-fluid');
         if (containerFluid) {
-            containerFluid.setAttribute('style', 'background-color: rgb(85, 51, 153) !important;');
+            containerFluid.setAttribute('style', 'background-color: transparent !important;');
         }
         
-        // White color for ALL navbar links, buttons, text
-        var navElements = document.querySelectorAll('.navbar a, .navbar button, .navbar span, .navbar i, .navbar .fa, .navbar svg, .usermenu a, .usermenu button, .navbar-nav .nav-link');
+        // White color for navbar links, buttons, text (but NOT moremenu)
+        var navElements = document.querySelectorAll('.navbar a, .navbar button, .navbar span, .navbar [role="menuitem"], .navbar menubar, [role="menubar"], [role="menuitem"], .usermenu a, .usermenu button, .navbar-nav .nav-link');
         navElements.forEach(function(el) {
-            el.setAttribute('style', el.getAttribute('style') ? el.getAttribute('style') + '; color: white !important;' : 'color: white !important;');
+            if (!el.closest('.moremenu')) {
+                el.style.setProperty('color', 'white', 'important');
+            }
         });
         
-        // Fill attribute for SVG icons to be white
-        var svgs = document.querySelectorAll('.navbar svg');
+        // Fill attribute for SVG icons to be white (but NOT moremenu)
+        var svgs = document.querySelectorAll('.navbar svg:not(.moremenu svg)');
         svgs.forEach(function(svg) {
-            svg.setAttribute('fill', 'white');
-            var paths = svg.querySelectorAll('path, circle, rect, polygon');
-            paths.forEach(function(path) {
-                path.setAttribute('fill', 'white');
-            });
+            if (!svg.closest('.moremenu')) {
+                svg.setAttribute('fill', 'white');
+                var paths = svg.querySelectorAll('path, circle, rect, polygon');
+                paths.forEach(function(path) {
+                    path.setAttribute('fill', 'white');
+                });
+            }
         });
     }, 100);
 });
