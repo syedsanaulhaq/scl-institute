@@ -1,13 +1,40 @@
 <style>
-/* == TOP NAVBAR - PURPLE BACKGROUND WITH WHITE TEXT == */
+/* == FULL-WIDTH TOP NAVBAR - PURPLE BACKGROUND WITH WHITE TEXT == */
+
+/* Primary navbar containers - purple background */
 .navbar,
 nav.navbar,
-[role="navigation"] {
+nav,
+nav.moremenu,
+.moremenu.navigation,
+#page-navbar,
+[role="navigation"],
+[role="banner"],
+header,
+.navbar-expand,
+.navbar-light {
     background-color: rgb(85, 51, 153) !important;
     background: rgb(85, 51, 153) !important;
 }
 
-/* Navbar text and links - white */
+/* Remove white background from conflicting elements */
+.moremenu,
+.navigation,
+nav.moremenu.navigation {
+    background-color: rgb(85, 51, 153) !important !important;
+}
+
+/* Page header navbar area - full purple */
+#page-header,
+#page-header-nav,
+.navbar-top,
+.navbar-nav,
+[role="banner"] > div,
+[role="banner"] > nav {
+    background-color: rgb(85, 51, 153) !important;
+}
+
+/* Navbar text and links - all white */
 .navbar-brand,
 .navbar-text,
 .navbar a,
@@ -23,10 +50,26 @@ nav.navbar,
 [role="menuitem"],
 [role="tab"],
 nav a,
+nav button,
+nav span,
+nav .nav-link,
 header a,
 header button,
 header [role="menuitem"],
-header [role="tab"] {
+header [role="tab"],
+header .nav-link,
+nav .nav-link,
+nav span,
+nav button,
+.moremenu a,
+.moremenu button,
+.moremenu span,
+.navigation a,
+.navigation button,
+.navigation span,
+[role="banner"] a,
+[role="banner"] button,
+[role="banner"] span {
     color: white !important;
     text-decoration: none !important;
 }
@@ -35,7 +78,9 @@ header [role="tab"] {
 .navbar-nav .nav-link:hover,
 .navbar a:hover,
 [role="menuitem"]:hover,
-[role="tab"]:hover {
+[role="tab"]:hover,
+nav a:hover,
+header a:hover {
     color: #E9D5FF !important;
     opacity: 0.9 !important;
 }
@@ -133,6 +178,19 @@ nav[aria-label="Breadcrumb"] ul {
             el.style.textDecoration = 'none';
         });
         
+        // FORCE moremenu background to purple
+        var moremenu = document.querySelector('.moremenu.navigation');
+        if (moremenu) {
+            moremenu.style.setProperty('background-color', 'rgb(85, 51, 153)', 'important');
+            moremenu.style.setProperty('background', 'rgb(85, 51, 153)', 'important');
+        }
+        
+        // Force all nav elements inside moremenu to have white text
+        var moremenuItems = document.querySelectorAll('.moremenu a, .moremenu button, .moremenu span, .moremenu .nav-link');
+        moremenuItems.forEach(function(el) {
+            el.style.setProperty('color', 'white', 'important');
+        });
+        
         // Breadcrumb links stay black
         var breadcrumbs = document.querySelectorAll('nav[aria-label="Breadcrumb"] a, .breadcrumb a, .nav-breadcrumb a');
         breadcrumbs.forEach(function(el) {
@@ -194,4 +252,28 @@ nav[aria-label="Breadcrumb"] ul {
         attributeFilter: ['style', 'class', 'id']
     });
 })();
+</script>
+
+<script>
+// Direct moremenu styling - simple and direct
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(function() {
+        var moremenu = document.querySelector('.moremenu.navigation, nav.moremenu, .moremenu');
+        if (moremenu) {
+            moremenu.setAttribute('style', 'background-color: rgb(85, 51, 153) !important; background: rgb(85, 51, 153) !important;');
+        }
+        
+        // Also style the UL inside if it exists
+        var morenavUl = document.querySelector('.moremenu .nav, .moremenu ul, .moremenu nav');
+        if (morenavUl) {
+            morenavUl.setAttribute('style', 'background-color: rgb(85, 51, 153) !important; background: rgb(85, 51, 153) !important;');
+        }
+        
+        // Color all links white
+        var allLinks = document.querySelectorAll('.moremenu a, .moremenu span, .moremenu button');
+        allLinks.forEach(function(el) {
+            el.setAttribute('style', el.getAttribute('style') ? el.getAttribute('style') + '; color: white !important;' : 'color: white !important;');
+        });
+    }, 100);
+});
 </script>
