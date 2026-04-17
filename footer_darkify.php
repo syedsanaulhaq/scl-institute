@@ -21,6 +21,39 @@ nav.navbar,
     color: white !important;
 }
 
+.navbar-expand .navbar-nav .nav-link {
+    color: white !important;
+}
+
+.navbar-light .navbar-nav .nav-link {
+    color: white !important;
+}
+
+.navbar-light .navbar-nav .nav-link.active {
+    color: white !important;
+}
+
+.navbar-light .navbar-nav .nav-link:focus,
+.navbar-light .navbar-nav .nav-link:hover {
+    color: #E9D5FF !important;
+}
+
+.navbar .nav-link {
+    color: white !important;
+}
+
+.navbar .nav-link.active {
+    color: white !important;
+}
+
+[role="navigation"] .nav-link {
+    color: white !important;
+}
+
+[role="menuitem"] {
+    color: white !important;
+}
+
 .navbar-brand,
 .navbar-text,
 .navbar a,
