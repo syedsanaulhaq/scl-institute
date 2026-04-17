@@ -11221,6 +11221,65 @@ router.put('/right-to-study/:id/confirm-compliance', async (req, res) => {
     }
 });
 
+// Download right-to-study document
+router.get('/right-to-study/:id/download', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { documentType, filename } = req.query;
+
+        if (!documentType || !filename) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Document type and filename are required' 
+            });
+        }
+
+        // Get the file path from right_to_study_documents table
+        const [result] = await db.execute(
+            `SELECT file_path, original_filename FROM right_to_study_documents 
+             WHERE application_id = ? AND document_type = ? AND original_filename = ?`,
+            [id, documentType, filename]
+        );
+
+        if (result.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Document not found'
+            });
+        }
+
+        const filePath = result[0].file_path;
+        const absolutePath = path.resolve(path.join(__dirname, '../uploads', filePath.replace(/^uploads\//i, '')));
+        const uploadsRoot = path.resolve(path.join(__dirname, '../uploads'));
+
+        // Security: Ensure path is within uploads directory
+        if (!absolutePath.startsWith(uploadsRoot)) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Invalid document path' 
+            });
+        }
+
+        if (!fs.existsSync(absolutePath)) {
+            return res.status(404).json({
+                success: false,
+                message: 'File not found on disk'
+            });
+        }
+
+        const downloadName = result[0].original_filename || filename;
+        return res.download(absolutePath, downloadName);
+
+    } catch (error) {
+        console.error('Error downloading right-to-study document:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to download document',
+            error: error.message
+        });
+    }
+});
+
 // Update student profile information
 router.put('/applications/:id/update-profile', async (req, res) => {
     try {

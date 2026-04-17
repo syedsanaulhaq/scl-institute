@@ -298,14 +298,29 @@ const StudentRightToStudy = ({ user }) => {
         }
     };
 
-    const handleViewDocument = (fileName) => {
-        if (!fileName) {
-            setMessage({ type: 'error', text: 'Document file not available.' });
+    const handleViewDocument = (document) => {
+        if (!document?.fileName || !appId) {
+            setMessage({ type: 'error', text: 'Document information not available.' });
             return;
         }
-        // For now, show alert with filename since we don't have direct file download yet
-        alert(`Document: ${fileName}`);
-        // TODO: Implement proper document download from backend
+
+        try {
+            // Construct download URL with query parameters
+            const downloadUrl = `${API_URL}/students/right-to-study/${appId}/download?documentType=${document.documentType}&filename=${encodeURIComponent(document.fileName)}`;
+            
+            // Create a temporary link and trigger download
+            const link = document.createElement('a');
+            link.href = downloadUrl;
+            link.setAttribute('download', document.fileName);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            setMessage({ type: 'success', text: `Downloading ${document.type}...` });
+        } catch (error) {
+            console.error('Error downloading document:', error);
+            setMessage({ type: 'error', text: 'Failed to download document. Please try again.' });
+        }
     };
 
     const getStatusBadge = (status) => {
@@ -519,7 +534,7 @@ const StudentRightToStudy = ({ user }) => {
                                     <div className="ml-14 mt-4 flex gap-3">
                                         {doc.fileName && (
                                             <button
-                                                onClick={() => handleViewDocument(doc.fileName)}
+                                                onClick={() => handleViewDocument(doc)}
                                                 className="px-4 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                                             >
                                                 View Document
