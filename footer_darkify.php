@@ -138,6 +138,21 @@ nav[aria-label="Breadcrumb"] span,
 </style>
 
 <script>
+// Function to apply correct colors to nav links
+function applyNavLinkColors() {
+    var navLinks = document.querySelectorAll('.navbar-nav .nav-link, [role="menuitem"]');
+    navLinks.forEach(function(el) {
+        if (!el.closest('.moremenu')) {
+            // If link is active, make it yellow. Otherwise, make it white
+            if (el.classList.contains('active') || el.getAttribute('aria-current') === 'page') {
+                el.style.color = '#FFD700';
+            } else {
+                el.style.color = 'white';
+            }
+        }
+    });
+}
+
 // Direct navbar styling - ensure entire navbar is purple with white text/icons
 document.addEventListener('DOMContentLoaded', function() {
     setTimeout(function() {
@@ -147,15 +162,22 @@ document.addEventListener('DOMContentLoaded', function() {
             navbar.style.backgroundColor = 'rgb(85, 51, 153)';
         }
         
+        // Apply initial colors
+        applyNavLinkColors();
+        
         // Use MutationObserver to watch for style changes and revert them
         var observer = new MutationObserver(function(mutations) {
             mutations.forEach(function(mutation) {
-                if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
+                if (mutation.type === 'attributes') {
                     var el = mutation.target;
                     
-                    // If it's a nav-link or moremenu item, enforce our color
-                    if (el.matches('.navbar-nav .nav-link') && !el.closest('.moremenu')) {
-                        el.style.color = 'white';
+                    // If it's a nav-link or menuitem, enforce our color based on active state
+                    if ((el.matches('.navbar-nav .nav-link') || el.hasAttribute('role') && el.getAttribute('role') === 'menuitem') && !el.closest('.moremenu')) {
+                        if (el.classList.contains('active') || el.getAttribute('aria-current') === 'page') {
+                            el.style.color = '#FFD700';
+                        } else {
+                            el.style.color = 'white';
+                        }
                     }
                     if (el.matches('.moremenu, .moremenu *')) {
                         el.style.color = '#000000';
@@ -165,20 +187,12 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         
         // Observe all navbar elements for attribute changes
-        var navElements = document.querySelectorAll('.navbar-nav .nav-link, .navbar a, .navbar button, .moremenu, .moremenu *');
+        var navElements = document.querySelectorAll('.navbar-nav .nav-link, [role="menuitem"], .navbar a, .navbar button, .moremenu, .moremenu *');
         navElements.forEach(function(el) {
             observer.observe(el, {
                 attributes: true,
-                attributeFilter: ['style']
+                attributeFilter: ['style', 'class']  // Also watch for class changes (active state)
             });
-        });
-        
-        // Also force colors immediately
-        var navLinks = document.querySelectorAll('.navbar-nav .nav-link');
-        navLinks.forEach(function(el) {
-            if (!el.closest('.moremenu')) {
-                el.style.color = 'white';
-            }
         });
         
         // Black for moremenu
