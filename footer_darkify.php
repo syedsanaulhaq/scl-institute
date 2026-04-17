@@ -29,13 +29,14 @@ nav.navbar,
     color: white !important;
 }
 
+/* Active/focused menu item should be YELLOW */
 .navbar-light .navbar-nav .nav-link.active {
-    color: white !important;
+    color: #FFD700 !important;
 }
 
 .navbar-light .navbar-nav .nav-link:focus,
 .navbar-light .navbar-nav .nav-link:hover {
-    color: #E9D5FF !important;
+    color: #FFE680 !important;
 }
 
 .navbar .nav-link {
@@ -43,7 +44,7 @@ nav.navbar,
 }
 
 .navbar .nav-link.active {
-    color: white !important;
+    color: #FFD700 !important;
 }
 
 [role="navigation"] .nav-link {
@@ -52,6 +53,10 @@ nav.navbar,
 
 [role="menuitem"] {
     color: white !important;
+}
+
+[role="menuitem"].active {
+    color: #FFD700 !important;
 }
 
 .navbar-brand,
