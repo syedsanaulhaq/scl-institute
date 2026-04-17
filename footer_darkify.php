@@ -13,13 +13,6 @@ nav.navbar,
     background: rgb(85, 51, 153) !important;
 }
 
-/* Remove white background from moremenu */
-.moremenu,
-.moremenu.navigation,
-nav.moremenu.navigation {
-    background-color: rgb(85, 51, 153) !important;
-}
-
 /* Navbar text and links - all white (TOP NAVBAR ONLY) */
 .navbar-brand,
 .navbar-text,
@@ -29,9 +22,6 @@ nav.moremenu.navigation {
 .navbar-nav a,
 .navbar-nav span,
 .nav-link,
-.moremenu a,
-.moremenu button,
-.moremenu span,
 .navbar-dark .navbar-text,
 .navbar svg,
 .navbar i,
@@ -55,8 +45,7 @@ header button,
 
 /* Navbar hover state */
 .navbar-nav .nav-link:hover,
-.navbar a:hover,
-.moremenu a:hover {
+.navbar a:hover {
     color: #E9D5FF !important;
     opacity: 0.9 !important;
 }
@@ -93,12 +82,6 @@ document.addEventListener('DOMContentLoaded', function() {
         var containerFluid = document.querySelector('.navbar .container-fluid');
         if (containerFluid) {
             containerFluid.setAttribute('style', 'background-color: rgb(85, 51, 153) !important;');
-        }
-        
-        // Purple background for moremenu
-        var moremenu = document.querySelector('.moremenu.navigation, nav.moremenu, .moremenu');
-        if (moremenu) {
-            moremenu.setAttribute('style', 'background-color: rgb(85, 51, 153) !important; background: rgb(85, 51, 153) !important;');
         }
         
         // White color for ALL navbar links, buttons, text
