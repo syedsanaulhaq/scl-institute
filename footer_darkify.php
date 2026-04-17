@@ -121,6 +121,26 @@ nav.moremenu.navigation,
     opacity: 0.9 !important;
 }
 
+/* Navbar icons - WHITE */
+.navbar .icon,
+.navbar svg,
+.navbar i,
+.navbar .fa,
+.navbar .fas,
+.navbar .far,
+.navbar .fab {
+    color: white !important;
+}
+
+/* Edit mode toggle text - WHITE */
+.edit-mode-button,
+.editmode-btn,
+[aria-label*="Edit mode"],
+.navbar-text,
+.navbar .navbar-text {
+    color: white !important;
+}
+
 /* Breadcrumb - all black */
 nav[aria-label="Breadcrumb"],
 .breadcrumb,
