@@ -139,13 +139,49 @@ label {
     }
 }
 
-// Breadcrumbs
+// Breadcrumbs - FORCE LEFT ALIGN
 .breadcrumb {
     background-color: $gray-100;
     padding: 0.75rem 1rem;
     margin-bottom: 1rem;
     border-radius: 0.375rem;
     border: 1px solid $border-color;
+    text-align: left !important;
+}
+
+nav[aria-label="Breadcrumb"] {
+    text-align: left !important;
+}
+
+// Main headings - LEFT ALIGN with !important
+h1, h2, h3, h4, h5, h6 {
+    text-align: left !important;
+    margin-left: 0 !important;
+}
+
+.page-header,
+.page-header-headings,
+#page-header {
+    text-align: left !important;
+    justify-content: flex-start !important;
+    display: block !important;
+}
+
+.page-header h1,
+.page-header-headings h1,
+#page-header h1,
+h1.h2 {
+    text-align: left !important;
+    margin-left: 0 !important;
+}
+
+// Page heading
+.activity-header {
+    text-align: left !important;
+}
+
+.activity-header h1 {
+    text-align: left !important;
 }
 
 // Course cards
