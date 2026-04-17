@@ -1,0 +1,563 @@
+// Purity Modern Theme - Custom Styles based on Purity Theme Design
+// This file applies Purity-specific customizations on top of Boost
+
+// Import Purity variables first
+@import "variables";
+
+// ============================================================
+// PURITY CUSTOM STYLING - Visual Identity
+// ============================================================
+
+// Root variables for easy customization
+:root {
+    --primary-color: #5e72e4;
+    --secondary-color: #172b4d;
+    --body-bg-color: #f8f9fe;
+}
+
+// Body and Base
+body {
+    background-color: #f8f9fe !important;
+    color: #32325d !important;
+    font-family: 'Open Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+}
+
+// Page wrapper
+#page {
+    background-color: #f8f9fe !important;
+}
+
+// Navbar styling - WHITE background with dark text (per design)
+// Target all navbar/header elements
+.navbar,
+.navbar-dark,
+.navbar-expand-lg,
+nav,
+header,
+#page-header,
+.site-header,
+.navbar-toggler,
+.navbar-nav,
+[role="navigation"] {
+    background-color: #ffffff !important;
+    border-bottom: 1px solid #e0e0e0 !important;
+}
+
+// Navbar container
+.navbar,
+.navbar-light,
+.navbar-dark,
+.navbar-expand-lg {
+    background-color: #ffffff !important;
+    border-bottom: 1px solid #e0e0e0 !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08) !important;
+}
+
+// All text in navbar - dark/black for contrast
+.navbar,
+.navbar *,
+.navbar a,
+.navbar button,
+.navbar-brand,
+.nav-link,
+.nav-item,
+.navbar-text,
+#page-navbar,
+#page-navbar *,
+#page-navbar a,
+[role="navigation"],
+[role="navigation"] *,
+[role="navigation"] a {
+    color: #333333 !important;
+}
+
+// Breadcrumb navigation - dark text
+.breadcrumb,
+.breadcrumb a,
+.breadcrumb *,
+.nav-breadcrumb,
+.nav-breadcrumb a,
+.nav-breadcrumb * {
+    color: #6B46C1 !important;
+    text-decoration: none !important;
+}
+
+.breadcrumb a:hover,
+.nav-breadcrumb a:hover {
+    color: #553399 !important;
+    text-decoration: underline !important;
+}
+
+// Site navigation links - dark text on white navbar
+.sitenavigation,
+.sitenavigation *,
+.sitenavigation a,
+.sitesettings,
+.sitesettings *,
+.sitesettings a {
+    color: #333333 !important;
+}
+
+.navbar-brand {
+    color: #333333 !important;
+    font-weight: 700 !important;
+    font-size: 1.25rem !important;
+}
+
+.navbar-brand:hover,
+.navbar-brand:focus {
+    color: #6B46C1 !important;
+}
+
+.nav-link,
+.nav-item a,
+.navbar-nav .nav-link {
+    color: #333333 !important;
+    
+    &:hover {
+        color: #6B46C1 !important;
+    }
+}
+
+// Navbar toggle button
+.navbar-toggler {
+    border-color: rgba(255, 255, 255, 0.1) !important;
+    
+    &:focus {
+        outline: none !important;
+        box-shadow: 0 0 0 0.25rem rgba(94, 114, 228, 0.25) !important;
+    }
+}
+
+// Primary button styling (SCL Purple)
+.btn-primary,
+button[type="submit"],
+input[type="submit"],
+a.btn-primary {
+    background-color: #6B46C1 !important;
+    border-color: #6B46C1 !important;
+    color: white !important;
+    
+    &:hover {
+        background-color: #553399 !important;
+        border-color: #553399 !important;
+        color: white !important;
+    }
+    
+    &:active,
+    &:focus {
+        background-color: #4C2D99 !important;
+        border-color: #4C2D99 !important;
+        color: white !important;
+    }
+}
+
+// Links - Default SCL Purple color
+a {
+    color: #6B46C1 !important;
+    
+    &:hover {
+        color: #553399 !important;
+    }
+}
+
+// BUT: Links inside navbar/header MUST be white (override everything)
+.navbar a,
+.navbar-nav a,
+#page-navbar a,
+[role="navigation"] a,
+.breadcrumb a,
+.nav-breadcrumb a,
+.sitenavigation a,
+#page-header a,
+header a,
+nav a,
+.navbar-text a {
+    color: white !important;
+    
+    &:hover {
+        color: #E9D5FF !important;
+    }
+}
+
+// Card styling (Purity cards with shadows)
+.card,
+[role="main"] > .card {
+    border: 1px solid #e9ecef !important;
+    box-shadow: 0 0.5rem 1rem rgba(50, 50, 93, 0.15), 0 0 0.2rem rgba(0, 0, 0, 0.1) !important;
+    border-radius: 0.375rem !important;
+    margin-bottom: 1.5rem !important;
+    background-color: white !important;
+}
+
+.card-header {
+    background-color: #5e72e4 !important;
+    color: white !important;
+    font-weight: 700 !important;
+    border-bottom: none !important;
+    
+    h3, h4, h5 {
+        color: white !important;
+    }
+}
+
+.card-body {
+    padding: 1.5rem !important;
+}
+
+// Panel and content areas
+.panel {
+    border: 1px solid $border-color;
+    background-color: #ffffff;
+    margin-bottom: 2rem;
+    box-shadow: 0 0.5rem 1rem rgba(50, 50, 93, 0.15);
+    
+    .panel-heading {
+        background-color: $primary-color;
+        color: white;
+        border-bottom: none;
+        padding: 1rem;
+        font-weight: $font-weight-bold;
+    }
+    
+    .panel-body {
+        padding: 1.5rem;
+    }
+}
+
+// Frontpage regions - Purity style
+.region-fp-fullwidth {
+    background-color: $fp-fullwidth-bg;
+    color: $fp-fullwidth-text;
+    padding: 3rem 2rem;
+    margin: 2rem 0;
+    border-radius: 0.375rem;
+    
+    h2 {
+        color: $fp-fullwidth-heading;
+        margin-bottom: 1.5rem;
+    }
+}
+
+.region-fp-intro {
+    background-color: $fp-intro-bg;
+    color: $fp-intro-text;
+    padding: 3rem 2rem;
+    margin: 2rem 0;
+    border: 1px solid $border-color;
+    border-radius: 0.375rem;
+    box-shadow: 0 0.5rem 1rem rgba(50, 50, 93, 0.1);
+    
+    h2 {
+        color: $fp-intro-heading;
+        margin-bottom: 1.5rem;
+    }
+}
+
+.region-fp-feature {
+    background-color: $fp-feature-bg;
+    color: $fp-feature-text;
+    padding: 3rem 2rem;
+    margin: 2rem 0;
+    border-radius: 0.375rem;
+    
+    h2 {
+        color: $fp-feature-heading;
+        margin-bottom: 1.5rem;
+    }
+}
+
+// Tables
+table {
+    border-collapse: collapse !important;
+    width: 100% !important;
+    margin-bottom: 1.5rem !important;
+    background-color: white !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+    
+    thead th {
+        background-color: #5e72e4 !important;
+        color: #ffffff !important;
+        font-weight: 700 !important;
+        padding: 0.75rem !important;
+        text-align: left !important;
+        border-bottom: 2px solid #4c63d2 !important;
+    }
+    
+    tbody tr {
+        border-bottom: 1px solid #e9ecef !important;
+        
+        &:hover {
+            background-color: #f6f9fc !important;
+        }
+        
+        td {
+            padding: 0.75rem !important;
+        }
+    }
+}
+
+// Form elements
+.form-control,
+input[type="text"],
+input[type="email"],
+input[type="password"],
+textarea,
+select {
+    border: 1px solid $border-color;
+    border-radius: 0.375rem;
+    padding: 0.5rem 0.75rem;
+    font-family: $font-family-base;
+    
+    &:focus {
+        border-color: $primary-color;
+        box-shadow: 0 0 0 0.2rem rgba($primary-color, 0.25);
+        outline: none;
+    }
+}
+
+// Labels
+label {
+    font-weight: $font-weight-bold;
+    color: $gray-800;
+    margin-bottom: 0.5rem;
+}
+
+// Alerts/Messages
+.alert {
+    padding: 1rem;
+    margin-bottom: 1rem;
+    border: 1px solid;
+    border-radius: 0.375rem;
+    
+    &.alert-info,
+    .alert-blue {
+        background-color: lighten($primary-color, 30%);
+        border-color: $primary-color;
+        color: darken($primary-color, 20%);
+    }
+    
+    &.alert-warning {
+        background-color: #fff3cd;
+        border-color: #ffc107;
+        color: #856404;
+    }
+    
+    &.alert-danger,
+    &.alert-error {
+        background-color: #f8d7da;
+        border-color: #f5c6cb;
+        color: #721c24;
+    }
+    
+    &.alert-success {
+        background-color: #d4edda;
+        border-color: #c3e6cb;
+        color: #155724;
+    }
+}
+
+// Breadcrumbs
+.breadcrumb {
+    background-color: $gray-100;
+    padding: 0.75rem 1rem;
+    margin-bottom: 1rem;
+    border-radius: 0.375rem;
+    border: 1px solid $border-color;
+}
+
+// Course cards
+.coursebox,
+.course-box {
+    border: 1px solid $border-color;
+    border-radius: 0.375rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+    margin-bottom: 1.5rem;
+    padding: 1.5rem;
+    background-color: white;
+    transition: box-shadow 0.2s ease;
+    
+    &:hover {
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.12);
+    }
+    
+    h3, .coursename {
+        color: $primary-color;
+        font-weight: $font-weight-bold;
+    }
+}
+
+// Sidebar
+.sidebar,
+.region-side-pre,
+[role="complementary"] {
+    background-color: $gray-100;
+    padding: 1rem;
+    border-radius: 0.375rem;
+    
+    .sideblock {
+        background-color: white;
+        border: 1px solid $border-color;
+        margin-bottom: 1.5rem;
+        border-radius: 0.375rem;
+        overflow: hidden;
+        
+        .header {
+            background-color: $primary-color;
+            color: white;
+            padding: 1rem;
+            font-weight: $font-weight-bold;
+            h3 {
+                color: white;
+                margin: 0;
+            }
+        }
+        
+        .content {
+            padding: 1rem;
+        }
+    }
+}
+
+// Main content area
+main {
+    background-color: white;
+    border-radius: 0.375rem;
+    padding: 1.5rem;
+    margin: 1.5rem 0;
+}
+
+// Responsive utilities
+@media (max-width: 768px) {
+    .sidebar,
+    .region-side-pre {
+        margin-top: 2rem;
+    }
+    
+    h1 {
+        font-size: 1.5rem;
+    }
+    
+    h2 {
+        font-size: 1.15rem;
+    }
+}
+
+// Page heading and header styling - FORCE LEFT ALIGN (override Boost flexbox centering)
+banner,
+.activity-header,
+#page-header,
+.page-header,
+.page-headings {
+    text-align: left !important;
+    display: block !important;
+    padding: 0 !important;
+    margin: 0 0 1.5rem 0 !important;
+    background: transparent !important;
+    justify-content: flex-start !important;
+}
+
+// Override any flexbox centering on heading containers
+banner > div,
+banner > *,
+.activity-header > div,
+.activity-header > * {
+    display: block !important;
+    text-align: left !important;
+}
+
+// Target ALL h1 elements and force left align
+h1 {
+    text-align: left !important;
+    margin-left: 0 !important;
+    display: block !important;
+    width: 100% !important;
+}
+
+banner h1,
+.activity-header h1,
+#page-header h1,
+// Page header and headings - LEFT ALIGN override (target ALL levels)
+.header-maxwidth {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin-left: 0 !important;
+    margin-right: auto !important;
+    padding-left: 0 !important;
+    justify-content: flex-start !important;
+}
+
+.page-header,
+.page-header-headings,
+.page-context-header,
+#page-header {
+    text-align: left !important;
+    display: flex !important;
+    justify-content: flex-start !important;
+    align-items: flex-start !important;
+    width: 100% !important;
+    margin-left: 0 !important;
+    margin-right: auto !important;
+}
+
+// Force flex containers to left-align
+.me-auto.d-flex {
+    justify-content: flex-start !important;
+}
+
+.page-header h1,
+.page-header-headings h1,
+.page-context-header h1,
+.page-heading h1,
+h1.h2 {
+    text-align: left !important;
+    font-size: 1.75rem !important;
+    font-weight: 700 !important;
+    color: #32325d !important;
+    margin: 0 0 1rem 0 !important;
+    padding: 0 !important;
+    display: block !important;
+    width: 100% !important;
+    margin-left: 0 !important;
+    margin-right: auto !important;
+}
+
+// Print styles
+@media print {
+    body {
+        background-color: white;
+    }
+    
+    .navbar {
+        display: none;
+    }
+}
+
+// NUCLEAR OPTION - ABSOLUTE OVERRIDE FOR NAV TEXT COLOR
+.navbar-nav .nav-link,
+.navbar .nav-link,
+[role="menuitem"],
+[role="tab"],
+.navbar a,
+.navbar button,
+nav [role="menuitem"],
+nav [role="tab"],
+header [role="menuitem"],
+header [role="tab"] {
+    color: #000000 !important;
+    letter-spacing: 0.5px !important;
+}
+
+.navbar .navbar-nav .nav-item .nav-link {
+    color: #000000 !important;
+}
+
+[role="menuitem"]:hover,
+[role="tab"]:hover,
+.nav-link:hover {
+    color: #6B46C1 !important;
+}
+
+[aria-selected="true"] {
+    color: #000000 !important;
+}
