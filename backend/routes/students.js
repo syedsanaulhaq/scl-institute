@@ -11234,9 +11234,9 @@ router.get('/right-to-study/:id/download', async (req, res) => {
             });
         }
 
-        // Get the file path from right_to_study_documents table
+        // Get the file path from application_documents table
         const [result] = await db.execute(
-            `SELECT file_path, original_filename FROM right_to_study_documents 
+            `SELECT file_path, original_filename FROM application_documents 
              WHERE application_id = ? AND document_type = ? AND original_filename = ?`,
             [id, documentType, filename]
         );
