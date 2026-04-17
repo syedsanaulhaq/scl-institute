@@ -1,0 +1,174 @@
+/*
+  >>>Social Network Styling Start
+*/
+
+.social-network {
+	background-color: #c9ced3;
+	padding: 1em 0 0 0;
+	ul.social {
+		text-align: center;
+		li {
+			list-style: none;
+			font-size: 16px;
+			text-transform: uppercase;
+			padding: 0;
+			display: inline-block;
+			line-height: 30px;
+			a {
+				font-size: 1.4em;
+				color: $siteorcolor;
+				margin: 0 10px;
+				img {
+					vertical-align: middle;
+					border: 0;
+				}
+			}
+		}
+	}
+}
+
+
+/*
+  >>>Social Network Styling End
+*/
+
+
+/*
+  >>>Footer Styling Start
+*/
+
+#page-footer {
+	background-color: $white;
+	border: none;
+	margin-top: 0;
+	text-align: left;
+	padding: 2em 0 0 0;
+	a {
+		color: #626262;
+	}
+	h5 {
+		color: $black;
+		letter-spacing: 2px;
+		margin-bottom: 20px;
+		font-size: 1em;
+		line-height: normal;
+		font-family: "open_sansbold";
+	}
+	ul {
+		margin: 0;
+		padding: 0;
+		li {
+			list-style: none;
+			margin-bottom: 10px;
+			color: #626262;
+			a {
+				color: $siteorcolor;
+				font-weight: normal;
+				font-size: 14px;
+				&:hover {
+					color: $black;
+				}
+			}
+		}
+	}
+	ul.common {
+		li {
+			list-style: none;
+			a {
+				color: #626262;
+				&::before {
+					color: #626262;
+					content: "\f105";
+					font-family: 'FontAwesome';
+					margin-right: 5px;
+				}
+				&:hover {
+					color: $siteorcolor;
+					&::before {
+						color: $siteorcolor;
+					}
+				}
+			}
+		}
+	}
+	ul.instagram-section {
+		li {
+			ul.instagram-pics {
+				li {
+					float: left;
+					width: 33%;
+					margin: 0!important;
+					padding: 4px!important;
+					list-style: none;
+					color: #626262;
+					a {
+						display: inline-block;
+						&::before {
+							content: "" !important;
+							display: none;
+						}
+						img {
+							width: 100%;
+							-webkit-transition: all .4s linear;
+							transition: all .4s linear;
+							display: block;
+							position: relative;
+							max-height: 100%;
+							max-width: 100%;
+							&:hover {
+								opacity: 0.7;
+								filter: alpha(opacity=70);
+								/* For IE8 and earlier */
+								-ms-transform: scale(1.2);
+								-webkit-transform: scale(1.2);
+								transform: scale(1.2);
+							}
+						}
+					}
+				}
+			}
+			a {
+				&::before {
+					content: "" !important;
+				}
+			}
+			span.followus {
+				a {
+					font-size: 13px;
+					&:hover {
+						color: $black;
+					}
+				}
+			}
+		}
+	}
+	ul.copyright {
+		margin-top: 20px;
+		text-align: center;
+		font-size: 14px;
+		li {
+			margin-bottom: 0;
+			p.copy {
+				text-transform: uppercase;
+				font-weight: 700;
+				color: #000;
+			}
+		}
+	}
+	.bottom-footer {
+		text-align: center;
+		background-color: $black;
+		padding: 20px 0;
+		font-weight: 700;
+		font-size: 13px;
+		color: #ccc;
+		a {
+			color: #ccc;
+		}
+	}
+}
+
+
+/*
+  >>>Footer Styling End
+*/

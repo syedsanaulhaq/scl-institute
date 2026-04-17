@@ -1,0 +1,25 @@
+<!-- Start Coaching Section --> 
+
+{{#displaygetthecoaching}}
+<div id="getcoaching" class="featurette">
+	
+	<div class="container-fluid">		
+		<img src="{{{getthecoachingimage}}}" class="featurette-image pull-left"/>
+		<div class="pull-left getcoachingtext-con">
+			{{#getthecoachingheading}}
+				<h2 class="featurette-heading">{{{getthecoachingheading}}}</h2>
+			{{/getthecoachingheading}}
+			{{#getthecoachingcontent}}
+				<h5>{{{getthecoachingcontent}}}</h5>
+			{{/getthecoachingcontent}}
+			{{#getthecoachingbuttontext}}
+				<a href="{{{getthecoachingbuttonurl}}}" class="btn btn-primary draw meet">{{{getthecoachingbuttontext}}}</a>
+			{{/getthecoachingbuttontext}}
+		</div>
+		<div class="clearfix"></div>
+	</div>
+
+</div>
+{{/displaygetthecoaching}}
+
+<!-- End Coaching Section -->

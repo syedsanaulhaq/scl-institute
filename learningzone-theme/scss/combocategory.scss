@@ -1,0 +1,87 @@
+#frontpage-category-wrapper {
+	padding: 4em 0;
+	#frontpage-category-combo {
+		h2 {
+			text-align: center;
+			font-size: 2.5em;
+			font-family: "open_sanslight";
+			text-transform: capitalize;
+			margin-bottom: 0;
+			line-height: normal;
+			color: $siteorcolor;
+		}
+		.course_category_tree {
+			.category {
+				.info {
+					.categoryname {
+						font-size: 16px;
+						font-family: "open_sansregular" !important;
+						color: #989898;
+						text-transform: capitalize;
+						line-height: normal;
+						border: none;
+						font-weight: 400;
+						margin: 0;
+						position: relative;
+						cursor: pointer;
+						a {
+							color: #989898;
+							font-family: "open_sansregular" !important;
+							font-size: 16px;
+							font-weight: 400;
+							span {
+								color: #989898;
+								font-size: 16px;
+							}
+						}
+					}
+				}
+				.content {
+					.courses {
+						.coursebox {
+							.courseimage {
+								display: none;
+							}
+                            .info{
+                  .coursename{
+                     width:100%;
+                  }
+              }
+						}
+						.summary {
+							p {
+								text-align: left;
+							}
+							.visitlink,
+							.teachers {
+								display: none;
+							}
+						}
+					}
+				}
+			}
+			.categoryimage {
+				display: none !important;
+			}
+			.collapsible-actions {
+				a.collapseexpand {
+					font-weight: normal;
+					&:hover {
+						color: $black;
+					}
+				}
+			}
+			.content {
+				.summary {
+					float: none;
+					width: 100%;
+				}
+				.coursename {
+					a {
+						font-weight: normal;
+					}
+				}
+			}
+		}
+	}
+}

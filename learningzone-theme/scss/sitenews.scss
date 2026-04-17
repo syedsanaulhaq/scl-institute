@@ -1,0 +1,167 @@
+/*
+  >>>News Styling Start
+*/
+
+#news {
+  background-color: #d6d6d6;
+  background-repeat: repeat-x;
+  background-position: left top, left bottom;
+  padding: 3em 0;
+  position: relative;
+  margin: 2em 0;
+  text-align: center;
+  #site-news-forum {
+    .p-t-1.p-b-1 {
+      display: none;
+    }
+           
+      .subscribelink{
+          margin-top: 15px;
+      }
+    .btn.btn-primary,
+    .subscribelink {
+      display: inline-block;
+    }
+    .btn.btn-primary {
+      position: relative;
+      top: -1px;
+      margin-left: 10px;
+    }
+    h2.newsheading {
+      font-family: "open_sanslight";
+      font-size: 2.5em;
+      font-weight: 400;
+      border-bottom: 1px dashed rgba(160, 160, 160, .4);
+      padding-bottom: 15px;
+      text-transform: capitalize;
+      margin-bottom: 0;
+      margin-top: 10px;
+    }
+    a.btn.btn-primary,
+    .subscribelink a {
+      background-color: #fff;
+      background-image: none;
+      filter: none;
+      box-shadow: none;
+      border: none;
+      -webkit-border-radius: 20px;
+      -moz-border-radius: 20px;
+      border-radius: 20px;
+      padding: 10px 20px;
+      color: #484848;
+      text-shadow: none;
+      text-transform: uppercase;
+      transition: 0.5s ease;
+      font-family: "open_sansbold";
+      display: inline-block;
+      text-decoration: none;
+      outline: none;
+      letter-spacing: normal;
+      font-size: 14px;
+      &:hover,
+      &:focus,
+      &:active {
+        background-color: $siteorcolor;
+        color: $white;
+      }
+    }
+    .owl-carousel {
+      padding-top: 0;
+      .owl-item {
+        .forumpost {
+          display: block !important;
+          border: none !important;
+          div[data-region-content="forum-post-core"] {
+            header {
+              >div.mr-2 {
+                width: 100% !important;
+                img {
+                  margin: 0 auto !important;
+                  width: 55px !important;
+                  height: 55px;
+                  -webkit-border-radius: 100px;
+                  -moz-border-radius: 100px;
+                  border-radius: 100px;
+                  border: 3px solid #fff;
+                  text-align: center;
+                  display: inherit;
+                }
+              }
+              >div.mr-2+div {
+                margin: 0 auto;
+                margin-top: 20px;
+                h3 {
+                  color: $black;
+                  font-size: 1.1em;
+                  font-family: "open_sansregular";
+                  margin-bottom: 10px !important;
+                }
+                address {
+                  font-family: "open_sanslight";
+                  color: #333;
+                  font-size: 14px;
+                  a {
+                    color: $siteorcolor;
+                    font-weight: normal;
+                  }
+                }
+              }
+            }
+          }
+        }
+        .body-content-container {
+          .content-alignment-container {
+            .post-content-container {
+              color: #000;
+              font-size: 16px;
+              line-height: 28px;
+              margin-bottom: 15px;
+              p {
+                strong {
+                  color: $black;
+                }
+              }
+            }
+            div[data-region="post-actions-container"] {
+              margin: 0 auto;
+              a {
+                color: $black;
+                font-family: "open_sanslight";
+                background-position: left center;
+                background-repeat: no-repeat;
+                padding-left: 16px;
+                margin-top: 10px;
+                padding-right: 0;
+                &:after {
+                  content: '|';
+                }
+                &:last-child {
+                  &:after {
+                    content: '';
+                  }
+                }
+              }
+            }
+            .link.text-right {
+              text-align: center !important;
+              a {
+                color: $black;
+                font-family: "open_sanslight";
+                font-weight: normal;
+              }
+            }
+          }
+        }
+      }
+      .owl-nav.disabled,
+      .owl-dots.disabled {
+        display: none;
+      }
+    }
+  }
+}
+
+
+/*
+  >>>News Styling End
+*/

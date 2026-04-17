@@ -1,0 +1,765 @@
+/*
+  >>>Block Section Styling Start
+*/
+
+#page-content.blocks-post {
+  .columnright,
+  .columnleft {
+    padding: 0 !important;
+  }
+}
+
+.block-section {
+  nav.slideblock {
+    position: fixed;
+    top: 140px;
+    left: -1px;
+    background-color: $white;
+    border-bottom: 1px solid #ccc;
+    border-right: 1px solid #ccc;
+    width: 296px;
+    margin: 0 0px 0 -300px;
+    -moz-transition: all 200ms ease-in;
+    -webkit-transition: all 200ms ease-in;
+    -o-transition: all 200ms ease-in;
+    transition: all 200ms ease-in;
+    z-index: 99;
+    height: 100%;
+    -moz-box-shadow: 0 0 5px #888;
+    -webkit-box-shadow: 0 0 5px#888;
+    box-shadow: 0 0 5px #888;
+    overflow-y: scroll;
+    > h2 {
+      background-color: $siteorcolor;
+      color: $white;
+      font-size: 1.4em;
+      font-weight: 400;
+      margin: 0;
+      font-family: "open_sanslight";
+      padding: 10px 15px;
+    }
+  }
+  hr {
+    margin: 0 !important;
+    border-top: 1px solid #eee;
+    border-bottom: 1px solid $white;
+  }
+  a {
+    font-weight: normal;
+  }
+  .columnleft {
+    overflow: hidden;
+  }
+  .columnright,
+  .columnleft {
+    padding-bottom: 150px !important;
+  }
+}
+
+.block-section {
+  label.slideblocklabel {
+    display: block;
+    background-repeat: no-repeat;
+    background-position: center center;
+    background-color: $siteorcolor;
+    width: 40px;
+    height: 45px;
+    margin-bottom: 0;
+    position: fixed;
+    top: 140px;
+    left: 0px;
+    -moz-transition: all 200ms ease-in;
+    -webkit-transition: all 200ms ease-in;
+    -o-transition: all 200ms ease-in;
+    transition: all 200ms ease-in;
+    z-index: 70;
+    cursor: pointer;
+    -webkit-border-top-right-radius: 10px;
+    -webkit-border-bottom-right-radius: 10px;
+    -moz-border-radius-topright: 10px;
+    -moz-border-radius-bottomright: 10px;
+    border-top-right-radius: 10px;
+    border-bottom-right-radius: 10px;
+  }
+  input[type="checkbox"] {
+    display: none;
+  }
+  input[type="checkbox"]:checked ~ nav {
+    margin: 0 !important;
+  }
+  input[type="checkbox"]:checked ~ label {
+    left: 294px;
+  }
+  input[type="checkbox"]:checked ~ section {
+    -webkit-transform: translate3d(300px, 0, 0);
+    -moz-transform: translate3d(300px, 0, 0);
+    -o-transform: translate3d(300px, 0, 0);
+    transform: translate3d(300px, 0, 0);
+  }
+}
+
+div[data-flexitour="step-background"] {
+  position: absolute;
+  background: inherit;
+  z-index: -1 !important;
+}
+
+[data-region="blocks-column"] {
+  width: 100%;
+  float: none;
+}
+
+.block {
+  border: none;
+  background-color: transparent;
+  font-size: 14px;
+  .p-3 {
+    padding: 1rem 1rem 0 1rem !important;
+  }
+  .card-title {
+    background-color: #eee;
+    color: $headingcolor;
+    text-shadow: none;
+    display: block !important;
+    padding: 9px 10px;
+    padding-left: 0;
+    font-size: 1.1em;
+    font-weight: bold;
+    &::before {
+      content: "\f0c9";
+      margin-right: 10px;
+      color: #fff;
+      padding: 9px 10px;
+      margin-top: -9px;
+      float: left;
+      font-family: "FontAwesome";
+    }
+  }
+  input.form-control[type="text"] {
+    border-radius: 0;
+  }
+  div[data-region="filter"] {
+    margin-bottom: 15px;
+  }
+  .minicalendar {
+    max-width: 288px !important;
+    thead {
+      tr {
+        th {
+          background-color: $siteorcolor;
+          padding: 15px 2px !important;
+          color: $white;
+          font-weight: normal;
+          abbr {
+            text-decoration: none !important;
+          }
+        }
+      }
+    }
+    tbody {
+      border: 1px solid #eee !important;
+      tr {
+        td {
+          padding: 7px;
+        }
+      }
+    }
+  }
+  .content {
+    h3 {
+      display: block;
+      padding: 3px 15px;
+      font-size: 11px;
+      font-weight: bold;
+      line-height: 20px;
+      color: #999;
+      text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
+      text-transform: uppercase;
+      font-size: 1.1em;
+    }
+  }
+}
+
+.block {
+  .card-title {
+    &::before {
+      content: "\f0c9";
+      background-color: $siteorcolor;
+    }
+  }
+}
+
+.block_navigation {
+  .card-title {
+    &::before {
+      content: "\f0c9";
+      background-color: $siteorcolor;
+    }
+  }
+}
+
+.block_activity_modules {
+  .card-title {
+    &::before {
+      content: "\f12e";
+    }
+  }
+}
+
+.block_activity_results {
+  .card-title {
+    &::before {
+      content: "\f0c9";
+    }
+  }
+}
+
+.block_blog_tags {
+  .card-title {
+    &::before {
+      content: "\f02c";
+    }
+  }
+}
+
+.block_blog_menu {
+  .card-title {
+    &::before {
+      content: "\f02d";
+    }
+  }
+}
+
+.block_course_summary {
+  .card-title {
+    &::before {
+      content: "\f0c9";
+    }
+  }
+}
+
+.block_badges {
+  .card-title {
+    &::before {
+      content: "\f0c9";
+    }
+  }
+}
+
+.block_myprofile {
+  .card-title {
+    &::before {
+      content: "\f007";
+    }
+  }
+}
+
+.block_calendar_month {
+  .card-title {
+    margin-bottom: 0;
+    &::before {
+      content: "\f073";
+    }
+  }
+  .card-body {
+    padding: 0;
+    .card-text {
+      margin-top: 0 !important;
+    }
+    .controls {
+      margin: 0 auto;
+      .calendar-controls {
+        background-color: $siteorcolor;
+        padding: 15px 0;
+        height: 50px;
+        .previous {
+          color: #fff;
+          font-size: 0;
+          background-position: right center;
+          background-repeat: no-repeat;
+          height: 20px;
+          margin-top: 0;
+        }
+        .next {
+          color: #fff;
+          font-size: 0;
+          background-position: left center;
+          background-repeat: no-repeat;
+          height: 20px;
+          margin-top: 0;
+        }
+        .current {
+          a {
+            font-size: 1.5em;
+            color: #fff;
+            font-weight: normal;
+          }
+        }
+      }
+    }
+    table {
+      margin: 0 auto;
+      border-top: 1px solid #fff;
+      thead {
+        th {
+          background-color: $siteorcolor;
+          padding: 15px 2px;
+          span[aria-hidden="true"] {
+            border-bottom: none;
+            text-decoration: none;
+            color: #fff;
+            font-size: 13px;
+            font-weight: bold;
+            text-transform: uppercase;
+            padding: 5px 0;
+          }
+        }
+      }
+      tbody {
+        background-color: #f5f5f5;
+        td {
+          padding: 5px 2px;
+        }
+      }
+    }
+  }
+}
+
+.block_admin_bookmarks {
+  .card-title {
+    &::before {
+      content: "\f02e";
+    }
+  }
+}
+
+.block_private_files {
+  .card-title {
+    &::before {
+      content: "\f114";
+    }
+  }
+}
+
+.block_participants {
+  .card-title {
+    &::before {
+      content: "\f0c0";
+    }
+  }
+}
+
+.block_tags {
+  .card-title {
+    &::before {
+      content: "\f02c";
+    }
+  }
+}
+
+.block_messages {
+  .card-title {
+    &::before {
+      content: "\f0e0";
+    }
+  }
+}
+
+.block_lp {
+  .card-title {
+    &::before {
+      content: "\f0c9";
+    }
+  }
+}
+
+.block_comments {
+  .card-title {
+    &::before {
+      content: "\f086";
+    }
+  }
+}
+
+.block_calendar_upcoming {
+  .card-title {
+    &::before {
+      content: "\f073";
+    }
+  }
+}
+
+.block_search_forums {
+  .card-title {
+    &::before {
+      content: "\f0e6";
+    }
+  }
+}
+
+.block_online_users {
+  .card-title {
+    &::before {
+      content: "\f0c0";
+    }
+  }
+}
+
+.block_selfcompletion {
+  .card-title {
+    &::before {
+      content: "\f0e4";
+    }
+  }
+}
+
+.block_settings {
+  .card-title {
+    &::before {
+      content: "\f007";
+    }
+  }
+}
+
+.block_community {
+  .card-title {
+    &::before {
+      content: "\f0ac";
+    }
+  }
+}
+
+.block_feedback {
+  .card-title {
+    &::before {
+      content: "\f087";
+    }
+  }
+}
+
+.block_globalsearch {
+  .card-title {
+    &::before {
+      content: "\f0c9";
+    }
+  }
+}
+
+.block_mentees {
+  .card-title {
+    &::before {
+      content: "\f0c9";
+    }
+  }
+}
+
+.block_course_list {
+  .card-title {
+    &::before {
+      content: "\f108";
+    }
+  }
+}
+
+.block_html {
+  .card-title {
+    &::before {
+      content: "\f022";
+    }
+  }
+}
+
+.block_completionstatus {
+  .card-title {
+    &::before {
+      content: "\f0e4";
+    }
+  }
+}
+
+.block_glossary_random {
+  .card-title {
+    &::before {
+      content: "\f0eb";
+    }
+  }
+}
+
+.block_recent_activity {
+  .card-title {
+    &::before {
+      content: "\f017";
+    }
+  }
+}
+
+.block_rss_client {
+  .card-title {
+    &::before {
+      content: "\f09e";
+    }
+  }
+}
+
+.block_news_items {
+  .card-title {
+    &::before {
+      content: "\f0a1";
+    }
+  }
+}
+
+.block_blog_recent {
+  .card-title {
+    &::before {
+      content: "\f0c9";
+    }
+  }
+}
+
+.block_section_links {
+  .card-title {
+    &::before {
+      content: "\f02e";
+    }
+  }
+}
+
+.block_adminblock {
+  .card-title {
+    &::before {
+      content: "\f009";
+    }
+  }
+}
+
+.block_myoverview {
+  .content {
+    clear: both;
+    margin-top: 2em !important;
+  }
+  .card-title {
+    &::before {
+      content: "\f0c9";
+    }
+  }
+}
+
+.block_settings .card-title,
+.block_site_main_menu .card-title,
+.block_calendar_upcoming .card-title,
+.block_messages .card-title,
+.block_mnet_hosts .card-title,
+.block_myprofile .card-title,
+.block_glossary_random .card-title,
+.block_completionstatus .card-title {
+  &::before {
+    background-color: $siteorcolor;
+  }
+}
+
+.block_online_users .card-title,
+.block_navigation .card-title,
+.block_mentees .card-title,
+.block_login .card-title,
+.block_participants .card-title,
+.block_blog_recent .card-title,
+.block_html .card-title {
+  &::before {
+    background-color: $siteorcolor;
+  }
+}
+
+.block_recent_activity .card-title,
+.block_tags,
+.block_course_list .card-title,
+.block_selfcompletion .card-title,
+.block_badges .card-title,
+.block_fake .card-title,
+.block_rss_client .card-title {
+  &::before {
+    background-color: $siteorcolor;
+  }
+}
+
+.block_myoverview .card-title,
+.block_calendar_month .card-title {
+  &::before {
+    background-color: $siteorcolor;
+  }
+}
+
+.block_recentlyaccessedcourses {
+  .paging-bar-container {
+    margin-top: -3.2rem;
+  }
+}
+
+.page-item .page-link {
+  border-radius: 0 !important;
+}
+
+body.editing {
+  .block {
+    .block-controls.header {
+      float: none !important;
+      text-align: right;
+      width: 100%;
+      .commands {
+        clear: both;
+        text-align: right;
+        display: block !important;
+        padding: 3px 15px;
+        background-color: #ccc;
+        .menubar {
+          display: inline-flex !important;
+        }
+      }
+    }
+    .card-title {
+      margin-bottom: 0 !important;
+    }
+  }
+  .block_recentlyaccessedcourses {
+    .paging-bar-container {
+      margin-top: -5rem;
+    }
+    .card-deck {
+      margin-top: 3rem;
+    }
+  }
+}
+
+.inplaceeditable {
+  .quickediticon {
+    i.fa {
+      opacity: 0.2;
+    }
+  }
+}
+
+.moodle-core-dragdrop-draghandle {
+  opacity: 0.5;
+}
+
+body.notloggedin {
+  .block_calendar_month {
+    caption.calendar-controls {
+      h3 {
+        text-shadow: none;
+        font-size: 16px;
+        padding: 0;
+        margin-bottom: 7px;
+        a {
+          font-size: 1.5em;
+          color: $white;
+          font-weight: normal;
+          text-transform: capitalize;
+          font-family: "RalewayRegular" !important;
+        }
+      }
+    }
+  }
+}
+
+/*
+  >>>Block Section Styling End
+*/
+
+/*
+  >>>Message App Section Styling Start
+*/
+.message-app {
+  background-color: $white;
+  margin-top: 10px;
+  .closewidget {
+    display: none;
+  }
+  .list-group {
+    .list-group-item {
+      &:hover {
+        background-color: #e8e7e7 !important;
+        color: $black;
+      }
+    }
+  }
+}
+.drawer {
+  top: 143px !important;
+  .close-btn {
+    cursor: pointer;
+    display: flex;
+    text-align: center;
+    padding: 0;
+    flex-direction: column;
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 23px;
+    border: 2px solid rgba(0, 0, 0, 0.125);
+    border-radius: 5px;
+    width: 30px;
+    height: 30px;
+    background-color: $siteorcolor;
+    color: $white;
+    position: relative;
+    left: 2%;
+    top: 2%;
+    margin-bottom: 10px;
+  }
+  .body-container {
+    div[data-region="view-contacts"] {
+      ul.nav-pills {
+        li.nav-item {
+          a.nav-link.active {
+            background-color: $siteorcolor;
+          }
+        }
+      }
+    }
+  }
+}
+
+div[data-region="view-conversation"] {
+  margin-top: 20px;
+}
+
+aside#block-region-side-pre {
+  #frontpage-category-names {
+    margin-bottom: 20px;
+    margin-top: 30px;
+    padding: 0 10px;
+    h2 {
+      color: $black;
+      font-family: "open_sansbold";
+      font-size: 1.2em;
+      font-weight: normal;
+      line-height: normal;
+      text-shadow: none;
+      text-transform: capitalize;
+      text-align: left;
+      margin-bottom: 20px;
+    }
+    .course_category_tree {
+      .collapsible-actions {
+        position: relative;
+        top: -42px;
+      }
+    }
+  }
+  h3.categoryname,
+  h4.categoryname {
+    font-size: 16px;
+    font-weight: normal;
+    box-shadow: none;
+    font-family: "open_sansregular";
+    text-transform: capitalize;
+    line-height: normal;
+  }
+  h4.categoryname {
+    font-size: 14px;
+  }
+}
+
+/*
+  >>>Message App Section Styling End
+*/

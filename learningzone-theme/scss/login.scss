@@ -1,0 +1,129 @@
+/*
+  >>>Login Styling Start
+*/
+body#page-login-signup{
+    .signupform{
+       padding-top: 50px;
+    }
+}
+body#page-login-index {
+	#nav-main,
+	.social-network,
+	#page-footer {
+		display: none;
+	}
+	#page {
+		background-color: #eee;
+		background-repeat: no-repeat;
+		background-position: right top;
+		background-size: cover;
+		background-attachment: fixed;
+		padding-top: 0;
+		margin: 0;
+		#page-content {
+			.login-main-wrapper {
+				display: flex;
+				margin: 0;
+				.login-section {
+					width: 30%;
+					margin: 0;
+					float: left;
+					background-color: transparent;
+					background-repeat: repeat;
+					color: #fff;
+					font-size: 14px;
+					height: 100vh;
+					padding: 10px;
+					display: table;
+                    .login-inner {
+						padding: 50px 30px;
+                    .loginform{
+                        text-align: center;
+                        h1.login-heading{
+                            display: none;
+                        }
+
+                input#username,
+                input#password {
+                  border-radius: 0;
+                  box-shadow: none;
+                  background-color: transparent;
+                  border: none;
+                  border-bottom: 2px solid $white;
+                  width: 60%;
+                  margin: 0 auto;
+                  display: inherit;
+                  margin-bottom: 0px;
+                  font-size: 12px;
+                  color: $white;
+                  height: 35px;
+                  line-height: 35px;
+                  padding-left: 0;
+                  letter-spacing: 1px;
+                }
+                        .input-group {
+                            display: inherit !important;
+                        }
+              .btn{
+                background-color: transparent;
+                background-image: none;
+                filter: none;
+                box-shadow: none;
+                border: 2px solid $white;
+                -webkit-border-radius: 100px;
+                -moz-border-radius: 100px;
+                border-radius: 100px;
+                color: $white;
+                text-shadow: none;
+                margin-top: 10px;
+                text-transform: uppercase;
+                padding: 8px 30px;
+                font-size: 14px;
+                letter-spacing: 1px;
+                width: auto !important;
+                margin: 0 auto !important;
+                &:hover,
+                &:active,
+                &:focus {
+                  background-color: transparent;
+                  background-repeat: repeat;
+                }
+              }
+               h2.login-heading{
+                  margin: 20px 0;
+                   font-size: 20px;
+              }
+              .d-flex{
+                  .login-languagemenu{
+                      margin: 20px auto 0 auto;
+                  }
+                  .btn{
+                      display: none;
+                  }
+              }
+
+                }
+                        
+                }
+				}
+
+			}
+
+		}
+	}
+}   
+
+@media all and (-ms-high-contrast:none) {
+	*::-ms-backdrop,
+	body#page-login-index #page #page-content .login-main-wrapper .login-section .login-inner form#login .form-group input[type="text"],
+	body#page-login-index #page #page-content .login-main-wrapper .login-section .login-inner form#login .form-group input[type="password"] {
+		box-sizing: unset;
+		padding: 5px 0 5px 5px;
+	}
+	/* IE11 */
+}
+
+
+/*
+  >>>Login Styling End
+*/

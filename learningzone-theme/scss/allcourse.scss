@@ -1,0 +1,233 @@
+/*
+  >>>All Course Styling Start
+*/
+
+.coursebox.proxyW {
+	width: 26.3% !important;
+}
+
+.paging-morelink {
+	text-align: left !important;
+	a {
+		background-color: $siteorcolor;
+		display: inline-block;
+		filter: none;
+		border: none;
+		color: #fff;
+		font-weight: 700;
+		padding: 5px 15px;
+		text-transform: capitalize;
+		-webkit-border-radius: 30px;
+		-moz-border-radius: 30px;
+		border-radius: 30px;
+	}
+}
+
+#frontpage-available-course-list,
+#frontpage-course-list {
+	.frontpage-course-list-all,
+	.frontpage-course-list-enrolled {
+		overflow: hidden;
+		margin-top: 3em;
+		.shadow-frontpage-course-list-all,
+		.shadow-frontpage-course-list-enrolled {
+			display: flex;
+			flex-wrap: wrap;
+			justify-content: space-between;
+			.course-section {
+				flex: 0 0 25%;
+				.coursebox {
+					border: none;
+					background-color: $white;
+					border-radius: 0;
+					padding: 0;
+					margin: 0;
+					margin-bottom: 20px!important;
+					.courseimage {
+						width: 100%;
+						height: auto;
+						overflow: hidden;
+						position: relative;
+						cursor: default;
+						img {
+							display: block;
+							position: relative;
+							-webkit-transition: all .4s linear;
+							transition: all .4s linear;
+							width: 100%;
+							margin: 0;
+							max-height: 100%;
+							max-width: 100%;
+							&:hover {
+								filter: alpha(opacity=70);
+								-ms-transform: scale(1.2);
+								-webkit-transform: scale(1.2);
+								transform: scale(1.2);
+							}
+						}
+					}
+					.content {
+						padding: 20px 8px;
+						font-size: 15px;
+						line-height: 24px;
+						word-wrap: break-word;
+						.summary {
+							float: none;
+							width: auto;
+							.no-overflow {
+								overflow: unset;
+							}
+							.visitlink {
+								margin-left: 0;
+								margin-top: 20px;
+								a {
+									background-color: $siteorcolor;
+									background-repeat: no-repeat;
+									background-position: 15px center;
+									text-transform: uppercase;
+									color: #fff;
+									padding: 5px 15px;
+									padding-left: 38px;
+									-webkit-border-radius: 30px;
+									-moz-border-radius: 30px;
+									border-radius: 30px;
+									&:hover,
+									&:active,
+									&:focus {
+										background-repeat: no-repeat, repeat;
+									}
+								}
+							}
+							ul.teachers {
+								float: none!important;
+								width: 100%!important;
+								margin: 10px 0!important;
+								color: #626262;
+								padding: 10px 0;
+								li {
+									a {
+										color: $black;
+										font-weight: normal;
+										img {
+											width: 20px;
+											height: 20px;
+											margin-right: 5px;
+											border-radius: 0;
+										}
+									}
+								}
+							}
+						}
+						.info {
+							h3 {
+								font-size: 1.9em;
+								line-height: 1.3em;
+								font-weight: 400;
+								font-family: 'open_sanslight'!important;
+								color: $black;
+								a {
+									color: $black;
+									font-weight: normal;
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+#frontpage-available-course-list,
+#frontpage-category-combo{
+	h2.ourcoursesheading {
+		text-align: center;
+		color: $siteorcolor;
+		font-size: 2.5em;
+		font-family: 'open_sanslight';
+		margin: 0;
+	}
+	p.tagline {
+		color: $black;
+		margin-top: 10px;
+		font-size: 16px;
+		text-align: center;
+	}
+}
+
+#enrolledcourses {
+	background-color: #eee;
+	.enrolledheader {
+		background-color: #484848;
+		text-align: center;
+		padding: 20px 0;
+		margin-bottom: 3em;
+		h2 {
+			color: $siteorcolor;
+			font-size: 2.3em;
+			font-family: "open_sanslight";
+			margin: 0;
+			font-weight: bold;
+			letter-spacing: normal;
+		}
+		p {
+			color: $white;
+			font-size: 17px;
+			margin-top: 10px;
+			font-family: "open_sansregular";
+			font-weight: normal;
+			letter-spacing: normal;
+		}
+		&:after {
+			content: '';
+			display: inline-block;
+			position: absolute;
+			margin-left: -65px;
+			width: 0;
+			height: 0;
+			border-top: 50px solid #484848;
+			border-right: 50px solid transparent;
+			border-bottom: 0 solid transparent;
+			border-left: 50px solid transparent;
+		}
+	}
+	#frontpage-course-list {
+		.frontpage-course-list-enrolled {
+			.coursebox {
+				.content {
+					.info {
+						.moreinfo {
+							background-position: right bottom;
+							background-repeat: no-repeat;
+							height: 11px;
+							width: 71px;
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+
+/*
+  >>>All Course Styling End
+*/
+
+
+/*
+  >>>IE 11 CSS Styling Start
+*/
+
+@media all and (-ms-high-contrast:none) {
+	*::-ms-backdrop,
+	#course-collection {
+		overflow: hidden !important;
+	}
+	/* IE11 */
+}
+
+
+/*
+  >>>IE 11 CSS Styling End
+*/

@@ -1,0 +1,23 @@
+/*
+  >>>IE 11 CSS Styling Start
+*/
+
+@media all and (-ms-high-contrast:none) {
+  *::-ms-backdrop,
+  *,
+  *::before,
+  *::after {
+    -webkit-box-sizing: unset !important;
+    box-sizing: unset !important;
+  }
+  *::-ms-backdrop,
+  #page-wrapper {
+    display: block;
+    flex-direction: unset;
+  }
+}
+
+
+/*
+  >>>IE 11 CSS Styling End
+*/

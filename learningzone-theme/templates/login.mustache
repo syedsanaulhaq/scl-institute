@@ -1,0 +1,48 @@
+{{!
+@template theme_learningzone/login
+Login page template
+Example context (json):
+{
+"output": {
+"doctype": "<!DOCTYPE html>",
+"page_title": "Login page",
+"favicon": "favicon.ico",
+"main_content": "
+<h1>Headers keep HTML validators happy</h1>
+"
+}
+}
+}}
+{{> theme_learningzone/head }}
+<body {{{ bodyattributes }}} theme="learningzone">
+<div id="page-wrapper">
+{{{ output.standard_top_of_body_html }}}
+<div id="page">
+ <!-- Start navigation -->
+      {{>theme_learningzone/navbar}}
+ <!-- End navigation -->
+   <div class="container-fluid">
+      <div id="page-content">
+         <div id="region-main-box" class="col-12">
+            <section id="region-main" aria-label="{{#str}}content{{/str}}">
+               {{{ output.course_content_header }}}
+               <div class="main-content clearfix">
+                <div class="login-main-wrapper">
+                  <div class="login-section col-lg-4 col-sm-12">
+                      <div class="login-inner">{{{ output.main_content }}}</div>
+                    </div>
+                   </div>
+               </div>
+               {{{ output.course_content_footer }}}
+            </section>
+         </div>
+      </div>
+   </div>
+   {{> theme_learningzone/footer }}
+</div>
+</div>
+</body>
+</html>
+{{#js}}
+require(['theme_boost/loader']);
+{{/js}}

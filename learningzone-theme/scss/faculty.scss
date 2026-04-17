@@ -1,0 +1,127 @@
+/*
+  >>>Faculty Styling Start
+*/
+
+.faculties {
+	h1 {
+		text-align: center;
+		margin-bottom: 5px;
+		font-size: 2.3em;
+		margin-top: 30px;
+	}
+	p {
+		text-align: center;
+	}
+	.faculty-wrapper {
+		display: flex;
+		padding: 0 0 4em 0;
+		p.name {
+			background-color: $white;
+			font-family: "open_sansbold";
+			font-size: 1.4em;
+			text-transform: uppercase;
+			line-height: 1.2em;
+			color: #000;
+			margin: 0;
+			a {
+				display: block;
+				color: $black;
+				&:hover {
+					color: $siteorcolor;
+				}
+			}
+		}
+		.view {
+			overflow: hidden;
+			position: relative;
+			text-align: center;
+			cursor: pointer;
+			width: 220px;
+			height: 220px;
+			margin: 20px auto;
+			-webkit-border-radius: 200px;
+			-moz-border-radius: 200px;
+			border-radius: 200px;
+			border: 10px solid #fff;
+			-moz-box-shadow: 0 0 5px #888;
+			-webkit-box-shadow: 0 0 5px#888;
+			box-shadow: 0 0 5px #888;
+			.mask {
+				position: relative;
+				overflow: hidden;
+				top: 0;
+				left: 0;
+			}
+			img,
+			p {
+				display: block;
+				position: relative;
+			}
+		}
+		.view-first {
+			img {
+				-webkit-transition: all 0.2s linear;
+				-moz-transition: all 0.2s linear;
+				-o-transition: all 0.2s linear;
+				-ms-transition: all 0.2s linear;
+				transition: all 0.2s linear;
+				width: 100%;
+				max-width: 100%;
+			}
+			.mask {
+				filter: alpha(opacity=0);
+				opacity: 0;
+				background-repeat: repeat;
+				background-color: transparent;
+				-webkit-transition: all 0.4s ease-in-out;
+				-moz-transition: all 0.4s ease-in-out;
+				-o-transition: all 0.4s ease-in-out;
+				-ms-transition: all 0.4s ease-in-out;
+				transition: all 0.4s ease-in-out;
+				width: 100%;
+				text-transform: uppercase;
+				color: #fff;
+				text-align: center;
+				font-size: 14px;
+				padding: 0;
+				position: absolute;
+				height: 100%;
+				line-height: 350px;
+				p.profile {
+					font-family: 'open_sansregular';
+					font-size: 16px;
+					text-align: center;
+					padding: 45px 20px 0 20px !important;
+					display: table-cell;
+					vertical-align: top;
+					background-color: transparent !important;
+					color: #fff !important;
+					text-transform: none !important;
+					line-height: 25px;
+					display: inline-block;
+				}
+			}
+			&:hover {
+				img {
+					-webkit-transform: scale(1.1, 1.1);
+					-moz-transform: scale(1.1, 1.1);
+					-o-transform: scale(1.1, 1.1);
+					-ms-transform: scale(1.1, 1.1);
+					transform: scale(1.1, 1.1);
+				}
+				.mask {
+					-ms-filter: "progid: DXImageTransform.Microsoft.Alpha(Opacity=100)";
+					filter: alpha(opacity=100);
+					opacity: 1;
+					position: absolute;
+					z-index: 101;
+				}
+			}
+		}
+	}
+}
+
+
+/*
+  >>>Faculty Styling End
+*/

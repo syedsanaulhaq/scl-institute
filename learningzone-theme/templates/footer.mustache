@@ -1,0 +1,228 @@
+{{!
+Page footer.
+}}
+<!-- Social Network Section Start -->
+{{#displaysocialnetwork}}
+<div class="social-network">
+   <div class="container-fluid">
+      <ul class="social">
+        <li>
+            <ul>
+               {{#hasfacebook}}
+                  <li>
+                     <a href="{{{hasfacebook}}}" target="_blank">
+                     <i class="facebook">
+                        <img src="{{{ config.wwwroot }}}/theme/learningzone/pix/social/facebook.jpg" alt="Facebook"/>
+                     </i>
+                     </a>
+                  </li>
+               {{/hasfacebook}}
+               {{#hastwitter}}
+                  <li>
+                     <a href="{{{hastwitter}}}" target="_blank">
+                     <i class="twitter">
+                        <img src="{{{ config.wwwroot }}}/theme/learningzone/pix/social/twitter.jpg" alt="twitter"/>
+                     </i>
+                     </a>
+                  </li>
+               {{/hastwitter}}
+               {{#hasgooglepluse}}
+                  <li>
+                     <a href="{{{hasgooglepluse}}}" target="_blank">
+                     <i class="googlepluse">
+                        <img src="{{{ config.wwwroot }}}/theme/learningzone/pix/social/googlepluse.jpg" alt="googlepluse"/>
+                     </i>
+                     </a>
+                  </li>
+               {{/hasgooglepluse}}
+               {{#haspinterest}}
+                  <li>
+                     <a href="{{{haspinterest}}}" target="_blank">
+                     <i class="pinterest">
+                        <img src="{{{ config.wwwroot }}}/theme/learningzone/pix/social/pinterest.jpg" alt="pinterest"/>
+                     </i>
+                     </a>
+                  </li>
+               {{/haspinterest}}
+               {{#hasvimeo}}
+                  <li>
+                     <a href="{{{hasvimeo}}}" target="_blank">
+                     <i class="vimeo">
+                        <img src="{{{ config.wwwroot }}}/theme/learningzone/pix/social/vimeo.jpg" alt="vimeo"/>
+                     </i>
+                     </a>
+                  </li>
+               {{/hasvimeo}}
+               {{#hasgit}}
+                  <li>
+                     <a href="{{{hasgit}}}" target="_blank">
+                     <i class="git">
+                        <img src="{{{ config.wwwroot }}}/theme/learningzone/pix/social/git.jpg" alt="git"/>
+                     </i>
+                     </a>
+                  </li>
+               {{/hasgit}}
+               {{#hasyahoo}}
+                  <li>
+                     <a href="{{{hasyahoo}}}" target="_blank">
+                     <i class="yahoo">
+                        <img src="{{{ config.wwwroot }}}/theme/learningzone/pix/social/yahoo.jpg" alt="yahoo"/>
+                     </i>
+                     </a>
+                  </li>
+               {{/hasyahoo}}
+               {{#haslinkdin}}
+                  <li>
+                     <a href="{{{haslinkdin}}}" target="_blank">
+                     <i class="linkdin">
+                        <img src="{{{ config.wwwroot }}}/theme/learningzone/pix/social/linkdin.jpg" alt="linkdin"/>
+                     </i>
+                     </a>
+                  </li>
+               {{/haslinkdin}}
+            </ul>
+         </li>
+      </ul>
+   </div>
+</div>
+{{/displaysocialnetwork}}
+<!-- Social Network Section End -->
+<!-- Footer Section Start -->
+{{#displayfootersection}}
+<footer id="page-footer">
+   <div class="container-fluid">
+      <div class="row-fluid">
+         <div class="col-lg-3 col-md-6 col-sm-12 footersection">
+            {{#footersection1heading}}
+               <h5>{{{footersection1heading}}}</h5>
+            {{/footersection1heading}}
+            <ul>
+               {{#footersection1content}}
+                  <li>{{{footersection1content}}}</li>
+               {{/footersection1content}}
+               {{#footersection1email}}
+                  <li><a href="mailto:{{{footersection1email}}}">{{{footersection1email}}}</a></li>
+               {{/footersection1email}}
+               {{#footersection1contactno}}
+                  <li>{{{footersection1contactno}}}</li>
+               {{/footersection1contactno}}
+               {{#footersection1address}}
+                  <li>{{{footersection1address}}}</li>
+               {{/footersection1address}}
+            </ul>
+         </div>
+         <div class="col-lg-3 col-md-6 col-sm-12 footersection">
+            <ul class="footer-link">
+               <li>
+                  {{#footersection2heading}}
+                  <h5>{{{footersection2heading}}}</h5>
+                  {{/footersection2heading}}
+                  <ul class="common">
+                     {{#footersection2link1}}
+                     <li><a href="{{{footersection2link1url}}}">{{{footersection2link1}}}</a></li>
+                     {{/footersection2link1}}
+                     {{#footersection2link2}}
+                     <li><a href="{{{footersection2link2url}}}">{{{footersection2link2}}}</a></li>
+                     {{/footersection2link2}}
+                     {{#footersection2link3}}
+                     <li><a href="{{{footersection2link3url}}}">{{{footersection2link3}}}</a></li>
+                     {{/footersection2link3}}
+                     {{#footersection2link4}}
+                     <li><a href="{{{footersection2link4url}}}">{{{footersection2link4}}}</a></li>
+                     {{/footersection2link4}}
+                     {{#footersection2link5}}
+                     <li><a href="{{{footersection2link5url}}}">{{{footersection2link5}}}</a></li>
+                     {{/footersection2link5}}
+                  </ul>
+               </li>
+            </ul>
+         </div>
+         <div class="col-lg-3 col-md-6 col-sm-12 footersection">
+            <ul class="footer-link">
+               <li>
+                  {{#footersection3heading}}
+                  <h5>{{{footersection3heading}}}</h5>
+                  {{/footersection3heading}}
+                  <ul class="common">
+                     {{#footersection3link1}}
+                     <li><a href="{{{footersection3link1url}}}">{{{footersection3link1}}}</a></li>
+                     {{/footersection3link1}}
+                     {{#footersection3link2}}
+                     <li><a href="{{{footersection3link2url}}}">{{{footersection3link2}}}</a></li>
+                     {{/footersection3link2}}
+                     {{#footersection3link3}}
+                     <li><a href="{{{footersection3link3url}}}">{{{footersection3link3}}}</a></li>
+                     {{/footersection3link3}}
+                     {{#footersection3link4}}
+                     <li><a href="{{{footersection3link4url}}}">{{{footersection3link4}}}</a></li>
+                     {{/footersection3link4}}
+                     {{#footersection3link5}}
+                     <li><a href="{{{footersection3link5url}}}">{{{footersection3link5}}}</a></li>
+                     {{/footersection3link5}}
+                  </ul>
+               </li>
+            </ul>
+         </div>
+         <div class="col-lg-3 col-md-6 col-sm-12 footersection">
+            <ul class="instagram-section">
+               <li>
+                  {{#footersection4heading}}
+                  <h5>{{{footersection4heading}}}</h5>
+                  {{/footersection4heading}}
+                  <ul class="common instagram-pics">
+                     <li><a href="#"><img src="{{{instagram1image}}}" alt="instagram-1-image" /></a></li>
+                     <li><a href="#"><img src="{{{instagram2image}}}" alt="instagram-2-image" /></a></li>
+                     <li><a href="#"><img src="{{{instagram3image}}}" alt="instagram-3-image" /></a></li>
+                     <li><a href="#"><img src="{{{instagram4image}}}" alt="instagram-4-image" /></a></li>
+                     <li><a href="#"><img src="{{{instagram5image}}}" alt="instagram-5-image" /></a></li>
+                     <li><a href="#"><img src="{{{instagram6image}}}" alt="instagram-6-image" /></a></li>
+                  </ul>
+                  {{#followus}}
+                     <span class="followus"><a href="{{{followusurl}}}">{{{followus}}}</a></span>
+                  {{/followus}}
+               </li>
+            </ul>
+         </div>
+         <div class="clearfix"></div>
+   </div>
+<ul class="copyright">
+   {{#hascopyright}}     
+   <li>
+      {{#hascopyright}}
+         <p class="copy">Copyright &copy; {{{copyrightY}}} {{{hascopyright}}} </p>
+      {{/hascopyright}}
+   </li>
+   {{/hascopyright}}
+</ul>
+{{/displayfootersection}}
+      
+</div>
+<div class="bottom-footer">
+      <div id="course-footer">{{{ output.course_footer }}}</div>
+      <!-- Start Custom Menu -->
+      <nav class="nav navbar-nav d-md-none" aria-label="{{#str}}custommenu, admin{{/str}}">
+         {{# output.custom_menu_flat }}
+         <ul class="list-unstyled pt-3">
+            {{> theme_boost/custom_menu_footer }}
+         </ul>
+         {{/ output.custom_menu_flat }}
+      </nav>
+      <!-- End Custom Menu-->
+      {{{ output.standard_footer_html }}}
+      {{{ output.standard_end_of_body_html }}}
+   </div>
+   <!-- Start Back To Top -->
+  
+   <!-- End Back To Top -->
+</footer>
+<!-- Footer Section End -->
+ {{#backtotop}}
+   <div id="backtotop" style="display: none;"> 
+      <a class="scrollup" href="javascript:void(0);" title="Go to top">
+      </a>
+   </div>
+{{/backtotop}}
+
+{{#js}}
+require(['theme_boost/loader']);
+{{/js}}

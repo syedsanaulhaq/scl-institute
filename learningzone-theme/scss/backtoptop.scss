@@ -1,0 +1,40 @@
+/*
+  >>>Back 2 Top Styling Start
+*/
+
+#backtotop {
+  cursor: pointer;
+  display: none;
+  position: relative;
+  text-align: right;
+  cursor: pointer;
+  z-index: 99999;
+  a.scrollup {
+    background-color: $siteorcolor;
+    background-repeat: no-repeat;
+    background-position: center center;
+    display: inline-block;
+    text-decoration: none;
+    text-align: center;
+    width: 40px;
+    height: 40px;
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    &::before {
+      content: "\f077";
+      color: #fff;
+      font-family: 'FontAwesome';
+      font-size: 12px !important;
+      line-height: 40px;
+    }
+    &:hover {
+      background-color: #191919;
+    }
+  }
+}
+
+
+/*
+  >>>Back 2 Top Styling End
+*/

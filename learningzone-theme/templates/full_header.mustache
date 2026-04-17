@@ -1,0 +1,20 @@
+{{!
+@template theme_learningzone/header
+This template renders the header.
+Example context (json):
+{
+"contextheader": "context_header_html",
+"hasnavbar": false,
+"navbar": "navbar_if_available",
+"courseheader": "course_header_html"
+}
+}}
+{{>theme_learningzone/blocks}}
+<header id="page-header" class="innerbanner">
+   <div class="container-fluid">
+      {{{pageheading}}}
+   </div>
+</header>
+
+
+

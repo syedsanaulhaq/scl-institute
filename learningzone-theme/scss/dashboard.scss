@@ -1,0 +1,26 @@
+/*
+  >>>Dashboard Styling Start
+*/
+
+body.pagelayout-mydashboard {
+	#page-content.blocks-pre.blocks-post {
+		.region-main {
+			flex: 0 0 100%;
+			max-width: 100%;
+			.dashboard-card-deck.one-row {
+				flex-flow: nowrap;
+				.dashboard-card {
+					width: calc(49.5% - .5rem);
+				}
+			}
+			.progress-bar {
+				background-color: $siteorcolor;
+			}
+		}
+	}
+}
+
+
+/*
+  >>>Dashboard Styling End
+*/

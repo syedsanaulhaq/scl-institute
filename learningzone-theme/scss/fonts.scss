@@ -1,0 +1,29 @@
+@charset "utf-8";
+@font-face {
+  font-style: normal;
+  font-family: "open_sansregular";
+  font-weight: normal;
+  src: url([[font:theme|OpenSans-Regular.ttf]]) format("truetype");
+  src: url([[font:theme|opensans-regular-webfont.woff2]]) format('woff2'),
+       url([[font:theme|opensans-regular-webfont.woff]]) format('woff');
+}
+
+@font-face {
+  font-weight: 700;
+  font-style: normal;
+  font-stretch: normal;
+  font-family: "open_sansbold";
+  src: url([[font:theme|OpenSans-Bold.ttf]]) format("truetype");
+  src: url([[font:theme|opensans-bold-webfont.woff2]]) format('woff2'),
+       url([[font:theme|opensans-bold-webfont.woff]]) format('woff');
+}
+
+@font-face {
+  font-weight: normal;
+  font-style: normal;
+  font-family: "open_sanslight";
+  src: url([[font:theme|OpenSans-Light.ttf]]) format("truetype");
+  src: url([[font:theme|opensans-light-webfont.woff2]]) format('woff2'),
+         url([[font:theme|opensans-light-webfont.woff]]) format('woff');
+}
+

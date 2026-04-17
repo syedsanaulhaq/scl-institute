@@ -1,0 +1,104 @@
+/*
+  >>>Register Styling Start
+*/
+
+#page-login-signup {
+    #page {
+        background-image: none;
+        .card {
+            border: none;
+        }
+        #page-content {
+            .login-main-wrapper {
+                margin-top: 100px;
+                .card-title.text-xs-center {
+                    display: none;
+                }
+                .card-title {
+                    h3 {
+                        font-size: 1.4em;
+                        line-height: normal;
+                    }
+                }
+                .login-section {
+                    flex: 0 0 100%;
+                    max-width: 100%;
+                    padding: 0;
+                    .login-inner {
+                        .card-body {
+                            font-family: "open_sansregular";
+                            font-size: 14px;
+                            padding: 0;
+                            .collapsible-actions {
+                                a {
+                                    font-weight: normal;
+                                    font-size: 14px;
+                                }
+                            }
+                            fieldset {
+                                border-bottom: none;
+                                legend {
+                                    border-bottom: 1px solid #ddd;
+                                    display: block;
+                                    width: 100%;
+                                    padding: 0;
+                                    margin-bottom: 20px;
+                                    font-size: 21px;
+                                    line-height: 40px;
+                                    a {
+                                        color: #333;
+                                        font-weight: normal;
+                                        font-size: 21px;
+                                    }
+                                }
+                                .fcontainer {
+                                    .col-md-3 {
+                                        text-align: right;
+                                        label {
+                                            margin-right: 5px;
+                                            font-size: 14px;
+                                            font-weight: bold;
+                                        }
+                                    }
+                                }
+                            }
+                            #fgroup_id_buttonar {
+                                .form-inline.felement {
+                                    padding-left: 0;
+                                }
+                                .form-group:not(.btn-cancel) {
+                                    input[type="submit"] {
+                                        background-color: $black;
+                                        border-color: $black;
+                                        transition: 0.5s ease;
+                                        color: $white;
+                                    }
+                                }
+                            }
+                            .fdescription {
+                                width: 330px;
+                                margin: 0 auto 30px 315px;
+                                margin-bottom: 30px;
+                            }
+                        }
+                    }
+                }
+            }
+            #region-main-box {
+                padding: 0;
+                #region-main {
+                    padding: 0;
+                    overflow-x: hidden;
+                }
+            }
+        }
+    }
+    .signup-section {
+        display: none;
+    }
+}
+
+
+/*
+  >>>Register Styling End
+*/
