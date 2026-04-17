@@ -1,4 +1,45 @@
 <style>
+/* == TOP NAVBAR - PURPLE BACKGROUND WITH WHITE TEXT == */
+.navbar,
+nav.navbar,
+[role="navigation"] {
+    background-color: rgb(85, 51, 153) !important;
+    background: rgb(85, 51, 153) !important;
+}
+
+/* Navbar text and links - white */
+.navbar-brand,
+.navbar-text,
+.navbar a,
+.navbar button,
+.navbar-nav .nav-link,
+.navbar-nav a,
+#page-navbar,
+#page-navbar a,
+#page-navbar *,
+[role="navigation"],
+[role="navigation"] a,
+[role="navigation"] *,
+[role="menuitem"],
+[role="tab"],
+nav a,
+header a,
+header button,
+header [role="menuitem"],
+header [role="tab"] {
+    color: white !important;
+    text-decoration: none !important;
+}
+
+/* Navbar hover state */
+.navbar-nav .nav-link:hover,
+.navbar a:hover,
+[role="menuitem"]:hover,
+[role="tab"]:hover {
+    color: #E9D5FF !important;
+    opacity: 0.9 !important;
+}
+
 /* Override flex/grid centering at all levels */
 #page-header {
     text-align: left !important;
@@ -78,6 +119,20 @@ nav[aria-label="Breadcrumb"] ul {
 <script>
 (function() {
     function fixAllAlignment() {
+        // == NAVBAR STYLING - PURPLE WITH WHITE TEXT ==
+        // Style navbar background
+        var navbars = document.querySelectorAll('.navbar, nav, [role="navigation"]');
+        navbars.forEach(function(nav) {
+            nav.style.backgroundColor = 'rgb(85, 51, 153)';
+        });
+        
+        // Style all navbar text and links white
+        var navElements = document.querySelectorAll('.navbar a, .navbar button, .navbar-brand, .navbar-text, .navbar-nav .nav-link, #page-navbar, #page-navbar a, [role="navigation"] a, [role="navigation"] *, [role="menuitem"], [role="tab"], nav a, header a, header button');
+        navElements.forEach(function(el) {
+            el.style.color = 'white';
+            el.style.textDecoration = 'none';
+        });
+        
         // Breadcrumb links stay black
         var breadcrumbs = document.querySelectorAll('nav[aria-label="Breadcrumb"] a, .breadcrumb a, .nav-breadcrumb a');
         breadcrumbs.forEach(function(el) {
