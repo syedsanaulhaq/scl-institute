@@ -47,6 +47,10 @@ nav.navbar,
     color: #FFD700 !important;
 }
 
+.navbar .navbar-nav .nav-item .nav-link {
+    color: white !important;
+}
+
 [role="navigation"] .nav-link {
     color: white !important;
 }
