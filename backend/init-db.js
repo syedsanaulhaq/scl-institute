@@ -25,16 +25,28 @@ async function initDatabase() {
         // Split by semicolon and execute each statement
         const statements = schema.split(';').map(s => s.trim()).filter(s => s && !s.startsWith('--'));
         
+        let successCount = 0;
+        let skipCount = 0;
+        
         for (const statement of statements) {
             try {
                 await connection.query(statement);
+                successCount++;
             } catch (err) {
-                if (!err.message.includes('already exists')) {
+                // Skip harmless errors: table already exists, index already exists
+                if (err.message.includes('already exists') || 
+                    err.message.includes("doesn't exist") ||
+                    err.message.includes('Duplicate key')) {
+                    skipCount++;
+                } else {
                     console.error('✗ Error executing statement:', err.message);
-                    console.error('Statement:', statement.substring(0, 100));
+                    console.error('Statement:', statement.substring(0, 150));
                 }
             }
         }
+        
+        console.log(`✓ Executed ${successCount} statements successfully`);
+        console.log(`✓ Skipped ${skipCount} harmless errors`);
         
         console.log('✓ Database initialization complete');
         connection.release();
