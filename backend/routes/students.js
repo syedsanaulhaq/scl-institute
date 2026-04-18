@@ -2144,9 +2144,9 @@ router.get('/applications/:id', async (req, res) => {
         const { id } = req.params;
         
         const [applications] = await db.execute(`
-            SELECT sa.*, c.department, c.awarding_body, c.duration_months
+            SELECT sa.*, c.code as course_code_ref, c.title as course_title
             FROM student_applications sa
-            LEFT JOIN courses c ON sa.course_code = c.course_code
+            LEFT JOIN courses c ON sa.course_code = c.code
             WHERE sa.id = ? AND sa.is_deleted = FALSE
         `, [id]);
 

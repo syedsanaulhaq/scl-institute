@@ -1458,6 +1458,47 @@ app.get('/api/students/applications', async (req, res) => {
     }
 });
 
+// GET /api/students/applications/:id - Get single application by ID
+app.get('/api/students/applications/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const [results] = await db.execute(
+            `SELECT * FROM student_applications WHERE id = ? AND is_deleted = FALSE`,
+            [id]
+        );
+        
+        if (!results || results.length === 0) {
+            return res.json({
+                success: false,
+                data: null,
+                error: 'Application not found'
+            });
+        }
+        
+        const app = results[0];
+        const refNum = app.application_reference || `SCL${String(app.id).padStart(6, '0')}`;
+        
+        const transformedApp = {
+            ...app,
+            reference_number: refNum,
+            application_reference: refNum
+        };
+        
+        res.json({
+            success: true,
+            data: {
+                application: transformedApp
+            }
+        });
+    } catch (err) {
+        console.error('[GET APPLICATION] Error:', err.message);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to fetch application'
+        });
+    }
+});
+
 // GET /api/students/applications/:id/review - Get review status for an application
 app.get('/api/students/applications/:id/review', async (req, res) => {
     try {
