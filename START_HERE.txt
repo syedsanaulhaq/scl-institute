@@ -1,0 +1,54 @@
+START HERE BEFORE YOUR PRESENTATION
+====================================
+
+Your system is ready. Do this:
+
+1. OPEN TERMINAL and run:
+   docker ps
+
+   You should see 5 containers. All should say "Up" or "Healthy".
+   If they don't, run: docker-compose up -d
+   Wait 60 seconds.
+
+2. OPEN BROWSER:
+   http://localhost:3000
+
+3. LOGIN with:
+   Email: admin@sclsandbox.xyz
+   Password: password123
+
+4. CLICK "Sign In to Dashboard"
+
+5. YOU SHOULD SEE:
+   - Dashboard with 10 modules
+   - Click "Admissions Hub" - see 10 applications
+   - Click "Course Lifecycle" - see 52 courses
+
+IF YOU SEE ALL THAT, YOU'RE READY TO PRESENT.
+
+---
+
+DEMO FLOW FOR YOUR PRESENTATION:
+
+1. Start on Dashboard - show the 10 operational modules
+2. Go to Admissions Hub - show the 10 student applications with their statuses
+3. Go to Course Lifecycle - show the 52 courses organized by program
+
+That's it. Your demo is ready.
+
+---
+
+IF SOMETHING DOESN'T WORK:
+
+- Page won't load? Press F5 to refresh.
+- System frozen? Click the "Refresh" button.
+- Completely broken? Open terminal and run:
+  docker-compose restart
+  Wait 60 seconds, then try again.
+
+---
+
+YOUR SYSTEM IS TESTED AND WORKING. 
+YOU CAN PRESENT WITH CONFIDENCE.
+
+Good luck! 🎉
