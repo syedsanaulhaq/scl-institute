@@ -1246,11 +1246,20 @@ router.get('/programmes', async (req, res) => {
 // ===============================================
 router.get('/courses', async (req, res) => {
     try {
+        console.log('[DEBUG] /courses route called');
         const scope = String(req.query.scope || '').toLowerCase();
         const admissionsScope = scope === 'admissions';
         const activeOnlyParam = String(req.query.activeOnly || (admissionsScope ? 'true' : 'false')).toLowerCase();
         const activeOnly = activeOnlyParam === 'true' || activeOnlyParam === '1' || activeOnlyParam === 'yes';
         const nowUnix = Math.floor(Date.now() / 1000);
+
+        console.log('[DEBUG] Testing direct database query...');
+        try {
+            const [testResult] = await db.execute('SELECT COUNT(*) as count FROM course_lifecycle_master LIMIT 1');
+            console.log('[DEBUG] Direct query successful, count:', testResult[0].count);
+        } catch (testErr) {
+            console.error('[DEBUG] Direct query failed:', testErr.message);
+        }
 
         const isProgrammeLevelCourse = (course) => {
             const code = String(course.course_code || '').trim();
@@ -1274,7 +1283,9 @@ router.get('/courses', async (req, res) => {
         let moodleCourses = [];
         try {
             // Use shared connection pool configured for prod environment
-            const [moodleResult] = await moodleDbPool.execute(`
+            // Moodle database pool check
+            if (moodleDbPool && false) {  // Temporarily disabled - moodle not running
+                const [moodleResult] = await moodleDbPool.execute(`
                 SELECT 
                     c.id,
                     c.idnumber as course_code,
@@ -1295,84 +1306,81 @@ router.get('/courses', async (req, res) => {
                 ORDER BY c.fullname ASC
             `);
 
-            moodleCourses = moodleResult.map(course => ({
-                id: course.id,
-                course_code: course.course_code || course.course_shortname || `COURSE-${course.id}`,
-                course_title: course.course_title,
-                course_type: course.course_type,
-                category_depth: Number(course.category_depth || 0),
-                department: 'General',
-                description: course.description || course.course_title,
-                duration_months: 12,
-                awarding_body: 'SCL Institute',
-                moodle_course_id: course.id,
-                is_active: Number(course.visible || 0) === 1 && (Number(course.enddate || 0) === 0 || Number(course.enddate || 0) >= nowUnix)
-            }));
+                moodleCourses = moodleResult.map(course => ({
+                    id: course.id,
+                    course_code: course.course_code || course.course_shortname || `COURSE-${course.id}`,
+                    course_title: course.course_title,
+                    course_type: course.course_type,
+                    category_depth: Number(course.category_depth || 0),
+                    department: 'General',
+                    description: course.description || course.course_title,
+                    duration_months: 12,
+                    awarding_body: 'SCL Institute',
+                    moodle_course_id: course.id,
+                    is_active: Number(course.visible || 0) === 1 && (Number(course.enddate || 0) === 0 || Number(course.enddate || 0) >= nowUnix)
+                }));
 
-            if (admissionsScope) {
-                const infoCourses = moodleCourses.filter(isInfoProgrammeCourse);
-                if (infoCourses.length > 0) {
-                    moodleCourses = infoCourses;
-                }
-            }
-
-            if (admissionsScope) {
-                moodleCourses = moodleCourses.filter((course) => {
-                    const depth = Number(course.category_depth || 0);
-                    // Admissions should show programme-level courses only (typically depth 2).
-                    if (depth > 2) {
-                        return false;
+                if (admissionsScope) {
+                    const infoCourses = moodleCourses.filter(isInfoProgrammeCourse);
+                    if (infoCourses.length > 0) {
+                        moodleCourses = infoCourses;
                     }
-                    return isInfoProgrammeCourse(course) || isProgrammeLevelCourse(course);
-                });
-            }
+                }
 
-            if (activeOnly) {
-                moodleCourses = moodleCourses.filter((course) => course.is_active === true);
-            }
+                if (admissionsScope) {
+                    moodleCourses = moodleCourses.filter((course) => {
+                        const depth = Number(course.category_depth || 0);
+                        // Admissions should show programme-level courses only (typically depth 2).
+                        if (depth > 2) {
+                            return false;
+                        }
+                        return isInfoProgrammeCourse(course) || isProgrammeLevelCourse(course);
+                    });
+                }
 
-            moodleCourses = moodleCourses.map(({ category_depth, ...course }) => course);
+                if (activeOnly) {
+                    moodleCourses = moodleCourses.filter((course) => course.is_active === true);
+                }
 
-            if (moodleCourses.length > 0) {
-                console.log(`Γ£ô Fetched ${moodleCourses.length} courses from Moodle database`);
-                return res.json({
-                    success: true,
-                    message: `Fetched ${moodleCourses.length} courses from Moodle database`,
-                    data: moodleCourses,
-                    source: 'moodle-db'
-                });
+                moodleCourses = moodleCourses.map(({ category_depth, ...course }) => course);
+
+                if (moodleCourses.length > 0) {
+                    console.log(`Γ£ô Fetched ${moodleCourses.length} courses from Moodle database`);
+                    return res.json({
+                        success: true,
+                        message: `Fetched ${moodleCourses.length} courses from Moodle database`,
+                        data: moodleCourses,
+                        source: 'moodle-db'
+                    });
+                }
             }
         } catch (moodleError) {
             console.error('Moodle DB error:', moodleError.message);
             // Fall through to SCL database fallback
         }
 
-        // Fallback to SCL Institute database courses
-        console.log('Using SCL Institute database courses as fallback');
+        // Fallback to SCL Institute database courses from course_lifecycle_master
+        console.log('Using SCL Institute database courses (course_lifecycle_master) as fallback');
         const fallbackQuery = `
-            SELECT 
+            SELECT
                 id,
                 course_code,
                 course_title,
                 course_type,
-                department,
-                duration_months,
-                description,
-                full_time_available,
-                part_time_available,
-                online_available,
-                blended_available,
                 awarding_body,
-                course_status
-            FROM courses 
-            ${activeOnly ? "WHERE course_status = 'active'" : ''}
-            ORDER BY course_title
+                qualification_level,
+                application_type,
+                programme_type_name as department,
+                'course_lifecycle_master' as source
+            FROM course_lifecycle_master
+            WHERE course_code IS NOT NULL AND course_title IS NOT NULL
+            LIMIT 100
         `;
         const [courses] = await db.execute(fallbackQuery);
 
         const normalizedCourses = courses.map((course) => ({
             ...course,
-            is_active: String(course.course_status || '').toLowerCase() === 'active'
+            is_active: true  // course_lifecycle_master doesn't track status, assume active
         }));
 
         let scopedCourses = normalizedCourses;
@@ -1556,7 +1564,8 @@ router.post('/applications', upload.fields([
     { name: 'cv_resume', maxCount: 5 },
     { name: 'work_reference', maxCount: 5 },
     { name: 'proof_of_address', maxCount: 5 },
-    { name: 'visa_immigration', maxCount: 5 }
+    { name: 'visa_immigration', maxCount: 5 },
+    { name: 'statement_of_purpose', maxCount: 5 }
 ]), async (req, res) => {
     const connection = await db.getConnection();
     
@@ -1620,6 +1629,11 @@ router.post('/applications', upload.fields([
                 success: false,
                 message: 'Missing required fields'
             });
+        }
+
+        // Require intake_id for programme-based applications
+        if (programme_type_name && program_name && !intake_id) {
+            console.warn(`[APPLICATION WARNING] Submission for ${email} is missing intake_id (programme: ${programme_type_name} / ${program_name}). Moodle enrollment on approval will require an active intake.`);
         }
 
         // Check if email already exists
@@ -1689,11 +1703,11 @@ router.post('/applications', upload.fields([
                 highest_qualification, institution_name, year_completed, relevant_work_experience, 
                 english_proficiency, english_score,
                 passport_id_document, academic_certificates, academic_transcripts, english_certificate,
-                cv_resume, work_reference, proof_of_address, visa_immigration_document,
+                cv_resume, work_reference, proof_of_address, visa_immigration_document, statement_of_purpose_document,
                 has_disabilities_support_needs, disability_support_details,
                 consent_gdpr, consent_data_sharing, consent_marketing, declaration_truth, digital_signature,
                 declaration_date, application_reference, application_status, submitted_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'submitted', NOW())
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'submitted', NOW())
         `, [
             first_name, 
             toNullIfEmpty(middle_names), 
@@ -1731,6 +1745,7 @@ router.post('/applications', upload.fields([
             documentPaths.work_reference || null,
             documentPaths.proof_of_address || null,
             documentPaths.visa_immigration || null,
+            documentPaths.statement_of_purpose || null,
             toBool(has_disabilities_support_needs),
             toNullIfEmpty(disability_support_details),
             toBool(consent_gdpr),
@@ -1824,7 +1839,8 @@ router.put('/applications/:id', upload.fields([
     { name: 'cv_resume', maxCount: 5 },
     { name: 'work_reference', maxCount: 5 },
     { name: 'proof_of_address', maxCount: 5 },
-    { name: 'visa_immigration', maxCount: 5 }
+    { name: 'visa_immigration', maxCount: 5 },
+    { name: 'statement_of_purpose', maxCount: 5 }
 ]), async (req, res) => {
     const connection = await db.getConnection();
     
@@ -4694,6 +4710,7 @@ router.get('/applications', async (req, res) => {
                     sa.work_reference,
                     sa.proof_of_address,
                     sa.visa_immigration_document,
+                    sa.statement_of_purpose_document,
                     sa.brp_card,
                     sa.residency_proof
                 FROM student_applications sa
@@ -5024,8 +5041,27 @@ router.post('/applications/:id/review-decision', async (req, res) => {
             );
 
             if (appRows.length > 0) {
-                const { first_name, last_name, course_title, course_code, intake_start_date, application_status, programme_type_name: appProgType, program_name: appProgName, intake_id: appIntakeId } = appRows[0];
+                let { first_name, last_name, course_title, course_code, intake_start_date, application_status, programme_type_name: appProgType, program_name: appProgName, intake_id: appIntakeId } = appRows[0];
                 email = appRows[0].email;
+
+                // Fallback: if intake_id is NULL, try to find the latest active intake for the student's programme
+                if (!appIntakeId && appProgType && appProgName) {
+                    const trimmedProgType = appProgType.trim();
+                    const trimmedProgName = appProgName.trim();
+                    const [fallbackIntakes] = await db.execute(
+                        'SELECT id, moodle_cohort_idnumber FROM programme_intakes WHERE TRIM(programme_type_name) = ? AND TRIM(program_name) = ? AND status = ? ORDER BY id DESC LIMIT 1',
+                        [trimmedProgType, trimmedProgName, 'active']
+                    );
+                    if (fallbackIntakes.length > 0) {
+                        appIntakeId = fallbackIntakes[0].id;
+                        // Also update the application record so the intake is permanently linked
+                        await db.execute('UPDATE student_applications SET intake_id = ?, course_code = ? WHERE id = ?', [appIntakeId, fallbackIntakes[0].moodle_cohort_idnumber || null, id]);
+                        console.log(`[APPROVAL FALLBACK] Application ${id}: intake_id was NULL, auto-resolved to intake ${appIntakeId} (${trimmedProgType} / ${trimmedProgName})`);
+                    } else {
+                        console.warn(`[APPROVAL WARNING] Application ${id}: intake_id is NULL and no active intake found for ${trimmedProgType} / ${trimmedProgName}. Moodle enrollment will be skipped.`);
+                    }
+                }
+
                 const [userRows] = await db.execute(
                     'SELECT id, role FROM users WHERE email = ?',
                     [email]
@@ -5606,6 +5642,7 @@ async function handleUploadLogic(req, res) {
             'work_reference',
             'proof_of_address',
             'visa_immigration_document',
+            'statement_of_purpose_document',
             'passport_id',
             'visa_immigration',
             'brp_card',
@@ -5628,7 +5665,8 @@ async function handleUploadLogic(req, res) {
             cv_resume: 'cv_resume',
             work_reference: 'work_reference',
             proof_of_address: 'proof_of_address',
-            visa_immigration_document: 'visa_immigration_document'
+            visa_immigration_document: 'visa_immigration_document',
+            statement_of_purpose_document: 'statement_of_purpose_document'
         };
 
         const uploadedFiles = [];
@@ -12141,6 +12179,152 @@ router.get('/student-dashboard', async (req, res) => {
     } catch (error) {
         console.error('[student-dashboard] ERROR:', error);
         return res.status(500).json({ success: false, message: 'Failed to load student dashboard', error: error.message });
+    }
+});
+
+// ===============================================
+// Interview Recordings
+// ===============================================
+
+// Ensure table exists
+(async () => {
+    try {
+        await db.query(`
+            CREATE TABLE IF NOT EXISTS interview_recordings (
+                id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                application_id INT NOT NULL,
+                original_filename VARCHAR(500) NOT NULL,
+                stored_filename VARCHAR(500) NOT NULL,
+                file_path VARCHAR(1000) NOT NULL,
+                file_size BIGINT DEFAULT 0,
+                mime_type VARCHAR(100),
+                recorded_at DATETIME NOT NULL,
+                uploaded_by VARCHAR(255),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (application_id) REFERENCES student_applications(id) ON DELETE CASCADE
+            )
+        `);
+    } catch (e) {
+        console.error('Failed to create interview_recordings table:', e.message);
+    }
+})();
+
+// Multer for audio/video uploads
+const interviewRecordingStorage = multer.diskStorage({
+    destination: async (req, file, cb) => {
+        const dir = path.join(__dirname, '../uploads/interview-recordings');
+        await fs.mkdir(dir, { recursive: true });
+        cb(null, dir);
+    },
+    filename: (req, file, cb) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        cb(null, uniqueSuffix + '-' + file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_'));
+    }
+});
+
+const uploadRecording = multer({
+    storage: interviewRecordingStorage,
+    limits: { fileSize: 100 * 1024 * 1024 }, // 100MB
+    fileFilter: (req, file, cb) => {
+        const allowed = [
+            'audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/x-wav', 'audio/ogg',
+            'audio/webm', 'audio/aac', 'audio/mp4', 'audio/x-m4a',
+            'video/mp4', 'video/webm', 'video/ogg'
+        ];
+        if (allowed.includes(file.mimetype)) {
+            cb(null, true);
+        } else {
+            cb(new Error('Invalid file type. Only audio/video files (MP3, WAV, OGG, AAC, M4A, MP4, WebM) are allowed.'));
+        }
+    }
+}).single('recording');
+
+// Upload interview recording
+router.post('/applications/:id/interview-recordings', (req, res) => {
+    uploadRecording(req, res, async (err) => {
+        if (err) {
+            return res.status(400).json({ success: false, message: err.message });
+        }
+        if (!req.file) {
+            return res.status(400).json({ success: false, message: 'No file uploaded' });
+        }
+        try {
+            const { id } = req.params;
+            const recordedAt = req.body.recorded_at || new Date().toISOString();
+            const uploadedBy = req.body.uploaded_by || 'Admin';
+
+            const [result] = await db.query(
+                `INSERT INTO interview_recordings
+                    (application_id, original_filename, stored_filename, file_path, file_size, mime_type, recorded_at, uploaded_by)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+                [
+                    id,
+                    req.file.originalname,
+                    req.file.filename,
+                    `/uploads/interview-recordings/${req.file.filename}`,
+                    req.file.size,
+                    req.file.mimetype,
+                    recordedAt,
+                    uploadedBy
+                ]
+            );
+
+            res.json({
+                success: true,
+                data: {
+                    id: result.insertId,
+                    original_filename: req.file.originalname,
+                    file_path: `/uploads/interview-recordings/${req.file.filename}`,
+                    file_size: req.file.size,
+                    mime_type: req.file.mimetype,
+                    recorded_at: recordedAt,
+                    uploaded_by: uploadedBy
+                }
+            });
+        } catch (error) {
+            console.error('Error saving interview recording:', error);
+            res.status(500).json({ success: false, message: 'Failed to save recording' });
+        }
+    });
+});
+
+// List interview recordings
+router.get('/applications/:id/interview-recordings', async (req, res) => {
+    try {
+        const [rows] = await db.query(
+            `SELECT id, original_filename, file_path, file_size, mime_type, recorded_at, uploaded_by, created_at
+             FROM interview_recordings
+             WHERE application_id = ?
+             ORDER BY recorded_at DESC`,
+            [req.params.id]
+        );
+        res.json({ success: true, data: rows });
+    } catch (error) {
+        console.error('Error fetching interview recordings:', error);
+        res.status(500).json({ success: false, message: 'Failed to fetch recordings' });
+    }
+});
+
+// Delete interview recording
+router.delete('/applications/:id/interview-recordings/:recordingId', async (req, res) => {
+    try {
+        const { recordingId } = req.params;
+        const [rows] = await db.query(
+            'SELECT stored_filename FROM interview_recordings WHERE id = ? AND application_id = ?',
+            [recordingId, req.params.id]
+        );
+        if (rows.length === 0) {
+            return res.status(404).json({ success: false, message: 'Recording not found' });
+        }
+        // Remove file from disk
+        const filePath = path.join(__dirname, '../uploads/interview-recordings', rows[0].stored_filename);
+        try { await fs.unlink(filePath); } catch (e) { /* file may already be gone */ }
+
+        await db.query('DELETE FROM interview_recordings WHERE id = ?', [recordingId]);
+        res.json({ success: true, message: 'Recording deleted' });
+    } catch (error) {
+        console.error('Error deleting interview recording:', error);
+        res.status(500).json({ success: false, message: 'Failed to delete recording' });
     }
 });
 
