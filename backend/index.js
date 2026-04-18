@@ -965,6 +965,11 @@ async function syncAllUserRoleSnapshots() {
 }
 
 async function getMoodleRolesByEmail(email, options = {}) {
+    // Skip Moodle integration if disabled
+    if (process.env.ENABLE_MOODLE_INTEGRATION === 'false') {
+        return null;
+    }
+
     const preferSnapshot = options.preferSnapshot !== false;
 
     if (preferSnapshot) {
