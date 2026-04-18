@@ -1131,7 +1131,8 @@ app.post('/api/login', async (req, res) => {
             res.status(401).json({ success: false, message: 'Invalid credentials' });
         }
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Database error' });
+        console.error('[LOGIN ERROR]', error);
+        res.status(500).json({ success: false, message: 'Database error', error: error.message });
     }
 });
 
