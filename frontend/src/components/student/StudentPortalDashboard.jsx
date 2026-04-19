@@ -139,28 +139,28 @@ const StudentPortalDashboard = ({ user }) => {
         <div className="p-4 md:p-6 bg-gray-50 min-h-screen space-y-6">
 
             {/* Welcome Banner */}
-            <div className="bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-700 rounded-2xl p-6 md:p-8 text-white shadow-lg">
+            <div className="bg-white rounded-2xl border border-gray-200 p-6 md:p-8">
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                     <div>
-                        <h1 className="text-2xl md:text-3xl font-bold">
+                        <h1 className="text-2xl md:text-3xl font-semibold text-gray-900">
                             Welcome back, {student?.name?.split(' ')[0] || 'Student'}!
                         </h1>
-                        <p className="text-indigo-200 mt-1 text-sm md:text-base">
+                        <p className="text-gray-500 mt-1 text-sm md:text-base">
                             {application?.courseTitle || 'Your learning journey continues'}
                         </p>
                         {application && (
                             <div className="flex items-center gap-3 mt-3 flex-wrap">
                                 <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border ${
-                                    application.status === 'accepted' ? 'bg-green-500/20 text-green-100 border-green-400/30' : 'bg-white/20 text-white border-white/30'
+                                    application.status === 'accepted' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-gray-50 text-gray-600 border-gray-200'
                                 }`}>
                                     <CheckCircle className="w-3.5 h-3.5" />
                                     {application.status?.replace(/_/g, ' ').toUpperCase()}
                                 </span>
                                 {application.modeOfStudy && (
-                                    <span className="text-xs text-indigo-200">{application.modeOfStudy}</span>
+                                    <span className="text-xs text-gray-500">{application.modeOfStudy}</span>
                                 )}
                                 {application.reference && (
-                                    <span className="text-xs text-indigo-300">Ref: {application.reference}</span>
+                                    <span className="text-xs text-gray-400">Ref: {application.reference}</span>
                                 )}
                             </div>
                         )}
@@ -168,13 +168,13 @@ const StudentPortalDashboard = ({ user }) => {
                     <button
                         onClick={handleAccessLMS}
                         disabled={ssoLoading}
-                        className="flex items-center gap-2 bg-white/15 hover:bg-white/25 backdrop-blur text-white px-5 py-3 rounded-xl font-medium transition-all border border-white/20 disabled:opacity-50 self-start md:self-auto"
+                        className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-3 rounded-xl font-medium transition-all disabled:opacity-50 self-start md:self-auto"
                     >
                         <ExternalLink className="w-4 h-4" />
                         {ssoLoading ? 'Opening...' : 'Open Moodle LMS'}
                     </button>
                 </div>
-                {ssoError && <p className="mt-2 text-xs text-red-200 bg-red-500/20 rounded px-3 py-1">{ssoError}</p>}
+                {ssoError && <p className="mt-2 text-xs text-red-600 bg-red-50 border border-red-100 rounded px-3 py-1">{ssoError}</p>}
             </div>
 
             {/* Summary Stats */}
@@ -279,19 +279,19 @@ const StudentPortalDashboard = ({ user }) => {
 /* ── Sub-Components ── */
 
 const StatCard = ({ icon: Icon, label, value, color }) => {
-    const colors = {
-        indigo: 'bg-indigo-50 text-indigo-600 border-indigo-100',
-        blue: 'bg-blue-50 text-blue-600 border-blue-100',
-        green: 'bg-green-50 text-green-600 border-green-100',
-        purple: 'bg-purple-50 text-purple-600 border-purple-100',
+    const iconColors = {
+        indigo: 'text-indigo-600',
+        blue: 'text-blue-600',
+        green: 'text-emerald-600',
+        purple: 'text-purple-600',
     };
     return (
-        <div className={`rounded-xl border p-4 ${colors[color] || colors.indigo}`}>
+        <div className="bg-white rounded-xl border border-gray-200 p-4">
             <div className="flex items-center gap-2 mb-1">
-                <Icon className="w-4 h-4 opacity-70" />
-                <span className="text-xs font-medium opacity-80">{label}</span>
+                <Icon className={`w-4 h-4 ${iconColors[color] || iconColors.indigo}`} />
+                <span className="text-xs font-medium text-gray-500">{label}</span>
             </div>
-            <p className="text-2xl font-bold">{value}</p>
+            <p className="text-2xl font-bold text-gray-900">{value}</p>
         </div>
     );
 };
