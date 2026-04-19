@@ -279,19 +279,19 @@ const StudentPortalDashboard = ({ user }) => {
 /* ── Sub-Components ── */
 
 const StatCard = ({ icon: Icon, label, value, color }) => {
-    const iconColors = {
-        indigo: 'text-indigo-600',
-        blue: 'text-blue-600',
-        green: 'text-emerald-600',
-        purple: 'text-purple-600',
+    const colors = {
+        indigo: 'bg-indigo-50 text-indigo-600 border-indigo-100',
+        blue: 'bg-blue-50 text-blue-600 border-blue-100',
+        green: 'bg-green-50 text-green-600 border-green-100',
+        purple: 'bg-purple-50 text-purple-600 border-purple-100',
     };
     return (
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
+        <div className={`rounded-xl border p-4 ${colors[color] || colors.indigo}`}>
             <div className="flex items-center gap-2 mb-1">
-                <Icon className={`w-4 h-4 ${iconColors[color] || iconColors.indigo}`} />
-                <span className="text-xs font-medium text-gray-500">{label}</span>
+                <Icon className="w-4 h-4 opacity-70" />
+                <span className="text-xs font-medium opacity-80">{label}</span>
             </div>
-            <p className="text-2xl font-bold text-gray-900">{value}</p>
+            <p className="text-2xl font-bold">{value}</p>
         </div>
     );
 };
