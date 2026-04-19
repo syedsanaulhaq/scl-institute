@@ -12093,7 +12093,7 @@ router.get('/student-dashboard', async (req, res) => {
         let announcements = [];
         if (moodleUser && moodleConn && courses.length > 0) {
             try {
-                const courseIds = courses.slice(0, 10).map(c => c.id);
+                const courseIds = courses.map(c => c.id);
                 const placeholders = courseIds.map(() => '?').join(',');
                 const [announceRows] = await moodleConn.execute(`
                     SELECT fd.id, fd.name AS subject, fp.message, fp.modified AS timemodified,
