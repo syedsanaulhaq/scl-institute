@@ -3202,15 +3202,8 @@ router.post('/moodle/create-category', async (req, res) => {
         const idnumber = [level, toCategorySlug(name)].filter(Boolean).join('-').slice(0, 100);
         console.log('[create-category] Creating with idnumber:', idnumber);
 
-        const created = await callMoodleRest('core_course_create_categories', {
-            categories: [{
-                name,
-                parent: actualParentId,
-                idnumber
-            }]
-        });
-
-        const createdId = Array.isArray(created) && created[0]?.id ? Number(created[0].id) : null;
+        // Use findOrCreateMoodleCategory which has REST + direct-DB fallback
+        const createdId = await findOrCreateMoodleCategory(name, actualParentId, level, idnumber);
         if (!createdId) {
             throw new Error('Failed to create category: no ID returned from Moodle');
         }
