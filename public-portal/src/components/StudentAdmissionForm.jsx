@@ -214,7 +214,8 @@ const StudentAdmissionForm = ({ onSubmitSuccess, isEditMode = false }) => {
     'CV / Resume',
     'Work Reference',
     'Proof of Address',
-    'Visa / Immigration Document'
+    'Visa / Immigration Document',
+    'Statement of Purpose (SOP)'
   ];
 
   // Create refs for file inputs
@@ -1063,7 +1064,8 @@ const StudentAdmissionForm = ({ onSubmitSuccess, isEditMode = false }) => {
       'CV / Resume': 'cv_resume',
       'Work Reference': 'work_reference',
       'Proof of Address': 'proof_of_address',
-      'Visa / Immigration Document': 'visa_immigration'
+      'Visa / Immigration Document': 'visa_immigration',
+      'Statement of Purpose (SOP)': 'statement_of_purpose'
     };
 
     if (formData.uploadedDocuments) {
