@@ -73,6 +73,21 @@ const StudentPortalDashboard = ({ user }) => {
         }
     };
 
+    const handleCourseClick = async (courseId) => {
+        try {
+            setSsoLoading(true);
+            setSsoError('');
+            await openMoodleSSO(user.email, {
+                redirectTo: `/course/view.php?id=${courseId}`,
+                onError: (msg) => setSsoError(msg)
+            });
+        } catch (err) {
+            setSsoError(err.response?.data?.message || 'Failed to access Moodle');
+        } finally {
+            setSsoLoading(false);
+        }
+    };
+
     const formatDate = (dateStr) => {
         if (!dateStr) return '-';
         return new Date(dateStr).toLocaleDateString('en-GB', {
@@ -231,7 +246,7 @@ const StudentPortalDashboard = ({ user }) => {
                 </div>
 
                 <div className="p-5">
-                    {activeTab === 'courses' && <CoursesTab courses={courses} />}
+                    {activeTab === 'courses' && <CoursesTab courses={courses} onCourseClick={handleCourseClick} />}
                     {activeTab === 'notifications' && <NotificationsTab notifications={notifications} formatTime={formatTime} />}
                     {activeTab === 'events' && <EventsTab events={upcomingEvents} formatDate={formatDate} />}
                     {activeTab === 'announcements' && <AnnouncementsTab announcements={announcements} formatTime={formatTime} />}
@@ -288,7 +303,7 @@ const InfoItem = ({ label, value }) => (
     </div>
 );
 
-const CoursesTab = ({ courses }) => {
+const CoursesTab = ({ courses, onCourseClick }) => {
     const [collapsed, setCollapsed] = useState({});
 
     if (!courses || courses.length === 0) {
@@ -347,15 +362,15 @@ const CoursesTab = ({ courses }) => {
     const renderCourseCard = (course, isActive) => {
         const progress = course.progress ?? 0;
         const isComplete = course.completed;
-        const Wrapper = isActive ? 'a' : 'div';
-        const wrapperProps = isActive ? {
-            href: `${getMoodleUrl()}/course/view.php?id=${course.id}`,
-            target: '_blank',
-            rel: 'noopener noreferrer',
+        const wrapperProps = isActive && onCourseClick ? {
+            onClick: () => onCourseClick(course.id),
+            role: 'link',
+            tabIndex: 0,
+            onKeyDown: (e) => { if (e.key === 'Enter') onCourseClick(course.id); },
         } : {};
 
         return (
-            <Wrapper
+            <div
                 key={course.id}
                 {...wrapperProps}
                 className={`flex items-center gap-4 p-3.5 rounded-xl border transition-all no-underline ${
@@ -405,7 +420,7 @@ const CoursesTab = ({ courses }) => {
                     )}
                     {!isActive && <span className="hidden md:inline text-gray-300">Upcoming</span>}
                 </div>
-            </Wrapper>
+            </div>
         );
     };
 
