@@ -16,10 +16,13 @@ import {
     AlertCircle,
     Megaphone,
     FileText,
-    Award
+    Award,
+    ChevronDown,
+    ChevronRight,
+    Lock
 } from 'lucide-react';
 import axios from 'axios';
-import { openMoodleSSO } from '../../utils/ssoService';
+import { openMoodleSSO, getMoodleUrl } from '../../utils/ssoService';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
 
@@ -286,6 +289,8 @@ const InfoItem = ({ label, value }) => (
 );
 
 const CoursesTab = ({ courses }) => {
+    const [collapsed, setCollapsed] = useState({});
+
     if (!courses || courses.length === 0) {
         return (
             <div className="text-center py-10 text-gray-500">
@@ -296,53 +301,172 @@ const CoursesTab = ({ courses }) => {
         );
     }
 
-    return (
-        <div className="grid gap-3">
-            {courses.map((course) => {
-                const progress = course.progress ?? 0;
-                const isComplete = course.completed;
-                return (
-                    <div
-                        key={course.id}
-                        className="flex items-center gap-4 p-4 rounded-xl border border-gray-100 hover:border-indigo-200 hover:bg-indigo-50/30 transition-all group"
-                    >
-                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                            isComplete ? 'bg-green-100' : progress > 0 ? 'bg-blue-100' : 'bg-gray-100'
-                        }`}>
-                            {isComplete ? (
-                                <CheckCircle className="w-6 h-6 text-green-600" />
-                            ) : (
-                                <BookOpen className={`w-6 h-6 ${progress > 0 ? 'text-blue-600' : 'text-gray-400'}`} />
-                            )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                            <p className="font-medium text-gray-900 truncate group-hover:text-indigo-700">{course.fullname}</p>
-                            <div className="flex items-center gap-3 mt-1 text-xs text-gray-500">
-                                {course.shortname && <span>{course.shortname}</span>}
-                                {course.lastaccess && <span>Last accessed: {new Date(course.lastaccess).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span>}
-                                {course.grade && course.grade !== '-' && <span className="text-green-600 font-medium">Grade: {course.grade}</span>}
-                            </div>
-                            {course.totalActivities > 0 && (
-                                <div className="mt-2 flex items-center gap-2">
-                                    <div className="flex-1 bg-gray-200 rounded-full h-2 overflow-hidden">
-                                        <div
-                                            className={`h-full rounded-full transition-all ${isComplete ? 'bg-green-500' : 'bg-indigo-500'}`}
-                                            style={{ width: `${Math.min(progress, 100)}%` }}
-                                        />
-                                    </div>
-                                    <span className="text-xs font-medium text-gray-600 w-10 text-right">{progress}%</span>
-                                </div>
-                            )}
-                            {course.totalActivities === 0 && (
-                                <p className="text-xs text-gray-400 mt-1">No tracked activities</p>
-                            )}
-                        </div>
-                        <div className="flex-shrink-0 text-xs text-gray-400">
-                            <span className="hidden md:inline">{course.completedActivities}/{course.totalActivities} activities</span>
-                        </div>
+    // Parse shortname to extract programme, year, semester
+    const parseCourse = (course) => {
+        const match = course.shortname?.match(/^([A-Z]+-[A-Z]+)-Y(\d+)-S(\d+)-C(\d+)$/);
+        if (match) {
+            return { programme: match[1], year: parseInt(match[2]), semester: parseInt(match[3]), courseNum: parseInt(match[4]) };
+        }
+        return { programme: 'Other', year: 0, semester: 0, courseNum: 0 };
+    };
+
+    const programmeLabels = { 'HND-LM': 'HND in Leadership and Management', 'HND-BUS': 'HND in Business' };
+
+    // Group: programme -> year -> semester -> courses
+    const grouped = {};
+    courses.forEach((course) => {
+        const { programme, year, semester, courseNum } = parseCourse(course);
+        if (!grouped[programme]) grouped[programme] = {};
+        if (!grouped[programme][year]) grouped[programme][year] = {};
+        if (!grouped[programme][year][semester]) grouped[programme][year][semester] = [];
+        grouped[programme][year][semester].push({ ...course, courseNum });
+    });
+
+    // Sort courses within each semester
+    Object.values(grouped).forEach(years =>
+        Object.values(years).forEach(semesters =>
+            Object.values(semesters).forEach(arr => arr.sort((a, b) => a.courseNum - b.courseNum))
+        )
+    );
+
+    // Determine active semester: the earliest semester that has any in-progress activity
+    let activeProgramme = null, activeYear = null, activeSemester = null;
+    outer: for (const [prog, years] of Object.entries(grouped)) {
+        for (const [yr, semesters] of Object.entries(years).sort(([a],[b]) => a - b)) {
+            for (const [sem, semCourses] of Object.entries(semesters).sort(([a],[b]) => a - b)) {
+                if (semCourses.some(c => (c.progress ?? 0) > 0 || c.totalActivities > 0)) {
+                    activeProgramme = prog; activeYear = yr; activeSemester = sem;
+                    break outer;
+                }
+            }
+        }
+    }
+
+    const toggleCollapse = (key) => setCollapsed(prev => ({ ...prev, [key]: !prev[key] }));
+
+    const renderCourseCard = (course, isActive) => {
+        const progress = course.progress ?? 0;
+        const isComplete = course.completed;
+        const Wrapper = isActive ? 'a' : 'div';
+        const wrapperProps = isActive ? {
+            href: `${getMoodleUrl()}/course/view.php?id=${course.id}`,
+            target: '_blank',
+            rel: 'noopener noreferrer',
+        } : {};
+
+        return (
+            <Wrapper
+                key={course.id}
+                {...wrapperProps}
+                className={`flex items-center gap-4 p-3.5 rounded-xl border transition-all no-underline ${
+                    isActive
+                        ? 'border-gray-100 hover:border-indigo-200 hover:bg-indigo-50/30 cursor-pointer group'
+                        : 'border-gray-50 bg-gray-50/50 opacity-60'
+                }`}
+            >
+                <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                    isComplete ? 'bg-green-100' : isActive && progress > 0 ? 'bg-blue-100' : isActive ? 'bg-indigo-50' : 'bg-gray-100'
+                }`}>
+                    {isComplete ? (
+                        <CheckCircle className="w-5 h-5 text-green-600" />
+                    ) : !isActive ? (
+                        <Lock className="w-5 h-5 text-gray-300" />
+                    ) : (
+                        <BookOpen className={`w-5 h-5 ${progress > 0 ? 'text-blue-600' : 'text-indigo-400'}`} />
+                    )}
+                </div>
+                <div className="flex-1 min-w-0">
+                    <p className={`font-medium truncate ${isActive ? 'text-gray-900 group-hover:text-indigo-700' : 'text-gray-500'}`}>{course.fullname}</p>
+                    <div className="flex items-center gap-3 mt-0.5 text-xs text-gray-400">
+                        {course.lastaccess && <span>Last accessed: {new Date(course.lastaccess).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span>}
+                        {course.grade && course.grade !== '-' && <span className="text-green-600 font-medium">Grade: {course.grade}</span>}
                     </div>
-                );
-            })}
+                    {isActive && course.totalActivities > 0 && (
+                        <div className="mt-2 flex items-center gap-2">
+                            <div className="flex-1 bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                                <div
+                                    className={`h-full rounded-full transition-all ${isComplete ? 'bg-green-500' : 'bg-indigo-500'}`}
+                                    style={{ width: `${Math.min(progress, 100)}%` }}
+                                />
+                            </div>
+                            <span className="text-xs font-medium text-gray-600 w-10 text-right">{progress}%</span>
+                        </div>
+                    )}
+                    {isActive && course.totalActivities === 0 && (
+                        <p className="text-xs text-gray-400 mt-1">No tracked activities</p>
+                    )}
+                </div>
+                <div className="flex-shrink-0 text-xs text-gray-400 flex items-center gap-2">
+                    {isActive && (
+                        <>
+                            <span className="hidden md:inline">{course.completedActivities}/{course.totalActivities} activities</span>
+                            <ExternalLink className="w-4 h-4 text-gray-300 group-hover:text-indigo-500 transition-colors" />
+                        </>
+                    )}
+                    {!isActive && <span className="hidden md:inline text-gray-300">Upcoming</span>}
+                </div>
+            </Wrapper>
+        );
+    };
+
+    return (
+        <div className="space-y-4">
+            {Object.entries(grouped).sort().map(([prog, years]) => (
+                <div key={prog}>
+                    <div className="flex items-center gap-2 mb-3">
+                        <GraduationCap className="w-5 h-5 text-indigo-600" />
+                        <h3 className="text-sm font-bold text-indigo-900 uppercase tracking-wide">{programmeLabels[prog] || prog}</h3>
+                    </div>
+                    {Object.entries(years).sort(([a],[b]) => a - b).map(([yr, semesters]) => (
+                        <div key={yr} className="ml-2 mb-3">
+                            <div className="flex items-center gap-2 mb-2">
+                                <div className="w-1.5 h-1.5 rounded-full bg-indigo-400" />
+                                <h4 className="text-sm font-semibold text-gray-700">Year {yr}</h4>
+                            </div>
+                            {Object.entries(semesters).sort(([a],[b]) => a - b).map(([sem, semCourses]) => {
+                                const semKey = `${prog}-Y${yr}-S${sem}`;
+                                const isActiveSem = prog === activeProgramme && yr === activeYear && sem === activeSemester;
+                                const isCollapsed = collapsed[semKey];
+                                const semProgress = semCourses.filter(c => (c.progress ?? 0) > 0).length;
+                                const semComplete = semCourses.filter(c => c.completed).length;
+
+                                return (
+                                    <div key={sem} className="ml-4 mb-3">
+                                        <button
+                                            onClick={() => toggleCollapse(semKey)}
+                                            className={`flex items-center gap-2 w-full text-left px-3 py-2 rounded-lg transition-colors ${
+                                                isActiveSem ? 'bg-indigo-50 hover:bg-indigo-100' : 'bg-gray-50 hover:bg-gray-100'
+                                            }`}
+                                        >
+                                            {isCollapsed ? (
+                                                <ChevronRight className="w-4 h-4 text-gray-400" />
+                                            ) : (
+                                                <ChevronDown className="w-4 h-4 text-gray-400" />
+                                            )}
+                                            <span className={`text-sm font-medium ${isActiveSem ? 'text-indigo-700' : 'text-gray-600'}`}>
+                                                Semester {sem}
+                                            </span>
+                                            {isActiveSem && (
+                                                <span className="ml-1 px-2 py-0.5 text-[10px] font-bold bg-indigo-600 text-white rounded-full uppercase">Active</span>
+                                            )}
+                                            <span className="ml-auto text-xs text-gray-400">
+                                                {semCourses.length} courses
+                                                {semProgress > 0 && ` · ${semProgress} in progress`}
+                                                {semComplete > 0 && ` · ${semComplete} completed`}
+                                            </span>
+                                        </button>
+                                        {!isCollapsed && (
+                                            <div className="mt-2 grid gap-2">
+                                                {semCourses.map(course => renderCourseCard(course, isActiveSem))}
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    ))}
+                </div>
+            ))}
         </div>
     );
 };

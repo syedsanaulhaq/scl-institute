@@ -2144,9 +2144,12 @@ router.get('/applications/:id', async (req, res) => {
         const { id } = req.params;
         
         const [applications] = await db.execute(`
-            SELECT sa.*, c.course_code as course_code_ref, c.course_title as course_title
+            SELECT sa.*, c.course_code as course_code_ref, c.course_title as course_title,
+                   pi.intake_label, pi.intake_start_date as intake_start,
+                   (SELECT COUNT(*) FROM course_registrations cr WHERE cr.intake_id = sa.intake_id) as intake_course_count
             FROM student_applications sa
             LEFT JOIN courses c ON sa.course_code = c.course_code
+            LEFT JOIN programme_intakes pi ON sa.intake_id = pi.id
             WHERE sa.id = ? AND sa.is_deleted = FALSE
         `, [id]);
 
