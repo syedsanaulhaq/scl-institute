@@ -4027,13 +4027,20 @@ router.get('/course-lifecycle/dashboard', async (req, res) => {
             const key = buildCourseLifecycleKey(courseCode, courseTitle);
             if (!courseMap.has(key)) {
                 const normalizedTitle = normalizeCourseTitle(courseTitle);
+                const incomingCode = String(courseCode || '').trim();
+                // Only merge by title when at least one side has no course code
                 const existingByTitle = normalizedTitle
-                    ? Array.from(courseMap.values()).find((row) => normalizeCourseTitle(row.course_title) === normalizedTitle)
+                    ? Array.from(courseMap.values()).find((row) => {
+                        if (normalizeCourseTitle(row.course_title) !== normalizedTitle) return false;
+                        // If both have distinct course codes, they are different courses
+                        if (row.course_code && incomingCode && row.course_code !== incomingCode) return false;
+                        return true;
+                    })
                     : null;
 
                 if (existingByTitle) {
-                    if (!existingByTitle.course_code && courseCode) {
-                        existingByTitle.course_code = String(courseCode || '').trim();
+                    if (!existingByTitle.course_code && incomingCode) {
+                        existingByTitle.course_code = incomingCode;
                     }
                     return existingByTitle;
                 }
