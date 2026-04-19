@@ -3319,8 +3319,8 @@ router.delete('/moodle/delete-category/:id', async (req, res) => {
             // Delete induction records (child tables cascade via ON DELETE CASCADE)
             try {
                 const [indResult] = await db.execute(
-                    'DELETE FROM course_inductions WHERE moodle_course_id = ? OR course_title = ? OR course_code = ?',
-                    [moodleCourseId, courseTitle, courseShortname]
+                    'DELETE FROM course_inductions WHERE course_title = ? OR course_code = ?',
+                    [courseTitle, courseShortname]
                 );
                 deletedSummary.inductions += indResult.affectedRows || 0;
             } catch (e) { console.warn(`[delete-category] inductions cleanup error:`, e.message); }
