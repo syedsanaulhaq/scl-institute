@@ -577,19 +577,21 @@ app.get('/api/admin/overview-stats', requireAuth, async (req, res) => {
         ]);
 
         // --- Moodle DB queries (run in parallel) ---
-        let moodleData = { courses: 0, enrollments: 0, moodleUsers: 0, courseBreakdown: [] };
+        let moodleData = { courses: 0, enrollments: 0, moodleUsers: 0, courseBreakdown: [], activeCourses: [] };
         try {
-            const [mCourses, mEnrol, mUsers, mCourseEnrol] = await Promise.all([
+            const [mCourses, mEnrol, mUsers, mCourseEnrol, mActiveCourses] = await Promise.all([
                 moodlePool.query(`SELECT COUNT(*) as count FROM mdl_course WHERE id > 1`),
                 moodlePool.query(`SELECT COUNT(*) as count FROM mdl_user_enrolments ue JOIN mdl_enrol e ON ue.enrolid = e.id`),
                 moodlePool.query(`SELECT COUNT(*) as count FROM mdl_user WHERE deleted = 0 AND id > 1`),
                 moodlePool.query(`SELECT c.shortname, c.fullname, COUNT(ue.id) as enrollments FROM mdl_course c JOIN mdl_enrol e ON e.courseid = c.id JOIN mdl_user_enrolments ue ON ue.enrolid = e.id WHERE c.id > 1 GROUP BY c.id ORDER BY enrollments DESC LIMIT 10`),
+                moodlePool.query(`SELECT c.id, c.shortname, c.fullname, c.visible, COALESCE(COUNT(DISTINCT ue.id), 0) as enrollments FROM mdl_course c LEFT JOIN mdl_enrol e ON e.courseid = c.id LEFT JOIN mdl_user_enrolments ue ON ue.enrolid = e.id WHERE c.id > 1 GROUP BY c.id ORDER BY c.fullname ASC LIMIT 25`),
             ]);
             moodleData = {
                 courses: mCourses[0][0]?.count || 0,
                 enrollments: mEnrol[0][0]?.count || 0,
                 moodleUsers: mUsers[0][0]?.count || 0,
                 courseBreakdown: mCourseEnrol[0] || [],
+                activeCourses: mActiveCourses[0] || [],
             };
         } catch (moodleErr) {
             console.warn('[OVERVIEW] Moodle DB unavailable:', moodleErr.message);

@@ -200,16 +200,16 @@ const AdminOverview = ({ user }) => {
                     <div
                         key={i}
                         onClick={() => card.path && navigate(card.path)}
-                        className={`rounded-xl border p-4 ${colorMap[card.color]} ${card.path ? 'cursor-pointer hover:shadow-md' : ''} transition`}
+                        className={`rounded-xl border px-4 py-3 flex items-center gap-3 ${colorMap[card.color]} ${card.path ? 'cursor-pointer hover:shadow-md' : ''} transition`}
                     >
-                        <div className="flex items-center justify-between mb-3">
-                            <div className={`p-2 rounded-lg ${iconColorMap[card.color]}`}>
-                                <card.icon className="w-5 h-5" />
-                            </div>
-                            {card.path && <ArrowUpRight className="w-4 h-4 opacity-40" />}
+                        <div className={`p-2 rounded-lg shrink-0 ${iconColorMap[card.color]}`}>
+                            <card.icon className="w-5 h-5" />
                         </div>
-                        <p className="text-2xl font-extrabold">{card.value.toLocaleString()}</p>
-                        <p className="text-xs font-medium opacity-70 mt-1">{card.label}</p>
+                        <div className="flex-1 min-w-0">
+                            <p className="text-xl font-extrabold leading-tight">{card.value.toLocaleString()}</p>
+                            <p className="text-xs font-medium opacity-70 leading-tight mt-0.5 truncate">{card.label}</p>
+                        </div>
+                        {card.path && <ArrowUpRight className="w-3.5 h-3.5 opacity-40 shrink-0" />}
                     </div>
                 ))}
             </div>
@@ -478,6 +478,51 @@ const AdminOverview = ({ user }) => {
                             </div>
                         ))}
                     </div>
+                </div>
+
+                {/* Active Courses */}
+                <div className="bg-white rounded-xl shadow border border-gray-100 p-6 lg:col-span-2">
+                    <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                        <BookOpen className="w-5 h-5 text-blue-600" /> Active Courses (Moodle)
+                    </h3>
+                    {data?.moodle?.activeCourses && data.moodle.activeCourses.length > 0 ? (
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-sm">
+                                <thead>
+                                    <tr className="border-b border-gray-200">
+                                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Course Code</th>
+                                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Course Name</th>
+                                        <th className="text-center py-3 px-4 font-semibold text-gray-700">Enrolments</th>
+                                        <th className="text-center py-3 px-4 font-semibold text-gray-700">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {data.moodle.activeCourses.map((course, i) => (
+                                        <tr key={i} className="border-b border-gray-100 hover:bg-gray-50 transition">
+                                            <td className="py-3 px-4 font-medium text-gray-900">{course.shortname}</td>
+                                            <td className="py-3 px-4 text-gray-700 truncate max-w-xs" title={course.fullname}>{course.fullname}</td>
+                                            <td className="py-3 px-4 text-center">
+                                                <span className="inline-block bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs font-semibold">
+                                                    {course.enrollments || 0}
+                                                </span>
+                                            </td>
+                                            <td className="py-3 px-4 text-center">
+                                                <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${
+                                                    course.visible === 1 
+                                                        ? 'bg-green-100 text-green-800' 
+                                                        : 'bg-gray-100 text-gray-800'
+                                                }`}>
+                                                    {course.visible === 1 ? 'Active' : 'Hidden'}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    ) : (
+                        <p className="text-gray-500 text-sm">No active courses found.</p>
+                    )}
                 </div>
 
                 {/* Quick Links */}
