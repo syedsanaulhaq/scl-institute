@@ -128,14 +128,14 @@ const AdminOverview = ({ user }) => {
 
     // Stat cards
     const statCards = [
-        { label: 'Total Users', value: users?.total || 0, icon: Users, color: 'purple' },
+        { label: 'Total Users', value: users?.total || 0, icon: Users, color: 'purple', path: '/admin/users-by-role' },
         { label: 'Student Applications', value: totalApps, icon: FileText, color: 'blue', path: '/applications' },
         { label: 'Course Registrations', value: courseRegistrations?.total || 0, icon: BookOpen, color: 'emerald', path: '/course-registrations' },
-        { label: 'LMS Enrolments', value: moodle?.enrollments || 0, icon: GraduationCap, color: 'indigo' },
-        { label: 'Moodle Courses', value: moodle?.courses || 0, icon: BarChart3, color: 'cyan' },
+        { label: 'LMS Enrolments', value: moodle?.enrollments || 0, icon: GraduationCap, color: 'indigo', path: '/admin/lms-enrolments' },
+        { label: 'Moodle Courses', value: moodle?.courses || 0, icon: BarChart3, color: 'cyan', path: '/admin/lms-enrolments' },
         { label: 'Programme Intakes', value: totalIntakes, icon: Calendar, color: 'amber', path: '/programme-intakes' },
         { label: 'Course Lifecycle', value: courseLifecycle?.total || 0, icon: ClipboardList, color: 'rose', path: '/course-lifecycle' },
-        { label: 'Recent Apps (7d)', value: applications?.recent7Days || 0, icon: TrendingUp, color: 'green' },
+        { label: 'Recent Apps (7d)', value: applications?.recent7Days || 0, icon: TrendingUp, color: 'green', path: '/applications' },
     ];
 
     const colorMap = {
@@ -175,6 +175,15 @@ const AdminOverview = ({ user }) => {
         }
         return null;
     };
+
+    const SectionLink = ({ to, children }) => (
+        <button
+            onClick={() => navigate(to)}
+            className="text-xs font-semibold text-purple-600 hover:text-purple-800 flex items-center gap-1 transition ml-auto"
+        >
+            {children || 'View Details'} <ArrowUpRight className="w-3.5 h-3.5" />
+        </button>
+    );
 
     return (
         <div className="p-6 bg-gray-50 min-h-screen space-y-8">
@@ -218,9 +227,12 @@ const AdminOverview = ({ user }) => {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Application Status Pie */}
                 <div className="bg-white rounded-xl shadow border border-gray-100 p-6">
-                    <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                        <FileText className="w-5 h-5 text-purple-600" /> Application Status
-                    </h3>
+                    <div className="flex items-center mb-4">
+                        <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                            <FileText className="w-5 h-5 text-purple-600" /> Application Status
+                        </h3>
+                        <SectionLink to="/applications" />
+                    </div>
                     {appStatusData.length > 0 ? (
                         <ResponsiveContainer width="100%" height={280}>
                             <PieChart>
@@ -249,9 +261,12 @@ const AdminOverview = ({ user }) => {
 
                 {/* Applications by Month Area Chart */}
                 <div className="bg-white rounded-xl shadow border border-gray-100 p-6">
-                    <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                        <TrendingUp className="w-5 h-5 text-blue-600" /> Applications Trend (6 Months)
-                    </h3>
+                    <div className="flex items-center mb-4">
+                        <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                            <TrendingUp className="w-5 h-5 text-blue-600" /> Applications Trend (6 Months)
+                        </h3>
+                        <SectionLink to="/applications-report" />
+                    </div>
                     {appMonthData.length > 0 ? (
                         <ResponsiveContainer width="100%" height={280}>
                             <AreaChart data={appMonthData}>
@@ -276,9 +291,12 @@ const AdminOverview = ({ user }) => {
 
             {/* Row 2: Applications by Course (stacked bar) */}
             <div className="bg-white rounded-xl shadow border border-gray-100 p-6">
-                <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                    <BarChart3 className="w-5 h-5 text-emerald-600" /> Applications by Course
-                </h3>
+                <div className="flex items-center mb-4">
+                    <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                        <BarChart3 className="w-5 h-5 text-emerald-600" /> Applications by Course
+                    </h3>
+                    <SectionLink to="/applications" />
+                </div>
                 {appCourseData.length > 0 ? (
                     <ResponsiveContainer width="100%" height={320}>
                         <BarChart data={appCourseData} layout="vertical" margin={{ left: 20 }}>
@@ -301,9 +319,12 @@ const AdminOverview = ({ user }) => {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* User roles */}
                 <div className="bg-white rounded-xl shadow border border-gray-100 p-6">
-                    <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                        <Users className="w-5 h-5 text-indigo-600" /> Users by Role
-                    </h3>
+                    <div className="flex items-center mb-4">
+                        <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                            <Users className="w-5 h-5 text-indigo-600" /> Users by Role
+                        </h3>
+                        <SectionLink to="/admin/users-by-role" />
+                    </div>
                     {userRoleData.length > 0 ? (
                         <ResponsiveContainer width="100%" height={280}>
                             <PieChart>
@@ -330,9 +351,12 @@ const AdminOverview = ({ user }) => {
 
                 {/* Moodle Course Enrolments */}
                 <div className="bg-white rounded-xl shadow border border-gray-100 p-6">
-                    <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                        <GraduationCap className="w-5 h-5 text-purple-600" /> LMS Course Enrolments (Top 10)
-                    </h3>
+                    <div className="flex items-center mb-4">
+                        <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                            <GraduationCap className="w-5 h-5 text-purple-600" /> LMS Course Enrolments (Top 10)
+                        </h3>
+                        <SectionLink to="/admin/lms-enrolments" />
+                    </div>
                     {moodleCourseData.length > 0 ? (
                         <ResponsiveContainer width="100%" height={280}>
                             <BarChart data={moodleCourseData}>
@@ -353,9 +377,12 @@ const AdminOverview = ({ user }) => {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Course Lifecycle Cards */}
                 <div className="bg-white rounded-xl shadow border border-gray-100 p-6">
-                    <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                        <ShieldCheck className="w-5 h-5 text-rose-600" /> Course Lifecycle
-                    </h3>
+                    <div className="flex items-center mb-4">
+                        <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                            <ShieldCheck className="w-5 h-5 text-rose-600" /> Course Lifecycle
+                        </h3>
+                        <SectionLink to="/course-lifecycle" />
+                    </div>
                     <div className="space-y-3">
                         {[
                             { label: 'Master Courses', value: courseLifecycle?.total || 0, color: 'bg-purple-100 text-purple-700' },
@@ -373,9 +400,12 @@ const AdminOverview = ({ user }) => {
 
                 {/* Programme Intake Status */}
                 <div className="bg-white rounded-xl shadow border border-gray-100 p-6">
-                    <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                        <Calendar className="w-5 h-5 text-amber-600" /> Programme Intakes
-                    </h3>
+                    <div className="flex items-center mb-4">
+                        <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                            <Calendar className="w-5 h-5 text-amber-600" /> Programme Intakes
+                        </h3>
+                        <SectionLink to="/programme-intakes" />
+                    </div>
                     {intakeStatusData.length > 0 ? (
                         <ResponsiveContainer width="100%" height={220}>
                             <PieChart>
@@ -404,9 +434,12 @@ const AdminOverview = ({ user }) => {
 
                 {/* Student Programme Registrations */}
                 <div className="bg-white rounded-xl shadow border border-gray-100 p-6">
-                    <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                        <UserCheck className="w-5 h-5 text-green-600" /> Student Programmes
-                    </h3>
+                    <div className="flex items-center mb-4">
+                        <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                            <UserCheck className="w-5 h-5 text-green-600" /> Student Programmes
+                        </h3>
+                        <SectionLink to="/admin/student-programmes" />
+                    </div>
                     {progRegData.length > 0 ? (
                         <div className="space-y-3 mt-2">
                             {progRegData.map((item, i) => {
@@ -438,9 +471,12 @@ const AdminOverview = ({ user }) => {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Change Requests */}
                 <div className="bg-white rounded-xl shadow border border-gray-100 p-6">
-                    <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                        <ClipboardList className="w-5 h-5 text-orange-600" /> Course Change Requests
-                    </h3>
+                    <div className="flex items-center mb-4">
+                        <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                            <ClipboardList className="w-5 h-5 text-orange-600" /> Course Change Requests
+                        </h3>
+                        <SectionLink to="/course-change-requests" />
+                    </div>
                     {(changeRequests || []).length > 0 ? (
                         <div className="space-y-2">
                             {changeRequests.map((cr, i) => (
@@ -461,9 +497,12 @@ const AdminOverview = ({ user }) => {
 
                 {/* Teacher Registrations + Moodle Users */}
                 <div className="bg-white rounded-xl shadow border border-gray-100 p-6">
-                    <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                        <Activity className="w-5 h-5 text-blue-600" /> System Snapshot
-                    </h3>
+                    <div className="flex items-center mb-4">
+                        <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                            <Activity className="w-5 h-5 text-blue-600" /> System Snapshot
+                        </h3>
+                        <SectionLink to="/admin/lms-enrolments">LMS Details</SectionLink>
+                    </div>
                     <div className="space-y-3">
                         {[
                             { label: 'Teacher Registrations', value: teacherRegistrations || 0 },
@@ -482,9 +521,12 @@ const AdminOverview = ({ user }) => {
 
                 {/* Active Courses */}
                 <div className="bg-white rounded-xl shadow border border-gray-100 p-6 lg:col-span-2">
-                    <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                        <BookOpen className="w-5 h-5 text-blue-600" /> Active Courses (Moodle)
-                    </h3>
+                    <div className="flex items-center mb-4">
+                        <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                            <BookOpen className="w-5 h-5 text-blue-600" /> Active Courses (Moodle)
+                        </h3>
+                        <SectionLink to="/admin/lms-enrolments">View All Courses</SectionLink>
+                    </div>
                     {data?.moodle?.activeCourses && data.moodle.activeCourses.length > 0 ? (
                         <div className="overflow-x-auto">
                             <table className="w-full text-sm">

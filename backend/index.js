@@ -644,6 +644,102 @@ app.get('/api/admin/overview-stats', requireAuth, async (req, res) => {
     }
 });
 
+// ── Admin Detail Endpoints ──
+
+// LMS Enrolments detail – all Moodle courses with enrolment counts & user lists
+app.get('/api/admin/lms-enrolments', requireAuth, async (req, res) => {
+    try {
+        let courses = [];
+        try {
+            const [rows] = await moodlePool.query(`
+                SELECT c.id, c.shortname, c.fullname, c.visible,
+                       COALESCE(COUNT(DISTINCT ue.id), 0) as enrollments,
+                       c.startdate, c.enddate, c.timecreated
+                FROM mdl_course c
+                LEFT JOIN mdl_enrol e ON e.courseid = c.id
+                LEFT JOIN mdl_user_enrolments ue ON ue.enrolid = e.id
+                WHERE c.id > 1
+                GROUP BY c.id
+                ORDER BY enrollments DESC, c.fullname ASC
+            `);
+            courses = rows || [];
+        } catch (moodleErr) {
+            console.warn('[LMS-ENROL] Moodle DB unavailable:', moodleErr.message);
+        }
+        res.json({ success: true, data: courses });
+    } catch (error) {
+        console.error('Error fetching LMS enrolments:', error);
+        res.status(500).json({ success: false, error: 'Failed to fetch LMS enrolments' });
+    }
+});
+
+// LMS Enrolment detail per course – enrolled users
+app.get('/api/admin/lms-enrolments/:courseId', requireAuth, async (req, res) => {
+    try {
+        const courseId = Number(req.params.courseId);
+        if (!courseId || isNaN(courseId)) return res.status(400).json({ success: false, error: 'Invalid course ID' });
+        let course = null, enrolledUsers = [];
+        try {
+            const [cRows] = await moodlePool.query(`SELECT id, shortname, fullname, visible, startdate, enddate FROM mdl_course WHERE id = ?`, [courseId]);
+            course = cRows?.[0] || null;
+            const [uRows] = await moodlePool.query(`
+                SELECT u.id, u.username, u.firstname, u.lastname, u.email,
+                       ue.timecreated as enrolled_at
+                FROM mdl_user u
+                JOIN mdl_user_enrolments ue ON ue.userid = u.id
+                JOIN mdl_enrol e ON e.id = ue.enrolid
+                WHERE e.courseid = ? AND u.deleted = 0
+                ORDER BY u.lastname, u.firstname
+            `, [courseId]);
+            enrolledUsers = uRows || [];
+        } catch (moodleErr) {
+            console.warn('[LMS-ENROL] Moodle DB unavailable:', moodleErr.message);
+        }
+        res.json({ success: true, data: { course, enrolledUsers } });
+    } catch (error) {
+        console.error('Error fetching course enrolment detail:', error);
+        res.status(500).json({ success: false, error: 'Failed to fetch course enrolment detail' });
+    }
+});
+
+// Student Programmes (admin view) – all student programme registrations
+app.get('/api/admin/student-programmes', requireAuth, async (req, res) => {
+    try {
+        const [rows] = await db.execute(`
+            SELECT spr.id, spr.application_id, spr.student_email, spr.programme_code,
+                   spr.programme_title, spr.status, spr.source, spr.notes,
+                   spr.started_at, spr.ended_at, spr.created_at,
+                   u.first_name, u.last_name
+            FROM student_programme_registrations spr
+            LEFT JOIN users u ON u.email = spr.student_email COLLATE utf8mb4_unicode_ci
+            ORDER BY spr.created_at DESC
+        `);
+        res.json({ success: true, data: rows });
+    } catch (error) {
+        console.error('Error fetching student programmes:', error);
+        res.status(500).json({ success: false, error: 'Failed to fetch student programmes' });
+    }
+});
+
+// Users by role detail – full user list with role filter support
+app.get('/api/admin/users-by-role', requireAuth, async (req, res) => {
+    try {
+        const { role } = req.query;
+        let query = `SELECT id, first_name, last_name, email, role, created_at FROM users`;
+        const params = [];
+        if (role) {
+            query += ` WHERE role = ?`;
+            params.push(role);
+        }
+        query += ` ORDER BY created_at DESC`;
+        const [rows] = await db.execute(query, params);
+        res.json({ success: true, data: rows });
+    } catch (error) {
+        console.error('Error fetching users by role:', error);
+        res.status(500).json({ success: false, error: 'Failed to fetch users' });
+    }
+});
+
 app.post('/api/admin/manual-role-sync', requireAuth, async (req, res) => {
     if (roleSyncJobInProgress) {
         return res.status(409).json({

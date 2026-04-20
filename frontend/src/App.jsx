@@ -5,6 +5,9 @@ import LoginPage from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import AdminDashboard from './components/AdminDashboard';
 import AdminOverview from './pages/AdminOverview';
+import LmsEnrolments from './pages/LmsEnrolments';
+import AdminStudentProgrammes from './pages/AdminStudentProgrammes';
+import AdminUsersByRole from './pages/AdminUsersByRole';
 import Layout from './components/Layout';
 import StudentAdmissionForm from './components/StudentAdmissionForm';
 import StudentDashboard from './components/StudentDashboard';
@@ -124,7 +127,7 @@ function App() {
                     user ? (
                         canAccessManagementPortal ? (
                             <Layout user={user} onLogout={handleLogout}>
-                                <Dashboard user={user} onLogout={handleLogout} viewMode="manager" />
+                                <AdminOverview user={user} />
                             </Layout>
                         ) : roleContext.hasTeaching ? (
                             <Layout user={user} onLogout={handleLogout}>
@@ -469,6 +472,42 @@ function App() {
                     user && canAccessManagementPortal ? (
                         <Layout user={user} onLogout={handleLogout}>
                             <AdminOverview user={user} />
+                        </Layout>
+                    ) : (
+                        <LoginPage onLoginSuccess={handleLoginSuccess} />
+                    )
+                } />
+                <Route path="/modules" element={
+                    user && canAccessManagementPortal ? (
+                        <Layout user={user} onLogout={handleLogout}>
+                            <Dashboard user={user} onLogout={handleLogout} viewMode="manager" />
+                        </Layout>
+                    ) : (
+                        <LoginPage onLoginSuccess={handleLoginSuccess} />
+                    )
+                } />
+                <Route path="/admin/lms-enrolments" element={
+                    user && canAccessManagementPortal ? (
+                        <Layout user={user} onLogout={handleLogout}>
+                            <LmsEnrolments />
+                        </Layout>
+                    ) : (
+                        <LoginPage onLoginSuccess={handleLoginSuccess} />
+                    )
+                } />
+                <Route path="/admin/student-programmes" element={
+                    user && canAccessManagementPortal ? (
+                        <Layout user={user} onLogout={handleLogout}>
+                            <AdminStudentProgrammes />
+                        </Layout>
+                    ) : (
+                        <LoginPage onLoginSuccess={handleLoginSuccess} />
+                    )
+                } />
+                <Route path="/admin/users-by-role" element={
+                    user && canAccessManagementPortal ? (
+                        <Layout user={user} onLogout={handleLogout}>
+                            <AdminUsersByRole />
                         </Layout>
                     ) : (
                         <LoginPage onLoginSuccess={handleLoginSuccess} />
