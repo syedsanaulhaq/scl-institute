@@ -2,6 +2,10 @@
 require_once('../../config.php');
 require_once($CFG->libdir.'/adminlib.php');
 
+// Set up $PAGE early so Moodle navigation/renderers don't hit null.
+$PAGE->set_context(context_system::instance());
+$PAGE->set_url(new moodle_url('/local/sclsso/login.php'));
+
 /**
  * Assign Moodle roles based on SCL system roles
  * Maps SCL roles to Moodle manager/admin roles
@@ -159,7 +163,7 @@ function syncRolesToBackend($userid, $email, $backendHost, $backendPort) {
 $token = optional_param('token', '', PARAM_ALPHANUMEXT);
 
 if (empty($token)) {
-    redirect($CFG->wwwroot, 'Invalid or missing token');
+    redirect(new moodle_url('/'));
 }
 
 // Verify token via SCL backend API
@@ -187,13 +191,13 @@ curl_close($ch);
 
 if ($httpCode !== 200) {
     error_log('[SSO] Backend verification failed: HTTP ' . $httpCode . ' Response: ' . $response);
-    redirect($CFG->wwwroot, 'SSO verification failed - Please try again');
+    redirect(new moodle_url('/'));
 }
 
 $responseData = json_decode($response, true);
 if (!$responseData || !isset($responseData['user'])) {
     error_log('[SSO] Invalid response structure from backend');
-    redirect($CFG->wwwroot, 'Invalid token');
+    redirect(new moodle_url('/'));
 }
 
 $tokenData = $responseData['user'];
@@ -272,13 +276,11 @@ error_log('[SSO] About to redirect. redirectUrl=' . var_export($redirectUrl, tru
 error_log('[SSO] !empty($redirectUrl)=' . (int)!empty($redirectUrl));
 if (!empty($redirectUrl)) {
     // The redirectUrl is stored from the token, e.g., /mod/quiz/view.php?id=21
-    $finalUrl = $CFG->wwwroot . $redirectUrl;
-    error_log('[SSO] Redirecting to activity: ' . $finalUrl);
-    error_log('[SSO] calling redirect() with: ' . $finalUrl);
-    redirect($finalUrl, 'Login successful');
+    $finalUrl = new moodle_url($redirectUrl);
+    error_log('[SSO] Redirecting to activity: ' . $finalUrl->out(false));
+    redirect($finalUrl);
 } else {
     error_log('[SSO] No redirect URL, redirecting to courses');
-    error_log('[SSO] calling redirect() with: ' . $CFG->wwwroot . '/my/courses.php');
-    redirect($CFG->wwwroot . '/my/courses.php', 'Login successful');
+    redirect(new moodle_url('/my/courses.php'));
 }
 ?>
