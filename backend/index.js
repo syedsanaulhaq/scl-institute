@@ -537,6 +537,109 @@ app.get('/api/admin/dashboard-stats', requireAuth, async (req, res) => {
     }
 });
 
+// ===============================
+// ADMIN OVERVIEW DASHBOARD STATS
+// ===============================
+app.get('/api/admin/overview-stats', requireAuth, async (req, res) => {
+    try {
+        // --- SCL System DB queries (run in parallel) ---
+        const sclQueries = Promise.all([
+            // Users by role
+            db.execute(`SELECT role, COUNT(*) as count FROM users GROUP BY role`),
+            // Total users
+            db.execute(`SELECT COUNT(*) as count FROM users`),
+            // Application status breakdown
+            db.execute(`SELECT application_status as status, COUNT(*) as count FROM student_applications GROUP BY application_status`),
+            // Applications by month (last 6 months)
+            db.execute(`SELECT DATE_FORMAT(submitted_at, '%Y-%m') as month, COUNT(*) as count FROM student_applications WHERE submitted_at >= DATE_SUB(NOW(), INTERVAL 6 MONTH) GROUP BY month ORDER BY month`),
+            // Applications by course (top 8)
+            db.execute(`SELECT course_title, COUNT(*) as total, SUM(application_status='accepted') as accepted, SUM(application_status='rejected') as rejected, SUM(application_status NOT IN ('accepted','rejected')) as pending FROM student_applications GROUP BY course_title ORDER BY total DESC LIMIT 8`),
+            // Course registrations
+            db.execute(`SELECT COUNT(*) as count FROM course_registrations`),
+            // Course registrations by application_status
+            db.execute(`SELECT application_status as status, COUNT(*) as count FROM course_registrations GROUP BY application_status`),
+            // Programme intakes
+            db.execute(`SELECT status, COUNT(*) as count FROM programme_intakes GROUP BY status`),
+            // Course lifecycle
+            db.execute(`SELECT COUNT(*) as count FROM course_lifecycle_master`),
+            // Course change requests
+            db.execute(`SELECT type_of_request as request_type, decision as status, COUNT(*) as count FROM course_change_requests GROUP BY type_of_request, decision`),
+            // Teacher registrations
+            db.execute(`SELECT COUNT(*) as count FROM teacher_registrations`),
+            // Student programme registrations
+            db.execute(`SELECT status, COUNT(*) as count FROM student_programme_registrations GROUP BY status`),
+            // Accreditations/Inductions/Visits
+            db.execute(`SELECT COUNT(*) as count FROM course_accreditations`),
+            db.execute(`SELECT COUNT(*) as count FROM course_inductions`),
+            db.execute(`SELECT COUNT(*) as count FROM course_visits`),
+            // Recent applications (7 days)
+            db.execute(`SELECT COUNT(*) as count FROM student_applications WHERE submitted_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)`),
+        ]);
+
+        // --- Moodle DB queries (run in parallel) ---
+        let moodleData = { courses: 0, enrollments: 0, moodleUsers: 0, courseBreakdown: [] };
+        try {
+            const [mCourses, mEnrol, mUsers, mCourseEnrol] = await Promise.all([
+                moodlePool.query(`SELECT COUNT(*) as count FROM mdl_course WHERE id > 1`),
+                moodlePool.query(`SELECT COUNT(*) as count FROM mdl_user_enrolments ue JOIN mdl_enrol e ON ue.enrolid = e.id`),
+                moodlePool.query(`SELECT COUNT(*) as count FROM mdl_user WHERE deleted = 0 AND id > 1`),
+                moodlePool.query(`SELECT c.shortname, c.fullname, COUNT(ue.id) as enrollments FROM mdl_course c JOIN mdl_enrol e ON e.courseid = c.id JOIN mdl_user_enrolments ue ON ue.enrolid = e.id WHERE c.id > 1 GROUP BY c.id ORDER BY enrollments DESC LIMIT 10`),
+            ]);
+            moodleData = {
+                courses: mCourses[0][0]?.count || 0,
+                enrollments: mEnrol[0][0]?.count || 0,
+                moodleUsers: mUsers[0][0]?.count || 0,
+                courseBreakdown: mCourseEnrol[0] || [],
+            };
+        } catch (moodleErr) {
+            console.warn('[OVERVIEW] Moodle DB unavailable:', moodleErr.message);
+        }
+
+        const results = await sclQueries;
+        const [
+            [usersByRole], [totalUsers], [appStatus], [appsByMonth],
+            [appsByCourse], [totalRegs], [regsByStatus], [intakes],
+            [lifecycle], [changeReqs], [teacherRegs], [progRegs],
+            [accred], [inductions], [visits], [recentApps],
+        ] = results;
+
+        res.json({
+            success: true,
+            data: {
+                users: {
+                    total: totalUsers[0]?.count || 0,
+                    byRole: usersByRole,
+                },
+                applications: {
+                    byStatus: appStatus,
+                    byMonth: appsByMonth,
+                    byCourse: appsByCourse,
+                    recent7Days: recentApps[0]?.count || 0,
+                },
+                courseRegistrations: {
+                    total: totalRegs[0]?.count || 0,
+                    byStatus: regsByStatus,
+                },
+                programmeIntakes: intakes,
+                courseLifecycle: {
+                    total: lifecycle[0]?.count || 0,
+                    accreditations: accred[0]?.count || 0,
+                    inductions: inductions[0]?.count || 0,
+                    visits: visits[0]?.count || 0,
+                },
+                changeRequests: changeReqs,
+                teacherRegistrations: teacherRegs[0]?.count || 0,
+                studentProgrammes: progRegs,
+                moodle: moodleData,
+                lastUpdated: new Date().toISOString(),
+            },
+        });
+    } catch (error) {
+        console.error('Error fetching overview stats:', error);
+        res.status(500).json({ success: false, error: 'Failed to fetch overview statistics' });
+    }
+});
+
 app.post('/api/admin/manual-role-sync', requireAuth, async (req, res) => {
     if (roleSyncJobInProgress) {
         return res.status(409).json({

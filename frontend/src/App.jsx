@@ -4,6 +4,7 @@ import axios from 'axios';
 import LoginPage from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import AdminDashboard from './components/AdminDashboard';
+import AdminOverview from './pages/AdminOverview';
 import Layout from './components/Layout';
 import StudentAdmissionForm from './components/StudentAdmissionForm';
 import StudentDashboard from './components/StudentDashboard';
@@ -459,6 +460,15 @@ function App() {
                     user && canAccessManagementPortal ? (
                         <Layout user={user} onLogout={handleLogout}>
                             <AdminDashboard user={user} />
+                        </Layout>
+                    ) : (
+                        <LoginPage onLoginSuccess={handleLoginSuccess} />
+                    )
+                } />
+                <Route path="/admin/overview" element={
+                    user && canAccessManagementPortal ? (
+                        <Layout user={user} onLogout={handleLogout}>
+                            <AdminOverview user={user} />
                         </Layout>
                     ) : (
                         <LoginPage onLoginSuccess={handleLoginSuccess} />

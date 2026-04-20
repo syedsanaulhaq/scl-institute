@@ -55,6 +55,7 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
     const managerMenuItems = canAccessManagementPortal
         ? [
             { name: 'Dashboard', icon: LayoutDashboard, path: '/' },
+            { name: 'Overview & Reports', icon: BarChart3, path: '/admin/overview' },
             { name: 'Admissions Hub', icon: BarChart3, path: '/admin/dashboard' },
             {
                 name: 'Student Admission',
