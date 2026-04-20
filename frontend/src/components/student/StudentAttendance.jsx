@@ -4,11 +4,23 @@ import axios from 'axios';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
 
+const extractYear = (courseCode) => {
+    const match = String(courseCode || '').match(/Y(\d+)/);
+    return match ? `Year ${match[1]}` : null;
+};
+
+const extractSemester = (courseCode) => {
+    const match = String(courseCode || '').match(/S(\d+)/);
+    return match ? `Semester ${match[1]}` : null;
+};
+
 const StudentAttendance = ({ user }) => {
     const [attendanceData, setAttendanceData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [selectedCourse, setSelectedCourse] = useState(null);
+    const [filterYear, setFilterYear] = useState('');
+    const [filterSemester, setFilterSemester] = useState('');
 
     useEffect(() => {
         fetchAttendanceData();
@@ -131,6 +143,25 @@ const StudentAttendance = ({ user }) => {
 
     const courses = attendanceData?.courseGroups || [];
 
+    // Derive unique years and semesters from course codes
+    const uniqueYears = [...new Set(
+        courses.map(c => extractYear(c.courseCode)).filter(Boolean)
+    )].sort();
+
+    const uniqueSemesters = [...new Set(
+        courses
+            .filter(c => !filterYear || extractYear(c.courseCode) === filterYear)
+            .map(c => extractSemester(c.courseCode))
+            .filter(Boolean)
+    )].sort();
+
+    // Filter courses based on year/semester selection
+    const filteredCourses = courses.filter(c => {
+        if (filterYear && extractYear(c.courseCode) !== filterYear) return false;
+        if (filterSemester && extractSemester(c.courseCode) !== filterSemester) return false;
+        return true;
+    });
+
     if (courses.length === 0) {
         return (
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 my-6">
@@ -158,16 +189,70 @@ const StudentAttendance = ({ user }) => {
                 </p>
             </div>
 
+            {/* Year & Semester Filters */}
+            <div className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm mb-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Year */}
+                    <div>
+                        <label htmlFor="att-year-filter" className="block text-sm font-medium text-gray-700 mb-2">
+                            Year
+                        </label>
+                        <select
+                            id="att-year-filter"
+                            value={filterYear}
+                            onChange={(e) => {
+                                setFilterYear(e.target.value);
+                                setFilterSemester('');
+                                setSelectedCourse(null);
+                            }}
+                            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                            <option value="">All Years</option>
+                            {uniqueYears.map((year) => (
+                                <option key={year} value={year}>{year}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    {/* Semester */}
+                    <div>
+                        <label htmlFor="att-semester-filter" className="block text-sm font-medium text-gray-700 mb-2">
+                            Semester
+                        </label>
+                        <select
+                            id="att-semester-filter"
+                            value={filterSemester}
+                            onChange={(e) => {
+                                setFilterSemester(e.target.value);
+                                setSelectedCourse(null);
+                            }}
+                            disabled={!filterYear}
+                            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                        >
+                            <option value="">All Semesters</option>
+                            {uniqueSemesters.map((sem) => (
+                                <option key={sem} value={sem}>{sem}</option>
+                            ))}
+                        </select>
+                    </div>
+                </div>
+            </div>
+
             {/* Course Selection and Summary */}
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-8">
                 {/* Course List */}
                 <div className="lg:col-span-1">
                     <div className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm">
                         <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-4 py-3">
-                            <h2 className="text-white font-semibold">Courses</h2>
+                            <h2 className="text-white font-semibold">Courses ({filteredCourses.length})</h2>
                         </div>
+                        {filteredCourses.length === 0 ? (
+                            <div className="px-4 py-6 text-center text-gray-500 text-sm">
+                                No courses match the selected filters
+                            </div>
+                        ) : (
                         <div className="divide-y">
-                            {courses.map((course, idx) => (
+                            {filteredCourses.map((course, idx) => (
                                 <button
                                     key={idx}
                                     onClick={() => setSelectedCourse(course)}
@@ -186,6 +271,7 @@ const StudentAttendance = ({ user }) => {
                                 </button>
                             ))}
                         </div>
+                        )}
                     </div>
                 </div>
 
