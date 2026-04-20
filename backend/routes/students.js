@@ -12016,21 +12016,33 @@ router.get('/student-dashboard', async (req, res) => {
             try {
                 const [notifRows] = await moodleConn.execute(`
                     SELECT id, subject, smallmessage, fullmessage, component, eventtype,
-                           timecreated, timeread
+                           contexturl, timecreated, timeread
                     FROM mdl_notifications
                     WHERE useridto = ?
                     ORDER BY timecreated DESC
                     LIMIT 15`,
                     [moodleUser.id]
                 );
-                notifications = notifRows.map(n => ({
-                    id: n.id,
-                    subject: n.subject || 'Notification',
-                    text: n.smallmessage || n.fullmessage || '',
-                    timecreated: n.timecreated ? new Date(n.timecreated * 1000).toISOString() : null,
-                    read: n.timeread != null,
-                    type: n.eventtype || n.component || 'notification'
-                }));
+                notifications = notifRows.map(n => {
+                    let moodlePath = '/my/';
+                    if (n.contexturl) {
+                        try {
+                            const u = new URL(n.contexturl);
+                            moodlePath = u.pathname + u.search;
+                        } catch (_) {
+                            moodlePath = n.contexturl.replace(/^https?:\/\/[^/]+/, '') || '/my/';
+                        }
+                    }
+                    return {
+                        id: n.id,
+                        subject: n.subject || 'Notification',
+                        text: n.smallmessage || n.fullmessage || '',
+                        timecreated: n.timecreated ? new Date(n.timecreated * 1000).toISOString() : null,
+                        read: n.timeread != null,
+                        type: n.eventtype || n.component || 'notification',
+                        moodlePath
+                    };
+                });
             } catch (e) {
                 console.warn('[student-dashboard] Moodle notifications fetch failed:', e.message);
             }
@@ -12061,9 +12073,12 @@ router.get('/student-dashboard', async (req, res) => {
                 const now = Math.floor(Date.now() / 1000);
                 const [eventRows] = await moodleConn.execute(`
                     SELECT e.id, e.name, e.description, e.courseid, e.timestart, e.timeduration,
-                           e.eventtype, c.fullname AS coursename
+                           e.eventtype, e.modulename, e.instance, c.fullname AS coursename,
+                           cm.id AS cmid
                     FROM mdl_event e
                     LEFT JOIN mdl_course c ON e.courseid = c.id
+                    LEFT JOIN mdl_modules m ON m.name = e.modulename
+                    LEFT JOIN mdl_course_modules cm ON cm.course = e.courseid AND cm.module = m.id AND cm.instance = e.instance
                     WHERE (e.userid = ? OR e.courseid IN (
                         SELECT e2.courseid FROM mdl_enrol e2
                         JOIN mdl_user_enrolments ue2 ON ue2.enrolid = e2.id
@@ -12074,16 +12089,23 @@ router.get('/student-dashboard', async (req, res) => {
                     LIMIT 10`,
                     [moodleUser.id, moodleUser.id, now]
                 );
-                upcomingEvents = eventRows.map(ev => ({
-                    id: ev.id,
-                    name: ev.name,
-                    description: (ev.description || '').replace(/<[^>]*>/g, '').substring(0, 200),
-                    coursename: ev.coursename || '',
-                    courseid: ev.courseid,
-                    timestart: ev.timestart ? new Date(ev.timestart * 1000).toISOString() : null,
-                    timeduration: ev.timeduration,
-                    eventtype: ev.eventtype
-                }));
+                upcomingEvents = eventRows.map(ev => {
+                    let moodlePath = ev.courseid ? `/course/view.php?id=${ev.courseid}` : '/calendar/view.php';
+                    if (ev.cmid && ev.modulename) {
+                        moodlePath = `/mod/${ev.modulename}/view.php?id=${ev.cmid}`;
+                    }
+                    return {
+                        id: ev.id,
+                        name: ev.name,
+                        description: (ev.description || '').replace(/<[^>]*>/g, '').substring(0, 200),
+                        coursename: ev.coursename || '',
+                        courseid: ev.courseid,
+                        timestart: ev.timestart ? new Date(ev.timestart * 1000).toISOString() : null,
+                        timeduration: ev.timeduration,
+                        eventtype: ev.eventtype,
+                        moodlePath
+                    };
+                });
             } catch (e) {
                 console.warn('[student-dashboard] Moodle events fetch failed:', e.message);
             }
@@ -12116,7 +12138,8 @@ router.get('/student-dashboard', async (req, res) => {
                     coursename: a.coursename,
                     courseid: a.courseid,
                     timemodified: a.timemodified ? new Date(a.timemodified * 1000).toISOString() : null,
-                    userfullname: a.userfullname || 'System'
+                    userfullname: a.userfullname || 'System',
+                    moodlePath: `/mod/forum/discuss.php?d=${a.id}`
                 }));
             } catch (e) {
                 console.warn('[student-dashboard] Moodle announcements fetch failed:', e.message);

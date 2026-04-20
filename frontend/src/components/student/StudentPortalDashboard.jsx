@@ -88,6 +88,22 @@ const StudentPortalDashboard = ({ user }) => {
         }
     };
 
+    const handleMoodleNavigate = async (moodlePath) => {
+        if (!moodlePath) return;
+        try {
+            setSsoLoading(true);
+            setSsoError('');
+            await openMoodleSSO(user.email, {
+                redirectTo: moodlePath,
+                onError: (msg) => setSsoError(msg)
+            });
+        } catch (err) {
+            setSsoError(err.response?.data?.message || 'Failed to access Moodle');
+        } finally {
+            setSsoLoading(false);
+        }
+    };
+
     const formatDate = (dateStr) => {
         if (!dateStr) return '-';
         return new Date(dateStr).toLocaleDateString('en-GB', {
@@ -247,9 +263,9 @@ const StudentPortalDashboard = ({ user }) => {
 
                 <div className="p-5">
                     {activeTab === 'courses' && <CoursesTab courses={courses} onCourseClick={handleCourseClick} />}
-                    {activeTab === 'notifications' && <NotificationsTab notifications={notifications} formatTime={formatTime} />}
-                    {activeTab === 'events' && <EventsTab events={upcomingEvents} formatDate={formatDate} />}
-                    {activeTab === 'announcements' && <AnnouncementsTab announcements={announcements} formatTime={formatTime} />}
+                    {activeTab === 'notifications' && <NotificationsTab notifications={notifications} formatTime={formatTime} onItemClick={handleMoodleNavigate} />}
+                    {activeTab === 'events' && <EventsTab events={upcomingEvents} formatDate={formatDate} onItemClick={handleMoodleNavigate} />}
+                    {activeTab === 'announcements' && <AnnouncementsTab announcements={announcements} formatTime={formatTime} onItemClick={handleMoodleNavigate} />}
                 </div>
             </div>
 
@@ -486,7 +502,7 @@ const CoursesTab = ({ courses, onCourseClick }) => {
     );
 };
 
-const NotificationsTab = ({ notifications, formatTime }) => {
+const NotificationsTab = ({ notifications, formatTime, onItemClick }) => {
     if (!notifications || notifications.length === 0) {
         return (
             <div className="text-center py-10 text-gray-500">
@@ -500,7 +516,7 @@ const NotificationsTab = ({ notifications, formatTime }) => {
     return (
         <div className="divide-y divide-gray-100">
             {notifications.map(notif => (
-                <div key={notif.id} className={`py-3 px-2 flex gap-3 ${!notif.read ? 'bg-blue-50/50' : ''}`}>
+                <div key={notif.id} onClick={() => onItemClick?.(notif.moodlePath)} className={`py-3 px-2 flex gap-3 cursor-pointer hover:bg-gray-50 transition-colors rounded ${!notif.read ? 'bg-blue-50/50' : ''}`}>
                     <div className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${!notif.read ? 'bg-blue-500' : 'bg-gray-300'}`} />
                     <div className="flex-1 min-w-0">
                         <p className={`text-sm ${!notif.read ? 'font-semibold text-gray-900' : 'text-gray-700'}`}>{notif.subject}</p>
@@ -513,7 +529,7 @@ const NotificationsTab = ({ notifications, formatTime }) => {
     );
 };
 
-const EventsTab = ({ events, formatDate }) => {
+const EventsTab = ({ events, formatDate, onItemClick }) => {
     if (!events || events.length === 0) {
         return (
             <div className="text-center py-10 text-gray-500">
@@ -527,7 +543,7 @@ const EventsTab = ({ events, formatDate }) => {
     return (
         <div className="divide-y divide-gray-100">
             {events.map(event => (
-                <div key={event.id} className="py-3 px-2 flex items-start gap-3">
+                <div key={event.id} onClick={() => onItemClick?.(event.moodlePath)} className="py-3 px-2 flex items-start gap-3 cursor-pointer hover:bg-gray-50 transition-colors rounded">
                     <div className="bg-indigo-100 text-indigo-700 rounded-lg px-2.5 py-1 text-center flex-shrink-0 min-w-[52px]">
                         <p className="text-lg font-bold leading-tight">
                             {event.timestart ? new Date(event.timestart).getDate() : '-'}
@@ -548,7 +564,7 @@ const EventsTab = ({ events, formatDate }) => {
     );
 };
 
-const AnnouncementsTab = ({ announcements, formatTime }) => {
+const AnnouncementsTab = ({ announcements, formatTime, onItemClick }) => {
     if (!announcements || announcements.length === 0) {
         return (
             <div className="text-center py-10 text-gray-500">
@@ -562,7 +578,7 @@ const AnnouncementsTab = ({ announcements, formatTime }) => {
     return (
         <div className="divide-y divide-gray-100">
             {announcements.map(ann => (
-                <div key={ann.id} className="py-3 px-2">
+                <div key={ann.id} onClick={() => onItemClick?.(ann.moodlePath)} className="py-3 px-2 cursor-pointer hover:bg-gray-50 transition-colors rounded">
                     <div className="flex items-center gap-2 mb-1">
                         <Megaphone className="w-3.5 h-3.5 text-amber-500" />
                         <p className="text-sm font-semibold text-gray-900">{ann.subject}</p>
