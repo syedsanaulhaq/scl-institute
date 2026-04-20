@@ -101,7 +101,7 @@ const LoginPage = ({ onLoginSuccess }) => {
                                         type="email"
                                         required
                                         className="block w-full pl-12 pr-4 py-4 bg-white border border-gray-200 rounded-2xl text-gray-900 text-sm focus:ring-2 focus:ring-scl-purple focus:border-transparent transition-all shadow-sm"
-                                        placeholder="admin@scl.com"
+                                        placeholder="Enter your email"
                                         value={email}
                                         onChange={(e) => setEmail(e.target.value)}
                                         disabled={loading}
@@ -155,21 +155,6 @@ const LoginPage = ({ onLoginSuccess }) => {
                             </button>
                         </form>
 
-                        <div className="relative my-4">
-                            <div className="absolute inset-0 flex items-center">
-                                <span className="w-full border-t border-gray-200" />
-                            </div>
-                            <div className="relative flex justify-center text-xs uppercase">
-                                <span className="bg-gray-50 px-3 text-gray-400 font-bold tracking-widest">
-                                    Demo Environment
-                                </span>
-                            </div>
-                        </div>
-
-                        <div className="text-center bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
-                            <p className="text-xs text-gray-500 font-medium">Use credentials:</p>
-                            <p className="text-sm font-bold text-gray-900 mt-1">admin@scl.com / password</p>
-                        </div>
                     </div>
 
                     <p className="mt-10 text-center text-xs text-gray-400 font-medium pb-8 uppercase tracking-widest">

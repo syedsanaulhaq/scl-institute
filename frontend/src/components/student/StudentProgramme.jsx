@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { BookOpen, Award, Target } from 'lucide-react';
 import axios from 'axios';
 import { openMoodleSSO } from '../../utils/ssoService';
@@ -649,7 +649,7 @@ const StudentProgramme = ({ user }) => {
                                             >
                                                 <option value="">Select a course...</option>
                                                 {(() => {
-                                                    // Group courses by Year → Semester
+                                                    // Group courses by Year â†’ Semester
                                                     const groups = {};
                                                     filteredCourses.forEach((course) => {
                                                         const yr = extractYear(course.course_code) || 'Other';
@@ -676,7 +676,7 @@ const StudentProgramme = ({ user }) => {
                                                                         value={String(course.moodle_course_id || course.id)}
                                                                     >
                                                                         {course.course_title} ({course.course_code || `COURSE-${course.id}`})
-                                                                        {blocked ? ' 🔒' : ''}
+                                                                        {blocked ? ' ðŸ”’' : ''}
                                                                     </option>
                                                                 );
                                                             })}
@@ -712,7 +712,7 @@ const StudentProgramme = ({ user }) => {
                             <div>
                                 <p className="text-blue-200">Start Date</p>
                                 <p className="font-semibold">
-                                    {overviewStartDate ? new Date(overviewStartDate).toLocaleDateString() : 'TBD'}
+                                    {overviewStartDate ? new Date(overviewStartDate).toLocaleDateString('en-GB') : 'TBD'}
                                 </p>
                             </div>
                             <div>
@@ -776,7 +776,7 @@ const StudentProgramme = ({ user }) => {
                                 >
                                     <div className="flex items-center gap-3">
                                         <span className={`text-gray-600 transition-transform ${expandedSections[index] ? 'rotate-180' : ''}`}>
-                                            ▼
+                                            â–¼
                                         </span>
                                         <h3 className="text-base font-medium text-gray-900">{module.name}</h3>
                                     </div>
@@ -820,3 +820,4 @@ const StudentProgramme = ({ user }) => {
 };
 
 export default StudentProgramme;
+

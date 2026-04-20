@@ -17,8 +17,10 @@ const LmsEnrolments = () => {
 
     const handleOpenMoodleCourse = (courseId) => {
         const moodleUrl = getMoodleUrl();
+        const redirectTo = `${moodleUrl}/course/view.php?id=${courseId}`;
         openMoodleSSO(adminEmail, {
-            redirectTo: `${moodleUrl}/course/view.php?id=${courseId}`,
+            redirectTo,
+            onError: (err) => alert('Failed to open Moodle: ' + err),
         });
     };
 

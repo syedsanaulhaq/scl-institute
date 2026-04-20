@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { 
     Search, 
     Filter, 
@@ -293,7 +293,7 @@ const StudentList = () => {
                                     </td>
                                     <td className="px-6 py-4">
                                         <div className="text-sm text-gray-900">
-                                            {new Date(student.applicationDate).toLocaleDateString()}
+                                            {new Date(student.applicationDate).toLocaleDateString('en-GB')}
                                         </div>
                                     </td>
                                     <td className="px-6 py-4">

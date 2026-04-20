@@ -10993,6 +10993,31 @@ router.get('/library/:id', async (req, res) => {
                 courseIds
             );
 
+            // Get learning activities from enrolled courses so Library is useful
+            // even when explicit resource/url modules are not present.
+            const [activities] = await moodleDbPool.query(
+                `SELECT
+                    cm.id as cmid,
+                    c.fullname as course_name,
+                    c.shortname as course_code,
+                    m.name as module_type,
+                    COALESCE(a.name, q.name, f.name) as title,
+                    COALESCE(a.intro, q.intro, f.intro) as description,
+                    COALESCE(a.id, q.id, f.id) as instance_id
+                FROM mdl_course_modules cm
+                JOIN mdl_course c ON c.id = cm.course
+                JOIN mdl_modules m ON m.id = cm.module
+                LEFT JOIN mdl_assign a ON m.name = 'assign' AND a.id = cm.instance
+                LEFT JOIN mdl_quiz q ON m.name = 'quiz' AND q.id = cm.instance
+                LEFT JOIN mdl_forum f ON m.name = 'forum' AND f.id = cm.instance
+                WHERE cm.course IN (${placeholders})
+                  AND cm.deletioninprogress = 0
+                  AND m.name IN ('assign', 'quiz', 'forum')
+                ORDER BY c.fullname, cm.id
+                LIMIT 100`,
+                courseIds
+            );
+
             // Combine and format resources
             const allResources = [
                 ...resources.map(r => ({
@@ -11020,7 +11045,28 @@ router.get('/library/:id', async (req, res) => {
                     available: true,
                     cmid: u.cmid,
                     moodleUrl: `/mod/url/view.php?id=${u.cmid}`
-                }))
+                })),
+                ...activities
+                    .filter(act => act.title)
+                    .map(act => ({
+                        id: `${act.module_type}-${act.instance_id}`,
+                        title: act.title,
+                        type: 'articles',
+                        category: act.course_name,
+                        course_code: act.course_code,
+                        author: 'Course Activity',
+                        description: act.description
+                            ? `Activity from ${act.course_name}`
+                            : `Learning activity from ${act.course_name}`,
+                        format: act.module_type === 'assign'
+                            ? 'Assignment'
+                            : act.module_type === 'quiz'
+                                ? 'Quiz'
+                                : 'Forum',
+                        available: true,
+                        cmid: act.cmid,
+                        moodleUrl: `/mod/${act.module_type}/view.php?id=${act.cmid}`
+                    }))
             ];
 
             return res.json({

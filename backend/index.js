@@ -1647,6 +1647,47 @@ app.post('/api/sso/generate', async (req, res) => {
     }
 });
 
+// GET redirect endpoint — browser navigates here directly via <a href>, no popup needed
+app.get('/api/sso/redirect', async (req, res) => {
+    const { email, redirect_to } = req.query;
+    if (!email) return res.status(400).send('Missing email parameter');
+
+    try {
+        const [rows] = await pool.query('SELECT id, email, first_name, last_name, role FROM users WHERE email = ?', [email]);
+        if (rows.length === 0) return res.status(404).send('User not found');
+        const user = rows[0];
+
+        const token = uuidv4();
+        let ssoRole = user.role;
+        try {
+            const moodleRoleData = await getMoodleRolesByEmail(user.email, { preferSnapshot: false });
+            const mergedRoles = mergeRoles(user.role, moodleRoleData?.roles || [], {
+                forceManager: isProtectedManagementEmail(user.email)
+            });
+            const effectiveRoleContext = buildRoleContext(
+                mergedRoles.length ? mergedRoles.join(',') : user.role,
+                moodleRoleData?.roleData
+            );
+            ssoRole = isProtectedManagementEmail(user.email) ? 'Super Admin' : (effectiveRoleContext.primaryRole || user.role);
+        } catch (_) {
+            if (isProtectedManagementEmail(user.email)) ssoRole = 'Super Admin';
+        }
+
+        await pool.query(
+            'INSERT INTO sso_tokens (token, email, firstname, lastname, role, redirect_url) VALUES (?, ?, ?, ?, ?, ?)',
+            [token, user.email, user.first_name || 'SCL', user.last_name || 'User', ssoRole, redirect_to || null]
+        );
+
+        const moodleUrl = process.env.MOODLE_EXTERNAL_URL || process.env.MOODLE_URL || 'http://localhost:8080';
+        const redirectUrl = `${moodleUrl}/local/sclsso/login.php?token=${token}`;
+        console.log(`[SSO Redirect] ${user.email} -> ${redirectUrl}`);
+        res.redirect(redirectUrl);
+    } catch (err) {
+        console.error('[SSO Redirect] Error:', err.message);
+        res.status(500).send('SSO error');
+    }
+});
+
 app.post('/api/sso/verify', async (req, res) => {
     const { token, secret } = req.body;
     if (secret !== (process.env.SSO_SECRET || 'supersecretkey')) {

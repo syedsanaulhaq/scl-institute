@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { Bell, X, CheckCircle, AlertCircle, Mail, XCircle, Clock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
@@ -141,7 +141,7 @@ export default function Notifications() {
         if (date.toDateString() === yesterday.toDateString()) {
             return 'Yesterday';
         }
-        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        return date.toLocaleDateString('en-GB', { month: 'short', day: 'numeric' });
     };
 
     const filteredNotifications = getFilteredNotifications();
@@ -272,3 +272,4 @@ export default function Notifications() {
         </div>
     );
 }
+

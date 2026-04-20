@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { Mail, Send, Inbox, Archive, Bell } from 'lucide-react';
 
 const StudentMessages = () => {
@@ -125,7 +125,7 @@ const StudentMessages = () => {
                                     <p className="text-sm text-gray-500">{message.preview}</p>
                                 </div>
                                 <div className="text-right ml-4">
-                                    <p className="text-xs text-gray-500 mb-2">{new Date(message.date).toLocaleDateString()}</p>
+                                    <p className="text-xs text-gray-500 mb-2">{new Date(message.date).toLocaleDateString('en-GB')}</p>
                                     <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs">
                                         {message.category}
                                     </span>
@@ -146,7 +146,7 @@ const StudentMessages = () => {
                                 {getPriorityBadge(announcement.priority)}
                             </div>
                             <p className="text-gray-700 mb-3">{announcement.content}</p>
-                            <p className="text-sm text-gray-500">Posted: {new Date(announcement.date).toLocaleDateString()}</p>
+                            <p className="text-sm text-gray-500">Posted: {new Date(announcement.date).toLocaleDateString('en-GB')}</p>
                         </div>
                     ))}
                 </div>
@@ -229,3 +229,4 @@ const StudentMessages = () => {
 };
 
 export default StudentMessages;
+

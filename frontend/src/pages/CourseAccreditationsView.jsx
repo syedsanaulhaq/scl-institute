@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { ChevronLeft } from 'lucide-react';
@@ -71,7 +71,7 @@ const CourseAccreditationsView = () => {
 
     const formatDate = (dateString) => {
         if (!dateString) return '-';
-        return new Date(dateString).toLocaleDateString();
+        return new Date(dateString).toLocaleDateString('en-GB');
     };
 
     return (
@@ -225,3 +225,4 @@ const CourseAccreditationsView = () => {
 };
 
 export default CourseAccreditationsView;
+

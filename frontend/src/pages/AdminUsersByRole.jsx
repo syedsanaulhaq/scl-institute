@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Users, ArrowLeft, Search, RefreshCw, ExternalLink } from 'lucide-react';
 import axios from 'axios';
@@ -28,8 +28,10 @@ const AdminUsersByRole = () => {
 
     const handleOpenMoodleProfile = (moodleUserId) => {
         const moodleUrl = getMoodleUrl();
+        const redirectTo = `${moodleUrl}/user/profile.php?id=${moodleUserId}`;
         openMoodleSSO(adminEmail, {
-            redirectTo: `${moodleUrl}/user/profile.php?id=${moodleUserId}`,
+            redirectTo,
+            onError: (err) => alert('Failed to open Moodle: ' + err),
         });
     };
 
@@ -158,7 +160,7 @@ const AdminUsersByRole = () => {
                                                 {u.role?.charAt(0).toUpperCase() + u.role?.slice(1)}
                                             </span>
                                         </td>
-                                        <td className="py-3 px-4 text-gray-500 text-xs">{u.created_at ? new Date(u.created_at).toLocaleDateString() : '—'}</td>
+                                        <td className="py-3 px-4 text-gray-500 text-xs">{u.created_at ? new Date(u.created_at).toLocaleDateString('en-GB') : 'â€”'}</td>
                                         <td className="py-3 px-4 text-center">
                                             {u.moodle_user_id ? (
                                                 <button
@@ -168,7 +170,7 @@ const AdminUsersByRole = () => {
                                                     <ExternalLink className="w-3 h-3" /> Moodle
                                                 </button>
                                             ) : (
-                                                <span className="text-xs text-gray-300">—</span>
+                                                <span className="text-xs text-gray-300">â€”</span>
                                             )}
                                         </td>
                                     </tr>
@@ -186,3 +188,4 @@ const AdminUsersByRole = () => {
 };
 
 export default AdminUsersByRole;
+

@@ -289,11 +289,11 @@ const AdminOverview = ({ user }) => {
                 </div>
             </div>
 
-            {/* Row 2: Applications by Course (stacked bar) */}
+            {/* Row 2: Application by Programme (stacked bar) */}
             <div className="bg-white rounded-xl shadow border border-gray-100 p-6">
                 <div className="flex items-center mb-4">
                     <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-                        <BarChart3 className="w-5 h-5 text-emerald-600" /> Applications by Course
+                        <BarChart3 className="w-5 h-5 text-emerald-600" /> Application by Programme
                     </h3>
                     <SectionLink to="/applications" />
                 </div>
@@ -311,7 +311,7 @@ const AdminOverview = ({ user }) => {
                         </BarChart>
                     </ResponsiveContainer>
                 ) : (
-                    <p className="text-gray-400 text-sm text-center py-12">No course data</p>
+                    <p className="text-gray-400 text-sm text-center py-12">No programme data</p>
                 )}
             </div>
 

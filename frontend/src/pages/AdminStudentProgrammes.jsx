@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { UserCheck, ArrowLeft, Search, RefreshCw, ExternalLink } from 'lucide-react';
 import axios from 'axios';
@@ -25,8 +25,10 @@ const AdminStudentProgrammes = () => {
 
     const handleOpenMoodleProfile = (moodleUserId) => {
         const moodleUrl = getMoodleUrl();
+        const redirectTo = `${moodleUrl}/user/profile.php?id=${moodleUserId}`;
         openMoodleSSO(adminEmail, {
-            redirectTo: `${moodleUrl}/user/profile.php?id=${moodleUserId}`,
+            redirectTo,
+            onError: (err) => alert('Failed to open Moodle: ' + err),
         });
     };
 
@@ -139,13 +141,13 @@ const AdminStudentProgrammes = () => {
                                 {filtered.map((r, i) => (
                                     <tr key={r.id} className="border-b border-gray-100 hover:bg-gray-50 transition">
                                         <td className="py-3 px-4 text-gray-400">{i + 1}</td>
-                                        <td className="py-3 px-4 font-medium text-gray-900">{r.first_name || '—'} {r.last_name || ''}</td>
+                                        <td className="py-3 px-4 font-medium text-gray-900">{r.first_name || 'â€”'} {r.last_name || ''}</td>
                                         <td className="py-3 px-4 text-gray-600">{r.student_email}</td>
-                                        <td className="py-3 px-4 text-gray-700 max-w-xs truncate" title={r.programme_title}>{r.programme_title || '—'}</td>
-                                        <td className="py-3 px-4 text-gray-600 font-mono text-xs">{r.programme_code || '—'}</td>
+                                        <td className="py-3 px-4 text-gray-700 max-w-xs truncate" title={r.programme_title}>{r.programme_title || 'â€”'}</td>
+                                        <td className="py-3 px-4 text-gray-600 font-mono text-xs">{r.programme_code || 'â€”'}</td>
                                         <td className="py-3 px-4 text-center">
                                             <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${STATUS_COLORS[r.status] || 'bg-gray-100 text-gray-700'}`}>
-                                                {r.status?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || '—'}
+                                                {r.status?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || 'â€”'}
                                             </span>
                                         </td>
                                         <td className="py-3 px-4 text-center">
@@ -157,10 +159,10 @@ const AdminStudentProgrammes = () => {
                                                     <ExternalLink className="w-3 h-3" /> Moodle
                                                 </button>
                                             ) : (
-                                                <span className="text-xs text-gray-300">—</span>
+                                                <span className="text-xs text-gray-300">â€”</span>
                                             )}
                                         </td>
-                                        <td className="py-3 px-4 text-gray-500 text-xs">{r.created_at ? new Date(r.created_at).toLocaleDateString() : '—'}</td>
+                                        <td className="py-3 px-4 text-gray-500 text-xs">{r.created_at ? new Date(r.created_at).toLocaleDateString('en-GB') : 'â€”'}</td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -176,3 +178,4 @@ const AdminStudentProgrammes = () => {
 };
 
 export default AdminStudentProgrammes;
+

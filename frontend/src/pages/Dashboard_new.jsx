@@ -130,11 +130,7 @@ const Dashboard = () => {
     };
 
     const formatDate = (dateString) => {
-        return new Date(dateString).toLocaleDateString('en-GB', {
-            day: '2-digit',
-            month: 'short',
-            year: 'numeric'
-        });
+        return new Date(dateString).toLocaleDateString('en-GB');
     };
 
     if (loading) {

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import {
@@ -71,7 +71,7 @@ const CourseAccreditations = ({ user }) => {
                     <div className="flex items-center justify-between">
                         <div>
                             <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-                                📋 Course Accreditations
+                                ðŸ“‹ Course Accreditations
                             </h1>
                             <p className="text-gray-600 text-sm mt-1">Track and manage course accreditations</p>
                         </div>
@@ -105,7 +105,7 @@ const CourseAccreditations = ({ user }) => {
                 {/* Table */}
                 {loading ? (
                     <div className="text-center py-12">
-                        <div className="inline-block animate-spin">⏳</div>
+                        <div className="inline-block animate-spin">â³</div>
                         <p className="text-gray-600 mt-2">Loading...</p>
                     </div>
                 ) : (
@@ -137,7 +137,7 @@ const CourseAccreditations = ({ user }) => {
                                             </td>
                                             <td className="px-6 py-4 text-sm">
                                                 <div className="text-xs space-y-1">
-                                                    <div><span className="text-gray-600">Submission:</span> <span className="font-medium">{accreditation.expected_submission_date ? new Date(accreditation.expected_submission_date).toLocaleDateString() : '-'}</span></div>
+                                                    <div><span className="text-gray-600">Submission:</span> <span className="font-medium">{accreditation.expected_submission_date ? new Date(accreditation.expected_submission_date).toLocaleDateString('en-GB') : '-'}</span></div>
                                                     <div><span className="text-gray-600">Version:</span> <span className="font-medium">{accreditation.version || '1.0'}</span></div>
                                                 </div>
                                             </td>
@@ -248,3 +248,4 @@ const CourseAccreditations = ({ user }) => {
 };
 
 export default CourseAccreditations;
+

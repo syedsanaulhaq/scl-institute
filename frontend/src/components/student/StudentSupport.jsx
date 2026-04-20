@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { HelpCircle, Send, Clock, CheckCircle, MessageSquare, Phone, Mail, FileText } from 'lucide-react';
 
 const StudentSupport = () => {
@@ -38,12 +38,12 @@ const StudentSupport = () => {
     ];
 
     const supportCategories = [
-        { name: 'IT Support', icon: '💻', description: 'Technical issues, LMS access, login problems' },
-        { name: 'Academic', icon: '📚', description: 'Academic advising, extensions, module queries' },
-        { name: 'Finance', icon: '💳', description: 'Fee payments, invoices, financial support' },
-        { name: 'Student Services', icon: '🎓', description: 'General enquiries, certificates, documentation' },
-        { name: 'Wellbeing', icon: '💚', description: 'Mental health support, counseling, wellbeing' },
-        { name: 'Accommodation', icon: '🏠', description: 'Housing support and accommodation queries' }
+        { name: 'IT Support', icon: 'ðŸ’»', description: 'Technical issues, LMS access, login problems' },
+        { name: 'Academic', icon: 'ðŸ“š', description: 'Academic advising, extensions, module queries' },
+        { name: 'Finance', icon: 'ðŸ’³', description: 'Fee payments, invoices, financial support' },
+        { name: 'Student Services', icon: 'ðŸŽ“', description: 'General enquiries, certificates, documentation' },
+        { name: 'Wellbeing', icon: 'ðŸ’š', description: 'Mental health support, counseling, wellbeing' },
+        { name: 'Accommodation', icon: 'ðŸ ', description: 'Housing support and accommodation queries' }
     ];
 
     const getStatusBadge = (status) => {
@@ -102,7 +102,7 @@ const StudentSupport = () => {
                     <MessageSquare className="w-8 h-8 text-purple-600 mb-3" />
                     <h3 className="font-semibold text-gray-900 mb-1">Live Chat</h3>
                     <p className="text-sm text-gray-600 mb-2">Chat with our team</p>
-                    <button className="text-xs text-purple-600 hover:text-purple-700 font-medium">Start Chat →</button>
+                    <button className="text-xs text-purple-600 hover:text-purple-700 font-medium">Start Chat â†’</button>
                 </div>
             </div>
 
@@ -139,10 +139,10 @@ const StudentSupport = () => {
                                         <h3 className="text-lg font-semibold text-gray-900">{ticket.subject}</h3>
                                         {getPriorityBadge(ticket.priority)}
                                     </div>
-                                    <p className="text-sm text-gray-600 mb-2">Ticket ID: {ticket.id} • Category: {ticket.category}</p>
+                                    <p className="text-sm text-gray-600 mb-2">Ticket ID: {ticket.id} â€¢ Category: {ticket.category}</p>
                                     <div className="flex items-center gap-4 text-xs text-gray-500">
-                                        <span>Created: {new Date(ticket.createdDate).toLocaleDateString()}</span>
-                                        <span>Last Update: {new Date(ticket.lastUpdate).toLocaleDateString()}</span>
+                                        <span>Created: {new Date(ticket.createdDate).toLocaleDateString('en-GB')}</span>
+                                        <span>Last Update: {new Date(ticket.lastUpdate).toLocaleDateString('en-GB')}</span>
                                         <span className="flex items-center gap-1">
                                             <MessageSquare className="w-3 h-3" />
                                             {ticket.messages} messages
@@ -152,7 +152,7 @@ const StudentSupport = () => {
                                 {getStatusBadge(ticket.status)}
                             </div>
                             <button className="text-blue-600 hover:text-blue-700 text-sm font-medium">
-                                View Details →
+                                View Details â†’
                             </button>
                         </div>
                     ))}
@@ -268,3 +268,4 @@ const StudentSupport = () => {
 };
 
 export default StudentSupport;
+

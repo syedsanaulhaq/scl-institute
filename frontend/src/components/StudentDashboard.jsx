@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Users, 
@@ -272,7 +272,7 @@ const StudentDashboard = () => {
                           </span>
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-500">
-                          {new Date(student.appliedDate).toLocaleDateString()}
+                          {new Date(student.appliedDate).toLocaleDateString('en-GB')}
                         </td>
                         <td className="px-4 py-3">
                           <button
@@ -385,9 +385,9 @@ const StudentDashboard = () => {
             <ResponsiveContainer width="100%" height={300}>
               <AreaChart data={applicationTrends}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="date" tickFormatter={(value) => new Date(value).toLocaleDateString()} />
+                <XAxis dataKey="date" tickFormatter={(value) => new Date(value).toLocaleDateString('en-GB')} />
                 <YAxis />
-                <Tooltip labelFormatter={(value) => new Date(value).toLocaleDateString()} />
+                <Tooltip labelFormatter={(value) => new Date(value).toLocaleDateString('en-GB')} />
                 <Area type="monotone" dataKey="applications" stackId="1" stroke="#3B82F6" fill="#93C5FD" />
                 <Area type="monotone" dataKey="accepted" stackId="2" stroke="#10B981" fill="#6EE7B7" />
               </AreaChart>
@@ -531,7 +531,7 @@ const StudentDashboard = () => {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {new Date(application.appliedDate).toLocaleDateString()}
+                      {new Date(application.appliedDate).toLocaleDateString('en-GB')}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex items-center space-x-2">

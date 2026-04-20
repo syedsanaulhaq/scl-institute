@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Loader2, RefreshCw, Plus, Edit2, Eye, Trash2 } from 'lucide-react';
@@ -100,7 +100,7 @@ const CourseVisits = () => {
                                             <div className="text-xs text-gray-500">{visit.course_code || 'No Code'}</div>
                                         </td>
                                         <td className="px-4 py-3 text-sm text-gray-700">{visit.visit_type || '-'}</td>
-                                        <td className="px-4 py-3 text-sm text-gray-700">{visit.visit_date ? new Date(visit.visit_date).toLocaleDateString() : '-'}</td>
+                                        <td className="px-4 py-3 text-sm text-gray-700">{visit.visit_date ? new Date(visit.visit_date).toLocaleDateString('en-GB') : '-'}</td>
                                         <td className="px-4 py-3 text-sm">
                                             <span className={`px-2 py-1 text-xs font-semibold rounded-full ${statusClass(visit.overall_status)}`}>
                                                 {visit.overall_status || 'Draft'}
@@ -132,3 +132,4 @@ const CourseVisits = () => {
 };
 
 export default CourseVisits;
+

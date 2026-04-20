@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { FileText, CheckCircle, Download } from 'lucide-react';
 import axios from 'axios';
 
@@ -269,7 +269,7 @@ export default function StudentContract({ user }) {
                                 <div>
                                     <h3 className="text-xl font-bold text-green-900">Contract Accepted</h3>
                                     <p className="text-green-800 mt-1">
-                                        You have successfully accepted the Student Contract & Terms on {new Date(acceptanceDate).toLocaleDateString()}
+                                        You have successfully accepted the Student Contract & Terms on {new Date(acceptanceDate).toLocaleDateString('en-GB')}
                                     </p>
                                     <p className="text-sm text-green-700 mt-2">
                                         Signed by: {signature}
@@ -288,7 +288,7 @@ export default function StudentContract({ user }) {
                             <div>
                                 <p className="font-medium text-gray-900 mb-1">Status</p>
                                 <p className={submitted ? 'text-green-600 font-medium' : 'text-yellow-600 font-medium'}>
-                                    {submitted ? '✓ Accepted' : '⏱ Pending Acceptance'}
+                                    {submitted ? 'âœ“ Accepted' : 'â± Pending Acceptance'}
                                 </p>
                             </div>
                             <div className="border-t pt-4">
@@ -320,3 +320,4 @@ export default function StudentContract({ user }) {
         </div>
     );
 }
+

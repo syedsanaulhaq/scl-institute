@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { AlertTriangle, MessageSquare, FileText, Scale, Accessibility, Shield, Plus, Send, Upload, Clock, CheckCircle } from 'lucide-react';
 import axios from 'axios';
 
@@ -237,12 +237,12 @@ const StudentSupportHub = ({ user }) => {
             {/* Tab Navigation */}
             <div className="flex gap-2 mb-6 overflow-x-auto border-b border-gray-200 pb-4">
                 {[
-                    { id: 'messages', label: '� Announcements', icon: MessageSquare },
-                    { id: 'support', label: '🆘 Support', icon: Plus },
-                    { id: 'feedback', label: '📋 Feedback', icon: FileText },
-                    { id: 'complaints', label: '⚖️ Complaints', icon: Scale },
-                    { id: 'disability', label: '♿ Disability', icon: Accessibility },
-                    { id: 'safeguarding', label: '🛡️ Safeguarding', icon: Shield }
+                    { id: 'messages', label: 'ï¿½ Announcements', icon: MessageSquare },
+                    { id: 'support', label: 'ðŸ†˜ Support', icon: Plus },
+                    { id: 'feedback', label: 'ðŸ“‹ Feedback', icon: FileText },
+                    { id: 'complaints', label: 'âš–ï¸ Complaints', icon: Scale },
+                    { id: 'disability', label: 'â™¿ Disability', icon: Accessibility },
+                    { id: 'safeguarding', label: 'ðŸ›¡ï¸ Safeguarding', icon: Shield }
                 ].map(tab => (
                     <button
                         key={tab.id}
@@ -262,7 +262,7 @@ const StudentSupportHub = ({ user }) => {
             {activeTab === 'messages' && (
                 <div className="space-y-6">
                     <div className="bg-white rounded-lg shadow p-6">
-                        <h2 className="text-xl font-bold mb-4">📢 Announcements from Your Courses</h2>
+                        <h2 className="text-xl font-bold mb-4">ðŸ“¢ Announcements from Your Courses</h2>
                         <p className="text-sm text-gray-600 mb-4">Live chat support is available in the bottom-right corner</p>
                         <div className="space-y-4">
                             {announcements.length === 0 ? (
@@ -275,7 +275,7 @@ const StudentSupportHub = ({ user }) => {
                                                 <p className="font-bold text-gray-900">{ann.title}</p>
                                                 {ann.course_name && (
                                                     <p className="text-xs text-blue-600 font-medium mt-1">
-                                                        📚 {ann.course_name} {ann.course_code && `(${ann.course_code})`}
+                                                        ðŸ“š {ann.course_name} {ann.course_code && `(${ann.course_code})`}
                                                     </p>
                                                 )}
                                                 <p className="text-sm text-gray-600 mt-2">{ann.content.substring(0, 150)}...</p>
@@ -284,7 +284,7 @@ const StudentSupportHub = ({ user }) => {
                                                         <span className="text-xs text-gray-500">By: {ann.published_by}</span>
                                                     )}
                                                     <span className="text-xs text-gray-500">
-                                                        {new Date(ann.created_at).toLocaleDateString()}
+                                                        {new Date(ann.created_at).toLocaleDateString('en-GB')}
                                                     </span>
                                                 </div>
                                             </div>
@@ -361,7 +361,7 @@ const StudentSupportHub = ({ user }) => {
                                         <p className="text-sm text-gray-600 mt-1">{req.description.substring(0, 100)}...</p>
                                         <div className="flex gap-2 mt-3">
                                             <span className={`px-3 py-1 rounded text-sm ${getStatusColor(req.status)}`}>{req.status}</span>
-                                            <span className="text-xs text-gray-600">{new Date(req.created_at).toLocaleDateString()}</span>
+                                            <span className="text-xs text-gray-600">{new Date(req.created_at).toLocaleDateString('en-GB')}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -434,9 +434,9 @@ const StudentSupportHub = ({ user }) => {
                                                     className="text-4xl transition-all hover:scale-125 cursor-pointer"
                                                 >
                                                     {star <= feedbackForm.rating ? (
-                                                        <span className="text-yellow-400">★</span>
+                                                        <span className="text-yellow-400">â˜…</span>
                                                     ) : (
-                                                        <span className="text-gray-300">☆</span>
+                                                        <span className="text-gray-300">â˜†</span>
                                                     )}
                                                 </button>
                                             ))}
@@ -495,7 +495,7 @@ const StudentSupportHub = ({ user }) => {
                                                     <div className="flex items-center justify-center gap-1">
                                                         {[1, 2, 3, 4, 5].map(star => (
                                                             <span key={star} className={`${star <= fb.rating ? 'text-yellow-400' : 'text-gray-300'}`}>
-                                                                {star <= fb.rating ? '●' : '○'}
+                                                                {star <= fb.rating ? 'â—' : 'â—‹'}
                                                             </span>
                                                         ))}
                                                         <span className="ml-2 text-sm font-semibold text-gray-700">{fb.rating}/5</span>
@@ -505,7 +505,7 @@ const StudentSupportHub = ({ user }) => {
                                                     {fb.comments || 'No comments'}
                                                 </td>
                                                 <td className="px-4 py-3 text-sm text-gray-500">
-                                                    {fb.submitted_at ? new Date(fb.submitted_at).toLocaleDateString() : 'N/A'}
+                                                    {fb.submitted_at ? new Date(fb.submitted_at).toLocaleDateString('en-GB') : 'N/A'}
                                                 </td>
                                             </tr>
                                         ))}
@@ -636,7 +636,7 @@ const StudentSupportHub = ({ user }) => {
                                     className="w-full px-4 py-2 border rounded mb-4 h-32"
                                     required
                                 ></textarea>
-                                <p className="text-sm text-gray-600 mb-4">📎 You can upload supporting documents after submission</p>
+                                <p className="text-sm text-gray-600 mb-4">ðŸ“Ž You can upload supporting documents after submission</p>
                                 <div className="flex gap-3">
                                     <button type="submit" className="px-6 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700">Submit</button>
                                     <button
@@ -658,7 +658,7 @@ const StudentSupportHub = ({ user }) => {
                                 <p className="text-sm text-gray-600 mt-1">{req.description.substring(0, 100)}...</p>
                                 <div className="flex gap-2 mt-3">
                                     <span className={`px-3 py-1 rounded text-sm ${getStatusColor(req.status)}`}>{req.status}</span>
-                                    {req.valid_until && <span className="text-xs text-gray-600">Valid until: {new Date(req.valid_until).toLocaleDateString()}</span>}
+                                    {req.valid_until && <span className="text-xs text-gray-600">Valid until: {new Date(req.valid_until).toLocaleDateString('en-GB')}</span>}
                                 </div>
                             </div>
                         ))}
@@ -670,7 +670,7 @@ const StudentSupportHub = ({ user }) => {
             {activeTab === 'safeguarding' && (
                 <div className="space-y-6">
                     <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                        <p className="text-red-900 font-bold">🛡️ Confidential Support</p>
+                        <p className="text-red-900 font-bold">ðŸ›¡ï¸ Confidential Support</p>
                         <p className="text-red-800 text-sm mt-2">Reports are treated with the highest level of confidentiality. Only authorized safeguarding team members can access this information.</p>
                     </div>
 
@@ -733,7 +733,7 @@ const StudentSupportHub = ({ user }) => {
                                 <p className="text-sm text-gray-600 mt-1">{report.description.substring(0, 100)}...</p>
                                 <div className="flex gap-2 mt-3">
                                     <span className={`px-3 py-1 rounded text-sm ${getStatusColor(report.status)}`}>{report.status}</span>
-                                    <span className="text-xs text-gray-600">{new Date(report.created_at).toLocaleDateString()}</span>
+                                    <span className="text-xs text-gray-600">{new Date(report.created_at).toLocaleDateString('en-GB')}</span>
                                 </div>
                             </div>
                         ))}
@@ -745,3 +745,4 @@ const StudentSupportHub = ({ user }) => {
 };
 
 export default StudentSupportHub;
+

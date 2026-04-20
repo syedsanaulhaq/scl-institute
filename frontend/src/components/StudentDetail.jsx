@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
     ArrowLeft, 
@@ -243,7 +243,7 @@ const StudentDetail = () => {
                             </div>
                             <div className="flex items-center text-gray-600">
                                 <Calendar className="w-4 h-4 mr-2" />
-                                Applied on {new Date(student.applicationDate).toLocaleDateString()}
+                                Applied on {new Date(student.applicationDate).toLocaleDateString('en-GB')}
                             </div>
                         </div>
                     </div>
@@ -265,7 +265,7 @@ const StudentDetail = () => {
                         </div>
                         <div className="flex justify-between">
                             <span className="text-gray-600">Date of Birth:</span>
-                            <span className="font-medium">{new Date(student.dateOfBirth).toLocaleDateString()}</span>
+                            <span className="font-medium">{new Date(student.dateOfBirth).toLocaleDateString('en-GB')}</span>
                         </div>
                         <div className="flex justify-between">
                             <span className="text-gray-600">Nationality:</span>
@@ -391,7 +391,7 @@ const StudentDetail = () => {
                                 </span>
                             </div>
                             <p className="text-sm text-gray-600">
-                                Uploaded: {new Date(doc.uploadDate).toLocaleDateString()}
+                                Uploaded: {new Date(doc.uploadDate).toLocaleDateString('en-GB')}
                             </p>
                         </div>
                     ))}
@@ -411,7 +411,7 @@ const StudentDetail = () => {
                     </div>
                     <div className="flex justify-between">
                         <span className="text-gray-600">Review Date:</span>
-                        <span className="font-medium">{new Date(student.reviewDate).toLocaleDateString()}</span>
+                        <span className="font-medium">{new Date(student.reviewDate).toLocaleDateString('en-GB')}</span>
                     </div>
                     <div>
                         <span className="text-gray-600 block mb-2">Review Notes:</span>

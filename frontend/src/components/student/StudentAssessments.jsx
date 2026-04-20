@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+﻿import { useState, useEffect, useMemo } from 'react';
 import { FileText, Upload, CheckCircle, Clock, AlertTriangle } from 'lucide-react';
 import axios from 'axios';
 import { openMoodleSSO } from '../../utils/ssoService';
@@ -218,8 +218,8 @@ const StudentAssessments = ({ user }) => {
                                                 <h3 className="text-lg font-semibold text-gray-900">{assessment.title}</h3>
                                             </div>
                                             <p className="text-sm text-gray-600 mb-2">
-                                                {assessment.courseCode && <span className="text-purple-600 font-semibold">{assessment.courseCode} · </span>}
-                                                {assessment.module} • {assessment.code}
+                                                {assessment.courseCode && <span className="text-purple-600 font-semibold">{assessment.courseCode} Â· </span>}
+                                                {assessment.module} â€¢ {assessment.code}
                                             </p>
                                             <p className="text-sm text-gray-600">Type: <span className="font-medium">{assessment.type}</span></p>
                                         </div>
@@ -232,7 +232,7 @@ const StudentAssessments = ({ user }) => {
                                         <div>
                                             <p className="text-xs text-gray-600">Due Date</p>
                                             <p className={`text-lg font-semibold ${isUrgent ? 'text-red-600' : 'text-gray-900'}`}>
-                                                {new Date(assessment.dueDate).toLocaleDateString()}
+                                                {new Date(assessment.dueDate).toLocaleDateString('en-GB')}
                                             </p>
                                             <p className={`text-xs ${isUrgent ? 'text-red-600' : 'text-gray-600'}`}>
                                                 {daysUntil} days left
@@ -278,8 +278,8 @@ const StudentAssessments = ({ user }) => {
                                             <h3 className="text-lg font-semibold text-gray-900">{assessment.title}</h3>
                                         </div>
                                         <p className="text-sm text-gray-600 mb-2">
-                                            {assessment.courseCode && <span className="text-purple-600 font-semibold">{assessment.courseCode} · </span>}
-                                            {assessment.module} • {assessment.code}
+                                            {assessment.courseCode && <span className="text-purple-600 font-semibold">{assessment.courseCode} Â· </span>}
+                                            {assessment.module} â€¢ {assessment.code}
                                         </p>
                                         <p className="text-sm text-gray-600">Type: <span className="font-medium">{assessment.type}</span></p>
                                     </div>
@@ -292,7 +292,7 @@ const StudentAssessments = ({ user }) => {
                                     <div>
                                         <p className="text-xs text-gray-600">Due Date</p>
                                         <p className="text-sm font-semibold text-gray-900">
-                                            {new Date(assessment.dueDate).toLocaleDateString()}
+                                            {new Date(assessment.dueDate).toLocaleDateString('en-GB')}
                                         </p>
                                     </div>
                                     <div>
@@ -320,3 +320,4 @@ const StudentAssessments = ({ user }) => {
 };
 
 export default StudentAssessments;
+

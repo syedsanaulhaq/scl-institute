@@ -725,7 +725,7 @@ const ApplicationReview = () => {
                                                     <div className="flex-1 min-w-0">
                                                         <p className="text-sm font-medium text-gray-900 truncate">{rec.original_filename}</p>
                                                         <div className="flex items-center gap-3 text-xs text-gray-500 mt-0.5">
-                                                            <span>{new Date(rec.recorded_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+                                                            <span>{new Date(rec.recorded_at).toLocaleDateString('en-GB')}</span>
                                                             <span>{new Date(rec.recorded_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</span>
                                                             <span>{formatFileSize(rec.file_size)}</span>
                                                             {rec.uploaded_by && <span>by {rec.uploaded_by}</span>}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { 
     Users, 
     TrendingUp, 
@@ -108,7 +108,7 @@ const StudentReport = () => {
                 student.email,
                 student.course_title,
                 student.application_status,
-                student.submitted_at ? new Date(student.submitted_at).toLocaleDateString() : ''
+                student.submitted_at ? new Date(student.submitted_at).toLocaleDateString('en-GB') : ''
             ])
         ].map(row => row.join(',')).join('\n');
 
@@ -266,7 +266,7 @@ const StudentReport = () => {
                                         </span>
                                     </td>
                                     <td className="px-6 py-4 text-sm text-gray-500">
-                                        {student.submitted_at ? new Date(student.submitted_at).toLocaleDateString() : 'N/A'}
+                                        {student.submitted_at ? new Date(student.submitted_at).toLocaleDateString('en-GB') : 'N/A'}
                                     </td>
                                 </tr>
                             )) : (

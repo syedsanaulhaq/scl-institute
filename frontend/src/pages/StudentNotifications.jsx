@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { Bell, CheckCircle, AlertCircle, XCircle, Clock, Mail, ArrowLeft } from 'lucide-react';
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
@@ -150,7 +150,7 @@ export default function NotificationsPage() {
     };
 
     const formatDate = (dateString) => {
-        return new Date(dateString).toLocaleDateString('en-US', {
+        return new Date(dateString).toLocaleDateString('en-GB', {
             year: 'numeric',
             month: 'long',
             day: 'numeric',
@@ -374,3 +374,4 @@ export default function NotificationsPage() {
         </div>
     );
 }
+

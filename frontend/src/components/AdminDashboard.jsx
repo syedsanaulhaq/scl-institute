@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import {
@@ -210,7 +210,7 @@ const AdminDashboard = ({ user }) => {
             app.email,
             app.course_title,
             getStatusLabel(app.application_status),
-            new Date(app.submitted_at).toLocaleDateString()
+            new Date(app.submitted_at).toLocaleDateString('en-GB')
         ]);
 
         const csv = [headers, ...rows].map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
@@ -465,7 +465,7 @@ const AdminDashboard = ({ user }) => {
                                             </span>
                                         </td>
                                         <td className="px-6 py-4 text-sm text-gray-600">
-                                            {new Date(app.submitted_at).toLocaleDateString()}
+                                            {new Date(app.submitted_at).toLocaleDateString('en-GB')}
                                         </td>
                                         <td className="px-6 py-4">
                                             <button
@@ -487,3 +487,4 @@ const AdminDashboard = ({ user }) => {
 };
 
 export default AdminDashboard;
+
