@@ -549,11 +549,11 @@ app.get('/api/admin/overview-stats', requireAuth, async (req, res) => {
             // Total users
             db.execute(`SELECT COUNT(*) as count FROM users`),
             // Application status breakdown
-            db.execute(`SELECT application_status as status, COUNT(*) as count FROM student_applications GROUP BY application_status`),
+            db.execute(`SELECT application_status as status, COUNT(*) as count FROM student_applications WHERE is_deleted = FALSE GROUP BY application_status`),
             // Applications by month (last 6 months)
-            db.execute(`SELECT DATE_FORMAT(submitted_at, '%Y-%m') as month, COUNT(*) as count FROM student_applications WHERE submitted_at >= DATE_SUB(NOW(), INTERVAL 6 MONTH) GROUP BY month ORDER BY month`),
+            db.execute(`SELECT DATE_FORMAT(submitted_at, '%Y-%m') as month, COUNT(*) as count FROM student_applications WHERE is_deleted = FALSE AND submitted_at >= DATE_SUB(NOW(), INTERVAL 6 MONTH) GROUP BY month ORDER BY month`),
             // Applications by course (top 8)
-            db.execute(`SELECT course_title, COUNT(*) as total, SUM(application_status='accepted') as accepted, SUM(application_status='rejected') as rejected, SUM(application_status NOT IN ('accepted','rejected')) as pending FROM student_applications GROUP BY course_title ORDER BY total DESC LIMIT 8`),
+            db.execute(`SELECT course_title, COUNT(*) as total, SUM(application_status='accepted') as accepted, SUM(application_status='rejected') as rejected, SUM(application_status NOT IN ('accepted','rejected')) as pending FROM student_applications WHERE is_deleted = FALSE GROUP BY course_title ORDER BY total DESC LIMIT 8`),
             // Course registrations
             db.execute(`SELECT COUNT(*) as count FROM course_registrations`),
             // Course registrations by application_status
@@ -561,7 +561,7 @@ app.get('/api/admin/overview-stats', requireAuth, async (req, res) => {
             // Programme intakes
             db.execute(`SELECT status, COUNT(*) as count FROM programme_intakes GROUP BY status`),
             // Course lifecycle
-            db.execute(`SELECT COUNT(*) as count FROM course_lifecycle_master`),
+            axios.get(`http://127.0.0.1:${PORT}/api/students/course-lifecycle/dashboard`, { timeout: 10000 }),
             // Course change requests
             db.execute(`SELECT type_of_request as request_type, decision as status, COUNT(*) as count FROM course_change_requests GROUP BY type_of_request, decision`),
             // Teacher registrations
@@ -573,7 +573,7 @@ app.get('/api/admin/overview-stats', requireAuth, async (req, res) => {
             db.execute(`SELECT COUNT(*) as count FROM course_inductions`),
             db.execute(`SELECT COUNT(*) as count FROM course_visits`),
             // Recent applications (7 days)
-            db.execute(`SELECT COUNT(*) as count FROM student_applications WHERE submitted_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)`),
+            db.execute(`SELECT COUNT(*) as count FROM student_applications WHERE is_deleted = FALSE AND submitted_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)`),
         ]);
 
         // --- Moodle DB queries (run in parallel) ---
@@ -601,9 +601,11 @@ app.get('/api/admin/overview-stats', requireAuth, async (req, res) => {
         const [
             [usersByRole], [totalUsers], [appStatus], [appsByMonth],
             [appsByCourse], [totalRegs], [regsByStatus], [intakes],
-            [lifecycle], [changeReqs], [teacherRegs], [progRegs],
+            lifecycleDashboard, [changeReqs], [teacherRegs], [progRegs],
             [accred], [inductions], [visits], [recentApps],
         ] = results;
+
+        const lifecycleTotal = Number(lifecycleDashboard?.data?.data?.summary?.total_courses || 0);
 
         res.json({
             success: true,
@@ -624,7 +626,7 @@ app.get('/api/admin/overview-stats', requireAuth, async (req, res) => {
                 },
                 programmeIntakes: intakes,
                 courseLifecycle: {
-                    total: lifecycle[0]?.count || 0,
+                    total: lifecycleTotal,
                     accreditations: accred[0]?.count || 0,
                     inductions: inductions[0]?.count || 0,
                     visits: visits[0]?.count || 0,

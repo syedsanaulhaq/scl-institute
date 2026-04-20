@@ -128,7 +128,7 @@ const AdminOverview = ({ user }) => {
 
     // Stat cards
     const statCards = [
-        { label: 'Total Users', value: users?.total || 0, icon: Users, color: 'purple', path: '/applicants' },
+        { label: 'Total Users', value: users?.total || 0, icon: Users, color: 'purple' },
         { label: 'Student Applications', value: totalApps, icon: FileText, color: 'blue', path: '/applications' },
         { label: 'Course Registrations', value: courseRegistrations?.total || 0, icon: BookOpen, color: 'emerald', path: '/course-registrations' },
         { label: 'LMS Enrolments', value: moodle?.enrollments || 0, icon: GraduationCap, color: 'indigo' },
