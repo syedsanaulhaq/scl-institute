@@ -17,15 +17,15 @@ const TeacherProgramme = ({ user }) => {
                 setLoading(true);
                 setError('');
 
-                // Fetch unified Moodle courses so mixed-role users can see all assigned/enrolled courses.
-                const coursesRes = await axios.get(`${API_URL}/students/my-moodle-courses`, {
+                // Fetch only courses where the user is assigned as teacher/editing teacher.
+                const coursesRes = await axios.get(`${API_URL}/students/teacher-courses`, {
                     params: { email: user.email }
                 });
                 
                 const myCourses = coursesRes.data?.data || [];
                 setCourses(myCourses);
                 
-                console.log(`Loaded ${myCourses.length} Moodle courses for ${user.email}`);
+                console.log(`Loaded ${myCourses.length} teaching courses for ${user.email}`);
             } catch (err) {
                 console.error('Error fetching teaching courses:', err);
                 setError(err.response?.data?.message || 'Unable to load teaching courses');
@@ -64,14 +64,14 @@ const TeacherProgramme = ({ user }) => {
         <div className="p-6 bg-gray-50 min-h-screen">
             <div className="mb-6">
                 <h1 className="text-3xl font-bold text-gray-900">My Courses</h1>
-                <p className="text-gray-600 mt-2">Courses where you are teaching and courses where you are enrolled as a student.</p>
+                <p className="text-gray-600 mt-2">Only courses where you are assigned as a teacher are shown here.</p>
             </div>
 
             {courses.length === 0 ? (
                 <div className="bg-white rounded-lg shadow p-8 text-center">
                     <BookOpen className="w-10 h-10 text-gray-400 mx-auto mb-3" />
-                    <p className="text-gray-700 font-medium">No Moodle courses found yet.</p>
-                    <p className="text-sm text-gray-500 mt-1">Please contact admin if your Moodle assignments are missing.</p>
+                    <p className="text-gray-700 font-medium">No teaching courses assigned yet.</p>
+                    <p className="text-sm text-gray-500 mt-1">Please contact admin if your teacher role assignments are missing.</p>
                 </div>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -84,12 +84,7 @@ const TeacherProgramme = ({ user }) => {
                             <h3 className="text-base font-bold text-gray-900 leading-tight">{course.name || course.course_title}</h3>
                             <p className="text-sm text-gray-600 mt-1">{course.code || course.course_code || 'N/A'}</p>
                             <div className="flex items-center gap-2 mt-2">
-                                {course.hasTeachingRole && (
-                                    <span className="text-xs px-2 py-1 rounded-full bg-purple-100 text-purple-700 font-medium">Teacher</span>
-                                )}
-                                {course.isStudentEnrolled && (
-                                    <span className="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-700 font-medium">Student</span>
-                                )}
+                                <span className="text-xs px-2 py-1 rounded-full bg-purple-100 text-purple-700 font-medium">Teacher</span>
                             </div>
                             {course.description && (
                                 <p className="text-sm text-gray-500 mt-3 line-clamp-3">{course.description}</p>

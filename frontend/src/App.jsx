@@ -27,7 +27,11 @@ import StudentDocumentsCentre from './components/student/StudentDocumentsCentre'
 import StudentMaterials from './components/student/StudentMaterials';
 import StudentRightToStudy from './components/student/StudentRightToStudy';
 import StudentProgramme from './components/student/StudentProgramme';
+import TeacherDashboard from './components/teacher/TeacherDashboard';
 import TeacherProgramme from './components/teacher/TeacherProgramme';
+import TeacherAssessments from './components/teacher/TeacherAssessments';
+import TeacherReports from './components/teacher/TeacherReports';
+import TeacherTimetable from './components/teacher/TeacherTimetable';
 import StudentTimetable from './components/student/StudentTimetable';
 import StudentAssessments from './components/student/StudentAssessments';
 import StudentGrades from './components/student/StudentGrades';
@@ -131,7 +135,7 @@ function App() {
                             </Layout>
                         ) : roleContext.hasTeaching ? (
                             <Layout user={user} onLogout={handleLogout}>
-                                <Dashboard user={user} onLogout={handleLogout} viewMode="teacher" />
+                                <TeacherDashboard user={user} />
                             </Layout>
                         ) : canAccessStudentPortal ? (
                             <Navigate to="/student/portal" replace />
@@ -156,7 +160,7 @@ function App() {
                 <Route path="/teacher/dashboard" element={
                     user && roleContext.hasTeaching ? (
                         <Layout user={user} onLogout={handleLogout}>
-                            <Dashboard user={user} onLogout={handleLogout} viewMode="teacher" />
+                            <TeacherDashboard user={user} />
                         </Layout>
                     ) : (
                         <LoginPage onLoginSuccess={handleLoginSuccess} />
@@ -265,6 +269,33 @@ function App() {
                     user && roleContext.hasTeaching ? (
                         <Layout user={user} onLogout={handleLogout}>
                             <TeacherProgramme user={user} />
+                        </Layout>
+                    ) : (
+                        <LoginPage onLoginSuccess={handleLoginSuccess} />
+                    )
+                } />
+                <Route path="/teacher/assessments" element={
+                    user && roleContext.hasTeaching ? (
+                        <Layout user={user} onLogout={handleLogout}>
+                            <TeacherAssessments user={user} />
+                        </Layout>
+                    ) : (
+                        <LoginPage onLoginSuccess={handleLoginSuccess} />
+                    )
+                } />
+                <Route path="/teacher/reports" element={
+                    user && roleContext.hasTeaching ? (
+                        <Layout user={user} onLogout={handleLogout}>
+                            <TeacherReports user={user} />
+                        </Layout>
+                    ) : (
+                        <LoginPage onLoginSuccess={handleLoginSuccess} />
+                    )
+                } />
+                <Route path="/teacher/timetable" element={
+                    user && roleContext.hasTeaching ? (
+                        <Layout user={user} onLogout={handleLogout}>
+                            <TeacherTimetable user={user} />
                         </Layout>
                     ) : (
                         <LoginPage onLoginSuccess={handleLoginSuccess} />

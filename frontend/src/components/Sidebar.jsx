@@ -13,6 +13,7 @@ import {
     FileText,
     UserPlus,
     BarChart3,
+    ClipboardCheck,
     UserCheck,
     User,
     BookOpen,
@@ -152,6 +153,8 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
         ? [
             { name: 'Dashboard', icon: LayoutDashboard, path: '/teacher/dashboard' },
             { name: 'My Teaching Programme', icon: BookOpen, path: '/teacher/programme' },
+            { name: 'Assessments', icon: ClipboardCheck, path: '/teacher/assessments' },
+            { name: 'Reports', icon: BarChart3, path: '/teacher/reports' },
             {
                 name: 'Teaching (LMS)',
                 icon: BookOpen,
@@ -159,7 +162,7 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
                 key: 'teaching-lms',
                 subItems: [
                     { name: 'Open Moodle Teaching', icon: GraduationCap, isSSO: true },
-                    { name: 'My Timetable', icon: Calendar, path: '/student/timetable' }
+                    { name: 'My Timetable', icon: Calendar, path: '/teacher/timetable' }
                 ]
             }
         ]
