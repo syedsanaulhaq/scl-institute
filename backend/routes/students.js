@@ -10370,9 +10370,9 @@ router.get('/timetable/:id', async (req, res) => {
     try {
         const { id } = req.params;
 
-        // Get student's application
+        // Get student's email from application
         const [appRows] = await db.execute(
-            'SELECT id, course_code FROM student_applications WHERE id = ?',
+            'SELECT id, email FROM student_applications WHERE id = ?',
             [id]
         );
 
@@ -10383,45 +10383,48 @@ router.get('/timetable/:id', async (req, res) => {
             });
         }
 
-        const courseCode = appRows[0].course_code;
+        const userEmail = appRows[0].email;
 
         try {
-            // Get course ID - try multiple ways to find the course using shared pool
-            let courseId = null;
-            
-            // First try exact match by idnumber or shortname
-            const [courseRows] = await moodleDbPool.execute(
-                `SELECT id FROM mdl_course WHERE idnumber = ? OR shortname = ? LIMIT 1`,
-                [courseCode, courseCode]
+            // Find Moodle user by email
+            const [moodleUsers] = await moodleDbPool.execute(
+                `SELECT id FROM mdl_user WHERE email = ?`, [userEmail]
             );
-            
-            if (courseRows.length > 0) {
-                courseId = courseRows[0].id;
-            } else {
-                // Try by idnumber starting with the code (e.g., "DEG-001 B.Sc Computer Science" contains "DEG-001")
-                const [idnumberRows] = await moodleDbPool.execute(
-                    `SELECT id FROM mdl_course WHERE idnumber LIKE ? OR fullname LIKE ? OR shortname LIKE ? LIMIT 1`,
-                    [`${courseCode}%`, `%${courseCode}%`, `%${courseCode}%`]
-                );
-                if (idnumberRows.length > 0) {
-                    courseId = idnumberRows[0].id;
-                }
-            }
-            
-            // If still no course found, just return empty data
-            if (!courseId) {
-                console.log(`Timetable: No course found for code '${courseCode}'`);
+
+            if (moodleUsers.length === 0) {
                 return res.json({
                     success: true,
                     data: {},
-                    debug: { courseCode, courseId: null, message: 'Course not found in Moodle' }
+                    debug: { message: 'Moodle user not found for email: ' + userEmail }
                 });
             }
 
-            console.log(`Timetable: Found course ID ${courseId} for code '${courseCode}'`);
+            const moodleUserId = moodleUsers[0].id;
 
-            // Get events from mdl_event table for this course
-            // Join with course modules to get activity links
+            // Get ALL enrolled courses via enrollment tables
+            const [enrolledCourses] = await moodleDbPool.execute(
+                `SELECT DISTINCT c.id
+                FROM mdl_course c
+                JOIN mdl_enrol e ON e.courseid = c.id
+                JOIN mdl_user_enrolments ue ON ue.enrolid = e.id
+                WHERE ue.userid = ? AND c.id != 1`,
+                [moodleUserId]
+            );
+
+            if (enrolledCourses.length === 0) {
+                return res.json({
+                    success: true,
+                    data: {},
+                    debug: { message: 'No enrolled courses found' }
+                });
+            }
+
+            const courseIds = enrolledCourses.map(c => c.id);
+            const placeholders = courseIds.map(() => '?').join(',');
+
+            console.log(`Timetable: Found ${courseIds.length} enrolled courses for user ${moodleUserId}`);
+
+            // Get events from mdl_event table for ALL enrolled courses
             const [eventRows] = await moodleDbPool.execute(
                 `
                 SELECT 
@@ -10441,22 +10444,22 @@ router.get('/timetable/:id', async (req, res) => {
                     (e.modulename = 'forum' AND cm.module = (SELECT id FROM mdl_modules WHERE name = 'forum') AND cm.instance = e.instance) OR
                     (e.modulename = 'lesson' AND cm.module = (SELECT id FROM mdl_modules WHERE name = 'lesson') AND cm.instance = e.instance)
                 )
-                WHERE e.courseid = ? AND e.visible = 1
+                WHERE e.courseid IN (${placeholders}) AND e.visible = 1
                 ORDER BY e.timestart ASC
                 `,
-                [courseId]
+                courseIds
             );
 
-            // Get assignments with due dates
+            // Get assignments with due dates from ALL enrolled courses
             const [assignmentRows] = await moodleDbPool.execute(
                 `
                 SELECT a.id, a.name, a.duedate, cm.id as cm_id
                 FROM mdl_assign a
                 JOIN mdl_course_modules cm ON cm.instance = a.id AND cm.module = (SELECT id FROM mdl_modules WHERE name = 'assign')
-                WHERE cm.course = ? AND a.duedate > ?
+                WHERE cm.course IN (${placeholders}) AND a.duedate > ?
                 ORDER BY a.duedate ASC
                 `,
-                [courseId, Math.floor(Date.now() / 1000) - 86400 * 7]
+                [...courseIds, Math.floor(Date.now() / 1000) - 86400 * 7]
             );
 
             // Organize by day of week
@@ -10574,9 +10577,9 @@ router.get('/assessments/:id', async (req, res) => {
     try {
         const studentId = req.params.id;
         
-        // Get student's course from application
+        // Get student's email from application
         const [appRows] = await db.query(
-            `SELECT course_code FROM student_applications WHERE id = ?`,
+            `SELECT email FROM student_applications WHERE id = ?`,
             [studentId]
         );
 
@@ -10587,43 +10590,58 @@ router.get('/assessments/:id', async (req, res) => {
             });
         }
 
-        const courseCode = appRows[0].course_code;
+        const userEmail = appRows[0].email;
         
-        // Get Moodle course ID using shared connection pool
-        const [courseRows] = await moodleDbPool.query(
-            `SELECT id FROM mdl_course WHERE idnumber LIKE ? OR fullname LIKE ? OR shortname LIKE ? LIMIT 1`,
-            [`${courseCode}%`, `%${courseCode}%`, `%${courseCode}%`]
+        // Find Moodle user by email
+        const [moodleUsers] = await moodleDbPool.query(
+            `SELECT id FROM mdl_user WHERE email = ?`, [userEmail]
         );
 
-        if (courseRows.length === 0) {
-            return res.json({
-                success: true,
-                data: []
-            });
+        if (moodleUsers.length === 0) {
+            return res.json({ success: true, data: [] });
         }
 
-        const courseId = courseRows[0].id;
+        const moodleUserId = moodleUsers[0].id;
 
-        // Get assignments with due dates
+        // Get ALL enrolled courses via enrollment tables
+        const [enrolledCourses] = await moodleDbPool.query(
+            `SELECT DISTINCT c.id
+            FROM mdl_course c
+            JOIN mdl_enrol e ON e.courseid = c.id
+            JOIN mdl_user_enrolments ue ON ue.enrolid = e.id
+            WHERE ue.userid = ? AND c.id != 1`,
+            [moodleUserId]
+        );
+
+        if (enrolledCourses.length === 0) {
+            return res.json({ success: true, data: [] });
+        }
+
+        const courseIds = enrolledCourses.map(c => c.id);
+        const placeholders = courseIds.map(() => '?').join(',');
+
+        // Get assignments with due dates from ALL enrolled courses
         const [assignments] = await moodleDbPool.query(
             `
-            SELECT a.id, a.name, a.duedate, cm.id as cm_id, 'assign' as type
+            SELECT a.id, a.name, a.duedate, cm.id as cm_id, 'assign' as type, c.fullname as course_name
             FROM mdl_assign a
             JOIN mdl_course_modules cm ON cm.instance = a.id AND cm.module = (SELECT id FROM mdl_modules WHERE name = 'assign')
-            WHERE cm.course = ? AND a.duedate > ?
+            JOIN mdl_course c ON c.id = cm.course
+            WHERE cm.course IN (${placeholders}) AND a.duedate > ?
             UNION
-            SELECT e.id, e.name, e.timestart as duedate, cm.id as cm_id, e.modulename as type
+            SELECT e.id, e.name, e.timestart as duedate, cm.id as cm_id, e.modulename as type, c.fullname as course_name
             FROM mdl_event e
             LEFT JOIN mdl_course_modules cm ON cm.instance = e.instance AND cm.module = (SELECT id FROM mdl_modules WHERE name = e.modulename)
-            WHERE e.courseid = ? AND e.visible = 1
+            LEFT JOIN mdl_course c ON c.id = e.courseid
+            WHERE e.courseid IN (${placeholders}) AND e.visible = 1
             ORDER BY duedate ASC
             `,
-            [courseId, Math.floor(Date.now() / 1000), courseId]
+            [...courseIds, Math.floor(Date.now() / 1000), ...courseIds]
         );
 
         const assessments = assignments.map(assign => ({
             id: assign.id,
-            module: 'Course Module',
+            module: assign.course_name || 'Course Module',
             code: assign.type ? assign.type.toUpperCase() : 'MOD',
             title: assign.name,
             type: assign.type === 'assign' ? 'Coursework' : (assign.type === 'quiz' ? 'Quiz' : (assign.type === 'forum' ? 'Forum' : 'Assessment')),
@@ -11041,7 +11059,6 @@ router.get('/grades/:id', async (req, res) => {
         }
 
         const userEmail = appRows[0].email;
-        const courseCode = appRows[0].course_code;
 
         // Get Moodle user ID by email using shared pool
         const [moodleUsers] = await moodleDbPool.query(
@@ -11058,22 +11075,24 @@ router.get('/grades/:id', async (req, res) => {
 
         const moodleUserId = moodleUsers[0].id;
 
-        // Get course ID
-        const [courseRows] = await moodleDbPool.query(
-            `SELECT id FROM mdl_course WHERE idnumber LIKE ? OR fullname LIKE ? OR shortname LIKE ? LIMIT 1`,
-            [`${courseCode}%`, `%${courseCode}%`, `%${courseCode}%`]
+        // Get ALL enrolled courses via enrollment tables
+        const [enrolledCourses] = await moodleDbPool.query(
+            `SELECT DISTINCT c.id
+            FROM mdl_course c
+            JOIN mdl_enrol e ON e.courseid = c.id
+            JOIN mdl_user_enrolments ue ON ue.enrolid = e.id
+            WHERE ue.userid = ? AND c.id != 1`,
+            [moodleUserId]
         );
 
-        if (courseRows.length === 0) {
-            return res.json({
-                success: true,
-                data: []
-            });
+        if (enrolledCourses.length === 0) {
+            return res.json({ success: true, data: [] });
         }
 
-        const courseId = courseRows[0].id;
+        const courseIds = enrolledCourses.map(c => c.id);
+        const placeholders = courseIds.map(() => '?').join(',');
 
-        // Get grades from gradebook
+        // Get grades from gradebook for ALL enrolled courses
         const [grades] = await moodleDbPool.query(
             `
             SELECT 
@@ -11086,10 +11105,10 @@ router.get('/grades/:id', async (req, res) => {
             FROM mdl_grade_items gi
             LEFT JOIN mdl_grade_grades gg ON gi.id = gg.itemid AND gg.userid = ?
             LEFT JOIN mdl_course_modules cm ON cm.instance = gi.iteminstance AND cm.module = (SELECT id FROM mdl_modules WHERE name = gi.itemmodule)
-            WHERE gi.courseid = ? AND gi.itemtype = 'mod' AND gg.finalgrade IS NOT NULL
+            WHERE gi.courseid IN (${placeholders}) AND gi.itemtype = 'mod' AND gg.finalgrade IS NOT NULL
             ORDER BY gg.timemodified DESC
             `,
-            [moodleUserId, courseId]
+            [moodleUserId, ...courseIds]
         );
 
         const [courseTotals] = await moodleDbPool.query(
@@ -11100,10 +11119,10 @@ router.get('/grades/:id', async (req, res) => {
                 gg.timemodified
             FROM mdl_grade_items gi
             LEFT JOIN mdl_grade_grades gg ON gi.id = gg.itemid AND gg.userid = ?
-            WHERE gi.courseid = ? AND gi.itemtype = 'course'
+            WHERE gi.courseid IN (${placeholders}) AND gi.itemtype = 'course'
             LIMIT 1
             `,
-            [moodleUserId, courseId]
+            [moodleUserId, ...courseIds]
         );
 
         const gradeData = grades.map(grade => ({
