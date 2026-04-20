@@ -276,7 +276,11 @@ const StudentGrades = ({ user }) => {
                     <h2 className="text-xl font-bold text-gray-900 mb-6">Course Grade Summary</h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                         {filteredCourseGrades.map(cg => (
-                            <div key={cg.courseCode} className="border rounded-lg p-4 hover:shadow-md transition">
+                            <div
+                                key={cg.courseCode}
+                                className="border rounded-lg p-4 hover:shadow-md transition cursor-pointer"
+                                onClick={() => handleViewInMoodle(cg.courseId ? `/grade/report/user/index.php?id=${cg.courseId}` : null)}
+                            >
                                 <p className="text-xs font-semibold text-purple-600 mb-1">{cg.courseCode}</p>
                                 <p className="text-sm font-medium text-gray-900 mb-3 line-clamp-2">{cg.courseName}</p>
                                 <div className="flex items-end justify-between">
@@ -303,6 +307,7 @@ const StudentGrades = ({ user }) => {
                                         style={{ width: `${cg.percentage || 0}%` }}
                                     ></div>
                                 </div>
+                                <p className="mt-2 text-xs text-blue-600 font-medium">View in Moodle →</p>
                             </div>
                         ))}
                     </div>

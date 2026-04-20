@@ -11161,6 +11161,7 @@ router.get('/grades/:id', async (req, res) => {
         const courseGrades = courseTotals.map(ct => {
             const courseInfo = courseMap[ct.courseid] || {};
             return {
+                courseId: ct.courseid,
                 courseCode: courseInfo.course_code,
                 courseName: courseInfo.fullname,
                 finalGrade: ct.finalgrade ? parseFloat(ct.finalgrade).toFixed(2) : null,
