@@ -2,9 +2,9 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { GraduationCap, ArrowLeft, Search, RefreshCw, Eye, EyeOff, ExternalLink } from 'lucide-react';
 import axios from 'axios';
+import { openMoodleSSO, getMoodleUrl } from '../utils/ssoService';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
-const MOODLE_URL = import.meta.env.VITE_MOODLE_URL || 'http://localhost:9090';
 
 const LmsEnrolments = () => {
     const navigate = useNavigate();
@@ -12,6 +12,15 @@ const LmsEnrolments = () => {
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
     const [visibilityFilter, setVisibilityFilter] = useState('all');
+
+    const adminEmail = JSON.parse(localStorage.getItem('user') || '{}')?.email;
+
+    const handleOpenMoodleCourse = (courseId) => {
+        const moodleUrl = getMoodleUrl();
+        openMoodleSSO(adminEmail, {
+            redirectTo: `${moodleUrl}/course/view.php?id=${courseId}`,
+        });
+    };
 
     const fetchData = async () => {
         setLoading(true);
@@ -139,14 +148,12 @@ const LmsEnrolments = () => {
                                             </span>
                                         </td>
                                         <td className="py-3 px-4 text-center">
-                                            <a
-                                                href={`${MOODLE_URL}/course/view.php?id=${course.id}`}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-orange-100 text-orange-700 hover:bg-orange-200 transition"
+                                            <button
+                                                onClick={() => handleOpenMoodleCourse(course.id)}
+                                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-orange-100 text-orange-700 hover:bg-orange-200 transition cursor-pointer"
                                             >
                                                 <ExternalLink className="w-3 h-3" /> Open
-                                            </a>
+                                            </button>
                                         </td>
                                     </tr>
                                 ))}

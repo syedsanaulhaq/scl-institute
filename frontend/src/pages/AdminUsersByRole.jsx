@@ -2,9 +2,9 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Users, ArrowLeft, Search, RefreshCw, ExternalLink } from 'lucide-react';
 import axios from 'axios';
+import { openMoodleSSO, getMoodleUrl } from '../utils/ssoService';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
-const MOODLE_URL = import.meta.env.VITE_MOODLE_URL || 'http://localhost:9090';
 
 const ROLE_COLORS = {
     admin: 'bg-purple-100 text-purple-800',
@@ -23,6 +23,15 @@ const AdminUsersByRole = () => {
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
     const [roleFilter, setRoleFilter] = useState(searchParams.get('role') || 'all');
+
+    const adminEmail = JSON.parse(localStorage.getItem('user') || '{}')?.email;
+
+    const handleOpenMoodleProfile = (moodleUserId) => {
+        const moodleUrl = getMoodleUrl();
+        openMoodleSSO(adminEmail, {
+            redirectTo: `${moodleUrl}/user/profile.php?id=${moodleUserId}`,
+        });
+    };
 
     const fetchData = async () => {
         setLoading(true);
@@ -152,14 +161,12 @@ const AdminUsersByRole = () => {
                                         <td className="py-3 px-4 text-gray-500 text-xs">{u.created_at ? new Date(u.created_at).toLocaleDateString() : '—'}</td>
                                         <td className="py-3 px-4 text-center">
                                             {u.moodle_user_id ? (
-                                                <a
-                                                    href={`${MOODLE_URL}/user/profile.php?id=${u.moodle_user_id}`}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-orange-100 text-orange-700 hover:bg-orange-200 transition"
+                                                <button
+                                                    onClick={() => handleOpenMoodleProfile(u.moodle_user_id)}
+                                                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-orange-100 text-orange-700 hover:bg-orange-200 transition cursor-pointer"
                                                 >
                                                     <ExternalLink className="w-3 h-3" /> Moodle
-                                                </a>
+                                                </button>
                                             ) : (
                                                 <span className="text-xs text-gray-300">—</span>
                                             )}

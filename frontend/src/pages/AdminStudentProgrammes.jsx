@@ -2,9 +2,9 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { UserCheck, ArrowLeft, Search, RefreshCw, ExternalLink } from 'lucide-react';
 import axios from 'axios';
+import { openMoodleSSO, getMoodleUrl } from '../utils/ssoService';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
-const MOODLE_URL = import.meta.env.VITE_MOODLE_URL || 'http://localhost:9090';
 
 const STATUS_COLORS = {
     active: 'bg-green-100 text-green-800',
@@ -20,6 +20,15 @@ const AdminStudentProgrammes = () => {
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
+
+    const adminEmail = JSON.parse(localStorage.getItem('user') || '{}')?.email;
+
+    const handleOpenMoodleProfile = (moodleUserId) => {
+        const moodleUrl = getMoodleUrl();
+        openMoodleSSO(adminEmail, {
+            redirectTo: `${moodleUrl}/user/profile.php?id=${moodleUserId}`,
+        });
+    };
 
     const fetchData = async () => {
         setLoading(true);
@@ -141,14 +150,12 @@ const AdminStudentProgrammes = () => {
                                         </td>
                                         <td className="py-3 px-4 text-center">
                                             {r.moodle_user_id ? (
-                                                <a
-                                                    href={`${MOODLE_URL}/user/profile.php?id=${r.moodle_user_id}`}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-orange-100 text-orange-700 hover:bg-orange-200 transition"
+                                                <button
+                                                    onClick={() => handleOpenMoodleProfile(r.moodle_user_id)}
+                                                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-orange-100 text-orange-700 hover:bg-orange-200 transition cursor-pointer"
                                                 >
                                                     <ExternalLink className="w-3 h-3" /> Moodle
-                                                </a>
+                                                </button>
                                             ) : (
                                                 <span className="text-xs text-gray-300">—</span>
                                             )}
