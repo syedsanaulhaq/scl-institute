@@ -10623,13 +10623,13 @@ router.get('/assessments/:id', async (req, res) => {
         // Get assignments with due dates from ALL enrolled courses
         const [assignments] = await moodleDbPool.query(
             `
-            SELECT a.id, a.name, a.duedate, cm.id as cm_id, 'assign' as type, c.fullname as course_name
+            SELECT a.id, a.name, a.duedate, cm.id as cm_id, 'assign' as type, c.fullname as course_name, COALESCE(NULLIF(c.idnumber,''), c.shortname) as course_code
             FROM mdl_assign a
             JOIN mdl_course_modules cm ON cm.instance = a.id AND cm.module = (SELECT id FROM mdl_modules WHERE name = 'assign')
             JOIN mdl_course c ON c.id = cm.course
             WHERE cm.course IN (${placeholders}) AND a.duedate > ?
             UNION
-            SELECT e.id, e.name, e.timestart as duedate, cm.id as cm_id, e.modulename as type, c.fullname as course_name
+            SELECT e.id, e.name, e.timestart as duedate, cm.id as cm_id, e.modulename as type, c.fullname as course_name, COALESCE(NULLIF(c.idnumber,''), c.shortname) as course_code
             FROM mdl_event e
             LEFT JOIN mdl_course_modules cm ON cm.instance = e.instance AND cm.module = (SELECT id FROM mdl_modules WHERE name = e.modulename)
             LEFT JOIN mdl_course c ON c.id = e.courseid
@@ -10649,7 +10649,8 @@ router.get('/assessments/:id', async (req, res) => {
             weight: '100%',
             status: 'pending',
             submitted: false,
-            moodle_url: assign.cm_id ? `/mod/${assign.type}/view.php?id=${assign.cm_id}` : null
+            moodle_url: assign.cm_id ? `/mod/${assign.type}/view.php?id=${assign.cm_id}` : null,
+            courseCode: assign.course_code || ''
         }));
 
         return res.json({
