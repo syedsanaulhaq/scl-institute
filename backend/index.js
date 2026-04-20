@@ -185,6 +185,65 @@ async function initDB() {
 // Initialize DB on startup
 initDB();
 
+// ─── Moodle → SCL User Sync (Moodle is source of truth) ───
+async function syncMoodleUsersToSCL() {
+    try {
+        const [moodleUsers] = await moodlePool.query(`
+            SELECT u.id, u.firstname, u.lastname, u.email,
+                   COALESCE(MIN(r.shortname), 'student') as role
+            FROM ${moodleTablePrefix}user u
+            LEFT JOIN ${moodleTablePrefix}role_assignments ra ON ra.userid = u.id
+            LEFT JOIN ${moodleTablePrefix}role r ON r.id = ra.roleid
+            WHERE u.deleted = 0 AND u.id > 1 AND u.email != ''
+            GROUP BY u.id
+        `);
+        const [sclUsers] = await db.query('SELECT id, email, first_name, last_name, role FROM users');
+        const sclMap = {};
+        sclUsers.forEach(u => { sclMap[u.email.toLowerCase()] = u; });
+
+        let created = 0, updated = 0;
+
+        for (const mu of moodleUsers) {
+            const email = mu.email.toLowerCase();
+            const existing = sclMap[email];
+            if (!existing) {
+                // Create in SCL DB
+                const hash = crypto.createHash('sha256').update('moodle-sync-' + mu.id).digest('hex');
+                await db.query(
+                    'INSERT INTO users (email, password_hash, first_name, last_name, role, is_active) VALUES (?, ?, ?, ?, ?, 1)',
+                    [email, hash, mu.firstname || '', mu.lastname || '', mu.role || 'student']
+                );
+                created++;
+            } else {
+                // Update name/role if changed in Moodle
+                const nameChanged = existing.first_name !== mu.firstname || existing.last_name !== mu.lastname;
+                const roleChanged = existing.role !== mu.role;
+                if (nameChanged || roleChanged) {
+                    await db.query(
+                        'UPDATE users SET first_name = ?, last_name = ?, role = ? WHERE id = ?',
+                        [mu.firstname || '', mu.lastname || '', mu.role || 'student', existing.id]
+                    );
+                    updated++;
+                }
+            }
+        }
+
+        if (created || updated) {
+            console.log(`[MOODLE SYNC] Synced: ${created} created, ${updated} updated (${moodleUsers.length} Moodle users total)`);
+        } else {
+            console.log(`[MOODLE SYNC] All ${moodleUsers.length} Moodle users already in sync with SCL DB`);
+        }
+    } catch (err) {
+        console.warn('[MOODLE SYNC] Failed:', err.message);
+    }
+}
+
+// Run sync on startup (after a short delay for DB readiness)
+setTimeout(() => syncMoodleUsersToSCL(), 5000);
+
+// Run sync every 10 minutes
+setInterval(() => syncMoodleUsersToSCL(), 10 * 60 * 1000);
+
 // Middleware  
 app.use(cors({
     origin: [
@@ -775,6 +834,16 @@ app.get('/api/admin/users-by-role', requireAuth, async (req, res) => {
     } catch (error) {
         console.error('Error fetching users by role:', error);
         res.status(500).json({ success: false, error: 'Failed to fetch users' });
+    }
+});
+
+// Manual Moodle → SCL sync endpoint
+app.post('/api/admin/sync-moodle-users', requireAuth, async (req, res) => {
+    try {
+        await syncMoodleUsersToSCL();
+        res.json({ success: true, message: 'Moodle → SCL user sync completed' });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
     }
 });
 
