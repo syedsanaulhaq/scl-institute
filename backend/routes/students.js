@@ -10826,10 +10826,15 @@ router.get('/attendance/:id', async (req, res) => {
                             summary: {
                                 total: courseData.records.length,
                                 present: presentCount,
+                                presentCount: presentCount,
                                 absent: absentCount,
+                                absentCount: absentCount,
                                 late: lateCount,
+                                lateCount: lateCount,
                                 excused: excusedCount,
-                                rate: attendanceRate
+                                excusedCount: excusedCount,
+                                rate: attendanceRate,
+                                attendanceRate: attendanceRate
                             }
                         });
 
