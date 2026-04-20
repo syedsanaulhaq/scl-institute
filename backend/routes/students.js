@@ -12010,6 +12010,38 @@ router.get('/student-dashboard', async (req, res) => {
             rawgrade: gradeMap.get(c.id)?.rawgrade || null
         }));
 
+        // Determine active course IDs (courses in the active semester)
+        // Mirrors the frontend logic: parse shortname to find the first semester with activities
+        const parseCourseShortname = (shortname) => {
+            const m = (shortname || '').match(/^(HND-\w+)-Y(\d+)-S(\d+)-C(\d+)$/);
+            if (m) return { programme: m[1], year: parseInt(m[2]), semester: parseInt(m[3]) };
+            return null;
+        };
+        const grouped = {};
+        courses.forEach(c => {
+            const parsed = parseCourseShortname(c.shortname);
+            if (!parsed) return;
+            const key = `${parsed.programme}|${parsed.year}|${parsed.semester}`;
+            if (!grouped[key]) grouped[key] = { ...parsed, courses: [] };
+            grouped[key].courses.push(c);
+        });
+        let activeCourseIds = [];
+        const sortedKeys = Object.keys(grouped).sort((a, b) => {
+            const ga = grouped[a], gb = grouped[b];
+            return ga.year - gb.year || ga.semester - gb.semester;
+        });
+        for (const key of sortedKeys) {
+            const g = grouped[key];
+            if (g.courses.some(c => (c.totalActivities || 0) > 0)) {
+                activeCourseIds = g.courses.map(c => c.id);
+                break;
+            }
+        }
+        // Fallback: if no semester has activities, use all enrolled course IDs
+        if (activeCourseIds.length === 0) {
+            activeCourseIds = courses.map(c => c.id);
+        }
+
         // 5. Get notifications from Moodle DB
         let notifications = [];
         if (moodleUser && moodleConn) {
@@ -12066,11 +12098,12 @@ router.get('/student-dashboard', async (req, res) => {
             }
         }
 
-        // 7. Get upcoming calendar events from Moodle DB
+        // 7. Get upcoming calendar events from Moodle DB (active courses only)
         let upcomingEvents = [];
-        if (moodleUser && moodleConn) {
+        if (moodleUser && moodleConn && activeCourseIds.length > 0) {
             try {
                 const now = Math.floor(Date.now() / 1000);
+                const eventPlaceholders = activeCourseIds.map(() => '?').join(',');
                 const [eventRows] = await moodleConn.execute(`
                     SELECT e.id, e.name, e.description, e.courseid, e.timestart, e.timeduration,
                            e.eventtype, e.modulename, e.instance, c.fullname AS coursename,
@@ -12079,15 +12112,11 @@ router.get('/student-dashboard', async (req, res) => {
                     LEFT JOIN mdl_course c ON e.courseid = c.id
                     LEFT JOIN mdl_modules m ON m.name = e.modulename
                     LEFT JOIN mdl_course_modules cm ON cm.course = e.courseid AND cm.module = m.id AND cm.instance = e.instance
-                    WHERE (e.userid = ? OR e.courseid IN (
-                        SELECT e2.courseid FROM mdl_enrol e2
-                        JOIN mdl_user_enrolments ue2 ON ue2.enrolid = e2.id
-                        WHERE ue2.userid = ?
-                    ) OR e.eventtype = 'site')
+                    WHERE (e.userid = ? OR e.courseid IN (${eventPlaceholders}) OR e.eventtype = 'site')
                     AND e.timestart >= ?
                     ORDER BY e.timestart ASC
                     LIMIT 10`,
-                    [moodleUser.id, moodleUser.id, now]
+                    [moodleUser.id, ...activeCourseIds, now]
                 );
                 upcomingEvents = eventRows.map(ev => {
                     let moodlePath = ev.courseid ? `/course/view.php?id=${ev.courseid}` : '/calendar/view.php';
@@ -12111,12 +12140,11 @@ router.get('/student-dashboard', async (req, res) => {
             }
         }
 
-        // 8. Get announcements from course news forums via Moodle DB
+        // 8. Get announcements from course news forums via Moodle DB (active courses only)
         let announcements = [];
-        if (moodleUser && moodleConn && courses.length > 0) {
+        if (moodleUser && moodleConn && activeCourseIds.length > 0) {
             try {
-                const courseIds = courses.map(c => c.id);
-                const placeholders = courseIds.map(() => '?').join(',');
+                const placeholders = activeCourseIds.map(() => '?').join(',');
                 const [announceRows] = await moodleConn.execute(`
                     SELECT fd.id, fd.name AS subject, fp.message, fp.modified AS timemodified,
                            c.fullname AS coursename, c.id AS courseid,
@@ -12129,7 +12157,7 @@ router.get('/student-dashboard', async (req, res) => {
                     WHERE f.type = 'news' AND f.course IN (${placeholders})
                     ORDER BY fp.modified DESC
                     LIMIT 10`,
-                    courseIds
+                    activeCourseIds
                 );
                 announcements = announceRows.map(a => ({
                     id: a.id,
@@ -12199,7 +12227,8 @@ router.get('/student-dashboard', async (req, res) => {
                 notifications,
                 unreadMessages,
                 upcomingEvents,
-                announcements
+                announcements,
+                activeCourseIds
             }
         });
     } catch (error) {
