@@ -220,8 +220,10 @@ const StudentProgramme = ({ user }) => {
 
     useEffect(() => {
         if (registeredCourses.length > 0) {
+            // Prefer the first course that is not locked and not progression-blocked (active semester)
+            const firstActive = registeredCourses.find((course) => !course.isLocked && !isProgressionBlocked(course));
             const firstUnlocked = registeredCourses.find((course) => !course.isLocked);
-            const preferredCourse = firstUnlocked || registeredCourses[0];
+            const preferredCourse = firstActive || firstUnlocked || registeredCourses[0];
             setSelectedCourseId(String(preferredCourse.moodle_course_id || preferredCourse.id));
         } else {
             setSelectedCourseId('');
@@ -234,7 +236,7 @@ const StudentProgramme = ({ user }) => {
             (course) => String(course.moodle_course_id || course.id) === String(selectedCourseId)
         );
 
-        if (selectedCourseId && selected && !selected.isLocked) {
+        if (selectedCourseId && selected && !selected.isLocked && !isProgressionBlocked(selected)) {
             fetchCourseSections();
         } else {
             setCourseModules([]);
@@ -255,7 +257,7 @@ const StudentProgramme = ({ user }) => {
                     summary: section.summary,
                     modules: section.modules.map(mod => ({
                         id: mod.id,
-                        name: mod.idnumber || `Module ${mod.id}`,
+                        name: mod.name || mod.idnumber || `Module ${mod.id}`,
                         type: mod.type
                     }))
                 }));
@@ -646,15 +648,41 @@ const StudentProgramme = ({ user }) => {
                                                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                                             >
                                                 <option value="">Select a course...</option>
-                                                {filteredCourses.map((course) => (
-                                                    <option
-                                                        key={course.id}
-                                                        value={String(course.moodle_course_id || course.id)}
-                                                    >
-                                                        {course.course_title} ({course.course_code || `COURSE-${course.id}`})
-                                                        {course.isLocked ? ' - Locked' : ''}
-                                                    </option>
-                                                ))}
+                                                {(() => {
+                                                    // Group courses by Year → Semester
+                                                    const groups = {};
+                                                    filteredCourses.forEach((course) => {
+                                                        const yr = extractYear(course.course_code) || 'Other';
+                                                        const sem = extractSemester(course.course_code) || 'Other';
+                                                        const key = `${yr}|${sem}`;
+                                                        if (!groups[key]) groups[key] = { year: yr, semester: sem, courses: [] };
+                                                        groups[key].courses.push(course);
+                                                    });
+                                                    const sortedGroups = Object.values(groups).sort((a, b) => {
+                                                        const ya = parseInt(a.year.replace(/\D/g, '')) || 99;
+                                                        const yb = parseInt(b.year.replace(/\D/g, '')) || 99;
+                                                        if (ya !== yb) return ya - yb;
+                                                        const sa = parseInt(a.semester.replace(/\D/g, '')) || 99;
+                                                        const sb = parseInt(b.semester.replace(/\D/g, '')) || 99;
+                                                        return sa - sb;
+                                                    });
+                                                    return sortedGroups.map((group) => (
+                                                        <optgroup key={`${group.year}-${group.semester}`} label={`${group.year} - ${group.semester}`}>
+                                                            {group.courses.map((course) => {
+                                                                const blocked = isProgressionBlocked(course);
+                                                                return (
+                                                                    <option
+                                                                        key={course.id}
+                                                                        value={String(course.moodle_course_id || course.id)}
+                                                                    >
+                                                                        {course.course_title} ({course.course_code || `COURSE-${course.id}`})
+                                                                        {blocked ? ' 🔒' : ''}
+                                                                    </option>
+                                                                );
+                                                            })}
+                                                        </optgroup>
+                                                    ));
+                                                })()}
                                             </select>
                                         </div>
                                     </>

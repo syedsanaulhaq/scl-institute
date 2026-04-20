@@ -1117,16 +1117,24 @@ router.get('/moodle-course/:courseId/sections', async (req, res) => {
             ORDER BY section ASC
         `, [numCourseId]);
 
-        // Fetch course modules
+        // Fetch course modules with activity names
         const [moduleRows] = await moodleDbPool.execute(`
-            SELECT cm.id, cm.section, cm.instance, cm.idnumber, m.name as module_type
+            SELECT cm.id, cm.section, cm.instance, cm.idnumber, m.name as module_type,
+                   COALESCE(a.name, q.name, f.name, r.name, p.name, u.name, l.name) AS activity_name
             FROM mdl_course_modules cm
             INNER JOIN mdl_modules m ON m.id = cm.module
+            LEFT JOIN mdl_assign a ON m.name = 'assign' AND a.id = cm.instance
+            LEFT JOIN mdl_quiz q ON m.name = 'quiz' AND q.id = cm.instance
+            LEFT JOIN mdl_forum f ON m.name = 'forum' AND f.id = cm.instance
+            LEFT JOIN mdl_resource r ON m.name = 'resource' AND r.id = cm.instance
+            LEFT JOIN mdl_page p ON m.name = 'page' AND p.id = cm.instance
+            LEFT JOIN mdl_url u ON m.name = 'url' AND u.id = cm.instance
+            LEFT JOIN mdl_label l ON m.name = 'label' AND l.id = cm.instance
             WHERE cm.course = ? AND cm.deletioninprogress = 0
             ORDER BY cm.section ASC, cm.id ASC
         `, [numCourseId]);
 
-        // Group modules by section
+        // Group modules by section ID (cm.section stores the section ID, not section number)
         const modulesBySection = {};
         moduleRows.forEach(mod => {
             if (!modulesBySection[mod.section]) {
@@ -1136,17 +1144,18 @@ router.get('/moodle-course/:courseId/sections', async (req, res) => {
                 id: mod.id,
                 instance: mod.instance,
                 type: mod.module_type,
-                idnumber: mod.idnumber
+                idnumber: mod.idnumber,
+                name: mod.activity_name || mod.idnumber || `${mod.module_type} ${mod.id}`
             });
         });
 
-        // Build section with modules structure
+        // Build section with modules structure (lookup by section.id, not section.section)
         const sections = sectionRows.map(section => ({
             id: section.id,
             section: section.section,
             name: section.name || `Section ${section.section}`,
             summary: section.summary,
-            modules: modulesBySection[section.section] || []
+            modules: modulesBySection[section.id] || []
         }));
 
         return res.json({
