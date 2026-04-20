@@ -714,7 +714,26 @@ app.get('/api/admin/student-programmes', requireAuth, async (req, res) => {
             LEFT JOIN users u ON u.email = spr.student_email COLLATE utf8mb4_unicode_ci
             ORDER BY spr.created_at DESC
         `);
-        res.json({ success: true, data: rows });
+
+        // Lookup Moodle user IDs by email
+        let moodleMap = {};
+        try {
+            const emails = rows.map(r => r.student_email).filter(Boolean);
+            if (emails.length) {
+                const placeholders = emails.map(() => '?').join(',');
+                const [mUsers] = await moodlePool.query(
+                    `SELECT id, email FROM mdl_user WHERE deleted = 0 AND email IN (${placeholders})`,
+                    emails
+                );
+                mUsers.forEach(mu => { moodleMap[mu.email.toLowerCase()] = mu.id; });
+            }
+        } catch (mErr) { console.warn('[STU-PROG] Moodle lookup skipped:', mErr.message); }
+
+        const enriched = rows.map(r => ({
+            ...r,
+            moodle_user_id: moodleMap[r.student_email?.toLowerCase()] || null,
+        }));
+        res.json({ success: true, data: enriched });
     } catch (error) {
         console.error('Error fetching student programmes:', error);
         res.status(500).json({ success: false, error: 'Failed to fetch student programmes' });
@@ -733,7 +752,26 @@ app.get('/api/admin/users-by-role', requireAuth, async (req, res) => {
         }
         query += ` ORDER BY created_at DESC`;
         const [rows] = await db.execute(query, params);
-        res.json({ success: true, data: rows });
+
+        // Lookup Moodle user IDs by email
+        let moodleMap = {};
+        try {
+            const emails = rows.map(r => r.email).filter(Boolean);
+            if (emails.length) {
+                const placeholders = emails.map(() => '?').join(',');
+                const [mUsers] = await moodlePool.query(
+                    `SELECT id, email FROM mdl_user WHERE deleted = 0 AND email IN (${placeholders})`,
+                    emails
+                );
+                mUsers.forEach(mu => { moodleMap[mu.email.toLowerCase()] = mu.id; });
+            }
+        } catch (mErr) { console.warn('[USERS] Moodle lookup skipped:', mErr.message); }
+
+        const enriched = rows.map(r => ({
+            ...r,
+            moodle_user_id: moodleMap[r.email?.toLowerCase()] || null,
+        }));
+        res.json({ success: true, data: enriched });
     } catch (error) {
         console.error('Error fetching users by role:', error);
         res.status(500).json({ success: false, error: 'Failed to fetch users' });

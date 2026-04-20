@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Users, ArrowLeft, Search, RefreshCw } from 'lucide-react';
+import { Users, ArrowLeft, Search, RefreshCw, ExternalLink } from 'lucide-react';
 import axios from 'axios';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
+const MOODLE_URL = import.meta.env.VITE_MOODLE_URL || 'http://localhost:9090';
 
 const ROLE_COLORS = {
     admin: 'bg-purple-100 text-purple-800',
@@ -134,6 +135,7 @@ const AdminUsersByRole = () => {
                                     <th className="text-left py-3 px-4 font-semibold text-gray-700">Email</th>
                                     <th className="text-center py-3 px-4 font-semibold text-gray-700">Role</th>
                                     <th className="text-left py-3 px-4 font-semibold text-gray-700">Joined</th>
+                                    <th className="text-center py-3 px-4 font-semibold text-gray-700">Moodle</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -148,6 +150,20 @@ const AdminUsersByRole = () => {
                                             </span>
                                         </td>
                                         <td className="py-3 px-4 text-gray-500 text-xs">{u.created_at ? new Date(u.created_at).toLocaleDateString() : '—'}</td>
+                                        <td className="py-3 px-4 text-center">
+                                            {u.moodle_user_id ? (
+                                                <a
+                                                    href={`${MOODLE_URL}/user/profile.php?id=${u.moodle_user_id}`}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-orange-100 text-orange-700 hover:bg-orange-200 transition"
+                                                >
+                                                    <ExternalLink className="w-3 h-3" /> Moodle
+                                                </a>
+                                            ) : (
+                                                <span className="text-xs text-gray-300">—</span>
+                                            )}
+                                        </td>
                                     </tr>
                                 ))}
                             </tbody>

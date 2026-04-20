@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { GraduationCap, ArrowLeft, Search, RefreshCw, Eye, EyeOff } from 'lucide-react';
+import { GraduationCap, ArrowLeft, Search, RefreshCw, Eye, EyeOff, ExternalLink } from 'lucide-react';
 import axios from 'axios';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
+const MOODLE_URL = import.meta.env.VITE_MOODLE_URL || 'http://localhost:9090';
 
 const LmsEnrolments = () => {
     const navigate = useNavigate();
@@ -115,6 +116,7 @@ const LmsEnrolments = () => {
                                     <th className="text-left py-3 px-4 font-semibold text-gray-700">Course Name</th>
                                     <th className="text-center py-3 px-4 font-semibold text-gray-700">Enrolments</th>
                                     <th className="text-center py-3 px-4 font-semibold text-gray-700">Status</th>
+                                    <th className="text-center py-3 px-4 font-semibold text-gray-700">Moodle</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -135,6 +137,16 @@ const LmsEnrolments = () => {
                                                 {course.visible === 1 ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
                                                 {course.visible === 1 ? 'Active' : 'Hidden'}
                                             </span>
+                                        </td>
+                                        <td className="py-3 px-4 text-center">
+                                            <a
+                                                href={`${MOODLE_URL}/course/view.php?id=${course.id}`}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-orange-100 text-orange-700 hover:bg-orange-200 transition"
+                                            >
+                                                <ExternalLink className="w-3 h-3" /> Open
+                                            </a>
                                         </td>
                                     </tr>
                                 ))}
