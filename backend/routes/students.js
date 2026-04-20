@@ -11080,9 +11080,9 @@ router.get('/grades/:id', async (req, res) => {
 
         const moodleUserId = moodleUsers[0].id;
 
-        // Get ALL enrolled courses via enrollment tables
+        // Get ALL enrolled courses with idnumber (course_code) and fullname
         const [enrolledCourses] = await moodleDbPool.query(
-            `SELECT DISTINCT c.id
+            `SELECT DISTINCT c.id, COALESCE(NULLIF(c.idnumber,''), c.shortname) as course_code, c.fullname
             FROM mdl_course c
             JOIN mdl_enrol e ON e.courseid = c.id
             JOIN mdl_user_enrolments ue ON ue.enrolid = e.id
@@ -11094,13 +11094,20 @@ router.get('/grades/:id', async (req, res) => {
             return res.json({ success: true, data: [] });
         }
 
+        // Build course lookup map
+        const courseMap = {};
+        enrolledCourses.forEach(c => {
+            courseMap[c.id] = { course_code: c.course_code || '', fullname: c.fullname || '' };
+        });
+
         const courseIds = enrolledCourses.map(c => c.id);
         const placeholders = courseIds.map(() => '?').join(',');
 
-        // Get grades from gradebook for ALL enrolled courses
+        // Get grades from gradebook for ALL enrolled courses (include courseid)
         const [grades] = await moodleDbPool.query(
             `
             SELECT 
+                gi.courseid,
                 gi.itemname,
                 gi.itemmodule,
                 gg.finalgrade,
@@ -11116,47 +11123,77 @@ router.get('/grades/:id', async (req, res) => {
             [moodleUserId, ...courseIds]
         );
 
+        // Get ALL course totals (not just LIMIT 1)
         const [courseTotals] = await moodleDbPool.query(
             `
             SELECT 
+                gi.courseid,
                 gg.finalgrade,
                 gi.grademax,
                 gg.timemodified
             FROM mdl_grade_items gi
             LEFT JOIN mdl_grade_grades gg ON gi.id = gg.itemid AND gg.userid = ?
-            WHERE gi.courseid IN (${placeholders}) AND gi.itemtype = 'course'
-            LIMIT 1
+            WHERE gi.courseid IN (${placeholders}) AND gi.itemtype = 'course' AND gg.finalgrade IS NOT NULL
             `,
             [moodleUserId, ...courseIds]
         );
 
-        const gradeData = grades.map(grade => ({
-            id: grade.itemname,
-            module: grade.itemname,
-            code: grade.itemmodule ? grade.itemmodule.toUpperCase() : 'MOD',
-            type: grade.itemmodule || 'Assessment',
-            grade: grade.finalgrade ? parseFloat(grade.finalgrade).toFixed(2) : 'N/A',
-            maxGrade: grade.grademax ? parseFloat(grade.grademax).toFixed(2) : '100',
-            percentage: grade.grademax ? Math.round((grade.finalgrade / grade.grademax) * 100) : 0,
-            submittedDate: grade.timemodified ? new Date(grade.timemodified * 1000).toISOString().split('T')[0] : 'N/A',
-            feedback: 'See Moodle for detailed feedback',
-            moodle_url: grade.cm_id ? `/mod/${grade.itemmodule}/view.php?id=${grade.cm_id}` : null
-        }));
+        const gradeData = grades.map(grade => {
+            const courseInfo = courseMap[grade.courseid] || {};
+            return {
+                id: `${grade.courseid}-${grade.itemname}`,
+                module: grade.itemname,
+                code: grade.itemmodule ? grade.itemmodule.toUpperCase() : 'MOD',
+                type: grade.itemmodule || 'Assessment',
+                grade: grade.finalgrade ? parseFloat(grade.finalgrade).toFixed(2) : 'N/A',
+                maxGrade: grade.grademax ? parseFloat(grade.grademax).toFixed(2) : '100',
+                percentage: grade.grademax ? Math.round((grade.finalgrade / grade.grademax) * 100) : 0,
+                submittedDate: grade.timemodified ? new Date(grade.timemodified * 1000).toISOString().split('T')[0] : 'N/A',
+                feedback: 'See Moodle for detailed feedback',
+                moodle_url: grade.cm_id ? `/mod/${grade.itemmodule}/view.php?id=${grade.cm_id}` : null,
+                courseCode: courseInfo.course_code,
+                courseName: courseInfo.fullname
+            };
+        });
 
-        const courseSummary = courseTotals.length > 0 ? {
-            finalGrade: courseTotals[0].finalgrade ? parseFloat(courseTotals[0].finalgrade).toFixed(2) : null,
-            maxGrade: courseTotals[0].grademax ? parseFloat(courseTotals[0].grademax).toFixed(2) : '100',
-            percentage: courseTotals[0].grademax && courseTotals[0].finalgrade
-                ? Math.round((courseTotals[0].finalgrade / courseTotals[0].grademax) * 100)
-                : null,
-            updatedAt: courseTotals[0].timemodified ? new Date(courseTotals[0].timemodified * 1000).toISOString().split('T')[0] : null
-        } : null;
+        // Per-course summaries
+        const courseGrades = courseTotals.map(ct => {
+            const courseInfo = courseMap[ct.courseid] || {};
+            return {
+                courseCode: courseInfo.course_code,
+                courseName: courseInfo.fullname,
+                finalGrade: ct.finalgrade ? parseFloat(ct.finalgrade).toFixed(2) : null,
+                maxGrade: ct.grademax ? parseFloat(ct.grademax).toFixed(2) : '100',
+                percentage: ct.grademax && ct.finalgrade
+                    ? Math.round((ct.finalgrade / ct.grademax) * 100) : null,
+                updatedAt: ct.timemodified ? new Date(ct.timemodified * 1000).toISOString().split('T')[0] : null
+            };
+        });
+
+        // Overall programme summary (average across all course totals)
+        let programmeSummary = null;
+        if (courseTotals.length > 0) {
+            const totalGrade = courseTotals.reduce((sum, ct) => sum + (parseFloat(ct.finalgrade) || 0), 0);
+            const totalMax = courseTotals.reduce((sum, ct) => sum + (parseFloat(ct.grademax) || 100), 0);
+            const latestUpdate = Math.max(...courseTotals.map(ct => ct.timemodified || 0));
+            programmeSummary = {
+                finalGrade: totalGrade.toFixed(2),
+                maxGrade: totalMax.toFixed(2),
+                percentage: totalMax > 0 ? Math.round((totalGrade / totalMax) * 100) : 0,
+                coursesGraded: courseTotals.length,
+                coursesTotal: enrolledCourses.length,
+                updatedAt: latestUpdate ? new Date(latestUpdate * 1000).toISOString().split('T')[0] : null
+            };
+        }
 
         return res.json({
             success: true,
             data: {
                 grades: gradeData,
-                courseSummary
+                courseGrades,
+                programmeSummary,
+                // Keep backward compat
+                courseSummary: programmeSummary
             }
         });
 
