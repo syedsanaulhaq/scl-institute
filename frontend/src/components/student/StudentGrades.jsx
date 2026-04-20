@@ -279,7 +279,7 @@ const StudentGrades = ({ user }) => {
                             <div
                                 key={cg.courseCode}
                                 className="border rounded-lg p-4 hover:shadow-md transition cursor-pointer"
-                                onClick={() => handleViewInMoodle(cg.courseId ? `/grade/report/user/index.php?id=${cg.courseId}` : null)}
+                                onClick={() => handleViewInMoodle(cg.courseId ? `/course/view.php?id=${cg.courseId}` : null)}
                             >
                                 <p className="text-xs font-semibold text-purple-600 mb-1">{cg.courseCode}</p>
                                 <p className="text-sm font-medium text-gray-900 mb-3 line-clamp-2">{cg.courseName}</p>
