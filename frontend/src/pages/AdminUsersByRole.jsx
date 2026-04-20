@@ -24,7 +24,7 @@ const AdminUsersByRole = () => {
     const [search, setSearch] = useState('');
     const [roleFilter, setRoleFilter] = useState(searchParams.get('role') || 'all');
 
-    const adminEmail = JSON.parse(localStorage.getItem('user') || '{}')?.email;
+    const adminEmail = JSON.parse(sessionStorage.getItem('user') || '{}')?.email;
 
     const handleOpenMoodleProfile = (moodleUserId) => {
         const moodleUrl = getMoodleUrl();

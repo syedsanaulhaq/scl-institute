@@ -21,7 +21,7 @@ const AdminStudentProgrammes = () => {
     const [search, setSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
 
-    const adminEmail = JSON.parse(localStorage.getItem('user') || '{}')?.email;
+    const adminEmail = JSON.parse(sessionStorage.getItem('user') || '{}')?.email;
 
     const handleOpenMoodleProfile = (moodleUserId) => {
         const moodleUrl = getMoodleUrl();

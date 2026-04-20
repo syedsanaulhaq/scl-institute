@@ -13,7 +13,7 @@ const LmsEnrolments = () => {
     const [search, setSearch] = useState('');
     const [visibilityFilter, setVisibilityFilter] = useState('all');
 
-    const adminEmail = JSON.parse(localStorage.getItem('user') || '{}')?.email;
+    const adminEmail = JSON.parse(sessionStorage.getItem('user') || '{}')?.email;
 
     const handleOpenMoodleCourse = (courseId) => {
         const moodleUrl = getMoodleUrl();
