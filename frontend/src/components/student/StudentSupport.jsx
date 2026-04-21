@@ -102,7 +102,7 @@ const StudentSupport = () => {
                     <MessageSquare className="w-8 h-8 text-purple-600 mb-3" />
                     <h3 className="font-semibold text-gray-900 mb-1">Live Chat</h3>
                     <p className="text-sm text-gray-600 mb-2">Chat with our team</p>
-                    <button className="text-xs text-purple-600 hover:text-purple-700 font-medium">Start Chat â†’</button>
+                    <button className="text-xs text-purple-600 hover:text-purple-700 font-medium">Start Chat -></button>
                 </div>
             </div>
 
@@ -139,7 +139,7 @@ const StudentSupport = () => {
                                         <h3 className="text-lg font-semibold text-gray-900">{ticket.subject}</h3>
                                         {getPriorityBadge(ticket.priority)}
                                     </div>
-                                    <p className="text-sm text-gray-600 mb-2">Ticket ID: {ticket.id} â€¢ Category: {ticket.category}</p>
+                                    <p className="text-sm text-gray-600 mb-2">Ticket ID: {ticket.id} | Category: {ticket.category}</p>
                                     <div className="flex items-center gap-4 text-xs text-gray-500">
                                         <span>Created: {new Date(ticket.createdDate).toLocaleDateString('en-GB')}</span>
                                         <span>Last Update: {new Date(ticket.lastUpdate).toLocaleDateString('en-GB')}</span>
@@ -152,7 +152,7 @@ const StudentSupport = () => {
                                 {getStatusBadge(ticket.status)}
                             </div>
                             <button className="text-blue-600 hover:text-blue-700 text-sm font-medium">
-                                View Details â†’
+                                View Details ->
                             </button>
                         </div>
                     ))}

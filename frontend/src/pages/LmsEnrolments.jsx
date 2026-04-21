@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { GraduationCap, ArrowLeft, Search, RefreshCw, Eye, EyeOff, ExternalLink } from 'lucide-react';
 import axios from 'axios';
-import { openMoodleSSO, getMoodleUrl } from '../utils/ssoService';
+import { openMoodleSSO } from '../utils/ssoService';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
 
@@ -16,8 +16,7 @@ const LmsEnrolments = () => {
     const adminEmail = JSON.parse(sessionStorage.getItem('user') || '{}')?.email;
 
     const handleOpenMoodleCourse = (courseId) => {
-        const moodleUrl = getMoodleUrl();
-        const redirectTo = `${moodleUrl}/course/view.php?id=${courseId}`;
+        const redirectTo = `/course/view.php?id=${courseId}`;
         openMoodleSSO(adminEmail, {
             redirectTo,
             onError: (err) => alert('Failed to open Moodle: ' + err),

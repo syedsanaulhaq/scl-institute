@@ -1,5 +1,5 @@
 ﻿import React, { useState, useEffect } from 'react';
-import { BookOpen, Award, Target } from 'lucide-react';
+import { BookOpen, Award, Target, ChevronDown } from 'lucide-react';
 import axios from 'axios';
 import { openMoodleSSO } from '../../utils/ssoService';
 
@@ -649,7 +649,7 @@ const StudentProgramme = ({ user }) => {
                                             >
                                                 <option value="">Select a course...</option>
                                                 {(() => {
-                                                    // Group courses by Year â†’ Semester
+                                                    // Group courses by Year -> Semester
                                                     const groups = {};
                                                     filteredCourses.forEach((course) => {
                                                         const yr = extractYear(course.course_code) || 'Other';
@@ -776,7 +776,7 @@ const StudentProgramme = ({ user }) => {
                                 >
                                     <div className="flex items-center gap-3">
                                         <span className={`text-gray-600 transition-transform ${expandedSections[index] ? 'rotate-180' : ''}`}>
-                                            â–¼
+                                            <ChevronDown className="w-4 h-4" />
                                         </span>
                                         <h3 className="text-base font-medium text-gray-900">{module.name}</h3>
                                     </div>

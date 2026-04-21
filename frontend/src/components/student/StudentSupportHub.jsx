@@ -237,12 +237,12 @@ const StudentSupportHub = ({ user }) => {
             {/* Tab Navigation */}
             <div className="flex gap-2 mb-6 overflow-x-auto border-b border-gray-200 pb-4">
                 {[
-                    { id: 'messages', label: 'ï¿½ Announcements', icon: MessageSquare },
-                    { id: 'support', label: 'ðŸ†˜ Support', icon: Plus },
-                    { id: 'feedback', label: 'ðŸ“‹ Feedback', icon: FileText },
-                    { id: 'complaints', label: 'âš–ï¸ Complaints', icon: Scale },
-                    { id: 'disability', label: 'â™¿ Disability', icon: Accessibility },
-                    { id: 'safeguarding', label: 'ðŸ›¡ï¸ Safeguarding', icon: Shield }
+                    { id: 'messages', label: 'Announcements', icon: MessageSquare },
+                    { id: 'support', label: 'Support', icon: Plus },
+                    { id: 'feedback', label: 'Feedback', icon: FileText },
+                    { id: 'complaints', label: 'Complaints', icon: Scale },
+                    { id: 'disability', label: 'Disability', icon: Accessibility },
+                    { id: 'safeguarding', label: 'Safeguarding', icon: Shield }
                 ].map(tab => (
                     <button
                         key={tab.id}
@@ -262,7 +262,7 @@ const StudentSupportHub = ({ user }) => {
             {activeTab === 'messages' && (
                 <div className="space-y-6">
                     <div className="bg-white rounded-lg shadow p-6">
-                        <h2 className="text-xl font-bold mb-4">ðŸ“¢ Announcements from Your Courses</h2>
+                        <h2 className="text-xl font-bold mb-4">Announcements from Your Courses</h2>
                         <p className="text-sm text-gray-600 mb-4">Live chat support is available in the bottom-right corner</p>
                         <div className="space-y-4">
                             {announcements.length === 0 ? (
@@ -275,7 +275,7 @@ const StudentSupportHub = ({ user }) => {
                                                 <p className="font-bold text-gray-900">{ann.title}</p>
                                                 {ann.course_name && (
                                                     <p className="text-xs text-blue-600 font-medium mt-1">
-                                                        ðŸ“š {ann.course_name} {ann.course_code && `(${ann.course_code})`}
+                                                        Course: {ann.course_name} {ann.course_code && `(${ann.course_code})`}
                                                     </p>
                                                 )}
                                                 <p className="text-sm text-gray-600 mt-2">{ann.content.substring(0, 150)}...</p>
@@ -636,7 +636,7 @@ const StudentSupportHub = ({ user }) => {
                                     className="w-full px-4 py-2 border rounded mb-4 h-32"
                                     required
                                 ></textarea>
-                                <p className="text-sm text-gray-600 mb-4">ðŸ“Ž You can upload supporting documents after submission</p>
+                                <p className="text-sm text-gray-600 mb-4">You can upload supporting documents after submission</p>
                                 <div className="flex gap-3">
                                     <button type="submit" className="px-6 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700">Submit</button>
                                     <button
@@ -670,7 +670,7 @@ const StudentSupportHub = ({ user }) => {
             {activeTab === 'safeguarding' && (
                 <div className="space-y-6">
                     <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                        <p className="text-red-900 font-bold">ðŸ›¡ï¸ Confidential Support</p>
+                        <p className="text-red-900 font-bold">Confidential Support</p>
                         <p className="text-red-800 text-sm mt-2">Reports are treated with the highest level of confidentiality. Only authorized safeguarding team members can access this information.</p>
                     </div>
 

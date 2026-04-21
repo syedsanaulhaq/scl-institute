@@ -218,8 +218,8 @@ const StudentAssessments = ({ user }) => {
                                                 <h3 className="text-lg font-semibold text-gray-900">{assessment.title}</h3>
                                             </div>
                                             <p className="text-sm text-gray-600 mb-2">
-                                                {assessment.courseCode && <span className="text-purple-600 font-semibold">{assessment.courseCode} Â· </span>}
-                                                {assessment.module} â€¢ {assessment.code}
+                                                {assessment.courseCode && <span className="text-purple-600 font-semibold">{assessment.courseCode} - </span>}
+                                                {assessment.module} - {assessment.code}
                                             </p>
                                             <p className="text-sm text-gray-600">Type: <span className="font-medium">{assessment.type}</span></p>
                                         </div>
@@ -278,8 +278,8 @@ const StudentAssessments = ({ user }) => {
                                             <h3 className="text-lg font-semibold text-gray-900">{assessment.title}</h3>
                                         </div>
                                         <p className="text-sm text-gray-600 mb-2">
-                                            {assessment.courseCode && <span className="text-purple-600 font-semibold">{assessment.courseCode} Â· </span>}
-                                            {assessment.module} â€¢ {assessment.code}
+                                            {assessment.courseCode && <span className="text-purple-600 font-semibold">{assessment.courseCode} - </span>}
+                                            {assessment.module} - {assessment.code}
                                         </p>
                                         <p className="text-sm text-gray-600">Type: <span className="font-medium">{assessment.type}</span></p>
                                     </div>

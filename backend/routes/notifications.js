@@ -9,6 +9,7 @@ const pool = mysql.createPool({
     user: process.env.DB_USER,
     password: process.env.DB_PASS,
     database: process.env.DB_NAME,
+    charset: 'utf8mb4',
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0
@@ -91,6 +92,7 @@ const moodlePool = mysql.createPool({
     user: process.env.MOODLE_DB_USER || 'bn_moodle',
     password: process.env.MOODLE_DB_PASS || 'bitnami_moodle_password',
     database: process.env.MOODLE_DB_NAME || 'bitnami_moodle',
+    charset: 'utf8mb4',
     waitForConnections: true,
     connectionLimit: 5,
     queueLimit: 0

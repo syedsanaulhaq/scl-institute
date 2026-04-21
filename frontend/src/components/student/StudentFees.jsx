@@ -51,28 +51,28 @@ const StudentFees = () => {
                         <DollarSign className="w-8 h-8 text-blue-600" />
                         <p className="text-sm text-gray-600">Total Tuition</p>
                     </div>
-                    <p className="text-2xl font-bold text-gray-900">Â£{feeAccount.totalTuition.toLocaleString()}</p>
+                    <p className="text-2xl font-bold text-gray-900">GBP {feeAccount.totalTuition.toLocaleString()}</p>
                 </div>
                 <div className="bg-white rounded-lg shadow p-6">
                     <div className="flex items-center gap-3 mb-2">
                         <CheckCircle className="w-8 h-8 text-green-600" />
                         <p className="text-sm text-gray-600">Paid</p>
                     </div>
-                    <p className="text-2xl font-bold text-green-600">Â£{feeAccount.paid.toLocaleString()}</p>
+                    <p className="text-2xl font-bold text-green-600">GBP {feeAccount.paid.toLocaleString()}</p>
                 </div>
                 <div className="bg-white rounded-lg shadow p-6">
                     <div className="flex items-center gap-3 mb-2">
                         <Clock className="w-8 h-8 text-orange-600" />
                         <p className="text-sm text-gray-600">Outstanding</p>
                     </div>
-                    <p className="text-2xl font-bold text-orange-600">Â£{feeAccount.outstanding.toLocaleString()}</p>
+                    <p className="text-2xl font-bold text-orange-600">GBP {feeAccount.outstanding.toLocaleString()}</p>
                 </div>
                 <div className="bg-white rounded-lg shadow p-6">
                     <div className="flex items-center gap-3 mb-2">
                         <CreditCard className="w-8 h-8 text-purple-600" />
                         <p className="text-sm text-gray-600">Next Payment</p>
                     </div>
-                    <p className="text-2xl font-bold text-purple-600">Â£{feeAccount.nextPayment.toLocaleString()}</p>
+                    <p className="text-2xl font-bold text-purple-600">GBP {feeAccount.nextPayment.toLocaleString()}</p>
                     <p className="text-xs text-gray-500 mt-1">Due: {new Date(feeAccount.nextPaymentDate).toLocaleDateString('en-GB')}</p>
                 </div>
             </div>
@@ -118,9 +118,9 @@ const StudentFees = () => {
                 <div className="space-y-6">
                     {feeAccount.outstanding > 0 && (
                         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
-                            <h3 className="font-semibold text-yellow-900 mb-2">âš ï¸ Payment Due</h3>
+                            <h3 className="font-semibold text-yellow-900 mb-2">Payment Due</h3>
                             <p className="text-yellow-800 mb-4">
-                                Your next payment of Â£{feeAccount.nextPayment.toLocaleString()} is due on {new Date(feeAccount.nextPaymentDate).toLocaleDateString('en-GB')}
+                                Your next payment of GBP {feeAccount.nextPayment.toLocaleString()} is due on {new Date(feeAccount.nextPaymentDate).toLocaleDateString('en-GB')}
                             </p>
                             <button className="flex items-center gap-2 px-6 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700">
                                 <CreditCard className="w-4 h-4" />
@@ -204,7 +204,7 @@ const StudentFees = () => {
                                             {new Date(payment.dueDate).toLocaleDateString('en-GB')}
                                         </td>
                                         <td className="px-6 py-4 text-sm font-semibold text-gray-900">
-                                            Â£{payment.amount.toLocaleString()}
+                                            GBP {payment.amount.toLocaleString()}
                                         </td>
                                         <td className="px-6 py-4">
                                             {getStatusBadge(payment.status)}
@@ -244,12 +244,12 @@ const StudentFees = () => {
                                             <p className="font-semibold text-gray-900">Payment Received</p>
                                         </div>
                                         <p className="text-sm text-gray-600 ml-8">
-                                            {new Date(payment.date).toLocaleDateString('en-GB')} â€¢ {payment.method}
+                                            {new Date(payment.date).toLocaleDateString('en-GB')} | {payment.method}
                                         </p>
                                         <p className="text-xs text-gray-500 ml-8">Receipt: {payment.receipt}</p>
                                     </div>
                                     <div className="text-right">
-                                        <p className="text-xl font-bold text-green-600">Â£{payment.amount.toLocaleString()}</p>
+                                        <p className="text-xl font-bold text-green-600">GBP {payment.amount.toLocaleString()}</p>
                                         <button className="flex items-center gap-2 text-blue-600 hover:text-blue-700 text-sm mt-2">
                                             <Download className="w-4 h-4" />
                                             Download Receipt

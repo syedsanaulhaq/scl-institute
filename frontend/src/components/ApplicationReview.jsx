@@ -498,7 +498,7 @@ const ApplicationReview = () => {
                                 
                                 {successData && (
                                     <div className="mt-4 p-4 bg-white rounded border border-green-200 space-y-3">
-                                        <p className="text-sm font-semibold text-gray-900 mb-3">Ã°Å¸â€œâ€¹ Student Credentials</p>
+                                        <p className="text-sm font-semibold text-gray-900 mb-3">Student Credentials</p>
                                         
                                         <div className="flex items-center justify-between p-3 bg-gray-50 rounded">
                                             <div>
@@ -538,9 +538,7 @@ const ApplicationReview = () => {
                                             </button>
                                         </div>
 
-                                        <p className="text-xs text-gray-600 italic mt-2">
-                                            Ã¢â€œËœ {successData.note}
-                                        </p>
+                                        <p className="text-xs text-gray-600 italic mt-2">Note: {successData.note}</p>
                                     </div>
                                 )}
                             </div>
@@ -712,7 +710,7 @@ const ApplicationReview = () => {
                                             />
                                         </label>
                                     </div>
-                                    <p className="text-xs text-gray-500">Accepted: MP3, WAV, OGG, AAC, M4A, MP4, WebM â€” max 100 MB</p>
+                                    <p className="text-xs text-gray-500">Accepted: MP3, WAV, OGG, AAC, M4A, MP4, WebM - max 100 MB</p>
 
                                     {/* Recordings list */}
                                     {recordings.length > 0 ? (
@@ -913,7 +911,7 @@ const ApplicationReview = () => {
 
                         {/* Modal Body */}
                         <div className="p-6 space-y-4">
-                            <p className="text-gray-700 font-medium">Ã°Å¸â€œâ€¹ Share These Credentials with the Student:</p>
+                            <p className="text-gray-700 font-medium">Share These Credentials with the Student:</p>
 
                             {/* Email Box */}
                             <div className="bg-gray-50 rounded-lg border-2 border-gray-200 p-4">
@@ -957,7 +955,7 @@ const ApplicationReview = () => {
 
                             {/* Note */}
                             <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
-                                <p className="font-medium mb-1">Ã¢â€žÂ¹Ã¯Â¸Â Important Notes:</p>
+                                <p className="font-medium mb-1">Important Notes:</p>
                                 <ul className="list-disc list-inside space-y-1 text-xs">
                                     <li>{successData.note}</li>
                                     <li>Student will receive a notification in their portal</li>
