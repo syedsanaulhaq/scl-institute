@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { BookOpen, FileText, Link2, Download, ExternalLink, Search, AlertCircle, Loader, Filter } from 'lucide-react';
 import axios from 'axios';
+import { openMoodleSSO } from '../../utils/ssoService';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
 
@@ -47,6 +48,19 @@ const StudentLibrary = ({ user }) => {
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleAccessResource = async (resource) => {
+        if (!resource?.moodleUrl) {
+            return;
+        }
+
+        await openMoodleSSO(user?.email, {
+            redirectTo: resource.moodleUrl,
+            onError: (message) => {
+                setError(message || 'Failed to open Moodle resource');
+            }
+        });
     };
 
     // Get unique courses from resources
@@ -260,17 +274,7 @@ const StudentLibrary = ({ user }) => {
 
                             {/* Action Button */}
                             <button
-                                onClick={() => {
-                                    if (resource.type === 'articles') {
-                                        // Open external link
-                                        const url = `http://localhost:9090${resource.moodleUrl}`;
-                                        window.open(url, '_blank');
-                                    } else {
-                                        // Download or access resource
-                                        const url = `http://localhost:9090${resource.moodleUrl}`;
-                                        window.open(url, '_blank');
-                                    }
-                                }}
+                                onClick={() => handleAccessResource(resource)}
                                 className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
                             >
                                 {resource.type === 'articles' ? (

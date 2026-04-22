@@ -249,7 +249,7 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
                             {isOpen ? (
                                 <button
                                     onClick={() => toggleSection(section.title)}
-                                    className="w-full px-3 pt-1 pb-1 text-[10px] uppercase tracking-widest text-purple-200/60 font-bold border-b border-white/10 flex items-center justify-between hover:text-purple-100"
+                                    className="w-full px-3 pt-1 pb-1 text-[10px] uppercase tracking-widest text-blue-200/60 font-bold border-b border-white/10 flex items-center justify-between hover:text-blue-100"
                                 >
                                     <span>{section.title}</span>
                                     {activeSectionTitle === section.title
@@ -272,7 +272,7 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
                                             className={`w-full flex items-center h-10 rounded-lg transition-all duration-200 group relative ${
                                                 isActive
                                                     ? 'bg-scl-purple text-white shadow-lg shadow-scl-purple/20'
-                                                    : 'text-purple-100/70 hover:bg-white/5 hover:text-white'
+                                                    : 'text-slate-300/70 hover:bg-white/5 hover:text-white'
                                             } ${item.isSSO && loading ? 'opacity-50 cursor-not-allowed' : ''}`}
                                         >
                                             <div className={`flex items-center justify-center transition-all duration-300 ${isOpen ? 'pl-3 w-10' : 'w-full'}`}>
@@ -311,7 +311,7 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
                                                             className={`w-full flex items-center justify-start h-10 rounded-lg transition-all duration-200 group relative pl-4 ${
                                                                 isSubActive
                                                                     ? 'bg-scl-purple/50 text-white shadow-md'
-                                                                    : 'text-purple-100/60 hover:bg-white/5 hover:text-white'
+                                                                    : 'text-slate-300/60 hover:bg-white/5 hover:text-white'
                                                             } ${subItem.isSSO && loading ? 'opacity-50 cursor-not-allowed' : ''}`}
                                                         >
                                                             <subItem.icon className="w-4 h-4 mr-3 flex-shrink-0" />

@@ -4,22 +4,17 @@ import {
     BookOpen,
     Bell,
     CheckCircle,
-    Clock,
-    MessageSquare,
     GraduationCap,
-    TrendingUp,
     Calendar,
     User,
     ExternalLink,
-    BarChart3,
     Loader2,
     AlertCircle,
     Megaphone,
-    FileText,
-    Award,
     ChevronDown,
     ChevronRight,
-    Lock
+    ChevronLeft,
+    Lock,
 } from 'lucide-react';
 import axios from 'axios';
 import { openMoodleSSO, getMoodleUrl } from '../../utils/ssoService';
@@ -34,6 +29,7 @@ const StudentPortalDashboard = ({ user }) => {
     const [ssoLoading, setSsoLoading] = useState(false);
     const [ssoError, setSsoError] = useState('');
     const [activeTab, setActiveTab] = useState('courses');
+    const [calendarDate, setCalendarDate] = useState(new Date());
 
     useEffect(() => {
         if (user?.email) fetchDashboard();
@@ -130,7 +126,7 @@ const StudentPortalDashboard = ({ user }) => {
         return (
             <div className="flex items-center justify-center min-h-[60vh]">
                 <div className="text-center">
-                    <Loader2 className="w-10 h-10 animate-spin text-indigo-600 mx-auto" />
+                    <Loader2 className="w-10 h-10 animate-spin text-blue-600 mx-auto" />
                     <p className="text-gray-500 mt-3 text-sm">Loading your dashboard...</p>
                 </div>
             </div>
@@ -150,41 +146,29 @@ const StudentPortalDashboard = ({ user }) => {
     }
 
     const { student, application, courses, summary, notifications, unreadMessages, upcomingEvents, announcements } = data || {};
+    const firstName = student?.name?.split(' ')[0] || 'Student';
+    const unreadCount = notifications?.filter(n => !n.read).length || 0;
 
     return (
-        <div className="p-4 md:p-6 bg-gray-50 min-h-screen space-y-6">
+        <div className="px-5 pt-2 pb-5 min-h-screen" style={{ background: '#F0F4FF' }}>
 
-            {/* Welcome Banner */}
-            <div className="bg-white rounded-2xl border border-gray-200 p-6 md:p-8">
-                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            {/* Welcome + LMS Button */}
+            <div className="mb-6">
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
                     <div>
-                        <h1 className="text-2xl md:text-3xl font-semibold text-gray-900">
-                            Welcome back, {student?.name?.split(' ')[0] || 'Student'}!
+                        <h1 className="text-base font-bold" style={{ color: '#1A2B6B' }}>
+                            Welcome back, {firstName}! 👋
                         </h1>
-                        <p className="text-gray-500 mt-1 text-sm md:text-base">
-                            {application?.courseTitle || 'Your learning journey continues'}
+                        <p className="text-xs mt-0.5" style={{ color: '#8A96B8' }}>
+                            {application?.courseTitle || application?.programName || "Here's what's happening in your academic journey today."}
+                            {application?.reference && <span className="ml-2 text-xs">· Ref: {application.reference}</span>}
                         </p>
-                        {application && (
-                            <div className="flex items-center gap-3 mt-3 flex-wrap">
-                                <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border ${
-                                    application.status === 'accepted' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-gray-50 text-gray-600 border-gray-200'
-                                }`}>
-                                    <CheckCircle className="w-3.5 h-3.5" />
-                                    {application.status?.replace(/_/g, ' ').toUpperCase()}
-                                </span>
-                                {application.modeOfStudy && (
-                                    <span className="text-xs text-gray-500">{application.modeOfStudy}</span>
-                                )}
-                                {application.reference && (
-                                    <span className="text-xs text-gray-400">Ref: {application.reference}</span>
-                                )}
-                            </div>
-                        )}
                     </div>
                     <button
                         onClick={handleAccessLMS}
                         disabled={ssoLoading}
-                        className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-3 rounded-xl font-medium transition-all disabled:opacity-50 self-start md:self-auto"
+                        className="flex items-center gap-2 text-white text-sm font-medium px-4 py-2.5 rounded-lg transition disabled:opacity-50 self-start md:self-auto"
+                        style={{ background: '#4F6FE8' }}
                     >
                         <ExternalLink className="w-4 h-4" />
                         {ssoLoading ? 'Opening...' : 'Open Moodle LMS'}
@@ -193,87 +177,144 @@ const StudentPortalDashboard = ({ user }) => {
                 {ssoError && <p className="mt-2 text-xs text-red-600 bg-red-50 border border-red-100 rounded px-3 py-1">{ssoError}</p>}
             </div>
 
-            {/* Summary Stats */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-                <StatCard icon={BookOpen} label="Enrolled Courses" value={summary?.totalCourses || 0} color="indigo" />
-                <StatCard icon={TrendingUp} label="In Progress" value={summary?.inProgressCourses || 0} color="blue" />
-                <StatCard icon={CheckCircle} label="Completed" value={summary?.completedCourses || 0} color="green" />
-                <StatCard icon={BarChart3} label="Avg. Progress" value={`${summary?.averageProgress || 0}%`} color="purple" />
+            {/* KPI Cards */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <KpiCard
+                    icon="📚"
+                    iconBg="#EDF7EE"
+                    value={summary?.totalCourses || 0}
+                    label="Active Courses"
+                    sub={`${(summary?.totalCourses || 0) * 6} credit hrs`}
+                    subColor="#8A96B8"
+                />
+                <KpiCard
+                    icon="📊"
+                    iconBg="#EEF1FD"
+                    value={`${summary?.averageProgress || 0}%`}
+                    label="Overall Progress"
+                    sub={summary?.inProgressCourses > 0 ? `${summary.inProgressCourses} in progress` : 'Keep it up!'}
+                    subColor="#4A9A60"
+                />
+                <KpiCard
+                    icon="✅"
+                    iconBg="#EDF7EE"
+                    value={summary?.completedCourses || 0}
+                    label="Completed"
+                    sub="modules finished"
+                    subColor="#8A96B8"
+                />
+                <KpiCard
+                    icon="🔔"
+                    iconBg="#FFF5E8"
+                    value={unreadCount}
+                    label="Notifications"
+                    sub={unreadCount > 0 ? `${unreadCount} unread` : 'All caught up'}
+                    subColor={unreadCount > 0 ? '#D07020' : '#8A96B8'}
+                />
             </div>
 
-            {/* Quick Navigation */}
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
-                {[
-                    { icon: User, label: 'My Profile', path: '/student/profile', color: 'bg-blue-500' },
-                    { icon: GraduationCap, label: 'Programme', path: '/student/programme', color: 'bg-purple-500' },
-                    { icon: Calendar, label: 'Timetable', path: '/student/timetable', color: 'bg-orange-500' },
-                    { icon: FileText, label: 'Assessments', path: '/student/assessments', color: 'bg-teal-500' },
-                    { icon: Award, label: 'Grades', path: '/student/grades', color: 'bg-emerald-500' },
-                    { icon: MessageSquare, label: 'Messages', path: '/student/messages', color: 'bg-pink-500',
-                      badge: unreadMessages > 0 ? unreadMessages : null },
-                ].map((item, i) => (
-                    <button
-                        key={i}
-                        onClick={() => navigate(item.path)}
-                        className="relative bg-white rounded-xl p-4 border border-gray-200 hover:border-indigo-300 hover:shadow-md transition-all text-left group"
-                    >
-                        <div className={`${item.color} w-9 h-9 rounded-lg flex items-center justify-center mb-2`}>
-                            <item.icon className="w-4.5 h-4.5 text-white" />
-                        </div>
-                        <p className="text-sm font-medium text-gray-800 group-hover:text-indigo-700">{item.label}</p>
-                        {item.badge && (
-                            <span className="absolute top-2 right-2 bg-red-500 text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center">
-                                {item.badge}
-                            </span>
-                        )}
-                    </button>
-                ))}
-            </div>
+            {/* Main Two-Column Grid */}
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-5 mb-5">
 
-            {/* Main Content Tabs */}
-            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-                <div className="border-b border-gray-200 overflow-x-auto">
-                    <div className="flex">
+                {/* Left: Courses panel */}
+                <div className="xl:col-span-2 bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+                    <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+                        <h2 className="text-sm font-semibold" style={{ color: '#1A2B6B' }}>My Courses</h2>
+                        <button onClick={() => navigate('/student/programme')} className="text-xs font-medium" style={{ color: '#4F6FE8' }}>
+                            View all →
+                        </button>
+                    </div>
+
+                    {/* Tab strip */}
+                    <div className="flex border-b border-gray-100 overflow-x-auto">
                         {[
-                            { key: 'courses', label: 'My Courses', icon: BookOpen, count: courses?.length },
-                            { key: 'notifications', label: 'Notifications', icon: Bell, count: notifications?.filter(n => !n.read).length },
-                            { key: 'events', label: 'Upcoming', icon: Calendar, count: upcomingEvents?.length },
-                            { key: 'announcements', label: 'Announcements', icon: Megaphone, count: announcements?.length },
+                            { key: 'courses', label: 'Courses' },
+                            { key: 'events', label: 'Upcoming' },
+                            { key: 'announcements', label: 'Announcements' },
                         ].map(tab => (
                             <button
                                 key={tab.key}
                                 onClick={() => setActiveTab(tab.key)}
-                                className={`flex items-center gap-2 px-5 py-3.5 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
-                                    activeTab === tab.key
-                                        ? 'border-indigo-600 text-indigo-700 bg-indigo-50/50'
-                                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                                }`}
+                                className="px-5 py-2.5 text-xs font-medium whitespace-nowrap border-b-2 transition-colors"
+                                style={{
+                                    borderBottomColor: activeTab === tab.key ? '#4F6FE8' : 'transparent',
+                                    color: activeTab === tab.key ? '#4F6FE8' : '#8A96B8',
+                                    background: 'transparent',
+                                }}
                             >
-                                <tab.icon className="w-4 h-4" />
                                 {tab.label}
-                                {tab.count > 0 && (
-                                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
-                                        activeTab === tab.key ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-100 text-gray-600'
-                                    }`}>{tab.count}</span>
-                                )}
                             </button>
                         ))}
                     </div>
+
+                    <div className="p-4">
+                        {activeTab === 'courses' && <CoursesTab courses={courses} onCourseClick={handleCourseClick} />}
+                        {activeTab === 'events' && <EventsTab events={upcomingEvents} formatDate={formatDate} onItemClick={handleMoodleNavigate} />}
+                        {activeTab === 'announcements' && <AnnouncementsTab announcements={announcements} formatTime={formatTime} onItemClick={handleMoodleNavigate} />}
+                    </div>
                 </div>
 
-                <div className="p-5">
-                    {activeTab === 'courses' && <CoursesTab courses={courses} onCourseClick={handleCourseClick} />}
-                    {activeTab === 'notifications' && <NotificationsTab notifications={notifications} formatTime={formatTime} onItemClick={handleMoodleNavigate} />}
-                    {activeTab === 'events' && <EventsTab events={upcomingEvents} formatDate={formatDate} onItemClick={handleMoodleNavigate} />}
-                    {activeTab === 'announcements' && <AnnouncementsTab announcements={announcements} formatTime={formatTime} onItemClick={handleMoodleNavigate} />}
+                {/* Right column: Notifications + Quick Links */}
+                <div className="flex flex-col gap-5">
+
+                    {/* Notifications Panel */}
+                    <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+                            <h2 className="text-sm font-semibold" style={{ color: '#1A2B6B' }}>Notifications</h2>
+                            <button onClick={() => navigate('/student/notifications')} className="text-xs font-medium" style={{ color: '#4F6FE8' }}>
+                                View all
+                            </button>
+                        </div>
+                        <div className="p-4 max-h-64 overflow-y-auto">
+                            <NotificationsTab notifications={notifications?.slice(0, 5)} formatTime={formatTime} onItemClick={handleMoodleNavigate} />
+                        </div>
+                    </div>
+
+                    {/* Mini Calendar */}
+                    <MiniCalendar
+                        date={calendarDate}
+                        onDateChange={setCalendarDate}
+                        events={upcomingEvents}
+                        onEventDayClick={() => setActiveTab('events')}
+                    />
+
+                    {/* Quick Links */}
+                    <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+                        <h2 className="text-sm font-semibold mb-3" style={{ color: '#1A2B6B' }}>Quick Links</h2>
+                        <div className="grid grid-cols-2 gap-2">
+                            {[
+                                { icon: '📝', label: 'Assessments', path: '/student/assessments' },
+                                { icon: '📄', label: 'My Programme', path: '/student/programme' },
+                                { icon: '🏆', label: 'Grades', path: '/student/grades' },
+                                { icon: '📅', label: 'Timetable', path: '/student/timetable' },
+                                { icon: '📚', label: 'Library', path: '/student/library' },
+                                { icon: '💬', label: 'Messages', path: '/student/messages', badge: unreadMessages > 0 ? unreadMessages : null },
+                            ].map((item, i) => (
+                                <button
+                                    key={i}
+                                    onClick={() => navigate(item.path)}
+                                    className="relative flex flex-col items-center gap-1.5 p-3 rounded-lg border text-center transition hover:shadow-sm"
+                                    style={{ borderColor: '#E4E8F4', background: '#fff' }}
+                                >
+                                    <span className="text-xl">{item.icon}</span>
+                                    <span className="text-xs font-medium" style={{ color: '#5A6A90' }}>{item.label}</span>
+                                    {item.badge && (
+                                        <span className="absolute top-1.5 right-1.5 bg-red-500 text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
+                                            {item.badge}
+                                        </span>
+                                    )}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
                 </div>
             </div>
 
             {/* Student Info Footer */}
             {(student || application) && (
-                <div className="bg-white rounded-2xl border border-gray-200 p-5">
-                    <h3 className="text-sm font-semibold text-gray-800 mb-3 flex items-center gap-2">
-                        <User className="w-4 h-4 text-gray-400" />
+                <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+                    <h3 className="text-sm font-semibold mb-3 flex items-center gap-2" style={{ color: '#1A2B6B' }}>
+                        <User className="w-4 h-4" style={{ color: '#8A96B8' }} />
                         Your Details
                     </h3>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
@@ -294,28 +335,116 @@ const StudentPortalDashboard = ({ user }) => {
 
 /* ── Sub-Components ── */
 
-const StatCard = ({ icon: Icon, label, value, color }) => {
-    const colors = {
-        indigo: 'bg-indigo-50 text-indigo-600 border-indigo-100',
-        blue: 'bg-blue-50 text-blue-600 border-blue-100',
-        green: 'bg-green-50 text-green-600 border-green-100',
-        purple: 'bg-purple-50 text-purple-600 border-purple-100',
-    };
+const MiniCalendar = ({ date, onDateChange, events, onEventDayClick }) => {
+    const today = new Date();
+    const year = date.getFullYear();
+    const month = date.getMonth();
+
+    const monthName = date.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+
+    // Build event day set (day numbers in this month)
+    const eventDays = new Set();
+    (events || []).forEach(ev => {
+        if (!ev.timestart) return;
+        const d = new Date(typeof ev.timestart === 'number' && ev.timestart < 1e11
+            ? ev.timestart * 1000 : ev.timestart);
+        if (d.getFullYear() === year && d.getMonth() === month) {
+            eventDays.add(d.getDate());
+        }
+    });
+
+    const firstDay = new Date(year, month, 1).getDay(); // 0=Sun
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    // Shift so Monday = 0
+    const startOffset = (firstDay + 6) % 7;
+
+    const cells = [];
+    for (let i = 0; i < startOffset; i++) cells.push(null);
+    for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+
+    const isToday = (d) => d === today.getDate() && month === today.getMonth() && year === today.getFullYear();
+
+    const prevMonth = () => onDateChange(new Date(year, month - 1, 1));
+    const nextMonth = () => onDateChange(new Date(year, month + 1, 1));
+
     return (
-        <div className={`rounded-xl border p-4 ${colors[color] || colors.indigo}`}>
-            <div className="flex items-center gap-2 mb-1">
-                <Icon className="w-4 h-4 opacity-70" />
-                <span className="text-xs font-medium opacity-80">{label}</span>
+        <div className="bg-white rounded-xl border shadow-sm p-4" style={{ borderColor: '#E4E8F4' }}>
+            {/* Header */}
+            <div className="flex items-center justify-between mb-3">
+                <h2 className="text-sm font-semibold" style={{ color: '#1A2B6B' }}>Calendar</h2>
+                <div className="flex items-center gap-1">
+                    <button onClick={prevMonth} className="p-1 rounded hover:bg-gray-100 transition">
+                        <ChevronLeft className="w-3.5 h-3.5" style={{ color: '#8A96B8' }} />
+                    </button>
+                    <span className="text-xs font-medium px-1" style={{ color: '#5A6A90' }}>{monthName}</span>
+                    <button onClick={nextMonth} className="p-1 rounded hover:bg-gray-100 transition">
+                        <ChevronRight className="w-3.5 h-3.5" style={{ color: '#8A96B8' }} />
+                    </button>
+                </div>
             </div>
-            <p className="text-2xl font-bold">{value}</p>
+
+            {/* Day headers */}
+            <div className="grid grid-cols-7 mb-1">
+                {['Mo','Tu','We','Th','Fr','Sa','Su'].map(d => (
+                    <div key={d} className="text-center text-[10px] font-semibold pb-1" style={{ color: '#B0B8D0' }}>{d}</div>
+                ))}
+            </div>
+
+            {/* Day grid */}
+            <div className="grid grid-cols-7 gap-y-0.5">
+                {cells.map((day, i) => (
+                    <div key={i} className="flex flex-col items-center justify-center py-0.5">
+                        {day ? (
+                            <button
+                                onClick={() => eventDays.has(day) && onEventDayClick?.()}
+                                className="w-7 h-7 rounded-full flex flex-col items-center justify-center relative transition"
+                                style={{
+                                    background: isToday(day) ? '#4F6FE8' : 'transparent',
+                                    cursor: eventDays.has(day) ? 'pointer' : 'default',
+                                }}
+                            >
+                                <span className="text-[11px] font-medium leading-none" style={{ color: isToday(day) ? '#fff' : '#1A2B6B' }}>
+                                    {day}
+                                </span>
+                                {eventDays.has(day) && !isToday(day) && (
+                                    <span className="absolute bottom-0.5 w-1 h-1 rounded-full" style={{ background: '#4F6FE8' }} />
+                                )}
+                                {eventDays.has(day) && isToday(day) && (
+                                    <span className="absolute bottom-0.5 w-1 h-1 rounded-full bg-white/70" />
+                                )}
+                            </button>
+                        ) : <div className="w-7 h-7" />}
+                    </div>
+                ))}
+            </div>
+
+            {eventDays.size > 0 && (
+                <p className="mt-2 text-[10px] text-center" style={{ color: '#8A96B8' }}>
+                    <span className="inline-block w-1.5 h-1.5 rounded-full mr-1 align-middle" style={{ background: '#4F6FE8' }} />
+                    {eventDays.size} day{eventDays.size > 1 ? 's' : ''} with events this month
+                </p>
+            )}
         </div>
     );
 };
 
+const KpiCard = ({ icon, iconBg, value, label, sub, subColor }) => (
+    <div className="bg-white rounded-xl border shadow-sm p-4 flex items-center gap-3" style={{ borderColor: '#E4E8F4' }}>
+        <div className="flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center text-2xl" style={{ background: iconBg }}>
+            {icon}
+        </div>
+        <div>
+            <p className="text-2xl font-bold leading-none" style={{ color: '#1A2B6B' }}>{value}</p>
+            <p className="text-xs mt-0.5" style={{ color: '#8A96B8' }}>{label}</p>
+            <p className="text-xs mt-0.5 font-medium" style={{ color: subColor || '#8A96B8' }}>{sub}</p>
+        </div>
+    </div>
+);
+
 const InfoItem = ({ label, value }) => (
     <div>
-        <p className="text-xs text-gray-500">{label}</p>
-        <p className="font-medium text-gray-800 truncate">{value}</p>
+        <p className="text-xs" style={{ color: '#8A96B8' }}>{label}</p>
+        <p className="font-medium truncate" style={{ color: '#1A2B6B' }}>{value}</p>
     </div>
 );
 
@@ -389,72 +518,77 @@ const CoursesTab = ({ courses, onCourseClick }) => {
             <div
                 key={course.id}
                 {...wrapperProps}
-                className={`flex items-center gap-4 p-3.5 rounded-xl border transition-all no-underline ${
-                    isActive
-                        ? 'border-gray-100 hover:border-indigo-200 hover:bg-indigo-50/30 cursor-pointer group'
-                        : 'border-gray-50 bg-gray-50/50 opacity-60'
-                }`}
+                className="flex items-center gap-3 p-3 rounded-xl border transition-all"
+                style={{
+                    borderColor: isActive ? '#E4E8F4' : '#F0F2F8',
+                    background: isActive ? '#fff' : '#FAFBFF',
+                    opacity: isActive ? 1 : 0.6,
+                    cursor: isActive && onCourseClick ? 'pointer' : 'default',
+                }}
             >
-                <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                    isComplete ? 'bg-green-100' : isActive && progress > 0 ? 'bg-blue-100' : isActive ? 'bg-indigo-50' : 'bg-gray-100'
-                }`}>
+                <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
+                    style={{ background: isComplete ? '#EDF7EE' : isActive && progress > 0 ? '#EEF1FD' : '#F0F2F8' }}>
                     {isComplete ? (
-                        <CheckCircle className="w-5 h-5 text-green-600" />
+                        <CheckCircle className="w-4 h-4" style={{ color: '#4A9A60' }} />
                     ) : !isActive ? (
-                        <Lock className="w-5 h-5 text-gray-300" />
+                        <Lock className="w-4 h-4 text-gray-300" />
                     ) : (
-                        <BookOpen className={`w-5 h-5 ${progress > 0 ? 'text-blue-600' : 'text-indigo-400'}`} />
+                        <BookOpen className="w-4 h-4" style={{ color: progress > 0 ? '#4F6FE8' : '#8A96B8' }} />
                     )}
                 </div>
                 <div className="flex-1 min-w-0">
-                    <p className={`font-medium truncate ${isActive ? 'text-gray-900 group-hover:text-indigo-700' : 'text-gray-500'}`}>{course.fullname}</p>
-                    <div className="flex items-center gap-3 mt-0.5 text-xs text-gray-400">
-                        {course.lastaccess && <span>Last accessed: {new Date(course.lastaccess).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span>}
-                        {course.grade && course.grade !== '-' && <span className="text-green-600 font-medium">Grade: {course.grade}</span>}
+                    <p className="text-sm font-medium truncate" style={{ color: isActive ? '#1A2B6B' : '#8A96B8' }}>{course.fullname}</p>
+                    <div className="flex items-center gap-2 mt-0.5 text-xs" style={{ color: '#8A96B8' }}>
+                        {course.lastaccess && <span>Accessed: {new Date(course.lastaccess).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span>}
+                        {course.grade && course.grade !== '-' && <span style={{ color: '#4A9A60' }} className="font-medium">Grade: {course.grade}</span>}
                     </div>
                     {isActive && course.totalActivities > 0 && (
-                        <div className="mt-2 flex items-center gap-2">
-                            <div className="flex-1 bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                        <div className="mt-1.5 flex items-center gap-2">
+                            <div className="flex-1 rounded-full h-1.5 overflow-hidden" style={{ background: '#E4E8F4' }}>
                                 <div
-                                    className={`h-full rounded-full transition-all ${isComplete ? 'bg-green-500' : 'bg-indigo-500'}`}
-                                    style={{ width: `${Math.min(progress, 100)}%` }}
+                                    className="h-full rounded-full transition-all"
+                                    style={{ width: `${Math.min(progress, 100)}%`, background: isComplete ? '#4A9A60' : '#4F6FE8' }}
                                 />
                             </div>
-                            <span className="text-xs font-medium text-gray-600 w-10 text-right">{progress}%</span>
+                            <span className="text-[11px] font-medium w-9 text-right" style={{ color: '#5A6A90' }}>{progress}%</span>
                         </div>
                     )}
-                    {isActive && course.totalActivities === 0 && (
-                        <p className="text-xs text-gray-400 mt-1">No tracked activities</p>
-                    )}
                 </div>
-                <div className="flex-shrink-0 text-xs text-gray-400 flex items-center gap-2">
-                    {isActive && (
-                        <>
-                            <span className="hidden md:inline">{course.completedActivities}/{course.totalActivities} activities</span>
-                            <ExternalLink className="w-4 h-4 text-gray-300 group-hover:text-indigo-500 transition-colors" />
-                        </>
-                    )}
-                    {!isActive && <span className="hidden md:inline text-gray-300">Upcoming</span>}
-                </div>
+                {isActive && (
+                    <ExternalLink className="w-3.5 h-3.5 flex-shrink-0" style={{ color: '#C8D0E8' }} />
+                )}
             </div>
         );
     };
 
     return (
         <div className="space-y-4">
-            {Object.entries(grouped).sort().map(([prog, years]) => (
-                <div key={prog}>
-                    <div className="flex items-center gap-2 mb-3">
-                        <GraduationCap className="w-5 h-5 text-indigo-600" />
-                        <h3 className="text-sm font-bold text-indigo-900 uppercase tracking-wide">{programmeLabels[prog] || prog}</h3>
-                    </div>
-                    {Object.entries(years).sort(([a],[b]) => a - b).map(([yr, semesters]) => (
-                        <div key={yr} className="ml-2 mb-3">
-                            <div className="flex items-center gap-2 mb-2">
-                                <div className="w-1.5 h-1.5 rounded-full bg-indigo-400" />
-                                <h4 className="text-sm font-semibold text-gray-700">Year {yr}</h4>
-                            </div>
-                            {Object.entries(semesters).sort(([a],[b]) => a - b).map(([sem, semCourses]) => {
+            {Object.entries(grouped).sort().map(([prog, years]) => {
+                // Filter out empty years - only show years with active semesters
+                const activeYears = Object.entries(years)
+                    .filter(([yr, semesters]) => 
+                        Object.values(semesters).some(semCourses => semCourses.some(c => (c.progress ?? 0) > 0 || c.completed))
+                    )
+                    .sort(([a],[b]) => a - b);
+
+                if (activeYears.length === 0) return null;
+
+                return (
+                    <div key={prog}>
+                        <div className="flex items-center gap-2 mb-3">
+                            <GraduationCap className="w-5 h-5" style={{ color: '#4F6FE8' }} />
+                            <h3 className="text-xs font-bold uppercase tracking-wide" style={{ color: '#1A2B6B' }}>{programmeLabels[prog] || prog}</h3>
+                        </div>
+                        {activeYears.map(([yr, semesters]) => (
+                            <div key={yr} className="ml-2 mb-3">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <div className="w-1.5 h-1.5 rounded-full" style={{ background: '#4F6FE8' }} />
+                                    <h4 className="text-xs font-semibold text-gray-600">Year {yr}</h4>
+                                </div>
+                                {Object.entries(semesters)
+                                    .filter(([sem, semCourses]) => semCourses.some(c => (c.progress ?? 0) > 0 || c.completed))
+                                    .sort(([a],[b]) => a - b)
+                                    .map(([sem, semCourses]) => {
                                 const semKey = `${prog}-Y${yr}-S${sem}`;
                                 const isActiveSem = prog === activeProgramme && yr === activeYear && sem === activeSemester;
                                 const isCollapsed = collapsed[semKey];
@@ -465,20 +599,19 @@ const CoursesTab = ({ courses, onCourseClick }) => {
                                     <div key={sem} className="ml-4 mb-3">
                                         <button
                                             onClick={() => toggleCollapse(semKey)}
-                                            className={`flex items-center gap-2 w-full text-left px-3 py-2 rounded-lg transition-colors ${
-                                                isActiveSem ? 'bg-indigo-50 hover:bg-indigo-100' : 'bg-gray-50 hover:bg-gray-100'
-                                            }`}
+                                            className="flex items-center gap-2 w-full text-left px-3 py-2 rounded-lg transition-colors"
+                                            style={{ background: isActiveSem ? '#EEF1FD' : '#F9FAFB' }}
                                         >
                                             {isCollapsed ? (
                                                 <ChevronRight className="w-4 h-4 text-gray-400" />
                                             ) : (
                                                 <ChevronDown className="w-4 h-4 text-gray-400" />
                                             )}
-                                            <span className={`text-sm font-medium ${isActiveSem ? 'text-indigo-700' : 'text-gray-600'}`}>
+                                            <span className="text-xs font-medium" style={{ color: isActiveSem ? '#4F6FE8' : '#5A6A90' }}>
                                                 Semester {sem}
                                             </span>
                                             {isActiveSem && (
-                                                <span className="ml-1 px-2 py-0.5 text-[10px] font-bold bg-indigo-600 text-white rounded-full uppercase">Active</span>
+                                                <span className="ml-1 px-2 py-0.5 text-[10px] font-bold text-white rounded-full uppercase" style={{ background: '#4F6FE8' }}>Active</span>
                                             )}
                                             <span className="ml-auto text-xs text-gray-400">
                                                 {semCourses.length} courses
@@ -494,10 +627,11 @@ const CoursesTab = ({ courses, onCourseClick }) => {
                                     </div>
                                 );
                             })}
-                        </div>
-                    ))}
-                </div>
-            ))}
+                            </div>
+                        ))}
+                    </div>
+                );
+            })}
         </div>
     );
 };
@@ -505,24 +639,29 @@ const CoursesTab = ({ courses, onCourseClick }) => {
 const NotificationsTab = ({ notifications, formatTime, onItemClick }) => {
     if (!notifications || notifications.length === 0) {
         return (
-            <div className="text-center py-10 text-gray-500">
-                <Bell className="w-10 h-10 mx-auto mb-2 text-gray-300" />
-                <p className="font-medium">No notifications</p>
-                <p className="text-sm mt-1">You are all caught up!</p>
+            <div className="text-center py-8" style={{ color: '#8A96B8' }}>
+                <Bell className="w-8 h-8 mx-auto mb-2" style={{ color: '#C8D0E8' }} />
+                <p className="text-sm font-medium">No notifications</p>
+                <p className="text-xs mt-1">You are all caught up!</p>
             </div>
         );
     }
 
     return (
-        <div className="divide-y divide-gray-100">
+        <div className="divide-y" style={{ borderColor: '#F0F2F8' }}>
             {notifications.map(notif => (
-                <div key={notif.id} onClick={() => onItemClick?.(notif.moodlePath)} className={`py-3 px-2 flex gap-3 cursor-pointer hover:bg-gray-50 transition-colors rounded ${!notif.read ? 'bg-blue-50/50' : ''}`}>
-                    <div className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${!notif.read ? 'bg-blue-500' : 'bg-gray-300'}`} />
+                <div
+                    key={notif.id}
+                    onClick={() => onItemClick?.(notif.moodlePath)}
+                    className="py-2.5 flex gap-2.5 cursor-pointer rounded hover:bg-gray-50 transition-colors px-1"
+                    style={{ background: !notif.read ? '#F5F7FF' : undefined }}
+                >
+                    <div className="w-1.5 h-1.5 rounded-full mt-2 flex-shrink-0" style={{ background: !notif.read ? '#4F6FE8' : '#D0D5E8' }} />
                     <div className="flex-1 min-w-0">
-                        <p className={`text-sm ${!notif.read ? 'font-semibold text-gray-900' : 'text-gray-700'}`}>{notif.subject}</p>
-                        {notif.text && <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{notif.text}</p>}
+                        <p className="text-xs font-medium" style={{ color: !notif.read ? '#1A2B6B' : '#5A6A90' }}>{notif.subject}</p>
+                        {notif.text && <p className="text-[11px] mt-0.5 line-clamp-1" style={{ color: '#8A96B8' }}>{notif.text}</p>}
                     </div>
-                    <span className="text-[11px] text-gray-400 flex-shrink-0 whitespace-nowrap">{formatTime(notif.timecreated)}</span>
+                    <span className="text-[10px] flex-shrink-0 whitespace-nowrap mt-0.5" style={{ color: '#B0B8D0' }}>{formatTime(notif.timecreated)}</span>
                 </div>
             ))}
         </div>
@@ -532,32 +671,31 @@ const NotificationsTab = ({ notifications, formatTime, onItemClick }) => {
 const EventsTab = ({ events, formatDate, onItemClick }) => {
     if (!events || events.length === 0) {
         return (
-            <div className="text-center py-10 text-gray-500">
-                <Calendar className="w-10 h-10 mx-auto mb-2 text-gray-300" />
-                <p className="font-medium">No upcoming events</p>
-                <p className="text-sm mt-1">Your calendar is clear</p>
+            <div className="text-center py-8" style={{ color: '#8A96B8' }}>
+                <Calendar className="w-8 h-8 mx-auto mb-2" style={{ color: '#C8D0E8' }} />
+                <p className="text-sm font-medium">No upcoming events</p>
+                <p className="text-xs mt-1">Your calendar is clear</p>
             </div>
         );
     }
 
     return (
-        <div className="divide-y divide-gray-100">
+        <div className="divide-y" style={{ borderColor: '#F0F2F8' }}>
             {events.map(event => (
-                <div key={event.id} onClick={() => onItemClick?.(event.moodlePath)} className="py-3 px-2 flex items-start gap-3 cursor-pointer hover:bg-gray-50 transition-colors rounded">
-                    <div className="bg-indigo-100 text-indigo-700 rounded-lg px-2.5 py-1 text-center flex-shrink-0 min-w-[52px]">
-                        <p className="text-lg font-bold leading-tight">
+                <div key={event.id} onClick={() => onItemClick?.(event.moodlePath)} className="py-3 flex items-start gap-3 cursor-pointer hover:bg-gray-50 transition-colors rounded px-1">
+                    <div className="rounded-lg px-2 py-1 text-center flex-shrink-0 min-w-[44px]" style={{ background: '#EEF1FD' }}>
+                        <p className="text-base font-bold leading-tight" style={{ color: '#4F6FE8' }}>
                             {event.timestart ? new Date(event.timestart).getDate() : '-'}
                         </p>
-                        <p className="text-[10px] uppercase font-medium">
+                        <p className="text-[9px] uppercase font-semibold" style={{ color: '#8A96B8' }}>
                             {event.timestart ? new Date(event.timestart).toLocaleDateString('en-GB', { month: 'short' }) : ''}
                         </p>
                     </div>
                     <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-900">{event.name}</p>
-                        {event.coursename && <p className="text-xs text-gray-500 mt-0.5">{event.coursename}</p>}
-                        {event.description && <p className="text-xs text-gray-400 mt-0.5 line-clamp-1">{event.description}</p>}
+                        <p className="text-xs font-medium" style={{ color: '#1A2B6B' }}>{event.name}</p>
+                        {event.coursename && <p className="text-[11px] mt-0.5" style={{ color: '#8A96B8' }}>{event.coursename}</p>}
                     </div>
-                    <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded flex-shrink-0">{event.eventtype}</span>
+                    {event.eventtype && <span className="text-[10px] px-2 py-0.5 rounded flex-shrink-0 font-medium" style={{ background: '#F0F2F8', color: '#5A6A90' }}>{event.eventtype}</span>}
                 </div>
             ))}
         </div>
@@ -567,27 +705,27 @@ const EventsTab = ({ events, formatDate, onItemClick }) => {
 const AnnouncementsTab = ({ announcements, formatTime, onItemClick }) => {
     if (!announcements || announcements.length === 0) {
         return (
-            <div className="text-center py-10 text-gray-500">
-                <Megaphone className="w-10 h-10 mx-auto mb-2 text-gray-300" />
-                <p className="font-medium">No announcements</p>
-                <p className="text-sm mt-1">Check back later for updates</p>
+            <div className="text-center py-8" style={{ color: '#8A96B8' }}>
+                <Megaphone className="w-8 h-8 mx-auto mb-2" style={{ color: '#C8D0E8' }} />
+                <p className="text-sm font-medium">No announcements</p>
+                <p className="text-xs mt-1">Check back later for updates</p>
             </div>
         );
     }
 
     return (
-        <div className="divide-y divide-gray-100">
+        <div className="divide-y" style={{ borderColor: '#F0F2F8' }}>
             {announcements.map(ann => (
-                <div key={ann.id} onClick={() => onItemClick?.(ann.moodlePath)} className="py-3 px-2 cursor-pointer hover:bg-gray-50 transition-colors rounded">
+                <div key={ann.id} onClick={() => onItemClick?.(ann.moodlePath)} className="py-3 px-1 cursor-pointer hover:bg-gray-50 transition-colors rounded">
                     <div className="flex items-center gap-2 mb-1">
-                        <Megaphone className="w-3.5 h-3.5 text-amber-500" />
-                        <p className="text-sm font-semibold text-gray-900">{ann.subject}</p>
+                        <Megaphone className="w-3 h-3" style={{ color: '#D07020' }} />
+                        <p className="text-xs font-semibold" style={{ color: '#1A2B6B' }}>{ann.subject}</p>
                     </div>
-                    {ann.message && <p className="text-xs text-gray-600 line-clamp-2 ml-5">{ann.message}</p>}
-                    <div className="flex items-center gap-3 mt-1 ml-5">
-                        <span className="text-[11px] text-gray-400">{ann.coursename}</span>
-                        <span className="text-[11px] text-gray-400">by {ann.userfullname}</span>
-                        <span className="text-[11px] text-gray-400">{formatTime(ann.timemodified)}</span>
+                    {ann.message && <p className="text-[11px] line-clamp-2 ml-5" style={{ color: '#5A6A90' }}>{ann.message}</p>}
+                    <div className="flex items-center gap-2 mt-1 ml-5">
+                        {ann.coursename && <span className="text-[10px]" style={{ color: '#8A96B8' }}>{ann.coursename}</span>}
+                        {ann.userfullname && <span className="text-[10px]" style={{ color: '#8A96B8' }}>· {ann.userfullname}</span>}
+                        <span className="text-[10px] ml-auto" style={{ color: '#B0B8D0' }}>{formatTime(ann.timemodified)}</span>
                     </div>
                 </div>
             ))}

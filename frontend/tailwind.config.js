@@ -8,10 +8,10 @@ export default {
         extend: {
             colors: {
                 scl: {
-                    purple: '#6B46C1',
-                    dark: '#553399',
-                    light: '#8B5CF6',
-                    bg: '#F7F9FC',
+                    purple: '#4F6FE8',
+                    dark: '#1E2B4A',
+                    light: '#6B8EF0',
+                    bg: '#F0F4FF',
                     error: '#EF4444'
                 }
             }

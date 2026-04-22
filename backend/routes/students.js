@@ -10965,7 +10965,7 @@ router.get('/library/:id', async (req, res) => {
                     'resource' as type,
                     'PDF' as format
                 FROM mdl_resource r
-                JOIN mdl_course_modules cm ON cm.instance = r.id
+                JOIN mdl_course_modules cm ON cm.instance = r.id AND cm.course = r.course
                 JOIN mdl_modules m ON m.id = cm.module AND m.name = 'resource'
                 JOIN mdl_course c ON c.id = r.course
                 WHERE r.course IN (${placeholders}) AND cm.deletioninprogress = 0
@@ -10986,7 +10986,7 @@ router.get('/library/:id', async (req, res) => {
                     'url' as type,
                     'Link' as format
                 FROM mdl_url u
-                JOIN mdl_course_modules cm ON cm.instance = u.id
+                JOIN mdl_course_modules cm ON cm.instance = u.id AND cm.course = u.course
                 JOIN mdl_modules m ON m.id = cm.module AND m.name = 'url'
                 JOIN mdl_course c ON c.id = u.course
                 WHERE u.course IN (${placeholders}) AND cm.deletioninprogress = 0
