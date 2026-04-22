@@ -149,7 +149,7 @@ const StudentTimetable = ({ user }) => {
         switch (type) {
             case 'Lecture': return 'bg-blue-100 text-blue-700 border-blue-300';
             case 'Seminar': return 'bg-green-100 text-green-700 border-green-300';
-            case 'Workshop': return 'bg-purple-100 text-purple-700 border-purple-300';
+            case 'Workshop': return 'bg-blue-100 text-slate-700 border-blue-300';
             case 'Tutorial': return 'bg-orange-100 text-orange-700 border-orange-300';
             case 'Assignment': return 'bg-red-100 text-red-700 border-red-300';
             case 'Quiz': return 'bg-yellow-100 text-yellow-700 border-yellow-300';
@@ -324,3 +324,4 @@ const StudentTimetable = ({ user }) => {
 };
 
 export default StudentTimetable;
+

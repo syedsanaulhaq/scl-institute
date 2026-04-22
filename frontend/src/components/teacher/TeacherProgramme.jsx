@@ -84,7 +84,7 @@ const TeacherProgramme = ({ user }) => {
                             <h3 className="text-base font-bold text-gray-900 leading-tight">{course.name || course.course_title}</h3>
                             <p className="text-sm text-gray-600 mt-1">{course.code || course.course_code || 'N/A'}</p>
                             <div className="flex items-center gap-2 mt-2">
-                                <span className="text-xs px-2 py-1 rounded-full bg-purple-100 text-purple-700 font-medium">Teacher</span>
+                                <span className="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-700 font-medium">Teacher</span>
                             </div>
                             {course.description && (
                                 <p className="text-sm text-gray-500 mt-3 line-clamp-3">{course.description}</p>

@@ -59,7 +59,7 @@ const LmsEnrolments = () => {
                     </button>
                     <div>
                         <h1 className="text-2xl font-extrabold text-gray-900 flex items-center gap-2">
-                            <GraduationCap className="w-6 h-6 text-purple-600" /> LMS Course Enrolments
+                            <GraduationCap className="w-6 h-6 text-blue-600" /> LMS Course Enrolments
                         </h1>
                         <p className="text-sm text-gray-500 mt-0.5">All Moodle courses and their enrolment counts</p>
                     </div>
@@ -77,7 +77,7 @@ const LmsEnrolments = () => {
                 </div>
                 <div className="bg-white rounded-xl border border-gray-200 p-4">
                     <p className="text-sm text-gray-500">Total Enrolments</p>
-                    <p className="text-2xl font-extrabold text-purple-700">{totalEnrolments.toLocaleString()}</p>
+                    <p className="text-2xl font-extrabold text-blue-700">{totalEnrolments.toLocaleString()}</p>
                 </div>
                 <div className="bg-white rounded-xl border border-gray-200 p-4">
                     <p className="text-sm text-gray-500">Avg Enrolments/Course</p>
@@ -94,7 +94,7 @@ const LmsEnrolments = () => {
                         placeholder="Search courses..."
                         value={search}
                         onChange={e => setSearch(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                        className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     />
                 </div>
                 <select
@@ -112,7 +112,7 @@ const LmsEnrolments = () => {
             <div className="bg-white rounded-xl shadow border border-gray-100 overflow-hidden">
                 {loading ? (
                     <div className="flex items-center justify-center py-20">
-                        <RefreshCw className="w-6 h-6 text-purple-600 animate-spin" />
+                        <RefreshCw className="w-6 h-6 text-blue-600 animate-spin" />
                     </div>
                 ) : filtered.length === 0 ? (
                     <div className="text-center py-20 text-gray-400 text-sm">No courses found</div>
@@ -136,7 +136,7 @@ const LmsEnrolments = () => {
                                         <td className="py-3 px-4 font-medium text-gray-900">{course.shortname}</td>
                                         <td className="py-3 px-4 text-gray-700 max-w-xs truncate" title={course.fullname}>{course.fullname}</td>
                                         <td className="py-3 px-4 text-center">
-                                            <span className="inline-block bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-xs font-semibold">
+                                            <span className="inline-block bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs font-semibold">
                                                 {course.enrollments || 0}
                                             </span>
                                         </td>
@@ -168,3 +168,4 @@ const LmsEnrolments = () => {
 };
 
 export default LmsEnrolments;
+

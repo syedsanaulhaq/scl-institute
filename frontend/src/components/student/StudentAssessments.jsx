@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { FileText, Upload, CheckCircle, Clock, AlertTriangle } from 'lucide-react';
 import axios from 'axios';
 import { openMoodleSSO } from '../../utils/ssoService';
@@ -151,7 +151,7 @@ const StudentAssessments = ({ user }) => {
                         <select
                             value={filterYear}
                             onChange={e => setFilterYear(e.target.value)}
-                            className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                            className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         >
                             <option value="">All Years</option>
                             {uniqueYears.map(y => <option key={y} value={y}>{y}</option>)}
@@ -163,7 +163,7 @@ const StudentAssessments = ({ user }) => {
                             value={filterSemester}
                             onChange={e => setFilterSemester(e.target.value)}
                             disabled={!filterYear}
-                            className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                            className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
                         >
                             <option value="">All Semesters</option>
                             {uniqueSemesters.map(s => <option key={s} value={s}>{s}</option>)}
@@ -218,7 +218,7 @@ const StudentAssessments = ({ user }) => {
                                                 <h3 className="text-lg font-semibold text-gray-900">{assessment.title}</h3>
                                             </div>
                                             <p className="text-sm text-gray-600 mb-2">
-                                                {assessment.courseCode && <span className="text-purple-600 font-semibold">{assessment.courseCode} - </span>}
+                                                {assessment.courseCode && <span className="text-slate-700 font-semibold">{assessment.courseCode} - </span>}
                                                 {assessment.module} - {assessment.code}
                                             </p>
                                             <p className="text-sm text-gray-600">Type: <span className="font-medium">{assessment.type}</span></p>
@@ -278,7 +278,7 @@ const StudentAssessments = ({ user }) => {
                                             <h3 className="text-lg font-semibold text-gray-900">{assessment.title}</h3>
                                         </div>
                                         <p className="text-sm text-gray-600 mb-2">
-                                            {assessment.courseCode && <span className="text-purple-600 font-semibold">{assessment.courseCode} - </span>}
+                                            {assessment.courseCode && <span className="text-slate-700 font-semibold">{assessment.courseCode} - </span>}
                                             {assessment.module} - {assessment.code}
                                         </p>
                                         <p className="text-sm text-gray-600">Type: <span className="font-medium">{assessment.type}</span></p>
@@ -320,4 +320,6 @@ const StudentAssessments = ({ user }) => {
 };
 
 export default StudentAssessments;
+
+
 

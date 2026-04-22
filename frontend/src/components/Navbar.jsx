@@ -36,7 +36,7 @@ const Navbar = ({ user, onLogout }) => {
             <div className="flex items-center space-x-6">
                 <Link
                     to="/student/notifications"
-                    className="relative p-2 text-gray-400 hover:text-scl-purple hover:bg-purple-50 rounded-xl transition-all"
+                    className="relative p-2 text-gray-400 hover:text-scl-purple hover:bg-blue-50 rounded-xl transition-all"
                 >
                     <Notifications />
                 </Link>
@@ -95,3 +95,4 @@ const Navbar = ({ user, onLogout }) => {
 };
 
 export default Navbar;
+

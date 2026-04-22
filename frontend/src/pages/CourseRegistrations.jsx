@@ -1185,7 +1185,7 @@ const CourseRegistrations = () => {
                                                     <td className="px-3 py-2 text-sm text-gray-700">{item.cohort_label || '-'}</td>
                                                     <td className="px-3 py-2 text-sm">
                                                         {item.intake_id ? (
-                                                            <span className="text-xs px-2 py-1 rounded-full bg-purple-100 text-purple-800 font-semibold" title={`Linked to programme intake #${item.intake_id}`}>
+                                                            <span className="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-800 font-semibold" title={`Linked to programme intake #${item.intake_id}`}>
                                                                 Intake #{item.intake_id}
                                                             </span>
                                                         ) : (
@@ -1247,3 +1247,4 @@ const CourseRegistrations = () => {
 };
 
 export default CourseRegistrations;
+

@@ -672,16 +672,16 @@ const StudentAdmissions = ({ user, initialTab }) => {
                     {applicationData?.application_status === 'accepted' ? (
                         <div className="space-y-6">
                             {/* Offer Letter */}
-                            <div className="p-6 bg-gradient-to-r from-purple-50 to-purple-100 border border-purple-200 rounded-lg">
+                            <div className="p-6 bg-gradient-to-r from-blue-50 to-blue-100 border border-slate-200 rounded-lg">
                                 <div className="flex items-start gap-4">
-                                    <Award className="w-8 h-8 text-purple-600 flex-shrink-0" />
+                                    <Award className="w-8 h-8 text-slate-700 flex-shrink-0" />
                                     <div>
-                                        <h3 className="text-lg font-bold text-purple-900 mb-2">Your Offer Letter</h3>
-                                        <p className="text-purple-800 mb-4">Congratulations on receiving an offer to study with us! Please review and accept your offer below.</p>
+                                        <h3 className="text-lg font-bold text-slate-900 mb-2">Your Offer Letter</h3>
+                                        <p className="text-slate-800 mb-4">Congratulations on receiving an offer to study with us! Please review and accept your offer below.</p>
                                         <button
                                             onClick={handleDownloadOffer}
                                             disabled={downloadingOffer}
-                                            className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-60"
+                                            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-60"
                                         >
                                             <Download className="w-4 h-4" />
                                             {downloadingOffer ? 'Downloading...' : 'Download Offer Letter'}
@@ -1179,3 +1179,7 @@ const StudentAdmissions = ({ user, initialTab }) => {
 };
 
 export default StudentAdmissions;
+
+
+
+

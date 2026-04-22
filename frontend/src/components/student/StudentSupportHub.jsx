@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { AlertTriangle, MessageSquare, FileText, Scale, Accessibility, Shield, Plus, Send, Upload, Clock, CheckCircle } from 'lucide-react';
 import axios from 'axios';
 
@@ -376,7 +376,7 @@ const StudentSupportHub = ({ user }) => {
                 <div className="space-y-6">
                     <button
                         onClick={() => setShowFeedbackForm(!showFeedbackForm)}
-                        className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center gap-2"
+                        className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
                     >
                         <Plus className="w-5 h-5" /> Submit Feedback
                     </button>
@@ -434,14 +434,14 @@ const StudentSupportHub = ({ user }) => {
                                                     className="text-4xl transition-all hover:scale-125 cursor-pointer"
                                                 >
                                                     {star <= feedbackForm.rating ? (
-                                                        <span className="text-yellow-400">â˜…</span>
+                                                        <span className="text-yellow-400">★</span>
                                                     ) : (
-                                                        <span className="text-gray-300">â˜†</span>
+                                                        <span className="text-gray-300">☆</span>
                                                     )}
                                                 </button>
                                             ))}
                                         </div>
-                                        <span className="text-lg font-bold text-purple-600 min-w-fit">{feedbackForm.rating || 0} / 5</span>
+                                        <span className="text-lg font-bold text-slate-700 min-w-fit">{feedbackForm.rating || 0} / 5</span>
                                     </div>
                                 </div>
                                 <textarea
@@ -451,7 +451,7 @@ const StudentSupportHub = ({ user }) => {
                                     className="w-full px-4 py-2 border rounded mb-4 h-24"
                                 ></textarea>
                                 <div className="flex gap-3">
-                                    <button type="submit" className="px-6 py-2 bg-purple-600 text-white rounded hover:bg-purple-700">Submit Feedback</button>
+                                    <button type="submit" className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Submit Feedback</button>
                                     <button
                                         type="button"
                                         onClick={() => setShowFeedbackForm(false)}
@@ -465,7 +465,7 @@ const StudentSupportHub = ({ user }) => {
                     )}
 
                     <div className="bg-white rounded-lg shadow overflow-hidden">
-                        <h3 className="text-lg font-bold p-4 bg-purple-50 border-b">My Feedback History</h3>
+                        <h3 className="text-lg font-bold p-4 bg-blue-50 border-b">My Feedback History</h3>
                         {feedback.length === 0 ? (
                             <p className="p-6 text-gray-600 text-center">No feedback submitted yet</p>
                         ) : (
@@ -487,7 +487,7 @@ const StudentSupportHub = ({ user }) => {
                                                     <span className="font-medium text-gray-900">{fb.module_code || 'N/A'}</span>
                                                 </td>
                                                 <td className="px-4 py-3">
-                                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-slate-800">
                                                         {fb.feedback_type}
                                                     </span>
                                                 </td>
@@ -495,7 +495,7 @@ const StudentSupportHub = ({ user }) => {
                                                     <div className="flex items-center justify-center gap-1">
                                                         {[1, 2, 3, 4, 5].map(star => (
                                                             <span key={star} className={`${star <= fb.rating ? 'text-yellow-400' : 'text-gray-300'}`}>
-                                                                {star <= fb.rating ? 'â—' : 'â—‹'}
+                                                                {star <= fb.rating ? '●' : '○'}
                                                             </span>
                                                         ))}
                                                         <span className="ml-2 text-sm font-semibold text-gray-700">{fb.rating}/5</span>
@@ -745,4 +745,7 @@ const StudentSupportHub = ({ user }) => {
 };
 
 export default StudentSupportHub;
+
+
+
 

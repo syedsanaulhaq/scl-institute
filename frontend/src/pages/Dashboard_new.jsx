@@ -137,7 +137,7 @@ const Dashboard = () => {
         return (
             <div className="min-h-screen bg-gray-50 flex items-center justify-center">
                 <div className="flex items-center space-x-2">
-                    <Loader2 className="h-8 w-8 animate-spin text-purple-600" />
+                    <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
                     <span className="text-lg text-gray-600">Loading dashboard...</span>
                 </div>
             </div>
@@ -152,7 +152,7 @@ const Dashboard = () => {
                     <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-4">
                             <div className="flex items-center space-x-2">
-                                <GraduationCap className="h-8 w-8 text-purple-600" />
+                                <GraduationCap className="h-8 w-8 text-blue-600" />
                                 <span className="text-xl font-bold text-gray-800">SCL Institute</span>
                             </div>
                             <span className="text-gray-400">|</span>
@@ -229,9 +229,9 @@ const Dashboard = () => {
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-sm font-medium text-gray-600">Enquiries</p>
-                                <p className="text-3xl font-bold text-purple-600">{stats.enquiries}</p>
+                                <p className="text-3xl font-bold text-blue-600">{stats.enquiries}</p>
                             </div>
-                            <Mail className="h-8 w-8 text-purple-600" />
+                            <Mail className="h-8 w-8 text-blue-600" />
                         </div>
                     </div>
                     
@@ -264,7 +264,7 @@ const Dashboard = () => {
                     >
                         <div className="flex items-center justify-between mb-4">
                             <h3 className="font-bold text-gray-800">Manage Applications</h3>
-                            <FileText className="h-6 w-6 text-purple-600" />
+                            <FileText className="h-6 w-6 text-blue-600" />
                         </div>
                         <p className="text-gray-600 text-sm">Review and process student applications</p>
                     </button>
@@ -312,7 +312,7 @@ const Dashboard = () => {
                                 <h2 className="text-lg font-bold text-gray-800">Recent Applications</h2>
                                 <button 
                                     onClick={() => navigate('/admin/applications')}
-                                    className="text-purple-600 hover:text-purple-700 text-sm font-medium"
+                                    className="text-blue-600 hover:text-blue-700 text-sm font-medium"
                                 >
                                     View All
                                 </button>
@@ -324,8 +324,8 @@ const Dashboard = () => {
                                 <div className="space-y-4">
                                     {recentApplications.map((application) => (
                                         <div key={application.id} className="flex items-start space-x-4 p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
-                                            <div className="h-10 w-10 rounded-full bg-purple-100 flex items-center justify-center">
-                                                <Users className="h-5 w-5 text-purple-600" />
+                                            <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
+                                                <Users className="h-5 w-5 text-blue-600" />
                                             </div>
                                             <div className="flex-1 min-w-0">
                                                 <p className="font-medium text-gray-800">
@@ -358,7 +358,7 @@ const Dashboard = () => {
                                 <h2 className="text-lg font-bold text-gray-800">Recent Enquiries</h2>
                                 <button 
                                     onClick={() => navigate('/admin/enquiries')}
-                                    className="text-purple-600 hover:text-purple-700 text-sm font-medium"
+                                    className="text-blue-600 hover:text-blue-700 text-sm font-medium"
                                 >
                                     View All
                                 </button>

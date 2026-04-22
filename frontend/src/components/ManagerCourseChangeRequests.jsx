@@ -198,7 +198,7 @@ const ManagerCourseChangeRequests = () => {
             'Approved': { label: 'Approved', style: 'bg-green-100 text-green-800', icon: CheckCircle2 },
             'Approved with Conditions': { label: 'Approved (Conditions)', style: 'bg-blue-100 text-blue-800', icon: CheckCircle2 },
             'Rejected': { label: 'Rejected', style: 'bg-red-100 text-red-800', icon: XCircle },
-            'Request More Information': { label: 'More Info Requested', style: 'bg-purple-100 text-purple-800', icon: AlertCircle }
+            'Request More Information': { label: 'More Info Requested', style: 'bg-blue-100 text-blue-800', icon: AlertCircle }
         };
         return map[decision] || { label: decision, style: 'bg-gray-100 text-gray-800', icon: FileText };
     };
@@ -622,3 +622,4 @@ const ManagerCourseChangeRequests = () => {
 };
 
 export default ManagerCourseChangeRequests;
+

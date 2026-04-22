@@ -1,4 +1,4 @@
-﻿import { useState } from 'react';
+import { useState } from 'react';
 import { DollarSign, CreditCard, FileText, Download, Clock, CheckCircle } from 'lucide-react';
 
 const StudentFees = () => {
@@ -69,10 +69,10 @@ const StudentFees = () => {
                 </div>
                 <div className="bg-white rounded-lg shadow p-6">
                     <div className="flex items-center gap-3 mb-2">
-                        <CreditCard className="w-8 h-8 text-purple-600" />
+                        <CreditCard className="w-8 h-8 text-slate-700" />
                         <p className="text-sm text-gray-600">Next Payment</p>
                     </div>
-                    <p className="text-2xl font-bold text-purple-600">GBP {feeAccount.nextPayment.toLocaleString()}</p>
+                    <p className="text-2xl font-bold text-slate-700">GBP {feeAccount.nextPayment.toLocaleString()}</p>
                     <p className="text-xs text-gray-500 mt-1">Due: {new Date(feeAccount.nextPaymentDate).toLocaleDateString('en-GB')}</p>
                 </div>
             </div>
@@ -147,7 +147,7 @@ const StudentFees = () => {
                                 </div>
                             </div>
                             <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg border cursor-pointer hover:border-blue-500">
-                                <FileText className="w-6 h-6 text-purple-600" />
+                                <FileText className="w-6 h-6 text-slate-700" />
                                 <div className="flex-1">
                                     <p className="font-medium text-gray-900">Payment Plan</p>
                                     <p className="text-sm text-gray-600">Arrange an installment plan</p>

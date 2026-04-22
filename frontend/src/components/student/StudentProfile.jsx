@@ -413,7 +413,7 @@ const StudentProfile = ({ user }) => {
             {/* Profile Card */}
             <div className="bg-white rounded-lg shadow mb-6">
                 {/* Header Section with Avatar */}
-                <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-8 rounded-t-lg">
+                <div className="bg-gradient-to-r from-blue-600 to-blue-700 p-8 rounded-t-lg">
                     <div className="flex items-center gap-6">
                         <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center shadow-lg">
                             <User className="w-12 h-12 text-blue-600" />

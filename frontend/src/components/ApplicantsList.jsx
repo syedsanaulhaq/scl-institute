@@ -68,7 +68,7 @@ const ApplicantsList = () => {
             'approved': 'bg-green-100 text-green-800',
             'accepted': 'bg-green-100 text-green-800',
             'rejected': 'bg-red-100 text-red-800',
-            'conditional_accept': 'bg-purple-100 text-purple-800'
+            'conditional_accept': 'bg-blue-100 text-blue-800'
         };
         return styles[status] || 'bg-gray-100 text-gray-800';
     };
@@ -252,3 +252,4 @@ const ApplicantsList = () => {
 };
 
 export default ApplicantsList;
+

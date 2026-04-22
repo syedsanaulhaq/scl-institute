@@ -100,7 +100,7 @@ const ContactForm = () => {
                             enquiry_type: 'general'
                         });
                     }}
-                    className="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700"
+                    className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700"
                 >
                     Send Another Message
                 </button>
@@ -124,7 +124,7 @@ const ContactForm = () => {
                             
                             <div className="space-y-6">
                                 <div className="flex items-start space-x-4">
-                                    <Mail className="h-6 w-6 text-purple-600 mt-1" />
+                                    <Mail className="h-6 w-6 text-blue-600 mt-1" />
                                     <div>
                                         <h4 className="font-medium text-gray-800">Email</h4>
                                         <p className="text-gray-600">admissions@sclinstitute.ac.uk</p>
@@ -133,7 +133,7 @@ const ContactForm = () => {
                                 </div>
                                 
                                 <div className="flex items-start space-x-4">
-                                    <Phone className="h-6 w-6 text-purple-600 mt-1" />
+                                    <Phone className="h-6 w-6 text-blue-600 mt-1" />
                                     <div>
                                         <h4 className="font-medium text-gray-800">Phone</h4>
                                         <p className="text-gray-600">+44 20 7946 0958</p>
@@ -142,7 +142,7 @@ const ContactForm = () => {
                                 </div>
                                 
                                 <div className="flex items-start space-x-4">
-                                    <MapPin className="h-6 w-6 text-purple-600 mt-1" />
+                                    <MapPin className="h-6 w-6 text-blue-600 mt-1" />
                                     <div>
                                         <h4 className="font-medium text-gray-800">Address</h4>
                                         <p className="text-gray-600">
@@ -187,7 +187,7 @@ const ContactForm = () => {
                                     name="name"
                                     value={formData.name}
                                     onChange={handleInputChange}
-                                    className={`w-full px-4 py-2 border rounded-lg focus:ring-purple-500 focus:border-purple-500 ${
+                                    className={`w-full px-4 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500 ${
                                         errors.name ? 'border-red-500' : 'border-gray-300'
                                     }`}
                                     placeholder="Enter your full name"
@@ -207,7 +207,7 @@ const ContactForm = () => {
                                         name="email"
                                         value={formData.email}
                                         onChange={handleInputChange}
-                                        className={`w-full px-4 py-2 border rounded-lg focus:ring-purple-500 focus:border-purple-500 ${
+                                        className={`w-full px-4 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500 ${
                                             errors.email ? 'border-red-500' : 'border-gray-300'
                                         }`}
                                         placeholder="your.email@example.com"
@@ -226,7 +226,7 @@ const ContactForm = () => {
                                         name="phone"
                                         value={formData.phone}
                                         onChange={handleInputChange}
-                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-purple-500 focus:border-purple-500"
+                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
                                         placeholder="Your phone number"
                                     />
                                 </div>
@@ -240,7 +240,7 @@ const ContactForm = () => {
                                     name="enquiry_type"
                                     value={formData.enquiry_type}
                                     onChange={handleInputChange}
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-purple-500 focus:border-purple-500"
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
                                 >
                                     <option value="general">General Enquiry</option>
                                     <option value="admissions">Admissions</option>
@@ -259,7 +259,7 @@ const ContactForm = () => {
                                     name="subject"
                                     value={formData.subject}
                                     onChange={handleInputChange}
-                                    className={`w-full px-4 py-2 border rounded-lg focus:ring-purple-500 focus:border-purple-500 ${
+                                    className={`w-full px-4 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500 ${
                                         errors.subject ? 'border-red-500' : 'border-gray-300'
                                     }`}
                                     placeholder="Brief subject of your enquiry"
@@ -278,7 +278,7 @@ const ContactForm = () => {
                                     value={formData.message}
                                     onChange={handleInputChange}
                                     rows={6}
-                                    className={`w-full px-4 py-2 border rounded-lg focus:ring-purple-500 focus:border-purple-500 ${
+                                    className={`w-full px-4 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500 ${
                                         errors.message ? 'border-red-500' : 'border-gray-300'
                                     }`}
                                     placeholder="Please provide details about your enquiry..."
@@ -294,7 +294,7 @@ const ContactForm = () => {
                             <button
                                 type="submit"
                                 disabled={loading}
-                                className="w-full bg-purple-600 text-white py-3 rounded-lg hover:bg-purple-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                                className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-purple-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
                             >
                                 {loading ? (
                                     <>

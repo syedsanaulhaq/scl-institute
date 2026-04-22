@@ -313,11 +313,11 @@ const StudentAttendance = ({ user }) => {
                                         <div className="text-sm text-blue-700 mt-1">Excused</div>
                                     </div>
                                     
-                                    <div className="bg-purple-50 rounded-lg p-4 border border-purple-200">
-                                        <div className="text-2xl font-bold text-purple-600">
+                                    <div className="bg-blue-50 rounded-lg p-4 border border-slate-200">
+                                        <div className="text-2xl font-bold text-slate-700">
                                             {selectedCourse.summary.attendanceRate}%
                                         </div>
-                                        <div className="text-sm text-purple-700 mt-1">Rate</div>
+                                        <div className="text-sm text-slate-700 mt-1">Rate</div>
                                     </div>
                                 </div>
                             ) : (
@@ -391,3 +391,4 @@ const StudentAttendance = ({ user }) => {
 };
 
 export default StudentAttendance;
+

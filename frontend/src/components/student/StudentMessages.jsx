@@ -1,4 +1,4 @@
-﻿import { useState } from 'react';
+import { useState } from 'react';
 import { Mail, Send, Inbox, Archive, Bell } from 'lucide-react';
 
 const StudentMessages = () => {
@@ -215,8 +215,8 @@ const StudentMessages = () => {
                             <p className="text-xs text-gray-600">Get help from student services</p>
                         </div>
                     </button>
-                    <button className="flex items-center gap-3 p-4 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors">
-                        <Archive className="w-6 h-6 text-purple-600" />
+                    <button className="flex items-center gap-3 p-4 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors">
+                        <Archive className="w-6 h-6 text-slate-700" />
                         <div className="text-left">
                             <p className="font-semibold text-gray-900">Archive</p>
                             <p className="text-xs text-gray-600">View archived messages</p>

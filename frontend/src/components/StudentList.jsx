@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { 
     Search, 
     Filter, 
@@ -306,7 +306,7 @@ const StudentList = () => {
                                                     e.stopPropagation();
                                                     handleViewStudent(student.id);
                                                 }}
-                                                className="p-2 text-gray-400 hover:text-scl-purple hover:bg-purple-50 rounded-lg transition-colors"
+                                                className="p-2 text-gray-400 hover:text-scl-purple hover:bg-blue-50 rounded-lg transition-colors"
                                                 title="View Details"
                                             >
                                                 <Eye className="w-4 h-4" />
@@ -404,3 +404,4 @@ const StudentList = () => {
 };
 
 export default StudentList;
+

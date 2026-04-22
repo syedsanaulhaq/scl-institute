@@ -740,7 +740,7 @@ const CourseVisitsDetail = () => {
                 })}
 
                 <div className="sticky bottom-0 bg-white border-t border-gray-200 px-6 py-4 flex items-center justify-end gap-3">
-                    <button onClick={fillTestData} type="button" className="px-4 py-2 border border-purple-200 bg-purple-50 text-purple-700 rounded-lg hover:bg-purple-100 font-semibold">
+                    <button onClick={fillTestData} type="button" className="px-4 py-2 border border-blue-200 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 font-semibold">
                         Fill Test Data
                     </button>
                     <button onClick={() => navigate('/course-visits')} className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-semibold">
@@ -756,3 +756,4 @@ const CourseVisitsDetail = () => {
 };
 
 export default CourseVisitsDetail;
+

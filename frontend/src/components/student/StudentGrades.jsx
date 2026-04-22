@@ -149,7 +149,7 @@ const StudentGrades = ({ user }) => {
                         <select
                             value={filterYear}
                             onChange={e => setFilterYear(e.target.value)}
-                            className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                            className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         >
                             <option value="">All Years</option>
                             {uniqueYears.map(y => <option key={y} value={y}>{y}</option>)}
@@ -161,7 +161,7 @@ const StudentGrades = ({ user }) => {
                             value={filterSemester}
                             onChange={e => setFilterSemester(e.target.value)}
                             disabled={!filterYear}
-                            className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                            className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
                         >
                             <option value="">All Semesters</option>
                             {uniqueSemesters.map(s => <option key={s} value={s}>{s}</option>)}
@@ -195,7 +195,7 @@ const StudentGrades = ({ user }) => {
                             </div>
                             <div className="w-full bg-gray-200 rounded-full h-4">
                                 <div
-                                    className="bg-gradient-to-r from-blue-500 via-purple-500 to-green-500 h-4 rounded-full transition-all duration-500"
+                                    className="bg-gradient-to-r from-blue-500 via-blue-500 to-green-500 h-4 rounded-full transition-all duration-500"
                                     style={{ width: `${filteredSummary.percentage || 0}%` }}
                                 ></div>
                             </div>
@@ -281,7 +281,7 @@ const StudentGrades = ({ user }) => {
                                 className="border rounded-lg p-4 hover:shadow-md transition cursor-pointer"
                                 onClick={() => handleViewInMoodle(cg.courseId ? `/course/view.php?id=${cg.courseId}` : null)}
                             >
-                                <p className="text-xs font-semibold text-purple-600 mb-1">{cg.courseCode}</p>
+                                <p className="text-xs font-semibold text-slate-700 mb-1">{cg.courseCode}</p>
                                 <p className="text-sm font-medium text-gray-900 mb-3 line-clamp-2">{cg.courseName}</p>
                                 <div className="flex items-end justify-between">
                                     <div>
@@ -341,7 +341,7 @@ const StudentGrades = ({ user }) => {
                                 {filteredGrades.map(grade => (
                                     <tr key={grade.id} className="hover:bg-gray-50 transition">
                                         <td className="px-4 py-4">
-                                            <p className="text-xs font-semibold text-purple-600">{grade.courseCode}</p>
+                                            <p className="text-xs font-semibold text-slate-700">{grade.courseCode}</p>
                                             <p className="text-xs text-gray-500 line-clamp-1">{grade.courseName}</p>
                                         </td>
                                         <td className="px-4 py-4">
@@ -382,3 +382,6 @@ const StudentGrades = ({ user }) => {
 };
 
 export default StudentGrades;
+
+
+

@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import {
@@ -275,7 +275,7 @@ const AdminDashboard = ({ user }) => {
                     <button
                         onClick={handleManualRoleSync}
                         disabled={syncingRoles}
-                        className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-60 disabled:cursor-not-allowed rounded-lg transition-colors"
+                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white hover:bg-purple-700 disabled:opacity-60 disabled:cursor-not-allowed rounded-lg transition-colors"
                     >
                         <RefreshCw className={`w-4 h-4 ${syncingRoles ? 'animate-spin' : ''}`} />
                         {syncingRoles ? 'Syncing Roles...' : 'Sync Moodle Roles'}
@@ -487,4 +487,5 @@ const AdminDashboard = ({ user }) => {
 };
 
 export default AdminDashboard;
+
 

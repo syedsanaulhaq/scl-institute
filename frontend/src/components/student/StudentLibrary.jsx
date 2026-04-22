@@ -92,7 +92,7 @@ const StudentLibrary = ({ user }) => {
     const getTypeColor = (type) => {
         switch (type) {
             case 'ebooks':
-                return 'bg-purple-50 text-purple-700 border-purple-200';
+                return 'bg-blue-50 text-slate-700 border-slate-200';
             case 'articles':
                 return 'bg-blue-50 text-blue-700 border-blue-200';
             case 'links':
@@ -297,11 +297,11 @@ const StudentLibrary = ({ user }) => {
             {/* Overall Stats */}
             {resources.length > 0 && (
                 <div className="mt-12 grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg p-4 border border-purple-200">
-                        <div className="text-2xl font-bold text-purple-600">
+                    <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-4 border border-slate-200">
+                        <div className="text-2xl font-bold text-slate-700">
                             {resources.filter(r => r.type === 'ebooks').length}
                         </div>
-                        <div className="text-sm text-purple-700 mt-1">E-Books</div>
+                        <div className="text-sm text-slate-700 mt-1">E-Books</div>
                     </div>
                     
                     <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-4 border border-blue-200">
@@ -331,3 +331,4 @@ const StudentLibrary = ({ user }) => {
 };
 
 export default StudentLibrary;
+

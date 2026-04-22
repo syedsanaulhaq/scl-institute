@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Users, 
@@ -136,7 +136,7 @@ const StudentDashboard = () => {
       'under_review': 'bg-yellow-100 text-yellow-800 border-yellow-200',
       'pending': 'bg-gray-100 text-gray-800 border-gray-200',
       'interview_scheduled': 'bg-blue-100 text-blue-800 border-blue-200',
-      'conditional_accept': 'bg-purple-100 text-purple-800 border-purple-200'
+      'conditional_accept': 'bg-blue-100 text-blue-800 border-blue-200'
     };
     return statusColors[status] || statusColors['pending'];
   };
@@ -280,7 +280,7 @@ const StudentDashboard = () => {
                               onClose();
                               handleViewStudent(student.id);
                             }}
-                            className="flex items-center text-scl-purple hover:text-purple-700 text-sm font-medium"
+                            className="flex items-center text-scl-purple hover:text-blue-700 text-sm font-medium"
                           >
                             <Eye className="w-4 h-4 mr-1" />
                             View
@@ -540,7 +540,7 @@ const StudentDashboard = () => {
                             e.stopPropagation();
                             handleViewStudent(application.studentId);
                           }}
-                          className="flex items-center text-scl-purple hover:text-purple-700 hover:bg-purple-50 px-2 py-1 rounded transition-colors"
+                          className="flex items-center text-scl-purple hover:text-blue-700 hover:bg-blue-50 px-2 py-1 rounded transition-colors"
                           title="View Details"
                         >
                           <Eye className="w-3 h-3 mr-1" />
@@ -589,3 +589,4 @@ const StudentDashboard = () => {
 };
 
 export default StudentDashboard;
+

@@ -1,4 +1,4 @@
-﻿import { useState } from 'react';
+import { useState } from 'react';
 import { HelpCircle, Send, Clock, CheckCircle, MessageSquare, Phone, Mail, FileText } from 'lucide-react';
 
 const StudentSupport = () => {
@@ -38,12 +38,12 @@ const StudentSupport = () => {
     ];
 
     const supportCategories = [
-        { name: 'IT Support', icon: 'ðŸ’»', description: 'Technical issues, LMS access, login problems' },
-        { name: 'Academic', icon: 'ðŸ“š', description: 'Academic advising, extensions, module queries' },
-        { name: 'Finance', icon: 'ðŸ’³', description: 'Fee payments, invoices, financial support' },
-        { name: 'Student Services', icon: 'ðŸŽ“', description: 'General enquiries, certificates, documentation' },
-        { name: 'Wellbeing', icon: 'ðŸ’š', description: 'Mental health support, counseling, wellbeing' },
-        { name: 'Accommodation', icon: 'ðŸ ', description: 'Housing support and accommodation queries' }
+        { name: 'IT Support', icon: '💻', description: 'Technical issues, LMS access, login problems' },
+        { name: 'Academic', icon: '📚', description: 'Academic advising, extensions, module queries' },
+        { name: 'Finance', icon: '💳', description: 'Fee payments, invoices, financial support' },
+        { name: 'Student Services', icon: '🎓', description: 'General enquiries, certificates, documentation' },
+        { name: 'Wellbeing', icon: '💚', description: 'Mental health support, counseling, wellbeing' },
+        { name: 'Accommodation', icon: '🏠', description: 'Housing support and accommodation queries' }
     ];
 
     const getStatusBadge = (status) => {
@@ -99,10 +99,10 @@ const StudentSupport = () => {
                     <p className="text-xs text-gray-500">Response within 24 hours</p>
                 </div>
                 <div className="bg-white rounded-lg shadow p-6">
-                    <MessageSquare className="w-8 h-8 text-purple-600 mb-3" />
+                    <MessageSquare className="w-8 h-8 text-slate-700 mb-3" />
                     <h3 className="font-semibold text-gray-900 mb-1">Live Chat</h3>
                     <p className="text-sm text-gray-600 mb-2">Chat with our team</p>
-                    <button className="text-xs text-purple-600 hover:text-purple-700 font-medium">Start Chat -></button>
+                    <button className="text-xs text-slate-700 hover:text-slate-700 font-medium">Start Chat -></button>
                 </div>
             </div>
 
@@ -268,4 +268,5 @@ const StudentSupport = () => {
 };
 
 export default StudentSupport;
+
 

@@ -282,7 +282,7 @@ const CourseMasterDetail = () => {
                   <button
                     type="button"
                     onClick={() => { setModal('type'); setModalInput(''); }}
-                    className="w-6 h-6 bg-purple-600 text-white rounded-full hover:bg-purple-700 flex items-center justify-center text-sm font-bold"
+                    className="w-6 h-6 bg-blue-600 text-white rounded-full hover:bg-purple-700 flex items-center justify-center text-sm font-bold"
                     title="Add new Programme Type"
                   >+</button>
                 </div>
@@ -309,7 +309,7 @@ const CourseMasterDetail = () => {
                     type="button"
                     onClick={() => { setModal('program'); setModalInput(''); }}
                     disabled={!selectedTypeId}
-                    className="w-6 h-6 bg-purple-600 text-white rounded-full hover:bg-purple-700 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center text-sm font-bold"
+                    className="w-6 h-6 bg-blue-600 text-white rounded-full hover:bg-purple-700 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center text-sm font-bold"
                     title="Add new Program"
                   >+</button>
                 </div>
@@ -337,7 +337,7 @@ const CourseMasterDetail = () => {
                     type="button"
                     onClick={() => { setModal('year'); setModalInput(''); }}
                     disabled={!selectedProgramId}
-                    className="w-6 h-6 bg-purple-600 text-white rounded-full hover:bg-purple-700 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center text-sm font-bold"
+                    className="w-6 h-6 bg-blue-600 text-white rounded-full hover:bg-purple-700 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center text-sm font-bold"
                     title="Add new Year"
                   >+</button>
                 </div>
@@ -364,7 +364,7 @@ const CourseMasterDetail = () => {
                     type="button"
                     onClick={() => { setModal('semester'); setModalInput(''); }}
                     disabled={!selectedYearId}
-                    className="w-6 h-6 bg-purple-600 text-white rounded-full hover:bg-purple-700 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center text-sm font-bold"
+                    className="w-6 h-6 bg-blue-600 text-white rounded-full hover:bg-purple-700 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center text-sm font-bold"
                     title="Add new Semester"
                   >+</button>
                 </div>
@@ -445,7 +445,7 @@ const CourseMasterDetail = () => {
           <button
             onClick={handleSaveCourse}
             disabled={saving || !selectedSemesterId || !formData.course_title.trim()}
-            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-purple-700 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {saving ? 'Saving...' : 'Save Course'}
           </button>
@@ -486,7 +486,7 @@ const CourseMasterDetail = () => {
                 type="button"
                 onClick={handleCreateCategory}
                 disabled={modalLoading || !modalInput.trim()}
-                className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {modalLoading ? 'Creating...' : 'Create'}
               </button>
@@ -499,3 +499,4 @@ const CourseMasterDetail = () => {
 };
 
 export default CourseMasterDetail;
+

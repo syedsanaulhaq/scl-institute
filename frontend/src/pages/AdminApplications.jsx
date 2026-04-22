@@ -174,7 +174,7 @@ const AdminApplications = () => {
         return (
             <div className="min-h-screen bg-gray-50 flex items-center justify-center">
                 <div className="flex items-center space-x-2">
-                    <Loader2 className="h-8 w-8 animate-spin text-purple-600" />
+                    <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
                     <span className="text-lg text-gray-600">Loading applications...</span>
                 </div>
             </div>
@@ -189,7 +189,7 @@ const AdminApplications = () => {
                     <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-4">
                             <div className="flex items-center space-x-2">
-                                <GraduationCap className="h-8 w-8 text-purple-600" />
+                                <GraduationCap className="h-8 w-8 text-blue-600" />
                                 <span className="text-xl font-bold text-gray-800">SCL Institute</span>
                             </div>
                             <span className="text-gray-400">|</span>
@@ -197,7 +197,7 @@ const AdminApplications = () => {
                         </div>
                         <button
                             onClick={() => navigate('/dashboard')}
-                            className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700"
+                            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700"
                         >
                             Back to Dashboard
                         </button>
@@ -259,14 +259,14 @@ const AdminApplications = () => {
                                 placeholder="Search applications..."
                                 value={filters.search}
                                 onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
-                                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-purple-500 focus:border-purple-500"
+                                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
                             />
                         </div>
                         
                         <select
                             value={filters.status}
                             onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-purple-500 focus:border-purple-500"
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
                         >
                             <option value="">All Statuses</option>
                             <option value="pending">Pending</option>
@@ -278,7 +278,7 @@ const AdminApplications = () => {
                         <select
                             value={filters.program}
                             onChange={(e) => setFilters(prev => ({ ...prev, program: e.target.value }))}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-purple-500 focus:border-purple-500"
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
                         >
                             <option value="">All Programs</option>
                             {programs.map(program => (
@@ -334,8 +334,8 @@ const AdminApplications = () => {
                                     <tr key={application.id} className="hover:bg-gray-50">
                                         <td className="px-6 py-4">
                                             <div className="flex items-center">
-                                                <div className="h-10 w-10 rounded-full bg-purple-100 flex items-center justify-center">
-                                                    <User className="h-5 w-5 text-purple-600" />
+                                                <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
+                                                    <User className="h-5 w-5 text-blue-600" />
                                                 </div>
                                                 <div className="ml-3">
                                                     <p className="font-medium text-gray-800">
@@ -375,7 +375,7 @@ const AdminApplications = () => {
                                                         setSelectedApplication(application);
                                                         setShowModal(true);
                                                     }}
-                                                    className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg"
+                                                    className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"
                                                     title="View Details"
                                                 >
                                                     <Eye className="h-4 w-4" />
@@ -455,7 +455,7 @@ const AdminApplications = () => {
                                     <select
                                         value={selectedApplication.status}
                                         onChange={(e) => handleStatusUpdate(selectedApplication.id, e.target.value)}
-                                        className="px-3 py-1 border border-gray-300 rounded-lg focus:ring-purple-500 focus:border-purple-500"
+                                        className="px-3 py-1 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
                                     >
                                         <option value="pending">Pending</option>
                                         <option value="under_review">Under Review</option>
@@ -491,7 +491,7 @@ const AdminApplications = () => {
                             </div>
 
                             {/* Program Details */}
-                            <div className="bg-purple-50 rounded-lg p-6">
+                            <div className="bg-blue-50 rounded-lg p-6">
                                 <h4 className="font-bold text-gray-800 mb-4 flex items-center">
                                     <BookOpen className="h-5 w-5 mr-2" />
                                     Program Details

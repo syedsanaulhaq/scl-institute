@@ -86,7 +86,7 @@ const StudentAdmissionForm = ({ onSubmitSuccess, isEditMode = false }) => {
 
   const sections = [
     { id: 1, title: 'Personal Information', icon: User, color: 'bg-blue-500' },
-    { id: 2, title: 'Course Selection', icon: GraduationCap, color: 'bg-purple-500' },
+    { id: 2, title: 'Course Selection', icon: GraduationCap, color: 'bg-blue-500' },
     { id: 3, title: 'Academic Background', icon: FileText, color: 'bg-green-500' },
     { id: 4, title: 'Document Upload', icon: Upload, color: 'bg-orange-500' },
     { id: 5, title: 'Consents & Declaration', icon: Shield, color: 'bg-red-500' }
@@ -547,7 +547,7 @@ const StudentAdmissionForm = ({ onSubmitSuccess, isEditMode = false }) => {
             value={formData.programmeTypeName}
             onChange={(e) => handleInputChange('programmeTypeName', e.target.value)}
             disabled={loadingCourses}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 disabled:bg-gray-100"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
           >
             <option value="">
               {loadingCourses ? 'Loading...' : 'Select programme type'}
@@ -563,7 +563,7 @@ const StudentAdmissionForm = ({ onSubmitSuccess, isEditMode = false }) => {
             value={formData.programName}
             onChange={(e) => handleInputChange('programName', e.target.value)}
             disabled={!formData.programmeTypeName}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 disabled:bg-gray-100"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
           >
             <option value="">Select programme</option>
             {availablePrograms.map(p => (
@@ -581,7 +581,7 @@ const StudentAdmissionForm = ({ onSubmitSuccess, isEditMode = false }) => {
             value={formData.intakeId}
             onChange={(e) => handleInputChange('intakeId', e.target.value)}
             disabled={!formData.programName || loadingIntakes}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 disabled:bg-gray-100"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
           >
             <option value="">
               {loadingIntakes ? 'Loading intakes...' : availableIntakes.length > 0 ? 'Select intake' : 'No intakes available'}
@@ -593,7 +593,7 @@ const StudentAdmissionForm = ({ onSubmitSuccess, isEditMode = false }) => {
             ))}
           </select>
           {formData.intakeId && availableIntakes.find(i => String(i.id) === String(formData.intakeId)) && (
-            <p className="mt-1 text-xs text-purple-600">
+            <p className="mt-1 text-xs text-blue-600">
               Cohort: {availableIntakes.find(i => String(i.id) === String(formData.intakeId))?.moodle_cohort_idnumber}
             </p>
           )}
@@ -617,7 +617,7 @@ const StudentAdmissionForm = ({ onSubmitSuccess, isEditMode = false }) => {
           <select
             value={formData.modeOfStudy}
             onChange={(e) => handleInputChange('modeOfStudy', e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           >
             <option value="">Select mode</option>
             <option value="Full-time">Full-time</option>
@@ -631,7 +631,7 @@ const StudentAdmissionForm = ({ onSubmitSuccess, isEditMode = false }) => {
           <select
             value={formData.entryRoute}
             onChange={(e) => handleInputChange('entryRoute', e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           >
             <option value="">Select entry route</option>
             <option value="Standard">Standard</option>
@@ -649,7 +649,7 @@ const StudentAdmissionForm = ({ onSubmitSuccess, isEditMode = false }) => {
             type="date"
             value={formData.intakeStartDate}
             onChange={(e) => handleInputChange('intakeStartDate', e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           />
         </div>
       </div>
@@ -658,13 +658,13 @@ const StudentAdmissionForm = ({ onSubmitSuccess, isEditMode = false }) => {
       {formData.intakeId && (() => {
         const intake = availableIntakes.find(i => String(i.id) === String(formData.intakeId));
         return intake?.courses?.length > 0 ? (
-          <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
-            <h4 className="text-sm font-medium text-purple-800 mb-2">Courses in this Intake ({intake.courses.length})</h4>
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <h4 className="text-sm font-medium text-blue-800 mb-2">Courses in this Intake ({intake.courses.length})</h4>
             <div className="space-y-1">
               {intake.courses.map(c => (
-                <div key={c.id} className="flex justify-between text-xs text-purple-700">
+                <div key={c.id} className="flex justify-between text-xs text-blue-700">
                   <span>{c.course_title}</span>
-                  <span className="text-purple-500">{c.course_code} • {c.academic_year} • {c.semester_name}</span>
+                  <span className="text-blue-500">{c.course_code} • {c.academic_year} • {c.semester_name}</span>
                 </div>
               ))}
             </div>
@@ -1386,7 +1386,7 @@ const StudentAdmissionForm = ({ onSubmitSuccess, isEditMode = false }) => {
       <div className="flex items-center justify-between rounded-xl bg-scl-dark px-5 py-4 text-white shadow-sm">
         <div>
           <h1 className="text-xl font-bold text-white">Student Admission Application</h1>
-          <p className="mt-1 text-sm text-purple-100">Complete all sections to submit your application</p>
+          <p className="mt-1 text-sm text-slate-100">Complete all sections to submit your application</p>
         </div>
         <div className="flex items-center space-x-3">
           <button
@@ -1399,7 +1399,7 @@ const StudentAdmissionForm = ({ onSubmitSuccess, isEditMode = false }) => {
           </button>
 
           <div className="flex items-center space-x-3">
-            <span className="text-sm text-purple-100">Progress:</span>
+            <span className="text-sm text-slate-100">Progress:</span>
             <div className="h-2 w-32 rounded-full bg-white/30">
               <div 
                 className="bg-scl-purple h-2 rounded-full transition-all duration-300"

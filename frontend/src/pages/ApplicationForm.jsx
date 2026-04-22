@@ -157,8 +157,8 @@ const ApplicationForm = () => {
                         <p className="text-lg text-gray-600 mb-6">
                             Thank you for your application. Your reference number is:
                         </p>
-                        <div className="bg-purple-50 border-2 border-purple-200 rounded-lg p-4 mb-8">
-                            <span className="text-2xl font-bold text-purple-600">{applicationRef}</span>
+                        <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4 mb-8">
+                            <span className="text-2xl font-bold text-blue-600">{applicationRef}</span>
                         </div>
                         <div className="text-left bg-gray-50 rounded-lg p-6 mb-8">
                             <h3 className="font-bold text-gray-800 mb-3">What happens next?</h3>
@@ -184,13 +184,13 @@ const ApplicationForm = () => {
                         <div className="flex flex-col sm:flex-row gap-4 justify-center">
                             <button 
                                 onClick={() => navigate('/')}
-                                className="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700"
+                                className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700"
                             >
                                 Return Home
                             </button>
                             <button 
                                 onClick={() => window.print()}
-                                className="border border-purple-600 text-purple-600 px-6 py-2 rounded-lg hover:bg-purple-50"
+                                className="border border-purple-600 text-blue-600 px-6 py-2 rounded-lg hover:bg-blue-50"
                             >
                                 Print Confirmation
                             </button>
@@ -212,14 +212,14 @@ const ApplicationForm = () => {
                         <div className="flex items-center space-x-4">
                             <button 
                                 onClick={() => navigate('/')}
-                                className="flex items-center text-gray-600 hover:text-purple-600"
+                                className="flex items-center text-gray-600 hover:text-blue-600"
                             >
                                 <ArrowLeft className="h-5 w-5 mr-2" />
                                 Back to Home
                             </button>
                         </div>
                         <div className="flex items-center space-x-2">
-                            <GraduationCap className="h-8 w-8 text-purple-600" />
+                            <GraduationCap className="h-8 w-8 text-blue-600" />
                             <span className="text-xl font-bold text-gray-800">SCL Institute</span>
                         </div>
                     </div>
@@ -239,7 +239,7 @@ const ApplicationForm = () => {
                     {/* Personal Information */}
                     <div className="mb-8">
                         <div className="flex items-center mb-6">
-                            <User className="h-6 w-6 text-purple-600 mr-2" />
+                            <User className="h-6 w-6 text-blue-600 mr-2" />
                             <h2 className="text-2xl font-bold text-gray-800">Personal Information</h2>
                         </div>
                         
@@ -253,7 +253,7 @@ const ApplicationForm = () => {
                                     name="first_name"
                                     value={formData.first_name}
                                     onChange={handleInputChange}
-                                    className={`w-full px-4 py-2 border rounded-lg focus:ring-purple-500 focus:border-purple-500 ${
+                                    className={`w-full px-4 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500 ${
                                         errors.first_name ? 'border-red-500' : 'border-gray-300'
                                     }`}
                                 />
@@ -271,7 +271,7 @@ const ApplicationForm = () => {
                                     name="last_name"
                                     value={formData.last_name}
                                     onChange={handleInputChange}
-                                    className={`w-full px-4 py-2 border rounded-lg focus:ring-purple-500 focus:border-purple-500 ${
+                                    className={`w-full px-4 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500 ${
                                         errors.last_name ? 'border-red-500' : 'border-gray-300'
                                     }`}
                                 />
@@ -291,7 +291,7 @@ const ApplicationForm = () => {
                                     name="email"
                                     value={formData.email}
                                     onChange={handleInputChange}
-                                    className={`w-full px-4 py-2 border rounded-lg focus:ring-purple-500 focus:border-purple-500 ${
+                                    className={`w-full px-4 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500 ${
                                         errors.email ? 'border-red-500' : 'border-gray-300'
                                     }`}
                                 />
@@ -309,7 +309,7 @@ const ApplicationForm = () => {
                                     name="phone"
                                     value={formData.phone}
                                     onChange={handleInputChange}
-                                    className={`w-full px-4 py-2 border rounded-lg focus:ring-purple-500 focus:border-purple-500 ${
+                                    className={`w-full px-4 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500 ${
                                         errors.phone ? 'border-red-500' : 'border-gray-300'
                                     }`}
                                 />
@@ -329,7 +329,7 @@ const ApplicationForm = () => {
                                     name="date_of_birth"
                                     value={formData.date_of_birth}
                                     onChange={handleInputChange}
-                                    className={`w-full px-4 py-2 border rounded-lg focus:ring-purple-500 focus:border-purple-500 ${
+                                    className={`w-full px-4 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500 ${
                                         errors.date_of_birth ? 'border-red-500' : 'border-gray-300'
                                     }`}
                                 />
@@ -347,7 +347,7 @@ const ApplicationForm = () => {
                                     name="nationality"
                                     value={formData.nationality}
                                     onChange={handleInputChange}
-                                    className={`w-full px-4 py-2 border rounded-lg focus:ring-purple-500 focus:border-purple-500 ${
+                                    className={`w-full px-4 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500 ${
                                         errors.nationality ? 'border-red-500' : 'border-gray-300'
                                     }`}
                                     placeholder="e.g., British, American"
@@ -365,7 +365,7 @@ const ApplicationForm = () => {
                                     name="gender"
                                     value={formData.gender}
                                     onChange={handleInputChange}
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-purple-500 focus:border-purple-500"
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
                                 >
                                     <option value="">Select Gender</option>
                                     <option value="Male">Male</option>
@@ -380,7 +380,7 @@ const ApplicationForm = () => {
                     {/* Address Information */}
                     <div className="mb-8">
                         <div className="flex items-center mb-6">
-                            <MapPin className="h-6 w-6 text-purple-600 mr-2" />
+                            <MapPin className="h-6 w-6 text-blue-600 mr-2" />
                             <h2 className="text-2xl font-bold text-gray-800">Address Information</h2>
                         </div>
                         
@@ -394,7 +394,7 @@ const ApplicationForm = () => {
                                     name="address_line1"
                                     value={formData.address_line1}
                                     onChange={handleInputChange}
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-purple-500 focus:border-purple-500"
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
                                     placeholder="Street address, house number"
                                 />
                             </div>
@@ -408,7 +408,7 @@ const ApplicationForm = () => {
                                     name="address_line2"
                                     value={formData.address_line2}
                                     onChange={handleInputChange}
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-purple-500 focus:border-purple-500"
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
                                     placeholder="Apartment, suite, unit, building, floor, etc."
                                 />
                             </div>
@@ -423,7 +423,7 @@ const ApplicationForm = () => {
                                         name="city"
                                         value={formData.city}
                                         onChange={handleInputChange}
-                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-purple-500 focus:border-purple-500"
+                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
                                     />
                                 </div>
                                 
@@ -436,7 +436,7 @@ const ApplicationForm = () => {
                                         name="postal_code"
                                         value={formData.postal_code}
                                         onChange={handleInputChange}
-                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-purple-500 focus:border-purple-500"
+                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
                                     />
                                 </div>
                                 
@@ -449,7 +449,7 @@ const ApplicationForm = () => {
                                         name="country"
                                         value={formData.country}
                                         onChange={handleInputChange}
-                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-purple-500 focus:border-purple-500"
+                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
                                     />
                                 </div>
                             </div>
@@ -459,7 +459,7 @@ const ApplicationForm = () => {
                     {/* Academic Background */}
                     <div className="mb-8">
                         <div className="flex items-center mb-6">
-                            <BookOpen className="h-6 w-6 text-purple-600 mr-2" />
+                            <BookOpen className="h-6 w-6 text-blue-600 mr-2" />
                             <h2 className="text-2xl font-bold text-gray-800">Academic Background</h2>
                         </div>
                         
@@ -473,7 +473,7 @@ const ApplicationForm = () => {
                                     name="highest_qualification"
                                     value={formData.highest_qualification}
                                     onChange={handleInputChange}
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-purple-500 focus:border-purple-500"
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
                                     placeholder="e.g., Bachelor's Degree, A-Levels, High School Diploma"
                                 />
                             </div>
@@ -487,7 +487,7 @@ const ApplicationForm = () => {
                                     name="institution_name"
                                     value={formData.institution_name}
                                     onChange={handleInputChange}
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-purple-500 focus:border-purple-500"
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
                                     placeholder="Name of your school/college/university"
                                 />
                             </div>
@@ -503,7 +503,7 @@ const ApplicationForm = () => {
                                     name="graduation_year"
                                     value={formData.graduation_year}
                                     onChange={handleInputChange}
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-purple-500 focus:border-purple-500"
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
                                     min="1980"
                                     max="2030"
                                 />
@@ -518,7 +518,7 @@ const ApplicationForm = () => {
                                     name="gpa_grade"
                                     value={formData.gpa_grade}
                                     onChange={handleInputChange}
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-purple-500 focus:border-purple-500"
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
                                     placeholder="e.g., First Class, 3.8/4.0, AAB"
                                 />
                             </div>
@@ -528,7 +528,7 @@ const ApplicationForm = () => {
                     {/* Program Selection */}
                     <div className="mb-8">
                         <div className="flex items-center mb-6">
-                            <GraduationCap className="h-6 w-6 text-purple-600 mr-2" />
+                            <GraduationCap className="h-6 w-6 text-blue-600 mr-2" />
                             <h2 className="text-2xl font-bold text-gray-800">Program Selection</h2>
                         </div>
                         
@@ -541,7 +541,7 @@ const ApplicationForm = () => {
                                     name="program_id"
                                     value={formData.program_id}
                                     onChange={handleInputChange}
-                                    className={`w-full px-4 py-2 border rounded-lg focus:ring-purple-500 focus:border-purple-500 ${
+                                    className={`w-full px-4 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500 ${
                                         errors.program_id ? 'border-red-500' : 'border-gray-300'
                                     }`}
                                 >
@@ -557,10 +557,10 @@ const ApplicationForm = () => {
                                 )}
                                 
                                 {selectedProgram && (
-                                    <div className="mt-4 p-4 bg-purple-50 border border-purple-200 rounded-lg">
-                                        <h4 className="font-bold text-purple-800 mb-2">{selectedProgram.name}</h4>
-                                        <p className="text-purple-700 text-sm mb-2">{selectedProgram.description}</p>
-                                        <div className="flex flex-wrap gap-4 text-sm text-purple-600">
+                                    <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                                        <h4 className="font-bold text-blue-800 mb-2">{selectedProgram.name}</h4>
+                                        <p className="text-blue-700 text-sm mb-2">{selectedProgram.description}</p>
+                                        <div className="flex flex-wrap gap-4 text-sm text-blue-600">
                                             <span>Duration: {selectedProgram.duration}</span>
                                             <span>Qualification: {selectedProgram.qualification}</span>
                                             <span>Fee: £{selectedProgram.fee_amount?.toLocaleString()}</span>
@@ -579,7 +579,7 @@ const ApplicationForm = () => {
                                     name="intake_year"
                                     value={formData.intake_year}
                                     onChange={handleInputChange}
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-purple-500 focus:border-purple-500"
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
                                 >
                                     <option value={new Date().getFullYear()}>{new Date().getFullYear()}</option>
                                     <option value={new Date().getFullYear() + 1}>{new Date().getFullYear() + 1}</option>
@@ -594,7 +594,7 @@ const ApplicationForm = () => {
                                     name="intake_month"
                                     value={formData.intake_month}
                                     onChange={handleInputChange}
-                                    className={`w-full px-4 py-2 border rounded-lg focus:ring-purple-500 focus:border-purple-500 ${
+                                    className={`w-full px-4 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500 ${
                                         errors.intake_month ? 'border-red-500' : 'border-gray-300'
                                     }`}
                                 >
@@ -618,7 +618,7 @@ const ApplicationForm = () => {
                                     name="how_did_you_hear"
                                     value={formData.how_did_you_hear}
                                     onChange={handleInputChange}
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-purple-500 focus:border-purple-500"
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
                                 >
                                     <option value="">Please select</option>
                                     <option value="Search Engine">Search Engine (Google, etc.)</option>
@@ -636,7 +636,7 @@ const ApplicationForm = () => {
                     {/* Personal Statement */}
                     <div className="mb-8">
                         <div className="flex items-center mb-6">
-                            <FileText className="h-6 w-6 text-purple-600 mr-2" />
+                            <FileText className="h-6 w-6 text-blue-600 mr-2" />
                             <h2 className="text-2xl font-bold text-gray-800">Personal Statement</h2>
                         </div>
                         
@@ -649,7 +649,7 @@ const ApplicationForm = () => {
                                 value={formData.personal_statement}
                                 onChange={handleInputChange}
                                 rows={6}
-                                className={`w-full px-4 py-2 border rounded-lg focus:ring-purple-500 focus:border-purple-500 ${
+                                className={`w-full px-4 py-2 border rounded-lg focus:ring-blue-500 focus:border-blue-500 ${
                                     errors.personal_statement ? 'border-red-500' : 'border-gray-300'
                                 }`}
                                 placeholder="Please tell us why you want to study this program and how it will help you achieve your career goals. Include any relevant experience, skills, or motivations."
@@ -693,7 +693,7 @@ const ApplicationForm = () => {
                             <button
                                 type="submit"
                                 disabled={loading}
-                                className="px-8 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                                className="px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-purple-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
                             >
                                 {loading ? (
                                     <>
