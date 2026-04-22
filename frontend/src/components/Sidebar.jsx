@@ -26,6 +26,13 @@ import {
 import { getRoleContext } from '../utils/roleAccess';
 import { openMoodleSSO } from '../utils/ssoService';
 
+// CSS to hide scrollbar across browsers
+const scrollbarHideStyles = `
+  nav[data-scrollbar-hide]::-webkit-scrollbar {
+    display: none;
+  }
+`;
+
 const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
     const navigate = useNavigate();
     const location = useLocation();
@@ -187,6 +194,14 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
         if (!sectionExists && menuSections.length > 0) {
             setActiveSectionTitle(menuSections[0].title);
         }
+        
+        // Inject scrollbar hide styles
+        if (!document.getElementById('scrollbar-hide-styles')) {
+            const style = document.createElement('style');
+            style.id = 'scrollbar-hide-styles';
+            style.textContent = scrollbarHideStyles;
+            document.head.appendChild(style);
+        }
     }, [activeSectionTitle, menuSections]);
 
     const toggleSection = (sectionTitle) => {
@@ -243,7 +258,11 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
                 </button>
 
                 {/* Navigation Items */}
-                <nav className="flex-1 px-2 py-4 space-y-3 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent hover:scrollbar-thumb-white/40">
+                <nav 
+                    className="flex-1 px-2 py-4 space-y-3 overflow-y-auto overflow-x-hidden" 
+                    style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                    data-scrollbar-hide
+                >
                     {menuSections.map((section) => (
                         <div key={section.title} className="space-y-1">
                             {isOpen ? (
