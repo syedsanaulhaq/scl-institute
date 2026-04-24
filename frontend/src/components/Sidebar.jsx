@@ -235,9 +235,9 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
 
     return (
         <aside
-            className={`fixed inset-y-0 left-0 z-50 transition-all duration-300 ease-in-out shadow-lg ${isOpen ? 'w-56' : 'w-16'
+            className={`fixed inset-y-0 left-0 z-50 bg-gray-100 transition-all duration-300 ease-in-out shadow-lg ${isOpen ? 'w-56' : 'w-16'
                 }`}
-            style={{ backgroundColor: '#F3F4F6', borderRight: '1px solid #E5E7EB' }}
+            style={{ borderRight: '1px solid #E5E7EB' }}
         >
             <div className="flex flex-col h-full relative">
                 {/* Logo Area */}
