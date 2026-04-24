@@ -235,23 +235,25 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
 
     return (
         <aside
-            className={`fixed inset-y-0 left-0 z-50 bg-scl-dark text-white transition-all duration-300 ease-in-out shadow-2xl ${isOpen ? 'w-56' : 'w-16'
+            className={`fixed inset-y-0 left-0 z-50 transition-all duration-300 ease-in-out shadow-lg ${isOpen ? 'w-56' : 'w-16'
                 }`}
+            style={{ backgroundColor: '#F3F4F6', borderRight: '1px solid #E5E7EB' }}
         >
             <div className="flex flex-col h-full relative">
                 {/* Logo Area */}
-                <div className={`h-[5.5rem] flex items-center px-3 border-b border-white/10 ${isOpen ? 'justify-between' : 'justify-center'}`}>
-                    <div className="flex items-center space-x-2 rounded-lg bg-white/15 px-2 py-1">
+                <div className={`h-[5.5rem] flex items-center px-3 border-b ${isOpen ? 'justify-between' : 'justify-center'}`} style={{ borderColor: '#E5E7EB' }}>
+                    <div className="flex items-center space-x-2 rounded-lg px-2 py-1" style={{ backgroundColor: '#EBF0FF' }}>
                         <img src="/assets/scl_logo.png" alt="Stratford College Lond." className="h-9 w-9 object-contain flex-shrink-0" />
                         {isOpen && (
-                            <span className="font-bold text-sm tracking-tight whitespace-nowrap text-white">Stratford College Lond.</span>
+                            <span className="font-bold text-sm tracking-tight whitespace-nowrap" style={{ color: '#1F2937' }}>Stratford College Lond.</span>
                         )}
                     </div>
                 </div>
 
                 <button
                     onClick={toggle}
-                    className="absolute top-3 -right-6 z-10 text-scl-purple hover:text-scl-purple transition-colors rounded-lg"
+                    className="absolute top-3 -right-6 z-10 hover:opacity-70 transition-opacity rounded-lg"
+                    style={{ color: '#2563EB' }}
                     aria-label={isOpen ? 'Collapse sidebar' : 'Expand sidebar'}
                 >
                     <Menu className="h-[3.5rem] w-[1.5em]" />
@@ -268,7 +270,8 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
                             {isOpen ? (
                                 <button
                                     onClick={() => toggleSection(section.title)}
-                                    className="w-full px-3 pt-1 pb-1 text-[10px] uppercase tracking-widest text-blue-200/60 font-bold border-b border-white/10 flex items-center justify-between hover:text-blue-100"
+                                    className="w-full px-3 pt-1 pb-1 text-[10px] uppercase tracking-widest font-bold border-b flex items-center justify-between hover:text-blue-600 transition-colors"
+                                    style={{ color: '#9CA3AF', borderColor: '#E5E7EB' }}
                                 >
                                     <span>{section.title}</span>
                                     {activeSectionTitle === section.title
@@ -276,7 +279,7 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
                                         : <ChevronRight className="w-3 h-3" />}
                                 </button>
                             ) : (
-                                <div className="mx-2 h-px bg-white/10" />
+                                <div className="mx-2 h-px" style={{ backgroundColor: '#E5E7EB' }} />
                             )}
 
                             {(activeSectionTitle === section.title || !isOpen) && section.items.map((item) => {
@@ -290,9 +293,15 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
                                             disabled={item.isSSO && loading}
                                             className={`w-full flex items-center h-10 rounded-lg transition-all duration-200 group relative ${
                                                 isActive
-                                                    ? 'bg-scl-purple text-white shadow-lg shadow-scl-purple/20'
-                                                    : 'text-slate-300/70 hover:bg-white/5 hover:text-white'
+                                                    ? 'shadow-md'
+                                                    : ''
                                             } ${item.isSSO && loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                            style={{
+                                                backgroundColor: isActive ? '#DBEAFE' : 'transparent',
+                                                color: isActive ? '#2563EB' : '#6B7280'
+                                            }}
+                                            onMouseEnter={(e) => !isActive && (e.currentTarget.style.backgroundColor = '#F0F0F0')}
+                                            onMouseLeave={(e) => !isActive && (e.currentTarget.style.backgroundColor = 'transparent')}
                                         >
                                             <div className={`flex items-center justify-center transition-all duration-300 ${isOpen ? 'pl-3 w-10' : 'w-full'}`}>
                                                 <item.icon className={`w-4 h-4 ${isActive ? 'scale-110' : 'group-hover:scale-110 transition-transform'}`} />
@@ -312,7 +321,7 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
                                             )}
 
                                             {!isOpen && (
-                                                <div className="absolute left-full ml-4 px-2 py-1 bg-scl-dark text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50 shadow-xl border border-white/10">
+                                                <div className="absolute left-full ml-4 px-2 py-1 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50 shadow-xl" style={{ backgroundColor: '#374151' }}>
                                                     {item.name}
                                                 </div>
                                             )}
@@ -328,10 +337,14 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
                                                             onClick={() => handleSubItemClick(subItem)}
                                                             disabled={subItem.isSSO && loading}
                                                             className={`w-full flex items-center justify-start h-10 rounded-lg transition-all duration-200 group relative pl-4 ${
-                                                                isSubActive
-                                                                    ? 'bg-scl-purple/50 text-white shadow-md'
-                                                                    : 'text-slate-300/60 hover:bg-white/5 hover:text-white'
-                                                            } ${subItem.isSSO && loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                                subItem.isSSO && loading ? 'opacity-50 cursor-not-allowed' : ''
+                                                            }`}
+                                                            style={{
+                                                                backgroundColor: isSubActive ? '#DBEAFE' : 'transparent',
+                                                                color: isSubActive ? '#2563EB' : '#6B7280'
+                                                            }}
+                                                            onMouseEnter={(e) => !isSubActive && (e.currentTarget.style.backgroundColor = '#F0F0F0')}
+                                                            onMouseLeave={(e) => !isSubActive && (e.currentTarget.style.backgroundColor = 'transparent')}
                                                         >
                                                             <subItem.icon className="w-4 h-4 mr-3 flex-shrink-0" />
                                                             <span className="font-medium text-xs text-left">
@@ -350,10 +363,11 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
                 </nav>
 
                 {/* Footer / Logout Area */}
-                <div className="p-3 border-t border-white/10">
+                <div className="p-3" style={{ borderTop: '1px solid #E5E7EB' }}>
                     <button
                         onClick={onLogout}
-                        className="w-full flex items-center h-12 rounded-xl text-red-300 hover:bg-red-500/10 hover:text-red-200 transition-all duration-200 group relative"
+                        className="w-full flex items-center h-12 rounded-xl hover:bg-red-50 transition-all duration-200 group relative"
+                        style={{ color: '#EF4444' }}
                     >
                         <div className={`flex items-center justify-center transition-all duration-300 ${isOpen ? 'pl-4 w-12' : 'w-full'}`}>
                             <LogOut className="w-5 h-5 group-hover:scale-110 transition-transform" />
@@ -364,7 +378,7 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
                         </span>
 
                         {!isOpen && (
-                            <div className="absolute left-full ml-4 px-2 py-1 bg-red-600 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50 shadow-xl">
+                            <div className="absolute left-full ml-4 px-2 py-1 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50 shadow-xl" style={{ backgroundColor: '#EF4444' }}>
                                 Logout
                             </div>
                         )}

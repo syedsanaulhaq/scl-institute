@@ -8,11 +8,14 @@ export default {
         extend: {
             colors: {
                 scl: {
-                    purple: '#4F6FE8',
-                    dark: '#1E2B4A',
-                    light: '#6B8EF0',
-                    bg: '#F0F4FF',
-                    error: '#EF4444'
+                    purple: '#2563EB',        // Herozi blue
+                    dark: '#F3F4F6',          // Herozi light gray sidebar
+                    light: '#3B82F6',         // Herozi hover blue
+                    bg: '#FFFFFF',            // White background
+                    error: '#EF4444',         // Red error
+                    'text-dark': '#1F2937',   // Dark text
+                    'text-light': '#6B7280',  // Light gray text
+                    'border': '#E5E7EB'       // Border color
                 }
             }
         },

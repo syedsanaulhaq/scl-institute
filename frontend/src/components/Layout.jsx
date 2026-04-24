@@ -19,7 +19,7 @@ const Layout = ({ user, onLogout, children }) => {
     };
 
     return (
-        <div className="min-h-screen bg-scl-bg">
+        <div className="min-h-screen" style={{ backgroundColor: '#FFFFFF' }}>
             <Sidebar
                 isOpen={isSidebarOpen}
                 toggle={toggleSidebar}
