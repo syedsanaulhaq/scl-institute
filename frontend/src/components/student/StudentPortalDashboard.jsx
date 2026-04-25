@@ -123,6 +123,11 @@ const StudentPortalDashboard1 = ({ user }) => {
 
     const handleMoodleNavigate = async (moodlePath) => {
         if (!moodlePath) return;
+        // Internal SCL routes — navigate within the app instead of Moodle SSO
+        if (moodlePath.startsWith('/student/') || moodlePath.startsWith('/admin/')) {
+            navigate(moodlePath);
+            return;
+        }
         try {
             setSsoLoading(true);
             setSsoError('');
