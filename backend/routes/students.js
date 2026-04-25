@@ -10965,7 +10965,7 @@ router.get('/library/:id', async (req, res) => {
                     'resource' as type,
                     'PDF' as format
                 FROM mdl_resource r
-                JOIN mdl_course_modules cm ON cm.instance = r.id AND cm.course = r.course
+                JOIN mdl_course_modules cm ON cm.instance = r.id
                 JOIN mdl_modules m ON m.id = cm.module AND m.name = 'resource'
                 JOIN mdl_course c ON c.id = r.course
                 WHERE r.course IN (${placeholders}) AND cm.deletioninprogress = 0
@@ -10986,7 +10986,7 @@ router.get('/library/:id', async (req, res) => {
                     'url' as type,
                     'Link' as format
                 FROM mdl_url u
-                JOIN mdl_course_modules cm ON cm.instance = u.id AND cm.course = u.course
+                JOIN mdl_course_modules cm ON cm.instance = u.id
                 JOIN mdl_modules m ON m.id = cm.module AND m.name = 'url'
                 JOIN mdl_course c ON c.id = u.course
                 WHERE u.course IN (${placeholders}) AND cm.deletioninprogress = 0
@@ -12121,14 +12121,26 @@ router.get('/student-dashboard', async (req, res) => {
             }
         }
 
-        // Merge grades into courses
+        // Merge grades into courses and recalculate progress from grades
         const gradeMap = new Map(grades.map(g => [g.courseid, g]));
-        courses = courses.map(c => ({
-            ...c,
-            grade: gradeMap.get(c.id)?.grade || '-',
-            grademax: gradeMap.get(c.id)?.grademax || null,
-            rawgrade: gradeMap.get(c.id)?.rawgrade || null
-        }));
+        courses = courses.map(c => {
+            const courseGrade = gradeMap.get(c.id);
+            let finalProgress = c.progress; // Use activity completion progress if available
+            
+            // If no activity completion progress, calculate from grades
+            if ((finalProgress === null || finalProgress === 0) && courseGrade?.rawgrade != null) {
+                const gradePercent = Math.round((courseGrade.rawgrade / (courseGrade.grademax || 100)) * 100);
+                finalProgress = Math.min(gradePercent, 100);
+            }
+            
+            return {
+                ...c,
+                progress: finalProgress ?? 0,
+                grade: courseGrade?.grade || '-',
+                grademax: courseGrade?.grademax || null,
+                rawgrade: courseGrade?.rawgrade || null
+            };
+        });
 
         // Determine active course IDs (courses in the active semester)
         // Mirrors the frontend logic: parse shortname to find the first semester with activities
