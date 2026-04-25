@@ -12121,16 +12121,34 @@ router.get('/student-dashboard', async (req, res) => {
             }
         }
 
-        // Merge grades into courses and recalculate progress from grades
+        // Merge grades into courses and recalculate progress from grades or timeline
         const gradeMap = new Map(grades.map(g => [g.courseid, g]));
         courses = courses.map(c => {
             const courseGrade = gradeMap.get(c.id);
             let finalProgress = c.progress; // Use activity completion progress if available
             
-            // If no activity completion progress, calculate from grades
+            // If no activity completion progress, try grades
             if ((finalProgress === null || finalProgress === 0) && courseGrade?.rawgrade != null) {
                 const gradePercent = Math.round((courseGrade.rawgrade / (courseGrade.grademax || 100)) * 100);
                 finalProgress = Math.min(gradePercent, 100);
+            }
+            
+            // If still no progress, calculate from course timeline
+            if ((finalProgress === null || finalProgress === 0) && c.startdate && c.enddate) {
+                const now = new Date();
+                const start = new Date(c.startdate);
+                const end = new Date(c.enddate);
+                
+                if (now < start) {
+                    finalProgress = 0; // Course hasn't started
+                } else if (now > end) {
+                    finalProgress = 100; // Course ended
+                } else {
+                    // Course is ongoing - calculate progress based on timeline
+                    const totalDuration = end - start;
+                    const elapsed = now - start;
+                    finalProgress = Math.round((elapsed / totalDuration) * 100);
+                }
             }
             
             return {
