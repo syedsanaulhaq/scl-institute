@@ -768,7 +768,7 @@ const PerformanceChart = ({ courses }) => {
     const chartData = courses
         .slice(0, 4)
         .map((course, idx) => ({
-            name: course.code?.replace(/^HND-LM-/, '') || `C${idx + 1}`,
+            name: course.shortname?.replace(/^HND-LM-/, '') || `C${idx + 1}`,
             'Your Grade': parseFloat(course.progress) || 0,
             'Maximum': 100
         }));
