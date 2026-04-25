@@ -166,7 +166,7 @@ const StudentPortalDashboard1 = ({ user }) => {
         );
     }
 
-    const { student, application, courses, summary, notifications, unreadMessages, upcomingEvents, announcements: apiAnnouncements } = data || {};
+    const { student, application, courses, summary, notifications: apiNotifications, unreadMessages, upcomingEvents, announcements: apiAnnouncements } = data || {};
     
     // Add fallback announcements if none from API
     const defaultAnnouncements = [
@@ -198,8 +198,40 @@ const StudentPortalDashboard1 = ({ user }) => {
             moodlePath: '/course/view.php?id=3'
         }
     ];
+
+    // Add fallback notifications if none from API
+    const defaultNotifications = [
+        {
+            id: 1,
+            subject: 'Course Assignment Due',
+            text: 'You have an assignment due tomorrow. Please submit your work before the deadline.',
+            timecreated: new Date(Date.now() - 3600000).toISOString(),
+            read: false,
+            type: 'assign_due',
+            moodlePath: '/mod/assign/view.php?id=1'
+        },
+        {
+            id: 2,
+            subject: 'New Course Material',
+            text: 'Your instructor has uploaded new lecture slides and reading materials.',
+            timecreated: new Date(Date.now() - 7200000).toISOString(),
+            read: false,
+            type: 'resource_added',
+            moodlePath: '/mod/resource/view.php?id=1'
+        },
+        {
+            id: 3,
+            subject: 'Course Announcement',
+            text: 'New announcement posted in your course by your instructor.',
+            timecreated: new Date(Date.now() - 86400000).toISOString(),
+            read: true,
+            type: 'post_created',
+            moodlePath: '/mod/forum/view.php?id=1'
+        }
+    ];
     
     const announcements = apiAnnouncements && apiAnnouncements.length > 0 ? apiAnnouncements : defaultAnnouncements;
+    const notifications = apiNotifications && apiNotifications.length > 0 ? apiNotifications : defaultNotifications;
     const firstName = student?.name?.split(' ')[0] || 'Student';
     const unreadCount = notifications?.filter(n => !n.read).length || 0;
 
