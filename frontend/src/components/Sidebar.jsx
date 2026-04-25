@@ -105,8 +105,7 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
                 subItems: [
                     { name: 'Dashboard 1 (Full)', icon: LayoutDashboard, path: '/student/portal?layout=1' },
                     { name: 'Dashboard 2 (Medium)', icon: LayoutDashboard, path: '/student/portal?layout=2' },
-                    { name: 'Dashboard 3 (Clean)', icon: LayoutDashboard, path: '/student/portal?layout=3' },
-                    { name: 'Dashboard 4 (Colorful)', icon: LayoutDashboard, path: '/student/portal?layout=4' }
+                    { name: 'Dashboard 3 (Clean)', icon: LayoutDashboard, path: '/student/portal?layout=3' }
                 ]
             },
             { name: 'Portal Home', icon: BookOpen, path: '/student/portal' },

@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import StudentPortalDashboard2 from './StudentPortalDashboard2';
 import StudentPortalDashboard3 from './StudentPortalDashboard3';
-import StudentPortalDashboard4 from './StudentPortalDashboard4';
 import {
     BookOpen,
     Bell,
@@ -35,9 +34,6 @@ const StudentPortalDashboardRouter = ({ user }) => {
     }
     if (layoutParam === '3') {
         return <StudentPortalDashboard3 user={user} />;
-    }
-    if (layoutParam === '4') {
-        return <StudentPortalDashboard4 user={user} />;
     }
     
     // Default to Dashboard 1
