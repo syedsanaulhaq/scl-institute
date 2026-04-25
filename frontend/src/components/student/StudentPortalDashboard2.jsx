@@ -19,6 +19,7 @@ import {
     Award,
     HelpCircle,
     DollarSign,
+    Bookmark,
 } from 'lucide-react';
 import axios from 'axios';
 import { openMoodleSSO, getMoodleUrl } from '../../utils/ssoService';
@@ -32,6 +33,7 @@ const StudentPortalDashboard2 = ({ user }) => {
     const [error, setError] = useState('');
     const [ssoLoading, setSsoLoading] = useState(false);
     const [activeTab, setActiveTab] = useState('courses');
+    const [courseScroll, setCourseScroll] = useState(0);
 
     useEffect(() => {
         if (user?.email) fetchDashboard();
@@ -123,71 +125,119 @@ const StudentPortalDashboard2 = ({ user }) => {
                     </div>
                 </div>
 
-                {/* Two Column Layout */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-                    {/* Courses Section */}
-                    <div className="lg:col-span-2">
-                        <div className="flex items-center justify-between mb-4">
-                            <h2 className="text-lg font-bold" style={{ color: '#1F2937' }}>My Courses</h2>
-                            <button onClick={() => navigate('/student/courses')} style={{ color: '#2563EB' }} className="text-sm">
-                                View all ΓåÆ
-                            </button>
+                {/* Courses Section - Moodle Style */}
+                <div className="mb-10">
+                    <div className="flex items-center justify-between mb-6">
+                        <div className="flex items-center gap-3">
+                            <BookOpen className="w-6 h-6" style={{ color: '#2563EB' }} />
+                            <h2 className="text-2xl font-bold" style={{ color: '#1F2937' }}>My Courses</h2>
                         </div>
-                        <div className="space-y-3">
-                            {courses.slice(0, 4).map((course, idx) => (
-                                <div key={idx} className="p-4 rounded-lg border" style={{ borderColor: '#E5E7EB' }}>
-                                    <div className="flex justify-between">
-                                        <div>
-                                            <p className="font-medium" style={{ color: '#1F2937' }}>{course.name || `Course ${idx + 1}`}</p>
-                                            <p className="text-xs mt-1" style={{ color: '#6B7280' }}>{course.credits || '3'} credit hrs</p>
+                        <button onClick={() => navigate('/student/courses')} style={{ color: '#2563EB' }} className="text-sm font-medium hover:underline">
+                            View all →
+                        </button>
+                    </div>
+                    
+                    {/* Horizontal Scrollable Cards */}
+                    <div className="relative">
+                        <div 
+                            className="flex gap-6 pb-4 overflow-x-auto scroll-smooth" 
+                            style={{ scrollBehavior: 'smooth', scrollbarWidth: 'thin' }}
+                            ref={(el) => { if(el) el.scrollLeft = courseScroll; }}
+                        >
+                            {courses.length > 0 ? courses.map((course, idx) => (
+                                <div key={idx} className="flex-shrink-0 w-72 rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition-shadow border" 
+                                    style={{ borderColor: '#E5E7EB', backgroundColor: '#FFFFFF' }}>
+                                    {/* Course Image */}
+                                    <div className="h-40 bg-gradient-to-r" style={{ backgroundImage: `linear-gradient(135deg, #2563EB 0%, #1E40AF 100%)` }}>
+                                        <div className="h-full flex items-center justify-center">
+                                            <BookOpen className="w-12 h-12 text-white opacity-50" />
                                         </div>
-                                        <span className="text-xs px-2 py-1 rounded" style={{ backgroundColor: '#DBEAFE', color: '#2563EB' }}>
-                                            Active
-                                        </span>
+                                    </div>
+                                    
+                                    {/* Course Info */}
+                                    <div className="p-5">
+                                        <h3 className="text-lg font-bold mb-2 line-clamp-2" style={{ color: '#1F2937' }}>
+                                            {course.name || `Course ${idx + 1}`}
+                                        </h3>
+                                        <p className="text-sm mb-4" style={{ color: '#6B7280' }}>
+                                            {course.description || `${course.credits || 3} credit hours • Active`}
+                                        </p>
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-xs px-3 py-1 rounded-full" style={{ backgroundColor: '#DBEAFE', color: '#2563EB' }}>
+                                                Active
+                                            </span>
+                                            <button className="text-sm font-medium hover:underline" style={{ color: '#2563EB' }}>
+                                                Open →
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* Announcements Section */}
-                    <div>
-                        <div className="flex items-center justify-between mb-4">
-                            <h2 className="text-lg font-bold" style={{ color: '#1F2937' }}>Announcements</h2>
-                            <Bell className="w-5 h-5" style={{ color: '#2563EB' }} />
-                        </div>
-                        <div className="space-y-3">
-                            {notifications.slice(0, 3).map((notif, idx) => (
-                                <div key={idx} className="p-4 rounded-lg border" style={{ borderColor: '#E5E7EB', backgroundColor: '#F9FAFB' }}>
-                                    <p className="text-sm" style={{ color: '#1F2937' }}>{notif.title || 'Important Update'}</p>
-                                    <p className="text-xs mt-2" style={{ color: '#6B7280' }}>Today</p>
+                            )) : (
+                                <div className="flex items-center justify-center w-full h-48 rounded-lg border" style={{ borderColor: '#E5E7EB', backgroundColor: '#F9FAFB' }}>
+                                    <p style={{ color: '#9CA3AF' }}>No courses enrolled yet</p>
                                 </div>
-                            ))}
-                            {notifications.length === 0 && (
-                                <p className="text-sm" style={{ color: '#9CA3AF' }}>No announcements</p>
                             )}
                         </div>
                     </div>
                 </div>
 
-                {/* Upcoming Events */}
-                <div className="mb-8">
-                    <div className="flex items-center gap-2 mb-4">
-                        <Calendar className="w-5 h-5" style={{ color: '#2563EB' }} />
-                        <h2 className="text-lg font-bold" style={{ color: '#1F2937' }}>Upcoming Events</h2>
+                {/* Announcements and Upcoming Events - Two Column */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
+                    {/* Announcements Section */}
+                    <div className="rounded-lg border p-6" style={{ borderColor: '#E5E7EB', backgroundColor: '#F9FAFB' }}>
+                        <div className="flex items-center gap-3 mb-6">
+                            <Bell className="w-6 h-6" style={{ color: '#2563EB' }} />
+                            <h2 className="text-xl font-bold" style={{ color: '#1F2937' }}>Announcements</h2>
+                        </div>
+                        
+                        <div className="space-y-4">
+                            {notifications.slice(0, 5).map((notif, idx) => (
+                                <div key={idx} className="p-4 rounded-lg border" style={{ borderColor: '#E5E7EB', backgroundColor: '#FFFFFF' }}>
+                                    <div className="flex gap-3">
+                                        <Megaphone className="w-5 h-5 flex-shrink-0 mt-1" style={{ color: '#2563EB' }} />
+                                        <div className="flex-1">
+                                            <p className="font-medium" style={{ color: '#1F2937' }}>{notif.title || 'Important Update'}</p>
+                                            <p className="text-xs mt-2" style={{ color: '#6B7280' }}>{notif.message || 'New announcement'}</p>
+                                            <p className="text-xs mt-2" style={{ color: '#9CA3AF' }}>Today</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                            {notifications.length === 0 && (
+                                <p className="text-center py-8" style={{ color: '#9CA3AF' }}>No announcements yet</p>
+                            )}
+                        </div>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {[
-                            { title: 'Midterm Exam', date: 'Oct 28' },
-                            { title: 'Project Deadline', date: 'Nov 5' },
-                            { title: 'Fee Payment Due', date: 'Oct 31' },
-                            { title: 'Class Resumption', date: 'Nov 10' },
-                        ].map((event, idx) => (
-                            <div key={idx} className="p-4 rounded-lg border" style={{ borderColor: '#E5E7EB', backgroundColor: '#F9FAFB' }}>
-                                <p className="font-medium" style={{ color: '#1F2937' }}>{event.title}</p>
-                                <div className="flex items-center gap-2 text-sm mt-2" style={{ color: '#6B7280' }}><Calendar className="w-4 h-4" /> {event.date}</div>
-                            </div>
-                        ))}
+
+                    {/* Upcoming Events Section */}
+                    <div className="rounded-lg border p-6" style={{ borderColor: '#E5E7EB', backgroundColor: '#F9FAFB' }}>
+                        <div className="flex items-center gap-3 mb-6">
+                            <Calendar className="w-6 h-6" style={{ color: '#2563EB' }} />
+                            <h2 className="text-xl font-bold" style={{ color: '#1F2937' }}>Upcoming Events</h2>
+                        </div>
+
+                        <div className="space-y-4">
+                            {[
+                                { title: 'Midterm Exam', date: 'Oct 28', time: '9:00 AM' },
+                                { title: 'Project Deadline', date: 'Nov 5', time: '11:59 PM' },
+                                { title: 'Fee Payment Due', date: 'Oct 31', time: '5:00 PM' },
+                                { title: 'Class Resumption', date: 'Nov 10', time: '8:00 AM' },
+                                { title: 'Semester Break', date: 'Dec 15', time: 'All day' },
+                            ].map((event, idx) => (
+                                <div key={idx} className="p-4 rounded-lg border" style={{ borderColor: '#E5E7EB', backgroundColor: '#FFFFFF' }}>
+                                    <div className="flex gap-3">
+                                        <div className="flex-shrink-0 w-12 h-12 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#DBEAFE' }}>
+                                            <Calendar className="w-5 h-5" style={{ color: '#2563EB' }} />
+                                        </div>
+                                        <div className="flex-1">
+                                            <p className="font-medium" style={{ color: '#1F2937' }}>{event.title}</p>
+                                            <p className="text-sm mt-1" style={{ color: '#6B7280' }}>{event.date} • {event.time}</p>
+                                        </div>
+                                        <Bookmark className="w-5 h-5 flex-shrink-0 mt-1" style={{ color: '#D1D5DB' }} />
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
                     </div>
                 </div>
 
