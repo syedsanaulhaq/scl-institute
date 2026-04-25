@@ -198,9 +198,12 @@ const StudentPortalDashboard3 = ({ user }) => {
                                             <p className="font-medium" style={{ color: '#1F2937' }}>
                                                 {task.title}
                                             </p>
-                                            <p className="text-sm mt-1" style={{ color: '#6B7280' }}>
-                                                ≡ƒôà {task.date} ┬╖ {task.location}
-                                            </p>
+                                            <div className="flex items-center gap-2 text-sm mt-1" style={{ color: '#6B7280' }}>
+                                                <Calendar className="w-4 h-4" />
+                                                {task.date}
+                                                <span>•</span>
+                                                {task.location}
+                                            </div>
                                         </div>
                                         <Clock className="w-4 h-4" style={{ color: '#D1D5DB' }} />
                                     </div>

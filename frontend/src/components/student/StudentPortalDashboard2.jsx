@@ -168,7 +168,10 @@ const StudentPortalDashboard2 = ({ user }) => {
 
                 {/* Upcoming Events */}
                 <div className="mb-8">
-                    <h2 className="text-lg font-bold mb-4" style={{ color: '#1F2937' }}>≡ƒôà Upcoming Events</h2>
+                    <div className="flex items-center gap-2 mb-4">
+                        <Calendar className="w-5 h-5" style={{ color: '#2563EB' }} />
+                        <h2 className="text-lg font-bold" style={{ color: '#1F2937' }}>Upcoming Events</h2>
+                    </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {[
                             { title: 'Midterm Exam', date: 'Oct 28' },
@@ -178,7 +181,7 @@ const StudentPortalDashboard2 = ({ user }) => {
                         ].map((event, idx) => (
                             <div key={idx} className="p-4 rounded-lg border" style={{ borderColor: '#E5E7EB', backgroundColor: '#F9FAFB' }}>
                                 <p className="font-medium" style={{ color: '#1F2937' }}>{event.title}</p>
-                                <p className="text-sm mt-2" style={{ color: '#6B7280' }}>≡ƒôà {event.date}</p>
+                                <div className="flex items-center gap-2 text-sm mt-2" style={{ color: '#6B7280' }}><Calendar className="w-4 h-4" /> {event.date}</div>
                             </div>
                         ))}
                     </div>
