@@ -234,69 +234,79 @@ const StudentPortalDashboard1 = ({ user }) => {
                 />
             </div>
 
-            {/* Main Two-Column Grid */}
-            <div className="grid grid-cols-1 xl:grid-cols-3 gap-5 mb-5">
+            {/* Main Content - Three Separate Blocks */}
+            <div className="grid grid-cols-1 gap-5 mb-5">
 
-                {/* Left: Courses panel */}
-                <div className="xl:col-span-2 bg-white rounded-xl border overflow-hidden shadow-sm" style={{ borderColor: '#E5E7EB' }}>
+                {/* Courses Block - Moodle Style */}
+                <div className="bg-white rounded-xl border overflow-hidden shadow-sm" style={{ borderColor: '#E5E7EB' }}>
                     <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: '1px solid #E5E7EB' }}>
-                        <h2 className="text-sm font-semibold" style={{ color: '#1F2937' }}>My Courses</h2>
+                        <h2 className="text-sm font-semibold flex items-center gap-2" style={{ color: '#1F2937' }}>
+                            <BookOpen className="w-4 h-4" style={{ color: '#2563EB' }} />
+                            My Courses
+                        </h2>
                         <button onClick={() => navigate('/student/programme')} className="text-xs font-medium" style={{ color: '#2563EB' }}>
                             View all →
                         </button>
                     </div>
-
-                    {/* Tab strip */}
-                    <div className="flex overflow-x-auto" style={{ borderBottom: '1px solid #E5E7EB' }}>
-                        {[
-                            { key: 'courses', label: 'Courses' },
-                            { key: 'events', label: 'Upcoming' },
-                            { key: 'announcements', label: 'Announcements' },
-                        ].map(tab => (
-                            <button
-                                key={tab.key}
-                                onClick={() => setActiveTab(tab.key)}
-                                className="px-5 py-2.5 text-xs font-medium whitespace-nowrap border-b-2 transition-colors"
-                                style={{
-                                    borderBottomColor: activeTab === tab.key ? '#2563EB' : 'transparent',
-                                    color: activeTab === tab.key ? '#2563EB' : '#6B7280',
-                                    background: 'transparent',
-                                }}
-                            >
-                                {tab.label}
-                            </button>
-                        ))}
-                    </div>
-
                     <div className="p-4">
-                        {activeTab === 'courses' && <CoursesTab courses={courses} onCourseClick={handleCourseClick} />}
-                        {activeTab === 'events' && <EventsTab events={upcomingEvents} formatDate={formatDate} onItemClick={handleMoodleNavigate} />}
-                        {activeTab === 'announcements' && <AnnouncementsTab announcements={announcements} formatTime={formatTime} onItemClick={handleMoodleNavigate} />}
+                        <CoursesTab courses={courses} onCourseClick={handleCourseClick} />
                     </div>
                 </div>
 
-                {/* Right column: Notifications + Quick Links */}
-                <div className="flex flex-col gap-5">
-
-                    {/* Notifications Panel */}
-                    <div className="bg-white rounded-xl border shadow-sm overflow-hidden" style={{ borderColor: '#E5E7EB' }}>
-                        <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: '1px solid #E5E7EB' }}>
-                            <h2 className="text-sm font-semibold" style={{ color: '#1F2937' }}>Notifications</h2>
-                            <button onClick={() => navigate('/student/notifications')} className="text-xs font-medium" style={{ color: '#2563EB' }}>
-                                View all
-                            </button>
-                        </div>
-                        <div className="p-4 max-h-64 overflow-y-auto">
-                            <NotificationsTab notifications={notifications?.slice(0, 5)} formatTime={formatTime} onItemClick={handleMoodleNavigate} />
-                        </div>
+                {/* Announcements Block */}
+                <div className="bg-white rounded-xl border overflow-hidden shadow-sm" style={{ borderColor: '#E5E7EB' }}>
+                    <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: '1px solid #E5E7EB' }}>
+                        <h2 className="text-sm font-semibold flex items-center gap-2" style={{ color: '#1F2937' }}>
+                            <Megaphone className="w-4 h-4" style={{ color: '#2563EB' }} />
+                            Announcements
+                        </h2>
+                        <button onClick={() => navigate('/student/notifications')} className="text-xs font-medium" style={{ color: '#2563EB' }}>
+                            View all →
+                        </button>
                     </div>
+                    <div className="p-4">
+                        <AnnouncementsTab announcements={announcements} formatTime={formatTime} onItemClick={handleMoodleNavigate} />
+                    </div>
+                </div>
 
-                    {/* Mini Calendar */}
+                {/* Upcoming Events Block */}
+                <div className="bg-white rounded-xl border overflow-hidden shadow-sm" style={{ borderColor: '#E5E7EB' }}>
+                    <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: '1px solid #E5E7EB' }}>
+                        <h2 className="text-sm font-semibold flex items-center gap-2" style={{ color: '#1F2937' }}>
+                            <Calendar className="w-4 h-4" style={{ color: '#2563EB' }} />
+                            Upcoming Events
+                        </h2>
+                        <button onClick={() => navigate('/student/timetable')} className="text-xs font-medium" style={{ color: '#2563EB' }}>
+                            View all →
+                        </button>
+                    </div>
+                    <div className="p-4">
+                        <EventsTab events={upcomingEvents} formatDate={formatDate} onItemClick={handleMoodleNavigate} />
+                    </div>
+                </div>
+            </div>
+
+            {/* Secondary Content - Notifications and Quick Links */}
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-5 mb-5">
+                <div className="xl:col-span-2 bg-white rounded-xl border shadow-sm overflow-hidden" style={{ borderColor: '#E5E7EB' }}>
+                    <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: '1px solid #E5E7EB' }}>
+                        <h2 className="text-sm font-semibold" style={{ color: '#1F2937' }}>Notifications</h2>
+                        <button onClick={() => navigate('/student/notifications')} className="text-xs font-medium" style={{ color: '#2563EB' }}>
+                            View all
+                        </button>
+                    </div>
+                    <div className="p-4 max-h-64 overflow-y-auto">
+                        <NotificationsTab notifications={notifications?.slice(0, 5)} formatTime={formatTime} onItemClick={handleMoodleNavigate} />
+                    </div>
+                </div>
+
+                {/* Mini Calendar */}
+                <div>
                     <MiniCalendar
                         date={calendarDate}
                         onDateChange={setCalendarDate}
                         events={upcomingEvents}
-                        onEventDayClick={() => setActiveTab('events')}
+                        onEventDayClick={() => {}}
                     />
 
                     {/* Quick Links */}
