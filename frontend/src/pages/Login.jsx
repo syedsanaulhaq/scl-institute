@@ -145,7 +145,7 @@ const LoginPage = ({ onLoginSuccess }) => {
                             <button
                                 type="submit"
                                 disabled={loading}
-                                className="w-full flex justify-center items-center py-4 px-4 border border-transparent text-sm font-bold rounded-2xl text-white bg-scl-purple hover:bg-scl-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-scl-purple transition-all duration-200 shadow-xl shadow-scl-purple/20 disabled:opacity-50"
+                                className="w-full flex justify-center items-center py-4 px-4 border border-transparent text-sm font-bold rounded-2xl text-white bg-scl-purple hover:bg-blue-700 active:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-scl-purple transition-all duration-200 shadow-xl shadow-scl-purple/20 disabled:opacity-50"
                             >
                                 {loading ? (
                                     <Loader2 className="w-5 h-5 animate-spin" />

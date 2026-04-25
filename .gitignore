@@ -62,3 +62,7 @@ dbhost
 dbname
 dbuser
 scripts/promote-develop-to-production.ps1
+
+# Local docker overrides (dev-only nginx etc.)
+docker-compose.override.yml
+

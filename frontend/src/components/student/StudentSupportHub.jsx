@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { AlertTriangle, MessageSquare, FileText, Scale, Accessibility, Shield, Plus, Send, Upload, Clock, CheckCircle } from 'lucide-react';
+import { AlertTriangle, MessageSquare, FileText, Scale, Accessibility, Shield, Plus, Send, Upload, Clock, CheckCircle, Megaphone } from 'lucide-react';
 import axios from 'axios';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
@@ -60,8 +60,24 @@ const StudentSupportHub = ({ user }) => {
                 console.error('Error getting student ID:', err);
             }
         };
-        
-        if (user?.email) getStudentId();
+
+        const fetchAnnouncements = async () => {
+            try {
+                const dash = await axios.get(`${API_URL}/students/student-dashboard`, {
+                    params: { email: user?.email }
+                });
+                if (dash.data?.success) {
+                    setAnnouncements(dash.data?.data?.announcements || []);
+                }
+            } catch (e) {
+                console.warn('Announcements fetch failed:', e?.message);
+            }
+        };
+
+        if (user?.email) {
+            getStudentId();
+            fetchAnnouncements();
+        }
     }, [user]);
 
     const fetchAllData = async (id) => {
@@ -87,23 +103,37 @@ const StudentSupportHub = ({ user }) => {
             const safe = await axios.get(`${API_URL}/support/safeguarding/${id}`);
             setSafeguardingReports(safe.data?.reports || []);
 
-            // Fetch announcements from Moodle courses
-            const ann = await axios.get(`${API_URL}/notifications/announcements`, {
-                params: { student_email: user?.email }
-            });
-            setAnnouncements(ann.data?.announcements || []);
-            
-            // Set enrolled courses from announcements response or fetch separately
-            if (ann.data?.courses && ann.data.courses.length > 0) {
-                setEnrolledCourses(ann.data.courses);
-                console.log('Courses loaded from announcements:', ann.data.courses);
-            } else {
-                // Fetch courses separately if not in announcements response
-                const coursesRes = await axios.get(`${API_URL}/notifications/courses/${user?.email}`);
-                if (coursesRes.data?.courses) {
-                    setEnrolledCourses(coursesRes.data.courses);
-                    console.log('Courses loaded separately:', coursesRes.data.courses);
+            // Fetch announcements from student-dashboard endpoint (same source as dashboard)
+            try {
+                const dash = await axios.get(`${API_URL}/students/student-dashboard`, {
+                    params: { email: user?.email }
+                });
+                if (dash.data?.success) {
+                    setAnnouncements(dash.data?.data?.announcements || []);
                 }
+            } catch (e) {
+                console.warn('Announcements fetch failed:', e?.message);
+                setAnnouncements([]);
+            }
+
+            // Fetch enrolled courses list for feedback dropdown
+            try {
+                const ann = await axios.get(`${API_URL}/notifications/announcements`, {
+                    params: { student_email: user?.email }
+                });
+                if (ann.data?.courses && ann.data.courses.length > 0) {
+                    setEnrolledCourses(ann.data.courses);
+                    console.log('Courses loaded from announcements:', ann.data.courses);
+                } else {
+                    // Fetch courses separately if not in announcements response
+                    const coursesRes = await axios.get(`${API_URL}/notifications/courses/${user?.email}`);
+                    if (coursesRes.data?.courses) {
+                        setEnrolledCourses(coursesRes.data.courses);
+                        console.log('Courses loaded separately:', coursesRes.data.courses);
+                    }
+                }
+            } catch (e) {
+                console.warn('Enrolled courses fetch failed:', e?.message);
             }
         } catch (err) {
             console.error('Error fetching data:', err);
@@ -261,36 +291,41 @@ const StudentSupportHub = ({ user }) => {
             {/* MESSAGES TAB */}
             {activeTab === 'messages' && (
                 <div className="space-y-6">
-                    <div className="bg-white rounded-lg shadow p-6">
-                        <h2 className="text-xl font-bold mb-4">Announcements from Your Courses</h2>
-                        <p className="text-sm text-gray-600 mb-4">Live chat support is available in the bottom-right corner</p>
-                        <div className="space-y-4">
+                    <div className="bg-white rounded-xl border overflow-hidden shadow-sm" style={{ borderColor: '#E5E7EB' }}>
+                        <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: '1px solid #E5E7EB' }}>
+                            <h2 className="text-sm font-semibold flex items-center gap-2" style={{ color: '#1F2937' }}>
+                                <Megaphone className="w-4 h-4" style={{ color: '#2563EB' }} />
+                                Announcements from Your Courses
+                            </h2>
+                        </div>
+                        <div className="p-4">
                             {announcements.length === 0 ? (
-                                <p className="text-gray-600">No announcements yet. Announcements from your enrolled Moodle courses will appear here.</p>
+                                <div className="text-center py-8" style={{ color: '#6B7280' }}>
+                                    <Megaphone className="w-8 h-8 mx-auto mb-2" style={{ color: '#9CA3AF' }} />
+                                    <p className="text-sm font-medium">No announcements</p>
+                                    <p className="text-xs mt-1">Announcements from your enrolled Moodle courses will appear here</p>
+                                </div>
                             ) : (
-                                announcements.slice(0, 10).map(ann => (
-                                    <div key={ann.id} className="p-4 bg-blue-50 rounded border-l-4 border-blue-500">
-                                        <div className="flex items-start justify-between">
-                                            <div className="flex-1">
-                                                <p className="font-bold text-gray-900">{ann.title}</p>
-                                                {ann.course_name && (
-                                                    <p className="text-xs text-blue-600 font-medium mt-1">
-                                                        Course: {ann.course_name} {ann.course_code && `(${ann.course_code})`}
-                                                    </p>
-                                                )}
-                                                <p className="text-sm text-gray-600 mt-2">{ann.content.substring(0, 150)}...</p>
-                                                <div className="flex gap-2 mt-2">
-                                                    {ann.published_by && (
-                                                        <span className="text-xs text-gray-500">By: {ann.published_by}</span>
-                                                    )}
-                                                    <span className="text-xs text-gray-500">
-                                                        {new Date(ann.created_at).toLocaleDateString('en-GB')}
+                                <div className="divide-y" style={{ borderColor: '#F9FAFB' }}>
+                                    {announcements.map(ann => (
+                                        <div key={ann.id} className="py-3 px-1 rounded">
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <Megaphone className="w-3 h-3" style={{ color: '#D07020' }} />
+                                                <p className="text-xs font-semibold" style={{ color: '#1F2937' }}>{ann.subject}</p>
+                                            </div>
+                                            {ann.message && <p className="text-[11px] line-clamp-2 ml-5" style={{ color: '#6B7280' }}>{ann.message}</p>}
+                                            <div className="flex items-center gap-2 mt-1 ml-5">
+                                                {ann.coursename && <span className="text-[10px]" style={{ color: '#6B7280' }}>{ann.coursename}</span>}
+                                                {ann.userfullname && <span className="text-[10px]" style={{ color: '#6B7280' }}>· {ann.userfullname}</span>}
+                                                {ann.timemodified && (
+                                                    <span className="text-[10px] ml-auto" style={{ color: '#9CA3AF' }}>
+                                                        {new Date(ann.timemodified).toLocaleDateString('en-GB')}
                                                     </span>
-                                                </div>
+                                                )}
                                             </div>
                                         </div>
-                                    </div>
-                                ))
+                                    ))}
+                                </div>
                             )}
                         </div>
                     </div>
@@ -376,7 +411,7 @@ const StudentSupportHub = ({ user }) => {
                 <div className="space-y-6">
                     <button
                         onClick={() => setShowFeedbackForm(!showFeedbackForm)}
-                        className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
+                        className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center gap-2"
                     >
                         <Plus className="w-5 h-5" /> Submit Feedback
                     </button>
@@ -434,14 +469,14 @@ const StudentSupportHub = ({ user }) => {
                                                     className="text-4xl transition-all hover:scale-125 cursor-pointer"
                                                 >
                                                     {star <= feedbackForm.rating ? (
-                                                        <span className="text-yellow-400">★</span>
+                                                        <span className="text-yellow-400">â˜…</span>
                                                     ) : (
-                                                        <span className="text-gray-300">☆</span>
+                                                        <span className="text-gray-300">â˜†</span>
                                                     )}
                                                 </button>
                                             ))}
                                         </div>
-                                        <span className="text-lg font-bold text-slate-700 min-w-fit">{feedbackForm.rating || 0} / 5</span>
+                                        <span className="text-lg font-bold text-purple-600 min-w-fit">{feedbackForm.rating || 0} / 5</span>
                                     </div>
                                 </div>
                                 <textarea
@@ -451,7 +486,7 @@ const StudentSupportHub = ({ user }) => {
                                     className="w-full px-4 py-2 border rounded mb-4 h-24"
                                 ></textarea>
                                 <div className="flex gap-3">
-                                    <button type="submit" className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Submit Feedback</button>
+                                    <button type="submit" className="px-6 py-2 bg-purple-600 text-white rounded hover:bg-purple-700">Submit Feedback</button>
                                     <button
                                         type="button"
                                         onClick={() => setShowFeedbackForm(false)}
@@ -465,7 +500,7 @@ const StudentSupportHub = ({ user }) => {
                     )}
 
                     <div className="bg-white rounded-lg shadow overflow-hidden">
-                        <h3 className="text-lg font-bold p-4 bg-blue-50 border-b">My Feedback History</h3>
+                        <h3 className="text-lg font-bold p-4 bg-purple-50 border-b">My Feedback History</h3>
                         {feedback.length === 0 ? (
                             <p className="p-6 text-gray-600 text-center">No feedback submitted yet</p>
                         ) : (
@@ -487,7 +522,7 @@ const StudentSupportHub = ({ user }) => {
                                                     <span className="font-medium text-gray-900">{fb.module_code || 'N/A'}</span>
                                                 </td>
                                                 <td className="px-4 py-3">
-                                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-slate-800">
+                                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
                                                         {fb.feedback_type}
                                                     </span>
                                                 </td>
@@ -495,7 +530,7 @@ const StudentSupportHub = ({ user }) => {
                                                     <div className="flex items-center justify-center gap-1">
                                                         {[1, 2, 3, 4, 5].map(star => (
                                                             <span key={star} className={`${star <= fb.rating ? 'text-yellow-400' : 'text-gray-300'}`}>
-                                                                {star <= fb.rating ? '●' : '○'}
+                                                                {star <= fb.rating ? 'â—' : 'â—‹'}
                                                             </span>
                                                         ))}
                                                         <span className="ml-2 text-sm font-semibold text-gray-700">{fb.rating}/5</span>
@@ -745,7 +780,4 @@ const StudentSupportHub = ({ user }) => {
 };
 
 export default StudentSupportHub;
-
-
-
 

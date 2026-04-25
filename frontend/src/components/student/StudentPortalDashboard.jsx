@@ -360,7 +360,7 @@ const StudentPortalDashboard1 = ({ user }) => {
                             <Megaphone className="w-4 h-4" style={{ color: '#2563EB' }} />
                             Announcements
                         </h2>
-                        <button onClick={() => navigate('/student/notifications')} className="text-xs font-medium" style={{ color: '#2563EB' }}>
+                        <button onClick={() => navigate('/student/messages')} className="text-xs font-medium" style={{ color: '#2563EB' }}>
                             View all →
                         </button>
                     </div>
