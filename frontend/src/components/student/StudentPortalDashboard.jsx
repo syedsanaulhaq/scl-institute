@@ -45,6 +45,7 @@ const StudentPortalDashboard1 = ({ user }) => {
     
     // Define all hooks unconditionally (required for React hook rules)
     const [data, setData] = useState(null);
+    const [sclNotifications, setSclNotifications] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [ssoLoading, setSsoLoading] = useState(false);
@@ -53,7 +54,10 @@ const StudentPortalDashboard1 = ({ user }) => {
     const [calendarDate, setCalendarDate] = useState(new Date());
 
     useEffect(() => {
-        if (user?.email) fetchDashboard();
+        if (user?.email) {
+            fetchDashboard();
+            fetchSCLNotifications();
+        }
     }, [user?.email]);
 
     const fetchDashboard = async () => {
@@ -73,6 +77,17 @@ const StudentPortalDashboard1 = ({ user }) => {
             setError('Failed to load dashboard data');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const fetchSCLNotifications = async () => {
+        try {
+            const res = await axios.get(`${API_URL}/notifications/user/${user.email}`);
+            if (res.data?.success && res.data?.notifications) {
+                setSclNotifications(res.data.notifications);
+            }
+        } catch (err) {
+            console.error('SCL notifications fetch failed:', err);
         }
     };
 
@@ -231,7 +246,25 @@ const StudentPortalDashboard1 = ({ user }) => {
     ];
     
     const announcements = apiAnnouncements && apiAnnouncements.length > 0 ? apiAnnouncements : defaultAnnouncements;
-    const notifications = apiNotifications && apiNotifications.length > 0 ? apiNotifications : defaultNotifications;
+    
+    // Use SCL notifications if available, otherwise fallback to Moodle notifications, then default notifications
+    let notifications = [];
+    if (sclNotifications && sclNotifications.length > 0) {
+        notifications = sclNotifications.map(n => ({
+            id: n.id,
+            subject: n.subject,
+            text: n.message || n.body || '',
+            timecreated: n.created_at ? new Date(n.created_at).toISOString() : new Date().toISOString(),
+            read: n.is_read || false,
+            type: n.type || 'notification',
+            moodlePath: '/student/notifications'
+        }));
+    } else if (apiNotifications && apiNotifications.length > 0) {
+        notifications = apiNotifications;
+    } else {
+        notifications = defaultNotifications;
+    }
+    
     const firstName = student?.name?.split(' ')[0] || 'Student';
     const unreadCount = notifications?.filter(n => !n.read).length || 0;
 
