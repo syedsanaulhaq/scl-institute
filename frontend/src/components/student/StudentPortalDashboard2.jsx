@@ -15,6 +15,10 @@ import {
     ChevronRight,
     ChevronLeft,
     Lock,
+    FileText,
+    Award,
+    HelpCircle,
+    DollarSign,
 } from 'lucide-react';
 import axios from 'axios';
 import { openMoodleSSO, getMoodleUrl } from '../../utils/ssoService';
@@ -83,10 +87,10 @@ const StudentPortalDashboard2 = ({ user }) => {
                 {/* Welcome Section */}
                 <div className="mb-8">
                     <h1 className="text-3xl font-bold mb-1" style={{ color: '#1F2937' }}>
-                        Welcome back, {student.firstName || 'Student'} ≡ƒæï
+                        Welcome back, {student.firstName || 'Student'}! 👋
                     </h1>
                     <p className="text-sm" style={{ color: '#6B7280' }}>
-                        {student.programme || 'Programme'} ┬╖ Roll No: {student.rollNumber || 'N/A'} ┬╖ {new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long' })}
+                        {student.programme || 'Programme'} • Roll No: {student.rollNumber || 'N/A'} • {new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long' })}
                     </p>
                 </div>
 
@@ -210,19 +214,19 @@ const StudentPortalDashboard2 = ({ user }) => {
                     <h2 className="text-lg font-bold mb-4" style={{ color: '#1F2937' }}>Quick Links</h2>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         <button onClick={() => navigate('/student/admissions')} className="p-4 rounded-lg text-center border hover:shadow-md transition" style={{ borderColor: '#E5E7EB', backgroundColor: '#F9FAFB' }}>
-                            <div className="text-2xl mb-2">≡ƒô¥</div>
+                            <GraduationCap className="w-8 h-8 mx-auto mb-2" style={{ color: '#2563EB' }} />
                             <p className="text-xs font-medium" style={{ color: '#1F2937' }}>Enroll</p>
                         </button>
                         <button onClick={() => navigate('/student/documents')} className="p-4 rounded-lg text-center border hover:shadow-md transition" style={{ borderColor: '#E5E7EB', backgroundColor: '#F9FAFB' }}>
-                            <div className="text-2xl mb-2">≡ƒôä</div>
+                            <FileText className="w-8 h-8 mx-auto mb-2" style={{ color: '#2563EB' }} />
                             <p className="text-xs font-medium" style={{ color: '#1F2937' }}>Documents</p>
                         </button>
                         <button onClick={() => navigate('/student/grades')} className="p-4 rounded-lg text-center border hover:shadow-md transition" style={{ borderColor: '#E5E7EB', backgroundColor: '#F9FAFB' }}>
-                            <div className="text-2xl mb-2">≡ƒôè</div>
+                            <Award className="w-8 h-8 mx-auto mb-2" style={{ color: '#2563EB' }} />
                             <p className="text-xs font-medium" style={{ color: '#1F2937' }}>Grades</p>
                         </button>
                         <button onClick={() => navigate('/student/support')} className="p-4 rounded-lg text-center border hover:shadow-md transition" style={{ borderColor: '#E5E7EB', backgroundColor: '#F9FAFB' }}>
-                            <div className="text-2xl mb-2">≡ƒÆ¼</div>
+                            <HelpCircle className="w-8 h-8 mx-auto mb-2" style={{ color: '#2563EB' }} />
                             <p className="text-xs font-medium" style={{ color: '#1F2937' }}>Support</p>
                         </button>
                     </div>

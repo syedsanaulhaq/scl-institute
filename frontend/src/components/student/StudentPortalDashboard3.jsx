@@ -18,6 +18,10 @@ import {
     Clock,
     FileText,
     Award,
+    HelpCircle,
+    CheckSquare,
+    BarChart3,
+    DollarSign,
 } from 'lucide-react';
 import axios from 'axios';
 import { openMoodleSSO, getMoodleUrl } from '../../utils/ssoService';
@@ -84,10 +88,10 @@ const StudentPortalDashboard3 = ({ user }) => {
             <div className="px-6 py-8">
                 <div className="mb-8">
                     <h1 className="text-3xl font-bold mb-1" style={{ color: '#1F2937' }}>
-                        Welcome back, {student.firstName || 'Student'} ≡ƒæï
+                        Welcome back, {student.firstName || 'Student'}! 👋
                     </h1>
                     <p className="text-sm" style={{ color: '#6B7280' }}>
-                        {student.programme || 'Programme'} ┬╖ Roll No: {student.rollNumber || 'N/A'} ┬╖ {new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long' })}
+                        {student.programme || 'Programme'} • Roll No: {student.rollNumber || 'N/A'} • {new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long' })}
                     </p>
                 </div>
 
@@ -173,7 +177,10 @@ const StudentPortalDashboard3 = ({ user }) => {
                     <div className="lg:col-span-2">
                         <div className="flex items-center justify-between mb-6">
                             <h2 className="text-xl font-bold" style={{ color: '#1F2937' }}>
-                                ≡ƒôï Pending Tasks
+                                <div className="flex items-center gap-2 mb-4">
+                                    <CheckSquare className="w-5 h-5" style={{ color: '#2563EB' }} />
+                                    <h3 className="text-lg font-bold" style={{ color: '#1F2937' }}>Pending Tasks</h3>
+                                </div>
                             </h2>
                             <button
                                 onClick={() => navigate('/student/tasks')}
@@ -187,7 +194,7 @@ const StudentPortalDashboard3 = ({ user }) => {
 
                         <div className="space-y-3">
                             {[
-                                { title: 'DB Systems Midterm', date: 'Oct 24', location: 'Hall B2 ┬╖ 9 AM' },
+                                { title: 'DB Systems Midterm', date: 'Oct 24', location: 'Hall B2 • 9 AM' },
                                 { title: 'SE Project Phase 2', date: 'Oct 26', location: 'Online' },
                                 { title: 'OS Lab Assignment #4', date: 'Oct 28', location: 'Lab C' },
                                 { title: 'Fee Challan Submission', date: 'Oct 31', location: 'Finance Office' },
@@ -216,7 +223,10 @@ const StudentPortalDashboard3 = ({ user }) => {
                     <div>
                         <div className="flex items-center justify-between mb-6">
                             <h2 className="text-xl font-bold" style={{ color: '#1F2937' }}>
-                                ≡ƒôè Last Results
+                                <div className="flex items-center gap-2 mb-4">
+                                    <BarChart3 className="w-5 h-5" style={{ color: '#2563EB' }} />
+                                    <h3 className="text-lg font-bold" style={{ color: '#1F2937' }}>Last Results</h3>
+                                </div>
                             </h2>
                             <button
                                 onClick={() => navigate('/student/grades')}
@@ -258,7 +268,7 @@ const StudentPortalDashboard3 = ({ user }) => {
                 {/* Quick Actions */}
                 <div>
                     <h2 className="text-lg font-bold mb-4" style={{ color: '#1F2937' }}>
-                        ΓÜí Quick Actions
+                        ⚡ Quick Actions
                     </h2>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         <button
@@ -266,7 +276,7 @@ const StudentPortalDashboard3 = ({ user }) => {
                             className="p-4 rounded-lg border text-center hover:shadow-md transition"
                             style={{ borderColor: '#E5E7EB', backgroundColor: '#F9FAFB' }}
                         >
-                            <div className="text-2xl mb-2">≡ƒô¥</div>
+                            <GraduationCap className="w-8 h-8 mx-auto mb-2" style={{ color: '#2563EB' }} />
                             <p className="text-sm font-medium" style={{ color: '#1F2937' }}>
                                 Enroll Courses
                             </p>
@@ -277,7 +287,7 @@ const StudentPortalDashboard3 = ({ user }) => {
                             className="p-4 rounded-lg border text-center hover:shadow-md transition"
                             style={{ borderColor: '#E5E7EB', backgroundColor: '#F9FAFB' }}
                         >
-                            <div className="text-2xl mb-2">≡ƒôä</div>
+                            <FileText className="w-8 h-8 mx-auto mb-2" style={{ color: '#2563EB' }} />
                             <p className="text-sm font-medium" style={{ color: '#1F2937' }}>
                                 Download Transcript
                             </p>
@@ -288,7 +298,7 @@ const StudentPortalDashboard3 = ({ user }) => {
                             className="p-4 rounded-lg border text-center hover:shadow-md transition"
                             style={{ borderColor: '#E5E7EB', backgroundColor: '#F9FAFB' }}
                         >
-                            <div className="text-2xl mb-2">≡ƒÅª</div>
+                            <DollarSign className="w-8 h-8 mx-auto mb-2" style={{ color: '#2563EB' }} />
                             <p className="text-sm font-medium" style={{ color: '#1F2937' }}>
                                 Pay Fee Online
                             </p>
@@ -299,7 +309,7 @@ const StudentPortalDashboard3 = ({ user }) => {
                             className="p-4 rounded-lg border text-center hover:shadow-md transition"
                             style={{ borderColor: '#E5E7EB', backgroundColor: '#F9FAFB' }}
                         >
-                            <div className="text-2xl mb-2">≡ƒÄô</div>
+                            <BookOpen className="w-8 h-8 mx-auto mb-2" style={{ color: '#2563EB' }} />
                             <p className="text-sm font-medium" style={{ color: '#1F2937' }}>
                                 Degree Audit
                             </p>
