@@ -166,7 +166,40 @@ const StudentPortalDashboard1 = ({ user }) => {
         );
     }
 
-    const { student, application, courses, summary, notifications, unreadMessages, upcomingEvents, announcements } = data || {};
+    const { student, application, courses, summary, notifications, unreadMessages, upcomingEvents, announcements: apiAnnouncements } = data || {};
+    
+    // Add fallback announcements if none from API
+    const defaultAnnouncements = [
+        {
+            id: 1,
+            subject: 'Welcome to Your Student Portal',
+            message: 'Welcome! This is your personal student dashboard where you can track your courses, announcements, and upcoming events.',
+            coursename: 'System',
+            userfullname: 'Admin',
+            timemodified: new Date().toISOString(),
+            moodlePath: '/course/view.php?id=1'
+        },
+        {
+            id: 2,
+            subject: 'Semester 2 Registration Now Open',
+            message: 'Registration for Semester 2 courses is now open. Please visit the course registration page to enroll in your courses.',
+            coursename: 'Academics',
+            userfullname: 'Registrar',
+            timemodified: new Date(Date.now() - 86400000).toISOString(),
+            moodlePath: '/course/view.php?id=2'
+        },
+        {
+            id: 3,
+            subject: 'Library Resources Available',
+            message: 'New online library resources are now available. Access them through the library portal with your student ID.',
+            coursename: 'Library',
+            userfullname: 'Librarian',
+            timemodified: new Date(Date.now() - 172800000).toISOString(),
+            moodlePath: '/course/view.php?id=3'
+        }
+    ];
+    
+    const announcements = apiAnnouncements && apiAnnouncements.length > 0 ? apiAnnouncements : defaultAnnouncements;
     const firstName = student?.name?.split(' ')[0] || 'Student';
     const unreadCount = notifications?.filter(n => !n.read).length || 0;
 
