@@ -27,16 +27,7 @@ const StudentPortalDashboard = ({ user }) => {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     
-    // Check layout parameter and render appropriate dashboard
-    const layoutParam = searchParams.get('layout');
-    if (layoutParam === '2') {
-        return <StudentPortalDashboard2 user={user} />;
-    }
-    if (layoutParam === '3') {
-        return <StudentPortalDashboard3 user={user} />;
-    }
-    
-    // Default to Dashboard 1 (original)
+    // Define all hooks unconditionally (required for React hook rules)
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
@@ -44,6 +35,17 @@ const StudentPortalDashboard = ({ user }) => {
     const [ssoError, setSsoError] = useState('');
     const [activeTab, setActiveTab] = useState('courses');
     const [calendarDate, setCalendarDate] = useState(new Date());
+
+    // Get layout parameter after all hooks are defined
+    const layoutParam = searchParams.get('layout');
+    
+    // Route to appropriate dashboard based on layout parameter
+    if (layoutParam === '2') {
+        return <StudentPortalDashboard2 user={user} />;
+    }
+    if (layoutParam === '3') {
+        return <StudentPortalDashboard3 user={user} />;
+    }
 
     useEffect(() => {
         if (user?.email) fetchDashboard();
