@@ -250,7 +250,7 @@ const StudentPortalDashboard1 = ({ user }) => {
                         </button>
                     </div>
                     <div className="p-4">
-                        <CoursesTab courses={courses} onCourseClick={handleCourseClick} />
+                        <CoursesTab courses={courses?.slice(0, 5)} onCourseClick={handleCourseClick} />
                     </div>
                 </div>
 
@@ -266,7 +266,7 @@ const StudentPortalDashboard1 = ({ user }) => {
                         </button>
                     </div>
                     <div className="p-4">
-                        <AnnouncementsTab announcements={announcements} formatTime={formatTime} onItemClick={handleMoodleNavigate} />
+                        <AnnouncementsTab announcements={announcements?.slice(0, 5)} formatTime={formatTime} onItemClick={handleMoodleNavigate} />
                     </div>
                 </div>
             </div>
@@ -285,7 +285,7 @@ const StudentPortalDashboard1 = ({ user }) => {
                         </button>
                     </div>
                     <div className="p-4">
-                        <EventsTab events={upcomingEvents} formatDate={formatDate} onItemClick={handleMoodleNavigate} />
+                        <EventsTab events={upcomingEvents?.slice(0, 5)} formatDate={formatDate} onItemClick={handleMoodleNavigate} />
                     </div>
                 </div>
 
@@ -301,7 +301,7 @@ const StudentPortalDashboard1 = ({ user }) => {
                         </button>
                     </div>
                     <div className="p-4">
-                        <NotificationsTab notifications={notifications?.slice(0, 8)} formatTime={formatTime} onItemClick={handleMoodleNavigate} />
+                        <NotificationsTab notifications={notifications?.slice(0, 5)} formatTime={formatTime} onItemClick={handleMoodleNavigate} />
                     </div>
                 </div>
             </div>
