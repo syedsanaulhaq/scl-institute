@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import axios from 'axios';
 import { openMoodleSSO, getMoodleUrl } from '../../utils/ssoService';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
 
@@ -763,110 +764,38 @@ const AnnouncementsTab = ({ announcements, formatTime, onItemClick }) => {
 };
 
 const PerformanceChart = ({ courses }) => {
-    const chartWidth = 600;
-    const chartHeight = 200;
-    const margin = { top: 20, right: 30, bottom: 50, left: 50 };
-    const plotWidth = chartWidth - margin.left - margin.right;
-    const plotHeight = chartHeight - margin.top - margin.bottom;
-    
-    // Create bars for first 4 courses
-    const courseData = courses.map((course, idx) => ({
-        code: course.code?.substring(0, 6) || `C${idx + 1}`,
-        grade: course.progress || 70,
-        max: 100
-    }));
-
-    const barWidth = plotWidth / (courseData.length * 2.5);
-    const spacing = barWidth * 1.5;
+    // Prepare data for chart - first 4 courses
+    const chartData = courses
+        .slice(0, 4)
+        .map((course, idx) => ({
+            name: course.code?.replace(/^HND-LM-/, '') || `C${idx + 1}`,
+            'Your Grade': parseFloat(course.progress) || 0,
+            'Maximum': 100
+        }));
 
     return (
-        <svg width="100%" height={chartHeight} viewBox={`0 0 ${chartWidth} ${chartHeight}`} style={{ minWidth: '100%' }}>
-            {/* Grid lines */}
-            {[0, 25, 50, 75, 100].map((val) => {
-                const y = margin.top + plotHeight - (val / 100) * plotHeight;
-                return (
-                    <line
-                        key={`grid-${val}`}
-                        x1={margin.left}
-                        y1={y}
-                        x2={chartWidth - margin.right}
-                        y2={y}
-                        stroke="#F3F4F6"
-                        strokeWidth="1"
-                        strokeDasharray="2,2"
-                    />
-                );
-            })}
-
-            {/* Y-axis */}
-            <line x1={margin.left} y1={margin.top} x2={margin.left} y2={margin.top + plotHeight} stroke="#D1D5DB" strokeWidth="2" />
-            
-            {/* X-axis */}
-            <line x1={margin.left} y1={margin.top + plotHeight} x2={chartWidth - margin.right} y2={margin.top + plotHeight} stroke="#D1D5DB" strokeWidth="2" />
-
-            {/* Y-axis labels */}
-            {[0, 25, 50, 75, 100].map((val) => {
-                const y = margin.top + plotHeight - (val / 100) * plotHeight;
-                return (
-                    <g key={`label-${val}`}>
-                        <line x1={margin.left - 5} y1={y} x2={margin.left} y2={y} stroke="#D1D5DB" strokeWidth="1" />
-                        <text x={margin.left - 10} y={y + 4} fontSize="12" textAnchor="end" fill="#6B7280">{val}</text>
-                    </g>
-                );
-            })}
-
-            {/* Bars */}
-            {courseData.map((data, idx) => {
-                const x = margin.left + idx * (barWidth * 2 + spacing);
-                
-                // Your grade bar height
-                const yourHeight = (data.grade / data.max) * plotHeight;
-                const maxHeight = (data.max / data.max) * plotHeight;
-                
-                return (
-                    <g key={`course-${idx}`}>
-                        {/* Your Grade Bar (Green) */}
-                        <rect
-                            x={x}
-                            y={margin.top + plotHeight - yourHeight}
-                            width={barWidth}
-                            height={yourHeight}
-                            fill="#10B981"
-                        />
-
-                        {/* Maximum Bar (Light Purple) */}
-                        <rect
-                            x={x + barWidth + 5}
-                            y={margin.top + plotHeight - maxHeight}
-                            width={barWidth}
-                            height={maxHeight}
-                            fill="#E9D5FF"
-                            opacity="0.6"
-                        />
-
-                        {/* Course Label */}
-                        <text
-                            x={x + barWidth / 2}
-                            y={margin.top + plotHeight + 25}
-                            fontSize="12"
-                            textAnchor="middle"
-                            fill="#6B7280"
-                        >
-                            {data.code}
-                        </text>
-                    </g>
-                );
-            })}
-
-            {/* Legend */}
-            <g>
-                <rect x={margin.left} y={chartHeight - 25} width="10" height="10" fill="#10B981" />
-                <text x={margin.left + 15} y={chartHeight - 17} fontSize="11" fill="#6B7280">Your Grade</text>
-
-                <rect x={margin.left + 130} y={chartHeight - 25} width="10" height="10" fill="#E9D5FF" opacity="0.6" />
-                <text x={margin.left + 145} y={chartHeight - 17} fontSize="11" fill="#6B7280">Maximum</text>
-            </g>
-        </svg>
+        <ResponsiveContainer width="100%" height={280}>
+            <BarChart
+                data={chartData}
+                margin={{ top: 20, right: 30, left: 0, bottom: 20 }}
+            >
+                <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" />
+                <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#6B7280' }} />
+                <YAxis tick={{ fontSize: 12, fill: '#6B7280' }} domain={[0, 100]} />
+                <Tooltip 
+                    contentStyle={{ 
+                        borderRadius: '8px', 
+                        border: 'none', 
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                        backgroundColor: '#FFFFFF'
+                    }} 
+                    formatter={(value) => Math.round(value)}
+                />
+                <Legend />
+                <Bar dataKey="Your Grade" fill="#10B981" radius={[8, 8, 0, 0]} />
+                <Bar dataKey="Maximum" fill="#D1D5DB" radius={[8, 8, 0, 0]} />
+            </BarChart>
+        </ResponsiveContainer>
     );
 };
 
