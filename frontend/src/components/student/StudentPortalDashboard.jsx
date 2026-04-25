@@ -487,8 +487,6 @@ const InfoItem = ({ label, value }) => (
 );
 
 const CoursesTab = ({ courses, onCourseClick }) => {
-    const [collapsed, setCollapsed] = useState({});
-
     if (!courses || courses.length === 0) {
         return (
             <div className="text-center py-10 text-gray-500">
@@ -499,174 +497,80 @@ const CoursesTab = ({ courses, onCourseClick }) => {
         );
     }
 
-    // Parse shortname to extract programme, year, semester
-    const parseCourse = (course) => {
-        const match = course.shortname?.match(/^([A-Z]+-[A-Z]+)-Y(\d+)-S(\d+)-C(\d+)$/);
-        if (match) {
-            return { programme: match[1], year: parseInt(match[2]), semester: parseInt(match[3]), courseNum: parseInt(match[4]) };
-        }
-        return { programme: 'Other', year: 0, semester: 0, courseNum: 0 };
-    };
-
-    const programmeLabels = { 'HND-LM': 'HND in Leadership and Management', 'HND-BUS': 'HND in Business' };
-
-    // Group: programme -> year -> semester -> courses
-    const grouped = {};
-    courses.forEach((course) => {
-        const { programme, year, semester, courseNum } = parseCourse(course);
-        if (!grouped[programme]) grouped[programme] = {};
-        if (!grouped[programme][year]) grouped[programme][year] = {};
-        if (!grouped[programme][year][semester]) grouped[programme][year][semester] = [];
-        grouped[programme][year][semester].push({ ...course, courseNum });
-    });
-
-    // Sort courses within each semester
-    Object.values(grouped).forEach(years =>
-        Object.values(years).forEach(semesters =>
-            Object.values(semesters).forEach(arr => arr.sort((a, b) => a.courseNum - b.courseNum))
-        )
-    );
-
-    // Determine active semester: the earliest semester that has any in-progress activity
-    let activeProgramme = null, activeYear = null, activeSemester = null;
-    outer: for (const [prog, years] of Object.entries(grouped)) {
-        for (const [yr, semesters] of Object.entries(years).sort(([a],[b]) => a - b)) {
-            for (const [sem, semCourses] of Object.entries(semesters).sort(([a],[b]) => a - b)) {
-                if (semCourses.some(c => (c.progress ?? 0) > 0 || c.totalActivities > 0)) {
-                    activeProgramme = prog; activeYear = yr; activeSemester = sem;
-                    break outer;
-                }
-            }
-        }
-    }
-
-    const toggleCollapse = (key) => setCollapsed(prev => ({ ...prev, [key]: !prev[key] }));
-
-    const renderCourseCard = (course, isActive) => {
-        const progress = course.progress ?? 0;
-        const isComplete = course.completed;
-        const wrapperProps = isActive && onCourseClick ? {
-            onClick: () => onCourseClick(course.id),
-            role: 'link',
-            tabIndex: 0,
-            onKeyDown: (e) => { if (e.key === 'Enter') onCourseClick(course.id); },
-        } : {};
-
-        return (
-            <div
-                key={course.id}
-                {...wrapperProps}
-                className="flex items-center gap-3 p-3 rounded-xl border transition-all"
-                style={{
-                    borderColor: isActive ? '#E5E7EB' : '#F9FAFB',
-                    background: isActive ? '#fff' : '#FAFBFF',
-                    opacity: isActive ? 1 : 0.6,
-                    cursor: isActive && onCourseClick ? 'pointer' : 'default',
-                }}
-            >
-                <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
-                    style={{ background: isComplete ? '#EDF7EE' : isActive && progress > 0 ? '#DBEAFE' : '#F9FAFB' }}>
-                    {isComplete ? (
-                        <CheckCircle className="w-4 h-4" style={{ color: '#4A9A60' }} />
-                    ) : !isActive ? (
-                        <Lock className="w-4 h-4 text-gray-300" />
-                    ) : (
-                        <BookOpen className="w-4 h-4" style={{ color: progress > 0 ? '#2563EB' : '#6B7280' }} />
-                    )}
-                </div>
-                <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate" style={{ color: isActive ? '#1F2937' : '#6B7280' }}>{course.fullname}</p>
-                    <div className="flex items-center gap-2 mt-0.5 text-xs" style={{ color: '#6B7280' }}>
-                        {course.lastaccess && <span>Accessed: {new Date(course.lastaccess).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span>}
-                        {course.grade && course.grade !== '-' && <span style={{ color: '#4A9A60' }} className="font-medium">Grade: {course.grade}</span>}
-                    </div>
-                    {isActive && course.totalActivities > 0 && (
-                        <div className="mt-1.5 flex items-center gap-2">
-                            <div className="flex-1 rounded-full h-1.5 overflow-hidden" style={{ background: '#E5E7EB' }}>
-                                <div
-                                    className="h-full rounded-full transition-all"
-                                    style={{ width: `${Math.min(progress, 100)}%`, background: isComplete ? '#4A9A60' : '#2563EB' }}
-                                />
-                            </div>
-                            <span className="text-[11px] font-medium w-9 text-right" style={{ color: '#6B7280' }}>{progress}%</span>
-                        </div>
-                    )}
-                </div>
-                {isActive && (
-                    <ExternalLink className="w-3.5 h-3.5 flex-shrink-0" style={{ color: '#9CA3AF' }} />
-                )}
-            </div>
-        );
-    };
-
+    // Simple grid layout for dashboard
     return (
-        <div className="space-y-4">
-            {Object.entries(grouped).sort().map(([prog, years]) => {
-                // Filter out empty years - only show years with active semesters
-                const activeYears = Object.entries(years)
-                    .filter(([yr, semesters]) => 
-                        Object.values(semesters).some(semCourses => semCourses.some(c => (c.progress ?? 0) > 0 || c.completed))
-                    )
-                    .sort(([a],[b]) => a - b);
-
-                if (activeYears.length === 0) return null;
-
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {courses.map(course => {
+                const progress = course.progress ?? 0;
+                const isComplete = course.completed;
                 return (
-                    <div key={prog}>
-                        <div className="flex items-center gap-2 mb-3">
-                            <GraduationCap className="w-5 h-5" style={{ color: '#2563EB' }} />
-                            <h3 className="text-xs font-bold uppercase tracking-wide" style={{ color: '#1F2937' }}>{programmeLabels[prog] || prog}</h3>
+                    <div
+                        key={course.id}
+                        onClick={() => onCourseClick?.(course.id)}
+                        className="rounded-lg border overflow-hidden transition-all hover:shadow-md cursor-pointer"
+                        style={{ borderColor: '#E5E7EB', background: '#fff' }}
+                    >
+                        {/* Course Image/Thumbnail */}
+                        <div
+                            className="w-full h-28 flex items-center justify-center text-2xl font-bold text-white"
+                            style={{
+                                background: isComplete 
+                                    ? 'linear-gradient(135deg, #10B981, #059669)' 
+                                    : progress > 0 
+                                    ? 'linear-gradient(135deg, #2563EB, #1E40AF)' 
+                                    : 'linear-gradient(135deg, #9CA3AF, #6B7280)'
+                            }}
+                        >
+                            {course.fullname?.substring(0, 2).toUpperCase()}
                         </div>
-                        {activeYears.map(([yr, semesters]) => (
-                            <div key={yr} className="ml-2 mb-3">
-                                <div className="flex items-center gap-2 mb-2">
-                                    <div className="w-1.5 h-1.5 rounded-full" style={{ background: '#2563EB' }} />
-                                    <h4 className="text-xs font-semibold text-gray-600">Year {yr}</h4>
-                                </div>
-                                {Object.entries(semesters)
-                                    .filter(([sem, semCourses]) => semCourses.some(c => (c.progress ?? 0) > 0 || c.completed))
-                                    .sort(([a],[b]) => a - b)
-                                    .map(([sem, semCourses]) => {
-                                const semKey = `${prog}-Y${yr}-S${sem}`;
-                                const isActiveSem = prog === activeProgramme && yr === activeYear && sem === activeSemester;
-                                const isCollapsed = collapsed[semKey];
-                                const semProgress = semCourses.filter(c => (c.progress ?? 0) > 0).length;
-                                const semComplete = semCourses.filter(c => c.completed).length;
-
-                                return (
-                                    <div key={sem} className="ml-4 mb-3">
-                                        <button
-                                            onClick={() => toggleCollapse(semKey)}
-                                            className="flex items-center gap-2 w-full text-left px-3 py-2 rounded-lg transition-colors"
-                                            style={{ background: isActiveSem ? '#DBEAFE' : '#F9FAFB' }}
-                                        >
-                                            {isCollapsed ? (
-                                                <ChevronRight className="w-4 h-4 text-gray-400" />
-                                            ) : (
-                                                <ChevronDown className="w-4 h-4 text-gray-400" />
-                                            )}
-                                            <span className="text-xs font-medium" style={{ color: isActiveSem ? '#2563EB' : '#6B7280' }}>
-                                                Semester {sem}
-                                            </span>
-                                            {isActiveSem && (
-                                                <span className="ml-1 px-2 py-0.5 text-[10px] font-bold text-white rounded-full uppercase" style={{ background: '#2563EB' }}>Active</span>
-                                            )}
-                                            <span className="ml-auto text-xs text-gray-400">
-                                                {semCourses.length} courses
-                                                {semProgress > 0 && ` · ${semProgress} in progress`}
-                                                {semComplete > 0 && ` · ${semComplete} completed`}
-                                            </span>
-                                        </button>
-                                        {!isCollapsed && (
-                                            <div className="mt-2 grid gap-2">
-                                                {semCourses.map(course => renderCourseCard(course, isActiveSem))}
-                                            </div>
-                                        )}
+                        
+                        {/* Course Content */}
+                        <div className="p-3">
+                            <h3 className="text-xs font-semibold line-clamp-2" style={{ color: '#1F2937' }}>
+                                {course.fullname}
+                            </h3>
+                            <p className="text-[11px] mt-1 line-clamp-2" style={{ color: '#6B7280' }}>
+                                {course.shortname}
+                            </p>
+                            
+                            {/* Progress Bar */}
+                            {course.totalActivities > 0 && (
+                                <div className="mt-2">
+                                    <div className="flex items-center justify-between mb-1">
+                                        <span className="text-[10px] font-medium" style={{ color: '#6B7280' }}>
+                                            {isComplete ? 'Completed' : 'Progress'}
+                                        </span>
+                                        <span className="text-[10px] font-bold" style={{ color: isComplete ? '#10B981' : '#2563EB' }}>
+                                            {progress}%
+                                        </span>
                                     </div>
-                                );
-                            })}
+                                    <div className="w-full rounded-full h-1.5 overflow-hidden" style={{ background: '#E5E7EB' }}>
+                                        <div
+                                            className="h-full rounded-full transition-all"
+                                            style={{
+                                                width: `${Math.min(progress, 100)}%`,
+                                                background: isComplete ? '#10B981' : '#2563EB'
+                                            }}
+                                        />
+                                    </div>
+                                </div>
+                            )}
+                            
+                            {/* Status Badge */}
+                            <div className="mt-2 flex items-center gap-1">
+                                {isComplete ? (
+                                    <>
+                                        <CheckCircle className="w-3.5 h-3.5" style={{ color: '#10B981' }} />
+                                        <span className="text-[10px] font-medium" style={{ color: '#10B981' }}>Completed</span>
+                                    </>
+                                ) : progress > 0 ? (
+                                    <>
+                                        <BookOpen className="w-3.5 h-3.5" style={{ color: '#2563EB' }} />
+                                        <span className="text-[10px] font-medium" style={{ color: '#2563EB' }}>In Progress</span>
+                                    </>
+                                ) : null}
                             </div>
-                        ))}
+                        </div>
                     </div>
                 );
             })}
