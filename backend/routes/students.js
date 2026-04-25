@@ -12160,87 +12160,46 @@ router.get('/student-dashboard', async (req, res) => {
             };
         });
 
-        // Determine active course IDs (courses in the currently active semester)
-        // Parse course shortnames and find which semester is currently active by date
+        // Determine active course IDs (courses in the earliest active semester)
+        // Parse course shortnames to extract year and semester
         const parseCourseShortname = (shortname) => {
             const m = (shortname || '').match(/^(HND-\w+)-Y(\d+)-S(\d+)-C(\d+)$/);
             if (m) return { programme: m[1], year: parseInt(m[2]), semester: parseInt(m[3]) };
             return null;
         };
         
-        // Group courses by semester and track date ranges
+        // Group courses by year+semester combination
         const semesterCourses = {};
         courses.forEach(c => {
             const parsed = parseCourseShortname(c.shortname);
             if (!parsed) return;
             
-            const semesterKey = `${parsed.programme}|${parsed.year}|${parsed.semester}`;
+            const semesterKey = `Y${parsed.year}S${parsed.semester}`;
             if (!semesterCourses[semesterKey]) {
                 semesterCourses[semesterKey] = {
-                    ...parsed,
-                    courses: [],
-                    startDate: null,
-                    endDate: null
+                    year: parsed.year,
+                    semester: parsed.semester,
+                    courses: []
                 };
             }
-            
             semesterCourses[semesterKey].courses.push(c);
-            
-            // Track the semester's overall start/end date
-            const courseStart = c.startdate ? new Date(c.startdate) : null;
-            const courseEnd = c.enddate ? new Date(c.enddate) : null;
-            
-            if (courseStart) {
-                if (!semesterCourses[semesterKey].startDate || courseStart < semesterCourses[semesterKey].startDate) {
-                    semesterCourses[semesterKey].startDate = courseStart;
-                }
-            }
-            if (courseEnd) {
-                if (!semesterCourses[semesterKey].endDate || courseEnd > semesterCourses[semesterKey].endDate) {
-                    semesterCourses[semesterKey].endDate = courseEnd;
-                }
-            }
         });
         
-        // Find currently active semester based on date
-        const now = new Date();
-        let activeSemesterKey = null;
-        const sortedSemesters = Object.keys(semesterCourses)
-            .sort((a, b) => {
-                const sa = semesterCourses[a];
-                const sb = semesterCourses[b];
-                return sa.year - sb.year || sa.semester - sb.semester;
-            });
-        
-        // Look for a semester where the current date falls between start and end
-        for (const key of sortedSemesters) {
-            const sem = semesterCourses[key];
-            if (sem.startDate && sem.endDate && now >= sem.startDate && now <= sem.endDate) {
-                activeSemesterKey = key;
-                break;
-            }
-        }
-        
-        // If no active semester found (e.g., between semesters), use the most recently started one
-        if (!activeSemesterKey && sortedSemesters.length > 0) {
-            // Find the semester that started most recently before now
-            for (const key of sortedSemesters) {
-                const sem = semesterCourses[key];
-                if (sem.startDate && sem.startDate <= now) {
-                    activeSemesterKey = key; // Latest semester that has started
-                }
-            }
-            // If still not found, use the first (earliest) semester
-            if (!activeSemesterKey) {
-                activeSemesterKey = sortedSemesters[0];
-            }
-        }
-        
+        // Find the earliest (first) semester with courses
         let activeCourseIds = [];
-        if (activeSemesterKey && semesterCourses[activeSemesterKey]) {
-            activeCourseIds = semesterCourses[activeSemesterKey].courses.map(c => c.id);
-        } else if (courses.length > 0) {
-            // Fallback: use all courses if no semester found
+        if (Object.keys(semesterCourses).length > 0) {
+            const sortedSemesters = Object.keys(semesterCourses)
+                .map(key => semesterCourses[key])
+                .sort((a, b) => a.year - b.year || a.semester - b.semester);
+            
+            // Use the first semester (earliest year, then lowest semester number)
+            if (sortedSemesters.length > 0) {
+                activeCourseIds = sortedSemesters[0].courses.map(c => c.id);
+            }
+        }
+        
+        // Fallback: if no semester found in shortname pattern, use all courses
+        if (activeCourseIds.length === 0 && courses.length > 0) {
             activeCourseIds = courses.map(c => c.id);
         }
 
