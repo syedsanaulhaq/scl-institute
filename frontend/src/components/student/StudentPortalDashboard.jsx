@@ -439,7 +439,7 @@ const StudentPortalDashboard1 = ({ user }) => {
             {/* Quick Links Section */}
             <div className="bg-white rounded-xl border shadow-sm p-4 mb-5" style={{ borderColor: '#E5E7EB' }}>
                 <h2 className="text-sm font-semibold mb-4" style={{ color: '#1F2937' }}>Quick Links</h2>
-                <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
                     {[
                         { icon: '📝', label: 'Assessments', path: '/student/assessments' },
                         { icon: '📄', label: 'My Programme', path: '/student/programme' },
@@ -451,13 +451,13 @@ const StudentPortalDashboard1 = ({ user }) => {
                         <button
                             key={i}
                             onClick={() => navigate(item.path)}
-                            className="relative flex flex-col items-center gap-1.5 p-3 rounded-lg border text-center transition hover:shadow-sm"
-                            style={{ borderColor: '#E5E7EB', background: '#fff' }}
+                            className="relative flex flex-col items-center justify-center gap-2 p-4 rounded-lg border text-center transition hover:shadow-md hover:border-blue-300"
+                            style={{ borderColor: '#E5E7EB', backgroundColor: '#F9FAFB' }}
                         >
-                            <span className="text-lg">{item.icon}</span>
-                            <span className="text-xs font-medium" style={{ color: '#6B7280' }}>{item.label}</span>
+                            <span className="text-3xl">{item.icon}</span>
+                            <span className="text-sm font-semibold" style={{ color: '#1F2937' }}>{item.label}</span>
                             {item.badge && (
-                                <span className="absolute top-1.5 right-1.5 bg-red-500 text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
+                                <span className="absolute top-2 right-2 bg-red-500 text-white text-[9px] font-bold w-5 h-5 rounded-full flex items-center justify-center">
                                     {item.badge}
                                 </span>
                             )}
