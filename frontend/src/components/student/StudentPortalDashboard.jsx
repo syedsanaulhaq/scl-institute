@@ -234,9 +234,10 @@ const StudentPortalDashboard1 = ({ user }) => {
                 />
             </div>
 
-            {/* Main Content - Three Separate Blocks */}
-            <div className="grid grid-cols-1 gap-5 mb-5">
-
+            {/* Main Content - 2 Column Layout */}
+            
+            {/* Row 1: Courses (Left) and Announcements (Right) */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
                 {/* Courses Block - Moodle Style */}
                 <div className="bg-white rounded-xl border overflow-hidden shadow-sm" style={{ borderColor: '#E5E7EB' }}>
                     <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: '1px solid #E5E7EB' }}>
@@ -248,7 +249,7 @@ const StudentPortalDashboard1 = ({ user }) => {
                             View all →
                         </button>
                     </div>
-                    <div className="p-4">
+                    <div className="p-4 max-h-96 overflow-y-auto">
                         <CoursesTab courses={courses} onCourseClick={handleCourseClick} />
                     </div>
                 </div>
@@ -264,11 +265,14 @@ const StudentPortalDashboard1 = ({ user }) => {
                             View all →
                         </button>
                     </div>
-                    <div className="p-4">
+                    <div className="p-4 max-h-96 overflow-y-auto">
                         <AnnouncementsTab announcements={announcements} formatTime={formatTime} onItemClick={handleMoodleNavigate} />
                     </div>
                 </div>
+            </div>
 
+            {/* Row 2: Upcoming Events (Left) and Notifications (Right) */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
                 {/* Upcoming Events Block */}
                 <div className="bg-white rounded-xl border overflow-hidden shadow-sm" style={{ borderColor: '#E5E7EB' }}>
                     <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: '1px solid #E5E7EB' }}>
@@ -280,63 +284,66 @@ const StudentPortalDashboard1 = ({ user }) => {
                             View all →
                         </button>
                     </div>
-                    <div className="p-4">
+                    <div className="p-4 max-h-96 overflow-y-auto">
                         <EventsTab events={upcomingEvents} formatDate={formatDate} onItemClick={handleMoodleNavigate} />
                     </div>
                 </div>
-            </div>
 
-            {/* Secondary Content - Notifications and Quick Links */}
-            <div className="grid grid-cols-1 xl:grid-cols-3 gap-5 mb-5">
-                <div className="xl:col-span-2 bg-white rounded-xl border shadow-sm overflow-hidden" style={{ borderColor: '#E5E7EB' }}>
+                {/* Notifications Block */}
+                <div className="bg-white rounded-xl border shadow-sm overflow-hidden" style={{ borderColor: '#E5E7EB' }}>
                     <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: '1px solid #E5E7EB' }}>
-                        <h2 className="text-sm font-semibold" style={{ color: '#1F2937' }}>Notifications</h2>
+                        <h2 className="text-sm font-semibold flex items-center gap-2" style={{ color: '#1F2937' }}>
+                            <Bell className="w-4 h-4" style={{ color: '#2563EB' }} />
+                            Notifications
+                        </h2>
                         <button onClick={() => navigate('/student/notifications')} className="text-xs font-medium" style={{ color: '#2563EB' }}>
                             View all
                         </button>
                     </div>
-                    <div className="p-4 max-h-64 overflow-y-auto">
-                        <NotificationsTab notifications={notifications?.slice(0, 5)} formatTime={formatTime} onItemClick={handleMoodleNavigate} />
+                    <div className="p-4 max-h-96 overflow-y-auto">
+                        <NotificationsTab notifications={notifications?.slice(0, 8)} formatTime={formatTime} onItemClick={handleMoodleNavigate} />
                     </div>
                 </div>
+            </div>
 
-                {/* Mini Calendar */}
-                <div>
+            {/* Row 3: Calendar and Quick Links */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-5">
+                <div className="lg:col-span-1">
                     <MiniCalendar
                         date={calendarDate}
                         onDateChange={setCalendarDate}
                         events={upcomingEvents}
                         onEventDayClick={() => {}}
                     />
+                </div>
 
-                    {/* Quick Links */}
-                    <div className="bg-white rounded-xl border shadow-sm p-4" style={{ borderColor: '#E5E7EB' }}>
-                        <h2 className="text-sm font-semibold mb-3" style={{ color: '#1F2937' }}>Quick Links</h2>
-                        <div className="grid grid-cols-2 gap-2">
-                            {[
-                                { icon: '📝', label: 'Assessments', path: '/student/assessments' },
-                                { icon: '📄', label: 'My Programme', path: '/student/programme' },
-                                { icon: '🏆', label: 'Grades', path: '/student/grades' },
-                                { icon: '📅', label: 'Timetable', path: '/student/timetable' },
-                                { icon: '📚', label: 'Library', path: '/student/library' },
-                                { icon: '💬', label: 'Messages', path: '/student/messages', badge: unreadMessages > 0 ? unreadMessages : null },
-                            ].map((item, i) => (
-                                <button
-                                    key={i}
-                                    onClick={() => navigate(item.path)}
-                                    className="relative flex flex-col items-center gap-1.5 p-3 rounded-lg border text-center transition hover:shadow-sm"
-                                    style={{ borderColor: '#E5E7EB', background: '#fff' }}
-                                >
-                                    <span className="text-xl">{item.icon}</span>
-                                    <span className="text-xs font-medium" style={{ color: '#6B7280' }}>{item.label}</span>
-                                    {item.badge && (
-                                        <span className="absolute top-1.5 right-1.5 bg-red-500 text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
-                                            {item.badge}
-                                        </span>
-                                    )}
-                                </button>
-                            ))}
-                        </div>
+                {/* Quick Links */}
+                <div className="lg:col-span-2 bg-white rounded-xl border shadow-sm p-4" style={{ borderColor: '#E5E7EB' }}>
+                    <h2 className="text-sm font-semibold mb-4" style={{ color: '#1F2937' }}>Quick Links</h2>
+                    <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
+                        {[
+                            { icon: '📝', label: 'Assessments', path: '/student/assessments' },
+                            { icon: '📄', label: 'My Programme', path: '/student/programme' },
+                            { icon: '🏆', label: 'Grades', path: '/student/grades' },
+                            { icon: '📅', label: 'Timetable', path: '/student/timetable' },
+                            { icon: '📚', label: 'Library', path: '/student/library' },
+                            { icon: '💬', label: 'Messages', path: '/student/messages', badge: unreadMessages > 0 ? unreadMessages : null },
+                        ].map((item, i) => (
+                            <button
+                                key={i}
+                                onClick={() => navigate(item.path)}
+                                className="relative flex flex-col items-center gap-1.5 p-3 rounded-lg border text-center transition hover:shadow-sm"
+                                style={{ borderColor: '#E5E7EB', background: '#fff' }}
+                            >
+                                <span className="text-lg">{item.icon}</span>
+                                <span className="text-xs font-medium" style={{ color: '#6B7280' }}>{item.label}</span>
+                                {item.badge && (
+                                    <span className="absolute top-1.5 right-1.5 bg-red-500 text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
+                                        {item.badge}
+                                    </span>
+                                )}
+                            </button>
+                        ))}
                     </div>
                 </div>
             </div>
