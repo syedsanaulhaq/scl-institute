@@ -497,12 +497,40 @@ const CoursesTab = ({ courses, onCourseClick }) => {
         );
     }
 
+    // Get course icon and light color based on course name
+    const getCourseTheme = (courseName) => {
+        const lower = courseName.toLowerCase();
+        const themes = [
+            { name: 'business', bg: '#FEF3C7', color: '#D97706', icon: '💼' },
+            { name: 'marketing', bg: '#FECACA', color: '#DC2626', icon: '📢' },
+            { name: 'management', bg: '#C7D2FE', color: '#4338CA', icon: '📊' },
+            { name: 'finance', bg: '#BFDBFE', color: '#1E40AF', icon: '💰' },
+            { name: 'accounting', bg: '#DBEAFE', color: '#0284C7', icon: '📈' },
+            { name: 'leadership', bg: '#A7F3D0', color: '#059669', icon: '👔' },
+            { name: 'technology', bg: '#E0E7FF', color: '#4F46E5', icon: '💻' },
+            { name: 'digital', bg: '#F3E8FF', color: '#7E22CE', icon: '📱' },
+            { name: 'communication', bg: '#FDE2E4', color: '#BE185D', icon: '💬' },
+            { name: 'research', bg: '#E0E7FF', color: '#3B82F6', icon: '🔍' },
+        ];
+
+        for (let theme of themes) {
+            if (lower.includes(theme.name)) return theme;
+        }
+        return { bg: '#F3F4F6', color: '#6B7280', icon: '📚' };
+    };
+
     // Simple grid layout for dashboard
     return (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {courses.map(course => {
                 const progress = course.progress ?? 0;
                 const isComplete = course.completed;
+                const theme = getCourseTheme(course.fullname);
+                
+                // Override colors based on completion status
+                const bgColor = isComplete ? '#F0FDF4' : theme.bg;
+                const iconColor = isComplete ? '#10B981' : theme.color;
+                
                 return (
                     <div
                         key={course.id}
@@ -510,18 +538,17 @@ const CoursesTab = ({ courses, onCourseClick }) => {
                         className="rounded-lg border overflow-hidden transition-all hover:shadow-md cursor-pointer"
                         style={{ borderColor: '#E5E7EB', background: '#fff' }}
                     >
-                        {/* Course Image/Thumbnail */}
+                        {/* Course Image/Thumbnail - Light Color with Icon */}
                         <div
-                            className="w-full h-28 flex items-center justify-center text-2xl font-bold text-white"
-                            style={{
-                                background: isComplete 
-                                    ? 'linear-gradient(135deg, #10B981, #059669)' 
-                                    : progress > 0 
-                                    ? 'linear-gradient(135deg, #2563EB, #1E40AF)' 
-                                    : 'linear-gradient(135deg, #9CA3AF, #6B7280)'
-                            }}
+                            className="w-full h-28 flex items-center justify-center"
+                            style={{ background: bgColor }}
                         >
-                            {course.fullname?.substring(0, 2).toUpperCase()}
+                            <div className="text-center">
+                                <div className="text-5xl mb-1">{isComplete ? '✅' : theme.icon}</div>
+                                <div className="text-xs font-medium" style={{ color: iconColor }}>
+                                    {isComplete ? 'Completed' : 'Active'}
+                                </div>
+                            </div>
                         </div>
                         
                         {/* Course Content */}
