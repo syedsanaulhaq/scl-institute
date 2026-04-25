@@ -497,39 +497,34 @@ const CoursesTab = ({ courses, onCourseClick }) => {
         );
     }
 
-    // Get course icon and light color based on course name
-    const getCourseTheme = (courseName) => {
+    // Get course background pattern based on course name
+    const getCoursePattern = (courseName) => {
         const lower = courseName.toLowerCase();
-        const themes = [
-            { name: 'business', bg: '#FEF3C7', color: '#D97706', icon: '💼' },
-            { name: 'marketing', bg: '#FECACA', color: '#DC2626', icon: '📢' },
-            { name: 'management', bg: '#C7D2FE', color: '#4338CA', icon: '📊' },
-            { name: 'finance', bg: '#BFDBFE', color: '#1E40AF', icon: '💰' },
-            { name: 'accounting', bg: '#DBEAFE', color: '#0284C7', icon: '📈' },
-            { name: 'leadership', bg: '#A7F3D0', color: '#059669', icon: '👔' },
-            { name: 'technology', bg: '#E0E7FF', color: '#4F46E5', icon: '💻' },
-            { name: 'digital', bg: '#F3E8FF', color: '#7E22CE', icon: '📱' },
-            { name: 'communication', bg: '#FDE2E4', color: '#BE185D', icon: '💬' },
-            { name: 'research', bg: '#E0E7FF', color: '#3B82F6', icon: '🔍' },
-        ];
+        const patterns = {
+            'accounting': { bg: '#E0E7FF', svg: 'M10,10 L30,10 L30,30 L10,30 Z M15,15 L25,15 L25,25 L15,25 Z' },
+            'marketing': { bg: '#FDE2E4', svg: 'M10,10 L20,10 L25,20 L20,30 L10,30 L5,20 Z' },
+            'business': { bg: '#FEF3C7', svg: 'M5,10 L25,10 L35,20 L25,30 L5,30 L-5,20 Z' },
+            'management': { bg: '#F3E8FF', svg: 'M10,5 L30,15 L30,35 L10,35 Z' },
+            'finance': { bg: '#BFDBFE', svg: 'M10,15 L20,5 L30,15 L20,25 Z M10,25 L20,35 L30,25' },
+            'technology': { bg: '#DBEAFE', svg: 'M8,8 L13,8 L13,13 L8,13 Z M17,8 L22,8 L22,13 L17,13 Z M26,8 L31,8 L31,13 L26,13 Z' },
+            'communication': { bg: '#A7F3D0', svg: 'M10,10 L30,10 L30,20 L10,20 Z M15,22 L12,28 L25,25 Z' },
+            'leadership': { bg: '#FEF3C7', svg: 'M20,5 L30,15 L30,30 L10,30 L10,15 Z M16,16 L24,16 L24,28 L16,28 Z' },
+            'analytics': { bg: '#C7D2FE', svg: 'M8,28 L12,20 L16,24 L20,12 L24,18 L28,10 L32,15' }
+        };
 
-        for (let theme of themes) {
-            if (lower.includes(theme.name)) return theme;
+        for (const [key, pattern] of Object.entries(patterns)) {
+            if (lower.includes(key)) return pattern;
         }
-        return { bg: '#F3F4F6', color: '#6B7280', icon: '📚' };
+        return { bg: '#F3F4F6', svg: 'M10,10 L30,10 L30,30 L10,30 Z' };
     };
 
-    // Simple grid layout for dashboard
     return (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {courses.map(course => {
                 const progress = course.progress ?? 0;
                 const isComplete = course.completed;
-                const theme = getCourseTheme(course.fullname);
-                
-                // Override colors based on completion status
-                const bgColor = isComplete ? '#F0FDF4' : theme.bg;
-                const iconColor = isComplete ? '#10B981' : theme.color;
+                const pattern = getCoursePattern(course.fullname);
+                const bgColor = isComplete ? '#F0FDF4' : pattern.bg;
                 
                 return (
                     <div
@@ -538,64 +533,43 @@ const CoursesTab = ({ courses, onCourseClick }) => {
                         className="rounded-lg border overflow-hidden transition-all hover:shadow-md cursor-pointer"
                         style={{ borderColor: '#E5E7EB', background: '#fff' }}
                     >
-                        {/* Course Image/Thumbnail - Light Color with Icon */}
-                        <div
-                            className="w-full h-28 flex items-center justify-center"
-                            style={{ background: bgColor }}
-                        >
-                            <div className="text-center">
-                                <div className="text-5xl mb-1">{isComplete ? '✅' : theme.icon}</div>
-                                <div className="text-xs font-medium" style={{ color: iconColor }}>
-                                    {isComplete ? 'Completed' : 'Active'}
-                                </div>
-                            </div>
+                        {/* Course Background with SVG Pattern */}
+                        <div style={{ background: bgColor, padding: '24px 16px', textAlign: 'center', minHeight: '120px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <svg width="80" height="80" viewBox="0 0 40 40" style={{ opacity: 0.3 }}>
+                                <path d={pattern.svg} stroke={isComplete ? '#10B981' : '#6B7280'} strokeWidth="1.5" fill="none" />
+                            </svg>
                         </div>
                         
                         {/* Course Content */}
-                        <div className="p-3">
-                            <h3 className="text-xs font-semibold line-clamp-2" style={{ color: '#1F2937' }}>
+                        <div style={{ padding: '16px' }}>
+                            <h3 className="text-sm font-semibold line-clamp-2" style={{ color: '#1F2937' }}>
                                 {course.fullname}
                             </h3>
-                            <p className="text-[11px] mt-1 line-clamp-2" style={{ color: '#6B7280' }}>
+                            <p className="text-xs mt-1" style={{ color: '#6B7280' }}>
                                 {course.shortname}
                             </p>
                             
                             {/* Progress Bar */}
-                            {course.totalActivities > 0 && (
-                                <div className="mt-2">
-                                    <div className="flex items-center justify-between mb-1">
-                                        <span className="text-[10px] font-medium" style={{ color: '#6B7280' }}>
-                                            {isComplete ? 'Completed' : 'Progress'}
-                                        </span>
-                                        <span className="text-[10px] font-bold" style={{ color: isComplete ? '#10B981' : '#2563EB' }}>
-                                            {progress}%
-                                        </span>
-                                    </div>
-                                    <div className="w-full rounded-full h-1.5 overflow-hidden" style={{ background: '#E5E7EB' }}>
-                                        <div
-                                            className="h-full rounded-full transition-all"
-                                            style={{
-                                                width: `${Math.min(progress, 100)}%`,
-                                                background: isComplete ? '#10B981' : '#2563EB'
-                                            }}
-                                        />
-                                    </div>
+                            <div style={{ marginTop: '12px' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                                    <span className="text-xs font-medium" style={{ color: '#6B7280' }}>
+                                        {isComplete ? '✓ Completed' : 'Progress'}
+                                    </span>
+                                    <span className="text-xs font-bold" style={{ color: isComplete ? '#10B981' : '#2563EB' }}>
+                                        {progress}%
+                                    </span>
                                 </div>
-                            )}
-                            
-                            {/* Status Badge */}
-                            <div className="mt-2 flex items-center gap-1">
-                                {isComplete ? (
-                                    <>
-                                        <CheckCircle className="w-3.5 h-3.5" style={{ color: '#10B981' }} />
-                                        <span className="text-[10px] font-medium" style={{ color: '#10B981' }}>Completed</span>
-                                    </>
-                                ) : progress > 0 ? (
-                                    <>
-                                        <BookOpen className="w-3.5 h-3.5" style={{ color: '#2563EB' }} />
-                                        <span className="text-[10px] font-medium" style={{ color: '#2563EB' }}>In Progress</span>
-                                    </>
-                                ) : null}
+                                <div style={{ width: '100%', height: '8px', background: '#E5E7EB', borderRadius: '4px', overflow: 'hidden' }}>
+                                    <div
+                                        style={{
+                                            height: '100%',
+                                            width: `${Math.min(progress, 100)}%`,
+                                            background: isComplete ? '#10B981' : '#2563EB',
+                                            transition: 'width 0.3s ease',
+                                            borderRadius: '4px'
+                                        }}
+                                    />
+                                </div>
                             </div>
                         </div>
                     </div>
