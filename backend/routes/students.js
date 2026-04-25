@@ -12202,6 +12202,10 @@ router.get('/student-dashboard', async (req, res) => {
         if (activeCourseIds.length === 0 && courses.length > 0) {
             activeCourseIds = courses.map(c => c.id);
         }
+        
+        // FILTER: Keep only courses from the active semester
+        const activeCourseIdSet = new Set(activeCourseIds);
+        courses = courses.filter(c => activeCourseIdSet.has(c.id));
 
         // 5. Get notifications from Moodle DB
         let notifications = [];
