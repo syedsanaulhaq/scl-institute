@@ -97,7 +97,17 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
 
     const studentMenuItems = (hasStudent || isManagementUser)
         ? [
-            { name: 'Dashboard', icon: LayoutDashboard, path: '/student/dashboard' },
+            {
+                name: 'Dashboard Layouts',
+                icon: LayoutDashboard,
+                isParent: true,
+                key: 'dashboard-layouts',
+                subItems: [
+                    { name: 'Dashboard 1 (Full)', icon: LayoutDashboard, path: '/student/portal?layout=1' },
+                    { name: 'Dashboard 2 (Medium)', icon: LayoutDashboard, path: '/student/portal?layout=2' },
+                    { name: 'Dashboard 3 (Clean)', icon: LayoutDashboard, path: '/student/portal?layout=3' }
+                ]
+            },
             { name: 'Portal Home', icon: BookOpen, path: '/student/portal' },
             { name: 'My Profile', icon: User, path: '/student/profile' },
             {

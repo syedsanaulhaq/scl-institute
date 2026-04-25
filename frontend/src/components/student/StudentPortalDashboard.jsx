@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import StudentPortalDashboard2 from './StudentPortalDashboard2';
+import StudentPortalDashboard3 from './StudentPortalDashboard3';
 import {
     BookOpen,
     Bell,
@@ -23,6 +25,18 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
 
 const StudentPortalDashboard = ({ user }) => {
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
+    
+    // Check layout parameter and render appropriate dashboard
+    const layoutParam = searchParams.get('layout');
+    if (layoutParam === '2') {
+        return <StudentPortalDashboard2 user={user} />;
+    }
+    if (layoutParam === '3') {
+        return <StudentPortalDashboard3 user={user} />;
+    }
+    
+    // Default to Dashboard 1 (original)
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
