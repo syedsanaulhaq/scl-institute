@@ -404,7 +404,7 @@ const StudentPortalDashboard1 = ({ user }) => {
                 </div>
             </div>
 
-            {/* Row 3: Calendar and Student Details */}
+            {/* Row 3: Calendar and Performance by Course */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-5">
                 <div className="lg:col-span-1">
                     <MiniCalendar
@@ -415,22 +415,70 @@ const StudentPortalDashboard1 = ({ user }) => {
                     />
                 </div>
 
-                {/* Student Info */}
-                {(student || application) && (
+                {/* Performance by Course Chart */}
+                {courses && courses.length > 0 && (
                     <div className="lg:col-span-2 bg-white rounded-xl border shadow-sm p-5" style={{ borderColor: '#E5E7EB' }}>
-                        <h3 className="text-sm font-semibold mb-3 flex items-center gap-2" style={{ color: '#1F2937' }}>
-                            <User className="w-4 h-4" style={{ color: '#6B7280' }} />
-                            Your Details
-                        </h3>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                            {student?.email && <InfoItem label="Email" value={student.email} />}
-                            {student?.phone && <InfoItem label="Phone" value={student.phone} />}
-                            {student?.nationality && <InfoItem label="Nationality" value={student.nationality} />}
-                            {application?.intakeStartDate && <InfoItem label="Intake Start" value={formatDate(application.intakeStartDate)} />}
-                            {application?.programmeType && <InfoItem label="Programme Type" value={application.programmeType} />}
-                            {application?.programName && <InfoItem label="Programme" value={application.programName} />}
-                            {application?.courseCode && <InfoItem label="Course Code" value={application.courseCode} />}
-                            {student?.lastMoodleAccess && <InfoItem label="Last LMS Access" value={formatDate(student.lastMoodleAccess)} />}
+                        <h3 className="text-sm font-semibold mb-4" style={{ color: '#1F2937' }}>Performance by Course</h3>
+                        <div className="overflow-x-auto">
+                            <svg width="100%" height="300" viewBox="0 0 600 250" className="min-w-full">
+                                {/* Y-axis */}
+                                <line x1="40" y1="20" x2="40" y2="210" stroke="#D1D5DB" strokeWidth="1" />
+                                {/* X-axis */}
+                                <line x1="40" y1="210" x2="560" y2="210" stroke="#D1D5DB" strokeWidth="1" />
+                                
+                                {/* Y-axis labels (0, 25, 50, 75, 100) */}
+                                {[0, 25, 50, 75, 100].map((val) => {
+                                    const y = 210 - (val / 100) * 180;
+                                    return (
+                                        <g key={`y-${val}`}>
+                                            <line x1="35" y1={y} x2="40" y2={y} stroke="#D1D5DB" strokeWidth="1" />
+                                            <text x="20" y={y + 4} fontSize="10" textAnchor="end" fill="#6B7280">{val}</text>
+                                        </g>
+                                    );
+                                })}
+
+                                {/* Grid lines */}
+                                {[0, 25, 50, 75, 100].map((val) => {
+                                    const y = 210 - (val / 100) * 180;
+                                    return <line key={`grid-${val}`} x1="40" y1={y} x2="560" y2={y} stroke="#F3F4F6" strokeWidth="1" strokeDasharray="2,2" />;
+                                })}
+
+                                {/* Bars - show first 4 courses */}
+                                {courses.slice(0, 4).map((course, idx) => {
+                                    const barWidth = 35;
+                                    const gap = 30;
+                                    const groupX = 80 + idx * (barWidth * 2 + gap + 20);
+                                    
+                                    // Your grade (green bar)
+                                    const yourGrade = course.progress || 70;
+                                    const maxGrade = 100;
+                                    const yourHeight = (yourGrade / maxGrade) * 180;
+                                    
+                                    return (
+                                        <g key={`course-${idx}`}>
+                                            {/* Your Grade Bar */}
+                                            <rect x={groupX} y={210 - yourHeight} width={barWidth} height={yourHeight} fill="#10B981" />
+                                            
+                                            {/* Maximum Bar */}
+                                            <rect x={groupX + barWidth + 5} y={210 - 180} width={barWidth} height={180} fill="#E9D5FF" opacity="0.6" />
+                                            
+                                            {/* Course Label */}
+                                            <text x={groupX + barWidth + 2.5} y="230" fontSize="11" textAnchor="middle" fill="#6B7280">
+                                                {course.code?.substring(0, 6) || `C${idx + 1}`}
+                                            </text>
+                                        </g>
+                                    );
+                                })}
+
+                                {/* Legend */}
+                                <g transform="translate(50, 235)">
+                                    <rect x="0" y="0" width="12" height="12" fill="#10B981" />
+                                    <text x="16" y="10" fontSize="11" fill="#1F2937">Your Grade</text>
+                                    
+                                    <rect x="120" y="0" width="12" height="12" fill="#E9D5FF" opacity="0.6" />
+                                    <text x="136" y="10" fontSize="11" fill="#1F2937">Maximum</text>
+                                </g>
+                            </svg>
                         </div>
                     </div>
                 )}
