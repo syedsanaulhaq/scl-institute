@@ -23,20 +23,9 @@ import { openMoodleSSO, getMoodleUrl } from '../../utils/ssoService';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
 
-const StudentPortalDashboard = ({ user }) => {
-    const navigate = useNavigate();
+// Wrapper component that routes to the correct dashboard variant
+const StudentPortalDashboardRouter = ({ user }) => {
     const [searchParams] = useSearchParams();
-    
-    // Define all hooks unconditionally (required for React hook rules)
-    const [data, setData] = useState(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState('');
-    const [ssoLoading, setSsoLoading] = useState(false);
-    const [ssoError, setSsoError] = useState('');
-    const [activeTab, setActiveTab] = useState('courses');
-    const [calendarDate, setCalendarDate] = useState(new Date());
-
-    // Get layout parameter after all hooks are defined
     const layoutParam = searchParams.get('layout');
     
     // Route to appropriate dashboard based on layout parameter
@@ -46,6 +35,22 @@ const StudentPortalDashboard = ({ user }) => {
     if (layoutParam === '3') {
         return <StudentPortalDashboard3 user={user} />;
     }
+    
+    // Default to Dashboard 1
+    return <StudentPortalDashboard1 user={user} />;
+};
+
+const StudentPortalDashboard1 = ({ user }) => {
+    const navigate = useNavigate();
+    
+    // Define all hooks unconditionally (required for React hook rules)
+    const [data, setData] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
+    const [ssoLoading, setSsoLoading] = useState(false);
+    const [ssoError, setSsoError] = useState('');
+    const [activeTab, setActiveTab] = useState('courses');
+    const [calendarDate, setCalendarDate] = useState(new Date());
 
     useEffect(() => {
         if (user?.email) fetchDashboard();
@@ -749,7 +754,7 @@ const AnnouncementsTab = ({ announcements, formatTime, onItemClick }) => {
     );
 };
 
-export default StudentPortalDashboard;
+export default StudentPortalDashboardRouter;
 
 
 
