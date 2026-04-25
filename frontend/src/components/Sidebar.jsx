@@ -251,7 +251,7 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
         >
             <div className="flex flex-col h-full relative">
                 {/* Logo Area */}
-                <div className={`h-[5.5rem] flex items-center px-3 border-b ${isOpen ? 'justify-between' : 'justify-center'}`} style={{ backgroundColor: '#DBEAFE', borderColor: '#E5E7EB' }}>
+                <div className={`h-20 flex items-center px-3 border-b ${isOpen ? 'justify-between' : 'justify-center'}`} style={{ backgroundColor: '#DBEAFE', borderColor: '#E5E7EB' }}>
                     <div className="flex items-center space-x-2 rounded-lg px-2 py-1" style={{ backgroundColor: '#DBEAFE' }}>
                         <img src="/assets/scl_logo.png" alt="Stratford College Lond." className="h-9 w-9 object-contain flex-shrink-0" style={{ filter: 'brightness(0) saturate(100%)', opacity: 0.9 }} />
                         {isOpen && (
