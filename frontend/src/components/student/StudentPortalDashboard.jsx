@@ -419,67 +419,7 @@ const StudentPortalDashboard1 = ({ user }) => {
                 {courses && courses.length > 0 && (
                     <div className="lg:col-span-2 bg-white rounded-xl border shadow-sm p-5" style={{ borderColor: '#E5E7EB' }}>
                         <h3 className="text-sm font-semibold mb-4" style={{ color: '#1F2937' }}>Performance by Course</h3>
-                        <div className="overflow-x-auto">
-                            <svg width="100%" height="300" viewBox="0 0 600 250" className="min-w-full">
-                                {/* Y-axis */}
-                                <line x1="40" y1="20" x2="40" y2="210" stroke="#D1D5DB" strokeWidth="1" />
-                                {/* X-axis */}
-                                <line x1="40" y1="210" x2="560" y2="210" stroke="#D1D5DB" strokeWidth="1" />
-                                
-                                {/* Y-axis labels (0, 25, 50, 75, 100) */}
-                                {[0, 25, 50, 75, 100].map((val) => {
-                                    const y = 210 - (val / 100) * 180;
-                                    return (
-                                        <g key={`y-${val}`}>
-                                            <line x1="35" y1={y} x2="40" y2={y} stroke="#D1D5DB" strokeWidth="1" />
-                                            <text x="20" y={y + 4} fontSize="10" textAnchor="end" fill="#6B7280">{val}</text>
-                                        </g>
-                                    );
-                                })}
-
-                                {/* Grid lines */}
-                                {[0, 25, 50, 75, 100].map((val) => {
-                                    const y = 210 - (val / 100) * 180;
-                                    return <line key={`grid-${val}`} x1="40" y1={y} x2="560" y2={y} stroke="#F3F4F6" strokeWidth="1" strokeDasharray="2,2" />;
-                                })}
-
-                                {/* Bars - show first 4 courses */}
-                                {courses.slice(0, 4).map((course, idx) => {
-                                    const barWidth = 35;
-                                    const gap = 30;
-                                    const groupX = 80 + idx * (barWidth * 2 + gap + 20);
-                                    
-                                    // Your grade (green bar)
-                                    const yourGrade = course.progress || 70;
-                                    const maxGrade = 100;
-                                    const yourHeight = (yourGrade / maxGrade) * 180;
-                                    
-                                    return (
-                                        <g key={`course-${idx}`}>
-                                            {/* Your Grade Bar */}
-                                            <rect x={groupX} y={210 - yourHeight} width={barWidth} height={yourHeight} fill="#10B981" />
-                                            
-                                            {/* Maximum Bar */}
-                                            <rect x={groupX + barWidth + 5} y={210 - 180} width={barWidth} height={180} fill="#E9D5FF" opacity="0.6" />
-                                            
-                                            {/* Course Label */}
-                                            <text x={groupX + barWidth + 2.5} y="230" fontSize="11" textAnchor="middle" fill="#6B7280">
-                                                {course.code?.substring(0, 6) || `C${idx + 1}`}
-                                            </text>
-                                        </g>
-                                    );
-                                })}
-
-                                {/* Legend */}
-                                <g transform="translate(50, 235)">
-                                    <rect x="0" y="0" width="12" height="12" fill="#10B981" />
-                                    <text x="16" y="10" fontSize="11" fill="#1F2937">Your Grade</text>
-                                    
-                                    <rect x="120" y="0" width="12" height="12" fill="#E9D5FF" opacity="0.6" />
-                                    <text x="136" y="10" fontSize="11" fill="#1F2937">Maximum</text>
-                                </g>
-                            </svg>
-                        </div>
+                        <PerformanceChart courses={courses.slice(0, 4)} />
                     </div>
                 )}
             </div>
@@ -819,6 +759,114 @@ const AnnouncementsTab = ({ announcements, formatTime, onItemClick }) => {
                 </div>
             ))}
         </div>
+    );
+};
+
+const PerformanceChart = ({ courses }) => {
+    const chartWidth = 600;
+    const chartHeight = 200;
+    const margin = { top: 20, right: 30, bottom: 50, left: 50 };
+    const plotWidth = chartWidth - margin.left - margin.right;
+    const plotHeight = chartHeight - margin.top - margin.bottom;
+    
+    // Create bars for first 4 courses
+    const courseData = courses.map((course, idx) => ({
+        code: course.code?.substring(0, 6) || `C${idx + 1}`,
+        grade: course.progress || 70,
+        max: 100
+    }));
+
+    const barWidth = plotWidth / (courseData.length * 2.5);
+    const spacing = barWidth * 1.5;
+
+    return (
+        <svg width="100%" height={chartHeight} viewBox={`0 0 ${chartWidth} ${chartHeight}`} style={{ minWidth: '100%' }}>
+            {/* Grid lines */}
+            {[0, 25, 50, 75, 100].map((val) => {
+                const y = margin.top + plotHeight - (val / 100) * plotHeight;
+                return (
+                    <line
+                        key={`grid-${val}`}
+                        x1={margin.left}
+                        y1={y}
+                        x2={chartWidth - margin.right}
+                        y2={y}
+                        stroke="#F3F4F6"
+                        strokeWidth="1"
+                        strokeDasharray="2,2"
+                    />
+                );
+            })}
+
+            {/* Y-axis */}
+            <line x1={margin.left} y1={margin.top} x2={margin.left} y2={margin.top + plotHeight} stroke="#D1D5DB" strokeWidth="2" />
+            
+            {/* X-axis */}
+            <line x1={margin.left} y1={margin.top + plotHeight} x2={chartWidth - margin.right} y2={margin.top + plotHeight} stroke="#D1D5DB" strokeWidth="2" />
+
+            {/* Y-axis labels */}
+            {[0, 25, 50, 75, 100].map((val) => {
+                const y = margin.top + plotHeight - (val / 100) * plotHeight;
+                return (
+                    <g key={`label-${val}`}>
+                        <line x1={margin.left - 5} y1={y} x2={margin.left} y2={y} stroke="#D1D5DB" strokeWidth="1" />
+                        <text x={margin.left - 10} y={y + 4} fontSize="12" textAnchor="end" fill="#6B7280">{val}</text>
+                    </g>
+                );
+            })}
+
+            {/* Bars */}
+            {courseData.map((data, idx) => {
+                const x = margin.left + idx * (barWidth * 2 + spacing);
+                
+                // Your grade bar height
+                const yourHeight = (data.grade / data.max) * plotHeight;
+                const maxHeight = (data.max / data.max) * plotHeight;
+                
+                return (
+                    <g key={`course-${idx}`}>
+                        {/* Your Grade Bar (Green) */}
+                        <rect
+                            x={x}
+                            y={margin.top + plotHeight - yourHeight}
+                            width={barWidth}
+                            height={yourHeight}
+                            fill="#10B981"
+                        />
+
+                        {/* Maximum Bar (Light Purple) */}
+                        <rect
+                            x={x + barWidth + 5}
+                            y={margin.top + plotHeight - maxHeight}
+                            width={barWidth}
+                            height={maxHeight}
+                            fill="#E9D5FF"
+                            opacity="0.6"
+                        />
+
+                        {/* Course Label */}
+                        <text
+                            x={x + barWidth / 2}
+                            y={margin.top + plotHeight + 25}
+                            fontSize="12"
+                            textAnchor="middle"
+                            fill="#6B7280"
+                        >
+                            {data.code}
+                        </text>
+                    </g>
+                );
+            })}
+
+            {/* Legend */}
+            <g>
+                <rect x={margin.left} y={chartHeight - 25} width="10" height="10" fill="#10B981" />
+                <text x={margin.left + 15} y={chartHeight - 17} fontSize="11" fill="#6B7280">Your Grade</text>
+
+                <rect x={margin.left + 130} y={chartHeight - 25} width="10" height="10" fill="#E9D5FF" opacity="0.6" />
+                <text x={margin.left + 145} y={chartHeight - 17} fontSize="11" fill="#6B7280">Maximum</text>
+            </g>
+        </svg>
     );
 };
 
