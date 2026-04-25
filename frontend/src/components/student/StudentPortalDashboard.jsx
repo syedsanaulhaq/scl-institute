@@ -404,7 +404,7 @@ const StudentPortalDashboard1 = ({ user }) => {
                 </div>
             </div>
 
-            {/* Row 3: Calendar and Quick Links */}
+            {/* Row 3: Calendar and Student Details */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-5">
                 <div className="lg:col-span-1">
                     <MiniCalendar
@@ -415,56 +415,56 @@ const StudentPortalDashboard1 = ({ user }) => {
                     />
                 </div>
 
-                {/* Quick Links */}
-                <div className="lg:col-span-2 bg-white rounded-xl border shadow-sm p-4" style={{ borderColor: '#E5E7EB' }}>
-                    <h2 className="text-sm font-semibold mb-4" style={{ color: '#1F2937' }}>Quick Links</h2>
-                    <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
-                        {[
-                            { icon: '📝', label: 'Assessments', path: '/student/assessments' },
-                            { icon: '📄', label: 'My Programme', path: '/student/programme' },
-                            { icon: '🏆', label: 'Grades', path: '/student/grades' },
-                            { icon: '📅', label: 'Timetable', path: '/student/timetable' },
-                            { icon: '📚', label: 'Library', path: '/student/library' },
-                            { icon: '💬', label: 'Messages', path: '/student/messages', badge: unreadMessages > 0 ? unreadMessages : null },
-                        ].map((item, i) => (
-                            <button
-                                key={i}
-                                onClick={() => navigate(item.path)}
-                                className="relative flex flex-col items-center gap-1.5 p-3 rounded-lg border text-center transition hover:shadow-sm"
-                                style={{ borderColor: '#E5E7EB', background: '#fff' }}
-                            >
-                                <span className="text-lg">{item.icon}</span>
-                                <span className="text-xs font-medium" style={{ color: '#6B7280' }}>{item.label}</span>
-                                {item.badge && (
-                                    <span className="absolute top-1.5 right-1.5 bg-red-500 text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
-                                        {item.badge}
-                                    </span>
-                                )}
-                            </button>
-                        ))}
+                {/* Student Info */}
+                {(student || application) && (
+                    <div className="lg:col-span-2 bg-white rounded-xl border shadow-sm p-5" style={{ borderColor: '#E5E7EB' }}>
+                        <h3 className="text-sm font-semibold mb-3 flex items-center gap-2" style={{ color: '#1F2937' }}>
+                            <User className="w-4 h-4" style={{ color: '#6B7280' }} />
+                            Your Details
+                        </h3>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                            {student?.email && <InfoItem label="Email" value={student.email} />}
+                            {student?.phone && <InfoItem label="Phone" value={student.phone} />}
+                            {student?.nationality && <InfoItem label="Nationality" value={student.nationality} />}
+                            {application?.intakeStartDate && <InfoItem label="Intake Start" value={formatDate(application.intakeStartDate)} />}
+                            {application?.programmeType && <InfoItem label="Programme Type" value={application.programmeType} />}
+                            {application?.programName && <InfoItem label="Programme" value={application.programName} />}
+                            {application?.courseCode && <InfoItem label="Course Code" value={application.courseCode} />}
+                            {student?.lastMoodleAccess && <InfoItem label="Last LMS Access" value={formatDate(student.lastMoodleAccess)} />}
+                        </div>
                     </div>
-                </div>
+                )}
             </div>
 
-            {/* Student Info Footer */}
-            {(student || application) && (
-                <div className="bg-white rounded-xl border shadow-sm p-5" style={{ borderColor: '#E5E7EB' }}>
-                    <h3 className="text-sm font-semibold mb-3 flex items-center gap-2" style={{ color: '#1F2937' }}>
-                        <User className="w-4 h-4" style={{ color: '#6B7280' }} />
-                        Your Details
-                    </h3>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                        {student?.email && <InfoItem label="Email" value={student.email} />}
-                        {student?.phone && <InfoItem label="Phone" value={student.phone} />}
-                        {student?.nationality && <InfoItem label="Nationality" value={student.nationality} />}
-                        {application?.intakeStartDate && <InfoItem label="Intake Start" value={formatDate(application.intakeStartDate)} />}
-                        {application?.programmeType && <InfoItem label="Programme Type" value={application.programmeType} />}
-                        {application?.programName && <InfoItem label="Programme" value={application.programName} />}
-                        {application?.courseCode && <InfoItem label="Course Code" value={application.courseCode} />}
-                        {student?.lastMoodleAccess && <InfoItem label="Last LMS Access" value={formatDate(student.lastMoodleAccess)} />}
-                    </div>
+            {/* Quick Links Section */}
+            <div className="bg-white rounded-xl border shadow-sm p-4 mb-5" style={{ borderColor: '#E5E7EB' }}>
+                <h2 className="text-sm font-semibold mb-4" style={{ color: '#1F2937' }}>Quick Links</h2>
+                <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
+                    {[
+                        { icon: '📝', label: 'Assessments', path: '/student/assessments' },
+                        { icon: '📄', label: 'My Programme', path: '/student/programme' },
+                        { icon: '🏆', label: 'Grades', path: '/student/grades' },
+                        { icon: '📅', label: 'Timetable', path: '/student/timetable' },
+                        { icon: '📚', label: 'Library', path: '/student/library' },
+                        { icon: '💬', label: 'Messages', path: '/student/messages', badge: unreadMessages > 0 ? unreadMessages : null },
+                    ].map((item, i) => (
+                        <button
+                            key={i}
+                            onClick={() => navigate(item.path)}
+                            className="relative flex flex-col items-center gap-1.5 p-3 rounded-lg border text-center transition hover:shadow-sm"
+                            style={{ borderColor: '#E5E7EB', background: '#fff' }}
+                        >
+                            <span className="text-lg">{item.icon}</span>
+                            <span className="text-xs font-medium" style={{ color: '#6B7280' }}>{item.label}</span>
+                            {item.badge && (
+                                <span className="absolute top-1.5 right-1.5 bg-red-500 text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
+                                    {item.badge}
+                                </span>
+                            )}
+                        </button>
+                    ))}
                 </div>
-            )}
+            </div>
         </div>
     );
 };
