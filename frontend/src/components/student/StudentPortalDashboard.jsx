@@ -249,7 +249,7 @@ const StudentPortalDashboard1 = ({ user }) => {
                             View all →
                         </button>
                     </div>
-                    <div className="p-4 max-h-96 overflow-y-auto">
+                    <div className="p-4">
                         <CoursesTab courses={courses} onCourseClick={handleCourseClick} />
                     </div>
                 </div>
@@ -265,7 +265,7 @@ const StudentPortalDashboard1 = ({ user }) => {
                             View all →
                         </button>
                     </div>
-                    <div className="p-4 max-h-96 overflow-y-auto">
+                    <div className="p-4">
                         <AnnouncementsTab announcements={announcements} formatTime={formatTime} onItemClick={handleMoodleNavigate} />
                     </div>
                 </div>
@@ -284,7 +284,7 @@ const StudentPortalDashboard1 = ({ user }) => {
                             View all →
                         </button>
                     </div>
-                    <div className="p-4 max-h-96 overflow-y-auto">
+                    <div className="p-4">
                         <EventsTab events={upcomingEvents} formatDate={formatDate} onItemClick={handleMoodleNavigate} />
                     </div>
                 </div>
@@ -300,7 +300,7 @@ const StudentPortalDashboard1 = ({ user }) => {
                             View all
                         </button>
                     </div>
-                    <div className="p-4 max-h-96 overflow-y-auto">
+                    <div className="p-4">
                         <NotificationsTab notifications={notifications?.slice(0, 8)} formatTime={formatTime} onItemClick={handleMoodleNavigate} />
                     </div>
                 </div>
