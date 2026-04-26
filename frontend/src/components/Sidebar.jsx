@@ -95,7 +95,7 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
         ]
         : [];
 
-    const studentMenuItems = (hasStudent || isManagementUser)
+    const studentMenuItems = hasStudent
         ? [
             {
                 name: 'Dashboard Layouts',
@@ -166,7 +166,7 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
         ]
         : [];
 
-    const teacherMenuItems = (hasTeaching || isManagementUser)
+    const teacherMenuItems = hasTeaching
         ? [
             { name: 'Dashboard', icon: LayoutDashboard, path: '/teacher/dashboard' },
             { name: 'My Teaching Programme', icon: BookOpen, path: '/teacher/programme' },
