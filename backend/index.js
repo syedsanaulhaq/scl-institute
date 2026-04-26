@@ -892,8 +892,20 @@ app.put('/api/admin/users/:id/role', requireAuth, async (req, res) => {
         const { id } = req.params;
         const { role } = req.body;
         if (!role) return res.status(400).json({ success: false, error: 'Role is required' });
+
+        // Get user email for Moodle role sync
+        const [[targetUser]] = await pool.query('SELECT email FROM users WHERE id = ?', [id]);
+        if (!targetUser) return res.status(404).json({ success: false, error: 'User not found' });
+
         await pool.query('UPDATE users SET role = ? WHERE id = ?', [role, id]);
-        res.json({ success: true, message: 'Role updated successfully' });
+
+        // Sync Moodle system role based on new SCL role
+        let moodleResult = null;
+        if (process.env.ENABLE_MOODLE_INTEGRATION !== 'false') {
+            moodleResult = await assignMoodleSystemRole(targetUser.email, role);
+        }
+
+        res.json({ success: true, message: 'Role updated successfully', moodle: moodleResult });
     } catch (error) {
         console.error('[ADMIN ROLE UPDATE] Error:', error);
         res.status(500).json({ success: false, error: 'Failed to update role' });
@@ -1109,7 +1121,115 @@ function mergeRoles(localRoleValue, moodleRoles = [], options = {}) {
         .sort((a, b) => getRolePriority(a) - getRolePriority(b));
 }
 
-async function callMoodle(wsfunction, params = {}) {
+// ─── Moodle System Role Assignment ───────────────────────────────────────────
+// Maps SCL roles to Moodle system-level permissions.
+// systemadmin → Moodle site admin + manager role at system context
+// collegeadmin → Moodle manager role at system context
+// manager/teacher/student/other → remove any system-level role; strip from siteadmins
+async function assignMoodleSystemRole(email, sclRole) {
+    const MOODLE_SYSTEM_CONTEXT_ID = 1;
+    const MOODLE_MANAGER_ROLE_ID = 1; // shortname: manager
+
+    try {
+        // Look up Moodle user by email
+        const [mUsers] = await moodlePool.query(
+            `SELECT id FROM ${moodleTablePrefix}user WHERE email = ? AND deleted = 0 LIMIT 1`,
+            [email]
+        );
+        if (!mUsers.length) {
+            console.warn(`[MOODLE ROLE] User not found in Moodle for email: ${email}`);
+            return { success: false, reason: 'moodle_user_not_found' };
+        }
+        const moodleUserId = mUsers[0].id;
+
+        if (sclRole === 'systemadmin') {
+            // 1. Assign system-level manager role if not already assigned
+            const [existing] = await moodlePool.query(
+                `SELECT id FROM ${moodleTablePrefix}role_assignments
+                 WHERE roleid = ? AND userid = ? AND contextid = ? LIMIT 1`,
+                [MOODLE_MANAGER_ROLE_ID, moodleUserId, MOODLE_SYSTEM_CONTEXT_ID]
+            );
+            if (!existing.length) {
+                await moodlePool.query(
+                    `INSERT INTO ${moodleTablePrefix}role_assignments
+                     (roleid, contextid, userid, timemodified, modifierid, component, itemid, sortorder)
+                     VALUES (?, ?, ?, UNIX_TIMESTAMP(), 2, '', 0, 0)`,
+                    [MOODLE_MANAGER_ROLE_ID, MOODLE_SYSTEM_CONTEXT_ID, moodleUserId]
+                );
+            }
+            // 2. Add to siteadmins
+            const [[cfg]] = await moodlePool.query(
+                `SELECT value FROM ${moodleTablePrefix}config WHERE name = 'siteadmins' LIMIT 1`
+            );
+            const currentAdmins = (cfg?.value || '').split(',').map(s => s.trim()).filter(Boolean);
+            if (!currentAdmins.includes(String(moodleUserId))) {
+                currentAdmins.push(String(moodleUserId));
+                await moodlePool.query(
+                    `UPDATE ${moodleTablePrefix}config SET value = ? WHERE name = 'siteadmins'`,
+                    [currentAdmins.join(',')]
+                );
+            }
+            console.log(`[MOODLE ROLE] systemadmin: user ${email} (moodle id ${moodleUserId}) → site admin + manager role`);
+            return { success: true };
+
+        } else if (sclRole === 'collegeadmin') {
+            // Assign system-level manager role only; do NOT add to siteadmins
+            // Also remove from siteadmins if they were previously a site admin
+            const [existing] = await moodlePool.query(
+                `SELECT id FROM ${moodleTablePrefix}role_assignments
+                 WHERE roleid = ? AND userid = ? AND contextid = ? LIMIT 1`,
+                [MOODLE_MANAGER_ROLE_ID, moodleUserId, MOODLE_SYSTEM_CONTEXT_ID]
+            );
+            if (!existing.length) {
+                await moodlePool.query(
+                    `INSERT INTO ${moodleTablePrefix}role_assignments
+                     (roleid, contextid, userid, timemodified, modifierid, component, itemid, sortorder)
+                     VALUES (?, ?, ?, UNIX_TIMESTAMP(), 2, '', 0, 0)`,
+                    [MOODLE_MANAGER_ROLE_ID, MOODLE_SYSTEM_CONTEXT_ID, moodleUserId]
+                );
+            }
+            // Remove from siteadmins (collegeadmin should not be site-level Moodle admin)
+            const [[cfg]] = await moodlePool.query(
+                `SELECT value FROM ${moodleTablePrefix}config WHERE name = 'siteadmins' LIMIT 1`
+            );
+            const currentAdmins = (cfg?.value || '').split(',').map(s => s.trim()).filter(Boolean);
+            const filtered = currentAdmins.filter(id => id !== String(moodleUserId));
+            if (filtered.length !== currentAdmins.length) {
+                await moodlePool.query(
+                    `UPDATE ${moodleTablePrefix}config SET value = ? WHERE name = 'siteadmins'`,
+                    [filtered.join(',')]
+                );
+            }
+            console.log(`[MOODLE ROLE] collegeadmin: user ${email} (moodle id ${moodleUserId}) → manager role at system context`);
+            return { success: true };
+
+        } else {
+            // manager, teacher, student, etc. — remove from siteadmins and remove system-level role assignment
+            await moodlePool.query(
+                `DELETE FROM ${moodleTablePrefix}role_assignments
+                 WHERE userid = ? AND contextid = ?`,
+                [moodleUserId, MOODLE_SYSTEM_CONTEXT_ID]
+            );
+            const [[cfg]] = await moodlePool.query(
+                `SELECT value FROM ${moodleTablePrefix}config WHERE name = 'siteadmins' LIMIT 1`
+            );
+            const currentAdmins = (cfg?.value || '').split(',').map(s => s.trim()).filter(Boolean);
+            const filtered = currentAdmins.filter(id => id !== String(moodleUserId));
+            if (filtered.length !== currentAdmins.length) {
+                await moodlePool.query(
+                    `UPDATE ${moodleTablePrefix}config SET value = ? WHERE name = 'siteadmins'`,
+                    [filtered.join(',')]
+                );
+            }
+            console.log(`[MOODLE ROLE] ${sclRole}: user ${email} (moodle id ${moodleUserId}) → removed from Moodle system roles`);
+            return { success: true };
+        }
+    } catch (err) {
+        console.error(`[MOODLE ROLE] Failed to assign Moodle role for ${email}:`, err.message);
+        return { success: false, reason: err.message };
+    }
+}
+
     const moodleBaseUrl = process.env.MOODLE_INTERNAL_URL || process.env.MOODLE_URL || 'http://localhost:9090';
     const moodleToken = process.env.MOODLE_TOKEN;
 

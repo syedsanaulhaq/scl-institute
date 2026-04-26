@@ -144,7 +144,6 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
             { name: 'LMS Enrolments', icon: GraduationCap, path: '/admin/lms-enrolments' },
             { name: 'Student Programmes', icon: BookOpen, path: '/admin/student-programmes' },
             { name: 'Users by Role', icon: Users, path: '/admin/users-by-role' },
-            { name: 'Access LMS', icon: GraduationCap, isSSO: true },
             { name: 'Settings', icon: Settings, path: '/settings' }
         ]
         : [];
