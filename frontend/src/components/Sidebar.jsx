@@ -62,7 +62,8 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
         }
     };
 
-    const managerMenuItems = canAccessManagementPortal
+    // System Admin: full access to everything
+    const systemAdminMenuItems = isSystemAdmin
         ? [
             { name: 'Overview & Reports', icon: BarChart3, path: '/' },
             { name: 'Module Launcher', icon: LayoutDashboard, path: '/modules' },
@@ -92,6 +93,57 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
             },
             { name: 'Course Lifecycle', icon: LayoutDashboard, path: '/course-lifecycle' },
             { name: 'Programme Intakes', icon: Users, path: '/programme-intakes' },
+            { name: 'LMS Enrolments', icon: GraduationCap, path: '/admin/lms-enrolments' },
+            { name: 'Student Programmes', icon: BookOpen, path: '/admin/student-programmes' },
+            { name: 'Users by Role', icon: Users, path: '/admin/users-by-role' },
+            { name: 'Role Management', icon: ShieldCheck, path: '/admin/role-management' },
+            { name: 'Access LMS', icon: GraduationCap, isSSO: true },
+            { name: 'Settings', icon: Settings, path: '/settings' }
+        ]
+        : [];
+
+    // College Admin: student admissions & management focused
+    const collegeAdminMenuItems = isCollegeAdmin
+        ? [
+            { name: 'Admissions Hub', icon: BarChart3, path: '/admin/dashboard' },
+            {
+                name: 'Student Applications',
+                icon: FileText,
+                isParent: true,
+                key: 'student-applications',
+                subItems: [
+                    { name: 'All Applications', icon: ClipboardList, path: '/applications' },
+                    { name: 'New Admission', icon: UserPlus, path: '/student-application' },
+                    { name: 'Applicants List', icon: UserCheck, path: '/applicants' },
+                    { name: 'Application Reports', icon: FileText, path: '/applications-report' }
+                ]
+            },
+            {
+                name: 'Student Management',
+                icon: Users,
+                isParent: true,
+                key: 'student-management',
+                subItems: [
+                    { name: 'Student List', icon: Users, path: '/student-list' },
+                    { name: 'Course Change Requests', icon: ClipboardList, path: '/course-change-requests' },
+                    { name: 'Student Report', icon: BarChart3, path: '/students/report' }
+                ]
+            },
+            { name: 'Programme Intakes', icon: Users, path: '/programme-intakes' },
+            { name: 'LMS Enrolments', icon: GraduationCap, path: '/admin/lms-enrolments' },
+            { name: 'Access LMS', icon: GraduationCap, isSSO: true },
+            { name: 'Settings', icon: Settings, path: '/settings' }
+        ]
+        : [];
+
+    // Manager: high-level reports & progress overview (read-only)
+    const managerMenuItems = isManagerOnly
+        ? [
+            { name: 'College Overview', icon: BarChart3, path: '/' },
+            { name: 'Admissions Dashboard', icon: LayoutDashboard, path: '/admin/dashboard' },
+            { name: 'LMS Enrolments', icon: GraduationCap, path: '/admin/lms-enrolments' },
+            { name: 'Student Programmes', icon: BookOpen, path: '/admin/student-programmes' },
+            { name: 'Users by Role', icon: Users, path: '/admin/users-by-role' },
             { name: 'Access LMS', icon: GraduationCap, isSSO: true },
             { name: 'Settings', icon: Settings, path: '/settings' }
         ]
@@ -192,6 +244,8 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
         : [];
 
     const menuSections = [
+        { title: 'System Admin Menu', items: systemAdminMenuItems },
+        { title: 'College Admin Menu', items: collegeAdminMenuItems },
         { title: 'Manager Menu', items: managerMenuItems },
         { title: 'Student Menu', items: studentMenuItems },
         { title: 'Teacher Menu', items: teacherMenuItems },

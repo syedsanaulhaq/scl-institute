@@ -54,6 +54,7 @@ import CourseRegistrations from './pages/CourseRegistrations';
 import ProgrammeIntakes from './pages/ProgrammeIntakes';
 import ManagerCourseChangeRequests from './components/ManagerCourseChangeRequests';
 import AccountSettings from './components/AccountSettings';
+import UserRoleManagement from './pages/UserRoleManagement';
 import TeacherRegistrationForm from './components/TeacherRegistrationForm';
 import TeacherRegistrationRequests from './components/TeacherRegistrationRequests';
 import { getRoleContext } from './utils/roleAccess';
@@ -656,6 +657,15 @@ function App() {
                     user && canAccessManagementPortal ? (
                         <Layout user={user} onLogout={handleLogout}>
                             <ManagerCourseChangeRequests />
+                        </Layout>
+                    ) : (
+                        <LoginPage onLoginSuccess={handleLoginSuccess} />
+                    )
+                } />
+                <Route path="/admin/role-management" element={
+                    user && canAccessManagementPortal ? (
+                        <Layout user={user} onLogout={handleLogout}>
+                            <UserRoleManagement user={user} />
                         </Layout>
                     ) : (
                         <LoginPage onLoginSuccess={handleLoginSuccess} />

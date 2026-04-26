@@ -177,6 +177,32 @@ async function initDB() {
         await safeAddColumn('student_programme_registrations', 'notes', 'TEXT NULL');
         await safeAddColumn('student_programme_registrations', 'started_at', 'DATETIME DEFAULT CURRENT_TIMESTAMP');
         await safeAddColumn('student_programme_registrations', 'ended_at', 'DATETIME NULL');
+
+        // Role privileges table
+        await connection.query(`
+            CREATE TABLE IF NOT EXISTS role_privileges (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                role VARCHAR(100) NOT NULL UNIQUE,
+                privileges JSON NOT NULL DEFAULT ('{}'),
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                INDEX idx_role (role)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        `);
+        // Seed default privileges if table is empty
+        const [privRows] = await connection.query('SELECT COUNT(*) as cnt FROM role_privileges');
+        if (privRows[0].cnt === 0) {
+            const defaults = [
+                ['systemadmin', JSON.stringify({ can_approve_applications: true, can_manage_students: true, can_manage_teachers: true, can_view_reports: true, can_manage_courses: true, can_access_lms: true, can_manage_settings: true, can_manage_roles: true })],
+                ['collegeadmin', JSON.stringify({ can_approve_applications: true, can_manage_students: true, can_manage_teachers: false, can_view_reports: true, can_manage_courses: false, can_access_lms: true, can_manage_settings: false, can_manage_roles: false })],
+                ['manager', JSON.stringify({ can_approve_applications: false, can_manage_students: false, can_manage_teachers: false, can_view_reports: true, can_manage_courses: false, can_access_lms: true, can_manage_settings: false, can_manage_roles: false })],
+                ['teacher', JSON.stringify({ can_approve_applications: false, can_manage_students: false, can_manage_teachers: false, can_view_reports: false, can_manage_courses: false, can_access_lms: true, can_manage_settings: false, can_manage_roles: false })],
+                ['student', JSON.stringify({ can_approve_applications: false, can_manage_students: false, can_manage_teachers: false, can_view_reports: false, can_manage_courses: false, can_access_lms: true, can_manage_settings: false, can_manage_roles: false })]
+            ];
+            for (const [role, privileges] of defaults) {
+                await connection.query('INSERT IGNORE INTO role_privileges (role, privileges) VALUES (?, ?)', [role, privileges]);
+            }
+        }
+
         console.log("[DB] Tables initialized");
         connection.release();
     } catch (err) {
@@ -836,6 +862,75 @@ app.get('/api/admin/users-by-role', requireAuth, async (req, res) => {
     } catch (error) {
         console.error('Error fetching users by role:', error);
         res.status(500).json({ success: false, error: 'Failed to fetch users' });
+    }
+});
+
+// List all users (for role management UI)
+app.get('/api/admin/users', requireAuth, async (req, res) => {
+    try {
+        const { search, role } = req.query;
+        let query = `SELECT id, first_name, last_name, email, role, is_active, created_at FROM users WHERE 1=1`;
+        const params = [];
+        if (role) { query += ` AND role = ?`; params.push(role); }
+        if (search) {
+            query += ` AND (first_name LIKE ? OR last_name LIKE ? OR email LIKE ?)`;
+            const like = `%${search}%`;
+            params.push(like, like, like);
+        }
+        query += ` ORDER BY first_name, last_name`;
+        const [rows] = await pool.query(query, params);
+        res.json({ success: true, data: rows });
+    } catch (error) {
+        console.error('[ADMIN USERS] Error:', error);
+        res.status(500).json({ success: false, error: 'Failed to fetch users' });
+    }
+});
+
+// Update a user's role
+app.put('/api/admin/users/:id/role', requireAuth, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { role } = req.body;
+        if (!role) return res.status(400).json({ success: false, error: 'Role is required' });
+        await pool.query('UPDATE users SET role = ? WHERE id = ?', [role, id]);
+        res.json({ success: true, message: 'Role updated successfully' });
+    } catch (error) {
+        console.error('[ADMIN ROLE UPDATE] Error:', error);
+        res.status(500).json({ success: false, error: 'Failed to update role' });
+    }
+});
+
+// Get all role privileges
+app.get('/api/admin/role-privileges', requireAuth, async (req, res) => {
+    try {
+        const [rows] = await pool.query('SELECT role, privileges FROM role_privileges ORDER BY role');
+        const result = {};
+        for (const row of rows) {
+            result[row.role] = typeof row.privileges === 'string' ? JSON.parse(row.privileges) : row.privileges;
+        }
+        res.json({ success: true, data: result });
+    } catch (error) {
+        console.error('[ROLE PRIVILEGES GET] Error:', error);
+        res.status(500).json({ success: false, error: 'Failed to fetch role privileges' });
+    }
+});
+
+// Update privileges for a role
+app.put('/api/admin/role-privileges/:role', requireAuth, async (req, res) => {
+    try {
+        const { role } = req.params;
+        const { privileges } = req.body;
+        if (!privileges || typeof privileges !== 'object') {
+            return res.status(400).json({ success: false, error: 'privileges object required' });
+        }
+        await pool.query(
+            'INSERT INTO role_privileges (role, privileges) VALUES (?, ?) ON DUPLICATE KEY UPDATE privileges = ?, updated_at = NOW()',
+            [role, JSON.stringify(privileges), JSON.stringify(privileges)]
+        );
+        res.json({ success: true, message: 'Privileges updated successfully' });
+    } catch (error) {
+        console.error('[ROLE PRIVILEGES PUT] Error:', error);
+        res.status(500).json({ success: false, error: 'Failed to update privileges' });
     }
 });
 
