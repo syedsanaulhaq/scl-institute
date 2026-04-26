@@ -1,6 +1,8 @@
 const CANONICAL_ROLE_MAP = {
-    'super admin': 'manager',
+    'super admin': 'systemadmin',
+    'system admin': 'systemadmin',
     'lms manager': 'manager',
+    'college admin': 'collegeadmin',
     'course creator': 'coursecreator',
     'non-editing teacher': 'teacher',
     noneditingteacher: 'teacher',
@@ -8,7 +10,10 @@ const CANONICAL_ROLE_MAP = {
     'authenticated user on site home': 'frontpage'
 };
 
-const MANAGEMENT_ROLES = new Set(['admin', 'manager', 'coursecreator']);
+const MANAGEMENT_ROLES = new Set(['admin', 'systemadmin', 'collegeadmin', 'manager', 'coursecreator']);
+const SYSTEM_ADMIN_ROLES = new Set(['admin', 'systemadmin']);
+const COLLEGE_ADMIN_ROLES = new Set(['collegeadmin']);
+const MANAGER_ONLY_ROLES = new Set(['manager']);
 const TEACHING_ROLES = new Set(['editingteacher', 'teacher']);
 const LEARNING_ROLES = new Set(['student']);
 
@@ -66,6 +71,9 @@ export function getRoleContext(user) {
             courseRoles: user.roleContext.courseRoles || {},
             hasSystemManagement: user.roleContext.hasSystemManagement || false,
             hasManagement: user.roleContext.hasManagement || false,
+            isSystemAdmin: user.roleContext.isSystemAdmin || false,
+            isCollegeAdmin: user.roleContext.isCollegeAdmin || false,
+            isManagerOnly: user.roleContext.isManagerOnly || false,
             hasTeaching: user.roleContext.hasTeaching || false,
             hasStudent: user.roleContext.hasStudent || false,
             canAccessManagementPortal: user.roleContext.canAccessManagementPortal || false,
@@ -80,6 +88,9 @@ export function getRoleContext(user) {
     const hasManagement = roles.some((role) => MANAGEMENT_ROLES.has(role));
     const hasTeaching = roles.some((role) => TEACHING_ROLES.has(role));
     const hasStudent = roles.some((role) => LEARNING_ROLES.has(role));
+    const isSystemAdmin = roles.some((role) => SYSTEM_ADMIN_ROLES.has(role));
+    const isCollegeAdmin = roles.some((role) => COLLEGE_ADMIN_ROLES.has(role));
+    const isManagerOnly = roles.some((role) => MANAGER_ONLY_ROLES.has(role)) && !isSystemAdmin && !isCollegeAdmin;
 
     return {
         roles,
@@ -89,6 +100,9 @@ export function getRoleContext(user) {
         courseRoles: {},
         hasSystemManagement: false,
         hasManagement,
+        isSystemAdmin,
+        isCollegeAdmin,
+        isManagerOnly,
         hasTeaching,
         hasStudent,
         canAccessStudentPortal: hasStudent || hasTeaching,

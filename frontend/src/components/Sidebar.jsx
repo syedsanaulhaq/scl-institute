@@ -38,10 +38,12 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
     const location = useLocation();
     const [loading, setLoading] = useState(false);
     const roleContext = getRoleContext(user);
-    const { canAccessStudentPortal, canAccessManagementPortal, hasTeaching, hasManagement, hasStudent } = roleContext;
+    const { canAccessStudentPortal, canAccessManagementPortal, hasTeaching, hasManagement, hasStudent, isSystemAdmin, isCollegeAdmin, isManagerOnly } = roleContext;
     const isManagementUser = Boolean(canAccessManagementPortal || hasManagement);
     const [activeSectionTitle, setActiveSectionTitle] = useState(() => {
-        if (canAccessManagementPortal) return 'Manager Menu';
+        if (isSystemAdmin) return 'System Admin Menu';
+        if (isCollegeAdmin) return 'College Admin Menu';
+        if (isManagerOnly) return 'Manager Menu';
         if (hasTeaching && !hasStudent) return 'Teacher Menu';
         if (canAccessStudentPortal) return 'Student Menu';
         if (hasTeaching) return 'Teacher Menu';

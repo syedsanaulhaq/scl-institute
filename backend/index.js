@@ -879,8 +879,10 @@ app.post('/api/admin/manual-role-sync', requireAuth, async (req, res) => {
 // ===============================
 
 const roleAliasMap = {
-    'super admin': 'manager',
+    'super admin': 'systemadmin',
+    'system admin': 'systemadmin',
     'lms manager': 'manager',
+    'college admin': 'collegeadmin',
     'course creator': 'coursecreator',
     'non-editing teacher': 'teacher',
     noneditingteacher: 'teacher',
@@ -888,7 +890,10 @@ const roleAliasMap = {
     'authenticated user on site home': 'frontpage'
 };
 
-const managementRoles = new Set(['admin', 'manager', 'coursecreator']);
+const managementRoles = new Set(['admin', 'systemadmin', 'collegeadmin', 'manager', 'coursecreator']);
+const systemAdminRoles = new Set(['admin', 'systemadmin']);
+const collegeAdminRoles = new Set(['collegeadmin']);
+const managerOnlyRoles = new Set(['manager']);
 const teachingRoles = new Set(['editingteacher', 'teacher']);
 const learningRoles = new Set(['student']);
 const protectedManagementEmails = new Set(
@@ -952,6 +957,9 @@ function buildRoleContext(roleValue, roleData = null) {
     // System assignments are ideal, but local/seeded management roles must still grant access.
     const hasSystemManagement = systemRoles.some((role) => managementRoles.has(role));
     const hasManagement = roles.some((role) => managementRoles.has(role));
+    const isSystemAdmin = roles.some((role) => systemAdminRoles.has(role));
+    const isCollegeAdmin = roles.some((role) => collegeAdminRoles.has(role));
+    const isManagerOnly = roles.some((role) => managerOnlyRoles.has(role)) && !isSystemAdmin && !isCollegeAdmin;
 
     return {
         primaryRole,
@@ -961,6 +969,9 @@ function buildRoleContext(roleValue, roleData = null) {
         courseRoles,
         hasSystemManagement,
         hasManagement,
+        isSystemAdmin,
+        isCollegeAdmin,
+        isManagerOnly,
         hasTeaching: roles.some((role) => teachingRoles.has(role)),
         hasStudent: roles.some((role) => learningRoles.has(role)),
         canAccessManagementPortal: hasSystemManagement || hasManagement,
@@ -996,7 +1007,7 @@ function mergeRoles(localRoleValue, moodleRoles = [], options = {}) {
         : [];
 
     if (forceManager) {
-        localRoles.push('manager');
+        localRoles.push('systemadmin');
     }
 
     return [...new Set([...localRoles, ...remoteRoles])]
