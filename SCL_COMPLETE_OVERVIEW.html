@@ -490,16 +490,17 @@
       </div>
     </div>
 
-    <div class="card-grid-3">
+    <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:1.5rem;">
+      <!-- Row 1 -->
       <div>
         <div class="screen-frame">
           <div class="screen-bar">
             <div class="sbar-dot sbar-red"></div>
             <div class="sbar-dot sbar-yellow"></div>
             <div class="sbar-dot sbar-green"></div>
-            <span style="font-size:.78rem; color:#6b7280; margin-left:.5rem;">scl-institute.com/login</span>
+            <span style="font-size:.78rem; color:#6b7280; margin-left:.5rem;">system.sclsandbox.xyz/login</span>
           </div>
-          <img src="Client-Overview-Screenshots/screenshots/01-login-screen.png" alt="SCL Login Screen" onerror="this.style.display='none'; this.parentElement.style.background='#f3f4f6'; this.parentElement.innerHTML+='<div style=padding:2rem;text-align:center;color:#9ca3af;font-size:.9rem;>Login Screen<br>(screenshot)</div>'"/>
+          <img src="Client-Overview-Screenshots/screenshots/01-login-screen.png" alt="SCL Login Screen" style="width:100%;display:block;"/>
           <div class="screen-caption">
             <span>🔐</span> Login Page – Secure Email + Password Sign-In
           </div>
@@ -511,11 +512,11 @@
             <div class="sbar-dot sbar-red"></div>
             <div class="sbar-dot sbar-yellow"></div>
             <div class="sbar-dot sbar-green"></div>
-            <span style="font-size:.78rem; color:#6b7280; margin-left:.5rem;">scl-institute.com/admin/dashboard</span>
+            <span style="font-size:.78rem; color:#6b7280; margin-left:.5rem;">system.sclsandbox.xyz/</span>
           </div>
-          <img src="Client-Overview-Screenshots/screenshots/02-admin-dashboard.png" alt="Admin Dashboard" onerror="this.style.display='none'; this.parentElement.style.background='#f3f4f6'; this.parentElement.innerHTML+='<div style=padding:2rem;text-align:center;color:#9ca3af;font-size:.9rem;>Admin Dashboard<br>(screenshot)</div>'"/>
+          <img src="Client-Overview-Screenshots/screenshots/02-admin-dashboard.png" alt="Admin Dashboard" style="width:100%;display:block;"/>
           <div class="screen-caption">
-            <span>📊</span> Admin Dashboard – Modules &amp; Management Hub
+            <span>📊</span> Admin Dashboard – Live Stats &amp; Overview (37 users, 108 registrations)
           </div>
         </div>
       </div>
@@ -525,11 +526,69 @@
             <div class="sbar-dot sbar-red"></div>
             <div class="sbar-dot sbar-yellow"></div>
             <div class="sbar-dot sbar-green"></div>
-            <span style="font-size:.78rem; color:#6b7280; margin-left:.5rem;">moodle.scl-institute.com</span>
+            <span style="font-size:.78rem; color:#6b7280; margin-left:.5rem;">system.sclsandbox.xyz/applications</span>
           </div>
-          <img src="Client-Overview-Screenshots/screenshots/03-moodle-lms.png" alt="Moodle LMS" onerror="this.style.display='none'; this.parentElement.style.background='#f3f4f6'; this.parentElement.innerHTML+='<div style=padding:2rem;text-align:center;color:#9ca3af;font-size:.9rem;>Moodle LMS<br>(screenshot)</div>'"/>
+          <img src="Client-Overview-Screenshots/screenshots/03-applications.png" alt="Student Applications" style="width:100%;display:block;"/>
           <div class="screen-caption">
-            <span>🎓</span> Moodle LMS – Online Learning Courses &amp; Activities
+            <span>📋</span> Student Applications – Review, Approve &amp; Track (12 total)
+          </div>
+        </div>
+      </div>
+      <!-- Row 2 -->
+      <div>
+        <div class="screen-frame">
+          <div class="screen-bar">
+            <div class="sbar-dot sbar-red"></div>
+            <div class="sbar-dot sbar-yellow"></div>
+            <div class="sbar-dot sbar-green"></div>
+            <span style="font-size:.78rem; color:#6b7280; margin-left:.5rem;">system.sclsandbox.xyz/admin/lms-enrolments</span>
+          </div>
+          <img src="Client-Overview-Screenshots/screenshots/04-lms-enrolments.png" alt="LMS Enrolments" style="width:100%;display:block;"/>
+          <div class="screen-caption">
+            <span>🎓</span> LMS Enrolments – 70 Moodle Courses, 68 Enrolments
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="screen-frame">
+          <div class="screen-bar">
+            <div class="sbar-dot sbar-red"></div>
+            <div class="sbar-dot sbar-yellow"></div>
+            <div class="sbar-dot sbar-green"></div>
+            <span style="font-size:.78rem; color:#6b7280; margin-left:.5rem;">system.sclsandbox.xyz/admin/role-management</span>
+          </div>
+          <img src="Client-Overview-Screenshots/screenshots/05-role-management.png" alt="Role Management" style="width:100%;display:block;"/>
+          <div class="screen-caption">
+            <span>👥</span> User &amp; Role Management – Assign Roles to All Staff
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="screen-frame">
+          <div class="screen-bar">
+            <div class="sbar-dot sbar-red"></div>
+            <div class="sbar-dot sbar-yellow"></div>
+            <div class="sbar-dot sbar-green"></div>
+            <span style="font-size:.78rem; color:#6b7280; margin-left:.5rem;">system.sclsandbox.xyz/course-lifecycle</span>
+          </div>
+          <img src="Client-Overview-Screenshots/screenshots/06-course-lifecycle.png" alt="Course Lifecycle" style="width:100%;display:block;"/>
+          <div class="screen-caption">
+            <span>🔄</span> Course Lifecycle – 55 Courses Tracked (15 Fully Active)
+          </div>
+        </div>
+      </div>
+      <!-- Row 3 - full-width centred -->
+      <div style="grid-column:2;">
+        <div class="screen-frame">
+          <div class="screen-bar">
+            <div class="sbar-dot sbar-red"></div>
+            <div class="sbar-dot sbar-yellow"></div>
+            <div class="sbar-dot sbar-green"></div>
+            <span style="font-size:.78rem; color:#6b7280; margin-left:.5rem;">system.sclsandbox.xyz/programme-intakes</span>
+          </div>
+          <img src="Client-Overview-Screenshots/screenshots/07-programme-intakes.png" alt="Programme Intakes" style="width:100%;display:block;"/>
+          <div class="screen-caption">
+            <span>📅</span> Programme Intakes – Manage Cohorts &amp; Sync to Moodle
           </div>
         </div>
       </div>
@@ -602,7 +661,7 @@
         <div class="tech-dot" style="background:#fee2e2;">☁️</div>
         <div>
           <div class="tech-name">VPS Production</div>
-          <div class="tech-desc">Dedicated server — 185.211.6.60, always online</div>
+          <div class="tech-desc">Dedicated server — system.sclsandbox.xyz, always online</div>
         </div>
       </div>
     </div>
@@ -1161,7 +1220,7 @@
       <!-- Layer 5: Infrastructure -->
       <div style="background:var(--dark); border-radius:12px; padding:1rem 1.5rem; text-align:center; color:white; margin-top:1rem;">
         <div style="font-size:.75rem; font-weight:700; opacity:.6; letter-spacing:.08em; margin-bottom:.2rem;">INFRASTRUCTURE</div>
-        <div style="font-size:.9rem; opacity:.8;">🐳 Docker Containers &nbsp;|&nbsp; 🌐 Nginx Web Server &nbsp;|&nbsp; ☁️ VPS Server (185.211.6.60) &nbsp;|&nbsp; 🔒 SSL/HTTPS</div>
+        <div style="font-size:.9rem; opacity:.8;">🐳 Docker Containers &nbsp;|&nbsp; 🌐 Nginx Web Server &nbsp;|&nbsp; ☁️ VPS Server (system.sclsandbox.xyz) &nbsp;|&nbsp; 🔒 SSL/HTTPS</div>
       </div>
     </div>
   </section>
@@ -1183,7 +1242,7 @@
         <div class="url-icon">🖥️</div>
         <div>
           <div class="url-title">SCL Institute Portal (Main)</div>
-          <div class="url-link">http://185.211.6.60/</div>
+          <div class="url-link">http://system.sclsandbox.xyz/</div>
           <div class="url-desc">Main login and dashboard — where all staff and students sign in</div>
         </div>
       </div>
@@ -1199,7 +1258,7 @@
         <div class="url-icon">📊</div>
         <div>
           <div class="url-title">Admin Dashboard</div>
-          <div class="url-link">http://185.211.6.60/admin/dashboard</div>
+          <div class="url-link">http://system.sclsandbox.xyz/admin/dashboard</div>
           <div class="url-desc">Administration hub — applications, enrolments, reports (Admin only)</div>
         </div>
       </div>
@@ -1207,7 +1266,7 @@
         <div class="url-icon">🔌</div>
         <div>
           <div class="url-title">API Health Check</div>
-          <div class="url-link">http://185.211.6.60/api/health</div>
+          <div class="url-link">http://system.sclsandbox.xyz/api/health</div>
           <div class="url-desc">Technical endpoint to verify the backend is running (for IT support)</div>
         </div>
       </div>
@@ -1236,7 +1295,7 @@
           </div>
         </div>
         <div style="font-family:monospace; background:var(--gray-50); padding:.7rem; border-radius:8px; font-size:.85rem;">
-          📧 admin@scl.com<br>🔑 password
+          📧 admin@sclsandbox.xyz<br>🔑 password123
         </div>
       </div>
       <div class="card" style="border-left:5px solid #7c3aed;">
@@ -1248,7 +1307,7 @@
           </div>
         </div>
         <div style="font-family:monospace; background:var(--gray-50); padding:.7rem; border-radius:8px; font-size:.85rem;">
-          📧 student@scl.com<br>🔑 password
+          📧 student.ali.001@scl.edu<br>🔑 password123
         </div>
       </div>
       <div class="card" style="border-left:5px solid #d97706;">
@@ -1260,7 +1319,7 @@
           </div>
         </div>
         <div style="font-family:monospace; background:var(--gray-50); padding:.7rem; border-radius:8px; font-size:.85rem;">
-          📧 faculty@scl.com<br>🔑 password
+          📧 dr.ahmed.cs@scl.edu<br>🔑 password123
         </div>
       </div>
       <div class="card" style="border-left:5px solid #059669;">
@@ -1272,7 +1331,7 @@
           </div>
         </div>
         <div style="font-family:monospace; background:var(--gray-50); padding:.7rem; border-radius:8px; font-size:.85rem;">
-          📧 hr@scl.com<br>🔑 password
+          📧 lmsmanager@scl.edu<br>🔑 password123
         </div>
       </div>
     </div>
@@ -1345,7 +1404,7 @@
 <footer>
   <div class="f-logo">SCL <span>Institute</span></div>
   <p>Smart Learning Platform &mdash; Complete System Overview</p>
-  <p style="margin-top:.4rem;">Built with React &bull; Node.js &bull; MySQL &bull; Moodle &bull; Docker &nbsp;|&nbsp; Production: 185.211.6.60</p>
+  <p style="margin-top:.4rem;">Built with React &bull; Node.js &bull; MySQL &bull; Moodle &bull; Docker &nbsp;|&nbsp; Production: system.sclsandbox.xyz</p>
   <p style="margin-top:.6rem; font-size:.75rem; opacity:.4;">Generated April 2026 &mdash; For internal and client use</p>
 </footer>
 
