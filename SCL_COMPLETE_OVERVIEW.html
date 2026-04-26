@@ -1,1411 +1,430 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>SCL Institute – Complete System Overview</title>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>SCL Institute – System Overview</title>
   <style>
-    /* ===== RESET & BASE ===== */
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    :root {
-      --purple:  #7c3aed;
-      --purple-d:#5b21b6;
-      --purple-l:#ede9fe;
-      --dark:    #1e1b4b;
-      --accent:  #a78bfa;
-      --green:   #059669;
-      --green-l: #d1fae5;
-      --blue:    #2563eb;
-      --blue-l:  #dbeafe;
-      --orange:  #d97706;
-      --orange-l:#fef3c7;
-      --red:     #dc2626;
-      --red-l:   #fee2e2;
-      --teal:    #0891b2;
-      --teal-l:  #cffafe;
-      --gray-50: #f9fafb;
-      --gray-100:#f3f4f6;
-      --gray-200:#e5e7eb;
-      --gray-400:#9ca3af;
-      --gray-600:#4b5563;
-      --gray-800:#1f2937;
-      --shadow:  0 4px 24px rgba(0,0,0,.08);
-      --radius:  14px;
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --blue:#2563eb;--blue-d:#1d4ed8;--blue-l:#dbeafe;--blue-ll:#eff6ff;
+      --green:#059669;--green-l:#d1fae5;--green-ll:#f0fdf4;
+      --amber:#d97706;--amber-l:#fef3c7;--amber-ll:#fffbeb;
+      --purple:#7c3aed;--purple-l:#ede9fe;--purple-ll:#f5f3ff;
+      --slate:#0f172a;--slate-600:#475569;--slate-400:#94a3b8;--slate-200:#e2e8f0;--slate-50:#f8fafc;
+      --radius:12px;--shadow:0 1px 3px rgba(0,0,0,.1),0 1px 2px rgba(0,0,0,.06);
+      --shadow-md:0 4px 6px -1px rgba(0,0,0,.1),0 2px 4px -1px rgba(0,0,0,.06);
     }
-    body {
-      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-      background: linear-gradient(135deg,#f5f3ff 0%,#faf5ff 50%,#f0fdf4 100%);
-      color: var(--gray-800);
-      line-height: 1.6;
-    }
-    h1,h2,h3,h4 { line-height: 1.3; }
-    a { color: inherit; text-decoration: none; }
-
-    /* ===== NAV ===== */
-    .topnav {
-      background: white;
-      border-bottom: 3px solid var(--purple);
-      position: sticky; top: 0; z-index: 200;
-      box-shadow: 0 2px 12px rgba(124,58,237,.12);
-    }
-    .topnav-inner {
-      max-width: 1400px; margin: 0 auto;
-      padding: .9rem 2rem;
-      display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;
-    }
-    .logo { display: flex; align-items: center; gap: .7rem; }
-    .logo-icon {
-      width: 42px; height: 42px; background: var(--purple);
-      border-radius: 10px; display: grid; place-items: center;
-    }
-    .logo-icon svg { width: 24px; height: 24px; fill: white; }
-    .logo-text { font-size: 1.4rem; font-weight: 800; color: var(--dark); }
-    .logo-text span { color: var(--purple); }
-    .logo-sub { font-size: .75rem; color: var(--gray-400); margin-top: .1rem; }
-    .nav-pills { display: flex; gap: .5rem; flex-wrap: wrap; }
-    .pill {
-      padding: .35rem .9rem; border-radius: 20px;
-      font-size: .78rem; font-weight: 600; cursor: pointer;
-      border: 2px solid transparent; transition: all .2s;
-    }
-    .pill:hover { transform: translateY(-1px); }
-    .pill-purple  { background: var(--purple-l); color: var(--purple); }
-    .pill-green   { background: var(--green-l);  color: var(--green);  }
-    .pill-blue    { background: var(--blue-l);   color: var(--blue);   }
-    .pill-orange  { background: var(--orange-l); color: var(--orange); }
-    .pill-success { background: var(--green);    color: white;         }
-
-    /* ===== MAIN WRAPPER ===== */
-    main { max-width: 1400px; margin: 0 auto; padding: 2rem; }
-    section { margin-bottom: 3rem; }
-
-    /* ===== HERO ===== */
-    .hero {
-      background: linear-gradient(135deg, var(--dark) 0%, var(--purple-d) 60%, var(--purple) 100%);
-      border-radius: var(--radius); padding: 3.5rem 3rem;
-      color: white; position: relative; overflow: hidden;
-      margin-bottom: 3rem;
-    }
-    .hero::before {
-      content: ''; position: absolute; inset: 0;
-      background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
-    }
-    .hero-grid { display: grid; grid-template-columns: 1fr auto; gap: 2rem; align-items: center; position: relative; }
-    .hero h1 { font-size: 2.6rem; font-weight: 900; margin-bottom: .7rem; }
-    .hero h1 span { color: var(--accent); }
-    .hero p { font-size: 1.1rem; opacity: .85; max-width: 640px; margin-bottom: 1.5rem; }
-    .hero-badges { display: flex; gap: .6rem; flex-wrap: wrap; }
-    .hbadge {
-      background: rgba(255,255,255,.15); border: 1px solid rgba(255,255,255,.25);
-      border-radius: 8px; padding: .3rem .8rem; font-size: .8rem; font-weight: 600;
-      backdrop-filter: blur(4px);
-    }
-    .hero-stats { display: flex; flex-direction: column; gap: 1rem; }
-    .hstat {
-      background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.2);
-      border-radius: 10px; padding: 1rem 1.4rem; text-align: center; min-width: 130px;
-      backdrop-filter: blur(6px);
-    }
-    .hstat-num { font-size: 2rem; font-weight: 900; color: var(--accent); }
-    .hstat-lbl { font-size: .75rem; opacity: .8; margin-top: .2rem; }
-
-    /* ===== SECTION HEADER ===== */
-    .section-hdr {
-      display: flex; align-items: center; gap: .8rem;
-      margin-bottom: 1.8rem;
-    }
-    .section-hdr-icon {
-      width: 44px; height: 44px; border-radius: 12px;
-      display: grid; place-items: center; flex-shrink: 0;
-    }
-    .section-hdr-icon svg { width: 22px; height: 22px; }
-    .section-hdr h2 { font-size: 1.6rem; font-weight: 800; color: var(--dark); }
-    .section-hdr p  { font-size: .9rem; color: var(--gray-600); margin-top: .15rem; }
-
-    /* ===== CARDS ===== */
-    .card {
-      background: white; border-radius: var(--radius);
-      box-shadow: var(--shadow); padding: 1.8rem;
-    }
-    .card-grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px,1fr)); gap: 1.5rem; }
-    .card-grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px,1fr)); gap: 1.5rem; }
-    .card-grid-4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px,1fr)); gap: 1.2rem; }
-
-    /* ===== TECH STACK ===== */
-    .tech-item {
-      display: flex; align-items: center; gap: 1rem;
-      padding: 1.2rem 1.4rem; border-radius: 10px;
-      border: 2px solid var(--gray-200); background: white;
-      transition: all .2s;
-    }
-    .tech-item:hover { border-color: var(--purple); transform: translateY(-2px); }
-    .tech-dot { width: 44px; height: 44px; border-radius: 10px; display: grid; place-items: center; flex-shrink: 0; font-size: 1.4rem; }
-    .tech-name { font-weight: 700; font-size: .95rem; }
-    .tech-desc { font-size: .8rem; color: var(--gray-600); }
-
-    /* ===== ROLE CARDS ===== */
-    .role-card {
-      border-radius: var(--radius); overflow: hidden;
-      box-shadow: var(--shadow); background: white;
-      transition: transform .2s;
-    }
-    .role-card:hover { transform: translateY(-4px); }
-    .role-header {
-      padding: 1.4rem 1.6rem;
-      display: flex; align-items: center; gap: .9rem;
-    }
-    .role-icon {
-      width: 48px; height: 48px; border-radius: 12px;
-      display: grid; place-items: center;
-      background: rgba(255,255,255,.25); flex-shrink: 0;
-    }
-    .role-icon svg { width: 26px; height: 26px; fill: white; }
-    .role-title { font-size: 1.2rem; font-weight: 800; color: white; }
-    .role-subtitle { font-size: .8rem; color: rgba(255,255,255,.8); }
-    .role-body { padding: 1.4rem 1.6rem; }
-    .role-feature {
-      display: flex; align-items: flex-start; gap: .6rem;
-      padding: .45rem 0; border-bottom: 1px solid var(--gray-100);
-      font-size: .875rem;
-    }
-    .role-feature:last-child { border-bottom: none; }
-    .role-check { width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; flex-shrink: 0; margin-top: 2px; }
-    .role-check svg { width: 10px; height: 10px; fill: white; }
-    .role-access-badge {
-      display: inline-block; padding: .2rem .6rem; border-radius: 6px;
-      font-size: .7rem; font-weight: 700; margin-bottom: 1rem;
-    }
-
-    /* Role colours */
-    .rc-admin    { background: linear-gradient(135deg,#4f46e5,#7c3aed); }
-    .rc-colladmin{ background: linear-gradient(135deg,#0891b2,#2563eb); }
-    .rc-manager  { background: linear-gradient(135deg,#0d9488,#059669); }
-    .rc-teacher  { background: linear-gradient(135deg,#d97706,#ea580c); }
-    .rc-student  { background: linear-gradient(135deg,#7c3aed,#a855f7); }
-    .rc-general  { background: linear-gradient(135deg,#6b7280,#374151); }
-
-    .chk-admin    { background: #4f46e5; }
-    .chk-colladmin{ background: #0891b2; }
-    .chk-manager  { background: #059669; }
-    .chk-teacher  { background: #d97706; }
-    .chk-student  { background: #7c3aed; }
-    .chk-general  { background: #6b7280; }
-
-    .ba-admin    { background: #ede9fe; color: #4f46e5; }
-    .ba-colladmin{ background: #cffafe; color: #0891b2; }
-    .ba-manager  { background: #d1fae5; color: #059669; }
-    .ba-teacher  { background: #fef3c7; color: #d97706; }
-    .ba-student  { background: #ede9fe; color: #7c3aed; }
-    .ba-general  { background: #f3f4f6; color: #6b7280; }
-
-    /* ===== WORKFLOW ===== */
-    .workflow-wrap { position: relative; }
-    .wf-steps {
-      display: grid;
-      grid-template-columns: repeat(6, 1fr);
-      gap: 0;
-      position: relative;
-    }
-    @media (max-width: 900px) {
-      .wf-steps { grid-template-columns: repeat(3, 1fr); }
-    }
-    @media (max-width: 580px) {
-      .wf-steps { grid-template-columns: repeat(2, 1fr); }
-    }
-    .wf-step {
-      position: relative;
-      text-align: center;
-      padding: 2rem 1.2rem;
-    }
-    .wf-step::after {
-      content: '→';
-      position: absolute;
-      right: -10px; top: 50%;
-      transform: translateY(-50%);
-      font-size: 1.8rem;
-      color: var(--gray-400);
-      z-index: 2;
-    }
-    .wf-step:last-child::after { display: none; }
-    .wf-circle {
-      width: 70px; height: 70px; border-radius: 50%;
-      display: grid; place-items: center;
-      margin: 0 auto 1rem;
-      font-size: 1.8rem;
-      box-shadow: 0 4px 16px rgba(0,0,0,.12);
-      border: 3px solid white;
-    }
-    .wf-num {
-      width: 26px; height: 26px; border-radius: 50%;
-      background: var(--dark); color: white;
-      display: grid; place-items: center;
-      font-size: .75rem; font-weight: 800;
-      margin: 0 auto .5rem;
-    }
-    .wf-title { font-size: 1rem; font-weight: 700; color: var(--dark); margin-bottom: .3rem; }
-    .wf-desc  { font-size: .8rem; color: var(--gray-600); }
-    .wf-tag   {
-      display: inline-block; padding: .2rem .6rem; border-radius: 10px;
-      font-size: .7rem; font-weight: 700; margin-top: .5rem;
-    }
-
-    /* Detail workflow blocks */
-    .flow-row {
-      display: flex; gap: 1.5rem; flex-wrap: wrap;
-      align-items: stretch; margin-bottom: 1.5rem;
-    }
-    .flow-block {
-      flex: 1; min-width: 200px;
-      background: white; border-radius: 12px;
-      padding: 1.4rem 1.6rem;
-      box-shadow: var(--shadow);
-      border-top: 4px solid;
-      position: relative;
-    }
-    .flow-block::after {
-      content: '▶';
-      position: absolute;
-      right: -16px; top: 50%;
-      transform: translateY(-50%);
-      color: var(--gray-400); font-size: 1.1rem;
-      z-index: 2;
-    }
-    .flow-block:last-child::after { display: none; }
-    .flow-emoji { font-size: 2rem; margin-bottom: .6rem; display: block; }
-    .flow-title { font-size: 1rem; font-weight: 700; margin-bottom: .3rem; }
-    .flow-text  { font-size: .82rem; color: var(--gray-600); }
-    .flow-by    {
-      margin-top: .7rem; padding: .25rem .6rem;
-      border-radius: 6px; font-size: .72rem; font-weight: 700;
-      display: inline-block;
-    }
-
-    /* ===== SCREENSHOT FRAME ===== */
-    .screen-frame {
-      border-radius: 12px; overflow: hidden;
-      box-shadow: 0 8px 40px rgba(0,0,0,.18);
-      border: 3px solid var(--gray-200);
-      position: relative;
-    }
-    .screen-bar {
-      background: #e5e7eb; padding: .5rem 1rem;
-      display: flex; align-items: center; gap: .5rem;
-    }
-    .sbar-dot { width: 12px; height: 12px; border-radius: 50%; }
-    .sbar-red    { background: #ff5f57; }
-    .sbar-yellow { background: #ffbd2e; }
-    .sbar-green  { background: #28ca41; }
-    .screen-frame img { width: 100%; display: block; }
-    .screen-caption {
-      background: var(--dark); color: white;
-      padding: .7rem 1rem; font-size: .85rem; font-weight: 600;
-      display: flex; align-items: center; gap: .5rem;
-    }
-
-    /* ===== PERMISSION MATRIX ===== */
-    .matrix-wrap { overflow-x: auto; }
-    .matrix {
-      width: 100%; border-collapse: collapse;
-      font-size: .85rem; min-width: 700px;
-    }
-    .matrix th {
-      padding: .7rem 1rem; text-align: left;
-      background: var(--dark); color: white;
-      font-weight: 700; font-size: .8rem; letter-spacing: .02em;
-      white-space: nowrap;
-    }
-    .matrix th:first-child { border-radius: 8px 0 0 0; }
-    .matrix th:last-child  { border-radius: 0 8px 0 0; }
-    .matrix td {
-      padding: .65rem 1rem; border-bottom: 1px solid var(--gray-100);
-      vertical-align: middle;
-    }
-    .matrix tr:hover td { background: var(--gray-50); }
-    .matrix .feature-cell { font-weight: 600; }
-    .mx-yes {
-      display: inline-flex; align-items: center; gap: .3rem;
-      color: var(--green); font-weight: 700; font-size: .8rem;
-    }
-    .mx-no  { color: var(--gray-400); font-size: .8rem; }
-    .mx-ro  {
-      display: inline-flex; align-items: center; gap: .3rem;
-      color: var(--orange); font-weight: 700; font-size: .8rem;
-    }
-    .mx-cat { background: var(--gray-100); font-weight: 700; font-size: .82rem; }
-
-    /* ===== URL CARDS ===== */
-    .url-card {
-      background: white; border-radius: 12px;
-      padding: 1.2rem 1.5rem; box-shadow: var(--shadow);
-      display: flex; align-items: center; gap: 1rem;
-      border-left: 5px solid;
-    }
-    .url-icon { font-size: 1.8rem; flex-shrink: 0; }
-    .url-title { font-weight: 700; font-size: 1rem; margin-bottom: .2rem; }
-    .url-link  { font-size: .82rem; color: var(--purple); font-family: monospace; word-break: break-all; }
-    .url-desc  { font-size: .8rem; color: var(--gray-600); margin-top: .2rem; }
-
-    /* ===== FOOTER ===== */
-    footer {
-      background: var(--dark); color: white;
-      text-align: center; padding: 2.5rem 2rem;
-      margin-top: 4rem;
-    }
-    footer .f-logo { font-size: 1.4rem; font-weight: 900; margin-bottom: .5rem; }
-    footer .f-logo span { color: var(--accent); }
-    footer p { opacity: .6; font-size: .85rem; }
-
-    /* ===== TIMELINE ===== */
-    .timeline { position: relative; padding-left: 2.5rem; }
-    .timeline::before {
-      content: ''; position: absolute;
-      left: 12px; top: 0; bottom: 0; width: 2px;
-      background: linear-gradient(180deg, var(--purple), var(--green));
-    }
-    .tl-item { position: relative; margin-bottom: 1.5rem; }
-    .tl-dot {
-      position: absolute; left: -2.05rem; top: .2rem;
-      width: 20px; height: 20px; border-radius: 50%;
-      border: 3px solid white; display: grid; place-items: center;
-    }
-    .tl-content {
-      background: white; border-radius: 10px;
-      padding: 1rem 1.3rem; box-shadow: var(--shadow);
-    }
-    .tl-title { font-weight: 700; margin-bottom: .2rem; }
-    .tl-text  { font-size: .85rem; color: var(--gray-600); }
-
-    /* ===== RESPONSIVE ===== */
-    @media (max-width: 768px) {
-      main { padding: 1rem; }
-      .hero { padding: 2rem 1.5rem; }
-      .hero-grid { grid-template-columns: 1fr; }
-      .hero h1 { font-size: 1.8rem; }
-      .hero-stats { flex-direction: row; flex-wrap: wrap; }
-      .wf-step::after { display: none; }
-      .flow-block::after { display: none; }
-      .flow-row { flex-direction: column; }
-    }
-
-    /* Print */
-    @media print {
-      .topnav { display: none; }
-      main { padding: .5rem; }
-    }
+    body{font-family:'Segoe UI',Inter,system-ui,-apple-system,sans-serif;background:#f8fafc;color:var(--slate);line-height:1.6;font-size:15px}
+    h1,h2,h3,h4{line-height:1.3;font-weight:700}
+    img{max-width:100%;height:auto;display:block}
+    a{color:var(--blue);text-decoration:none}
+    .topnav{background:#fff;border-bottom:1px solid var(--slate-200);position:sticky;top:0;z-index:100;box-shadow:var(--shadow)}
+    .topnav-inner{max-width:1200px;margin:0 auto;padding:.75rem 2rem;display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap}
+    .nav-logo{display:flex;align-items:center;gap:.6rem}
+    .nav-logo-mark{width:36px;height:36px;background:var(--blue);border-radius:8px;display:grid;place-items:center}
+    .nav-logo-mark svg{width:20px;height:20px;fill:white}
+    .nav-brand{font-weight:800;font-size:1rem;color:var(--slate);letter-spacing:.03em}
+    .nav-brand span{color:var(--blue)}
+    .nav-links{display:flex;align-items:center;gap:.25rem;flex-wrap:wrap}
+    .nav-links a{padding:.4rem .9rem;border-radius:6px;font-size:.82rem;font-weight:600;color:var(--slate-600);transition:all .15s}
+    .nav-links a:hover{background:var(--slate-50);color:var(--slate)}
+    .nav-links a.student{color:var(--blue)}
+    .nav-links a.teacher{color:var(--green)}
+    .nav-links a.manager{color:var(--amber)}
+    .nav-links a.admin{color:var(--purple)}
+    .hero{background:linear-gradient(135deg,#1e3a8a 0%,#2563eb 60%,#3b82f6 100%);color:white;padding:4rem 2rem 3rem;text-align:center}
+    .hero-badge{display:inline-flex;align-items:center;gap:.4rem;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);border-radius:999px;padding:.3rem .9rem;font-size:.78rem;font-weight:600;letter-spacing:.05em;text-transform:uppercase;margin-bottom:1.5rem}
+    .hero h1{font-size:clamp(1.8rem,4vw,2.8rem);font-weight:800;margin-bottom:.8rem}
+    .hero p{font-size:1.05rem;opacity:.85;max-width:600px;margin:0 auto 2rem}
+    .hero-stats{display:flex;justify-content:center;gap:2.5rem;flex-wrap:wrap}
+    .hero-stat .num{font-size:2rem;font-weight:800;line-height:1}
+    .hero-stat .lbl{font-size:.8rem;opacity:.7;margin-top:.2rem;text-transform:uppercase;letter-spacing:.05em}
+    .page{max-width:1200px;margin:0 auto;padding:0 2rem 4rem}
+    .role-section{margin-top:4rem}
+    .role-banner{border-radius:var(--radius);padding:2.5rem;margin-bottom:2rem;display:flex;align-items:flex-start;gap:1.5rem;flex-wrap:wrap}
+    .role-banner.student{background:linear-gradient(135deg,#1e40af,#2563eb);color:white}
+    .role-banner.teacher{background:linear-gradient(135deg,#065f46,#059669);color:white}
+    .role-banner.manager{background:linear-gradient(135deg,#92400e,#d97706);color:white}
+    .role-banner.admin{background:linear-gradient(135deg,#4c1d95,#7c3aed);color:white}
+    .role-icon{width:64px;height:64px;border-radius:16px;background:rgba(255,255,255,.2);display:grid;place-items:center;flex-shrink:0}
+    .role-icon svg{width:32px;height:32px;fill:white}
+    .role-badge{display:inline-block;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.35);border-radius:999px;padding:.2rem .8rem;font-size:.72rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:.5rem}
+    .role-info h2{font-size:1.7rem;font-weight:800;margin-bottom:.4rem}
+    .role-info p{opacity:.85;font-size:.95rem;max-width:600px}
+    .login-card{background:white;border-radius:var(--radius);padding:1.5rem;box-shadow:var(--shadow-md);border:1px solid var(--slate-200);margin-bottom:2rem}
+    .login-card-head{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;margin-bottom:1.2rem}
+    .login-card-head h3{font-size:1rem;font-weight:700;color:var(--slate);display:flex;align-items:center;gap:.5rem}
+    .login-btn{display:inline-flex;align-items:center;gap:.4rem;padding:.55rem 1.2rem;border-radius:8px;font-size:.85rem;font-weight:700;color:white;transition:opacity .15s;cursor:pointer;border:none;text-decoration:none}
+    .login-btn:hover{opacity:.88}
+    .login-btn.student{background:var(--blue)}
+    .login-btn.teacher{background:var(--green)}
+    .login-btn.manager{background:var(--amber)}
+    .login-btn.admin{background:var(--purple)}
+    .creds{display:flex;gap:1rem;flex-wrap:wrap}
+    .cred-box{background:var(--slate-50);border:1px solid var(--slate-200);border-radius:8px;padding:.7rem 1rem;flex:1;min-width:200px}
+    .cred-label{font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--slate-400);margin-bottom:.3rem}
+    .cred-value{font-family:'Courier New',monospace;font-size:.9rem;font-weight:600;color:var(--slate);word-break:break-all}
+    .login-note{margin-top:.9rem;font-size:.8rem;color:var(--slate-400)}
+    .steps-title{font-size:1.05rem;font-weight:700;color:var(--slate);margin-bottom:1.2rem;padding-bottom:.6rem;border-bottom:2px solid var(--slate-200)}
+    .steps{display:flex;flex-direction:column;gap:1rem;margin-bottom:2rem}
+    .step{display:flex;gap:1rem;align-items:flex-start}
+    .step-num{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:.88rem;flex-shrink:0;margin-top:.15rem}
+    .step-num.student{background:var(--blue-l);color:var(--blue-d)}
+    .step-num.teacher{background:var(--green-l);color:var(--green)}
+    .step-num.manager{background:var(--amber-l);color:var(--amber)}
+    .step-num.admin{background:var(--purple-l);color:var(--purple)}
+    .step-body h4{font-size:.95rem;font-weight:700;color:var(--slate);margin-bottom:.2rem}
+    .step-body p{font-size:.88rem;color:var(--slate-600);line-height:1.55}
+    .step-url{display:inline-block;margin-top:.35rem;font-size:.78rem;font-family:monospace;background:var(--slate-50);border:1px solid var(--slate-200);border-radius:5px;padding:.15rem .5rem;color:var(--blue)}
+    .screens{display:grid;gap:1.2rem;margin-bottom:2.5rem}
+    .screens.cols-2{grid-template-columns:repeat(2,1fr)}
+    .screens.cols-3{grid-template-columns:repeat(3,1fr)}
+    @media(max-width:768px){.screens.cols-2,.screens.cols-3{grid-template-columns:1fr}}
+    .screen-wrap{background:white;border:1px solid var(--slate-200);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)}
+    .screen-chrome{background:#f1f5f9;border-bottom:1px solid var(--slate-200);padding:.5rem .8rem;display:flex;align-items:center;gap:.5rem}
+    .dot{width:10px;height:10px;border-radius:50%}
+    .dot-r{background:#ef4444}.dot-y{background:#f59e0b}.dot-g{background:#22c55e}
+    .screen-url{flex:1;background:white;border-radius:4px;padding:.2rem .6rem;font-family:monospace;font-size:.73rem;color:var(--slate-400);border:1px solid var(--slate-200);margin-left:.4rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .screen-img{width:100%;display:block}
+    .screen-cap{padding:.6rem .9rem;font-size:.8rem;font-weight:600;color:var(--slate-600);background:var(--slate-50);border-top:1px solid var(--slate-200)}
+    .section-divider{display:flex;align-items:center;gap:1rem;margin:3rem 0;color:var(--slate-400);font-size:.8rem;font-weight:600;text-transform:uppercase;letter-spacing:.08em}
+    .section-divider::before,.section-divider::after{content:'';flex:1;height:1px;background:var(--slate-200)}
+    .card-grid{display:grid;gap:1rem}
+    .card-grid.cols-2{grid-template-columns:repeat(2,1fr)}
+    .card-grid.cols-3{grid-template-columns:repeat(3,1fr)}
+    @media(max-width:768px){.card-grid.cols-2,.card-grid.cols-3{grid-template-columns:1fr}}
+    .info-card{background:white;border:1px solid var(--slate-200);border-radius:var(--radius);padding:1.2rem;box-shadow:var(--shadow)}
+    .info-card-icon{font-size:1.6rem;margin-bottom:.6rem}
+    .info-card h4{font-size:.92rem;font-weight:700;color:var(--slate);margin-bottom:.3rem}
+    .info-card p{font-size:.83rem;color:var(--slate-600);line-height:1.5}
+    footer{background:var(--slate);color:rgba(255,255,255,.7);text-align:center;padding:2.5rem;font-size:.85rem;margin-top:4rem}
+    footer strong{color:white}
   </style>
 </head>
 <body>
 
-<!-- ===== TOP NAV ===== -->
 <nav class="topnav">
   <div class="topnav-inner">
-    <div class="logo">
-      <div class="logo-icon">
-        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-          <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
-        </svg>
-      </div>
-      <div>
-        <div class="logo-text">SCL <span>Institute</span></div>
-        <div class="logo-sub">Complete System Overview – April 2026</div>
-      </div>
+    <div class="nav-logo">
+      <div class="nav-logo-mark"><svg viewBox="0 0 24 24"><path d="M12 3L1 9l11 6 9-4.91V17h2V9L12 3zM5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z"/></svg></div>
+      <div class="nav-brand">STRATFORD COLLEGE <span>LONDON</span></div>
     </div>
-    <div class="nav-pills">
-      <span class="pill pill-success">LIVE IN PRODUCTION</span>
-      <span class="pill pill-purple">React + Node.js</span>
-      <span class="pill pill-blue">Moodle LMS</span>
-      <span class="pill pill-orange">Role-Based Access</span>
-    </div>
+    <nav class="nav-links">
+      <a href="#student" class="student">Student</a>
+      <a href="#teacher" class="teacher">Teacher</a>
+      <a href="#manager" class="manager">Manager</a>
+      <a href="#admin" class="admin">Admin</a>
+      <a href="http://system.sclsandbox.xyz/" target="_blank" style="background:var(--blue);color:white;padding:.4rem 1rem;border-radius:6px;font-size:.82rem;font-weight:700">Open Live Site &#8599;</a>
+    </nav>
   </div>
 </nav>
 
-<main>
+<div class="hero">
+  <div class="hero-badge">&#9679; Live Production System</div>
+  <h1>SCL Institute Portal &ndash; System Overview</h1>
+  <p>Everything you need to understand how the system works &mdash; shown role by role, with real screenshots from the live system.</p>
+  <div class="hero-stats">
+    <div class="hero-stat"><div class="num">37</div><div class="lbl">Total Users</div></div>
+    <div class="hero-stat"><div class="num">12</div><div class="lbl">Applications</div></div>
+    <div class="hero-stat"><div class="num">70</div><div class="lbl">Moodle Courses</div></div>
+    <div class="hero-stat"><div class="num">55</div><div class="lbl">Course Lifecycle</div></div>
+    <div class="hero-stat"><div class="num">9</div><div class="lbl">Programme Intakes</div></div>
+  </div>
+</div>
 
-  <!-- ===== HERO ===== -->
-  <div class="hero">
-    <div class="hero-grid">
-      <div>
-        <h1>SCL Institute<br/><span>Smart Learning Platform</span></h1>
-        <p>A fully integrated, cloud-based education management platform — connecting students, teachers, administrators and managers through a single, secure portal backed by Moodle LMS.</p>
-        <div class="hero-badges">
-          <span class="hbadge">🎓 Student Portal</span>
-          <span class="hbadge">👩‍💼 Admin Dashboard</span>
-          <span class="hbadge">📚 Moodle LMS (SSO)</span>
-          <span class="hbadge">🔐 Role-Based Security</span>
-          <span class="hbadge">📊 Live Reports</span>
-          <span class="hbadge">🌍 Production Deployed</span>
-        </div>
-      </div>
-      <div class="hero-stats">
-        <div class="hstat"><div class="hstat-num">6</div><div class="hstat-lbl">User Roles</div></div>
-        <div class="hstat"><div class="hstat-num">30+</div><div class="hstat-lbl">Features</div></div>
-        <div class="hstat"><div class="hstat-num">99.9%</div><div class="hstat-lbl">Uptime</div></div>
+<div class="page">
+
+<!-- ══ STUDENT ══ -->
+<div class="role-section" id="student">
+  <div class="role-banner student">
+    <div class="role-icon"><svg viewBox="0 0 24 24"><path d="M12 3L1 9l11 6 9-4.91V17h2V9L12 3zM5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z"/></svg></div>
+    <div class="role-info">
+      <div class="role-badge">Role 1 of 4 &middot; Student</div>
+      <h2>Student Portal</h2>
+      <p>Students access their personal dashboard to view courses, check grades, track progress, and access Moodle for online learning &mdash; all in one place.</p>
+    </div>
+  </div>
+  <div class="login-card">
+    <div class="login-card-head">
+      <h3><span>&#128272;</span> Demo Login &ndash; Student Account (Live System)</h3>
+      <a class="login-btn student" href="http://system.sclsandbox.xyz/" target="_blank">&#8599; Go to Login Page</a>
+    </div>
+    <div class="creds">
+      <div class="cred-box"><div class="cred-label">&#128231; Email Address</div><div class="cred-value">sarah.johnson.lm@example.com</div></div>
+      <div class="cred-box"><div class="cred-label">&#128273; Password</div><div class="cred-value">089f4607e213</div></div>
+      <div class="cred-box"><div class="cred-label">&#128100; Name</div><div class="cred-value">Sarah Johnson</div></div>
+    </div>
+    <div class="login-note">&#8505;&#65039; After logging in you will land directly on the Student Portal Dashboard.</div>
+  </div>
+  <div class="steps-title">What a Student Sees on the System</div>
+  <div class="screens cols-2">
+    <div class="screen-wrap">
+      <div class="screen-chrome"><div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div><div class="screen-url">system.sclsandbox.xyz/</div></div>
+      <img class="screen-img" src="Client-Overview-Screenshots/screenshots/01-login-screen.png" alt="Login Screen"/>
+      <div class="screen-cap">&#128272; Step 1 &mdash; Enter email &amp; password, click &ldquo;Sign In to Dashboard&rdquo;</div>
+    </div>
+    <div class="screen-wrap">
+      <div class="screen-chrome"><div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div><div class="screen-url">system.sclsandbox.xyz/student/portal</div></div>
+      <img class="screen-img" src="Client-Overview-Screenshots/screenshots/08-student-portal.png" alt="Student Portal"/>
+      <div class="screen-cap">&#128202; Step 2 &mdash; Student Dashboard with courses, progress &amp; announcements</div>
+    </div>
+  </div>
+  <div class="screens cols-2">
+    <div class="screen-wrap">
+      <div class="screen-chrome"><div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div><div class="screen-url">system.sclsandbox.xyz/student/grades</div></div>
+      <img class="screen-img" src="Client-Overview-Screenshots/screenshots/10-student-grades.png" alt="Student Grades"/>
+      <div class="screen-cap">&#128200; Grades &amp; Academic Progress &mdash; Sarah: 78% overall (311/400 pts)</div>
+    </div>
+    <div class="screen-wrap" style="display:flex;flex-direction:column;justify-content:center;background:var(--blue-ll);padding:2rem">
+      <div style="font-size:2.5rem;margin-bottom:1rem">&#127891;</div>
+      <h3 style="color:var(--blue-d);margin-bottom:.5rem">Access Moodle LMS</h3>
+      <p style="font-size:.88rem;color:var(--slate-600);margin-bottom:1rem">From the student portal, click the blue <strong>&ldquo;Open Moodle LMS&rdquo;</strong> button. You are automatically logged in &mdash; no second password needed (Single Sign-On).</p>
+      <div style="background:var(--blue);color:white;border-radius:8px;padding:.7rem 1.2rem;font-size:.85rem;font-weight:700;display:inline-flex;gap:.4rem;width:fit-content">&#128279; Single Sign-On (SSO)</div>
+    </div>
+  </div>
+  <div class="steps-title">Student Journey &ndash; Step by Step</div>
+  <div class="steps">
+    <div class="step"><div class="step-num student">1</div><div class="step-body"><h4>Go to the Portal &amp; Sign In</h4><p>Open a browser and go to the portal URL. Enter your email and password, then click &ldquo;Sign In to Dashboard&rdquo;.</p><a class="step-url" href="http://system.sclsandbox.xyz/" target="_blank">system.sclsandbox.xyz</a></div></div>
+    <div class="step"><div class="step-num student">2</div><div class="step-body"><h4>View Your Student Dashboard</h4><p>You land on your personal dashboard. See active courses, overall progress %, completed modules, and unread notifications all in one screen.</p><a class="step-url" href="http://system.sclsandbox.xyz/student/portal" target="_blank">system.sclsandbox.xyz/student/portal</a></div></div>
+    <div class="step"><div class="step-num student">3</div><div class="step-body"><h4>Check Grades &amp; Academic Progress</h4><p>Click &ldquo;Grades&rdquo; in the sidebar. See your overall programme grade, grade distribution chart, and performance per course &mdash; updated in real time.</p><a class="step-url" href="http://system.sclsandbox.xyz/student/grades" target="_blank">system.sclsandbox.xyz/student/grades</a></div></div>
+    <div class="step"><div class="step-num student">4</div><div class="step-body"><h4>Access Moodle for Online Learning</h4><p>Click the blue &ldquo;Open Moodle LMS&rdquo; button on your dashboard. You are automatically logged in to Moodle &mdash; no second password needed. Find your courses, submit assignments, and take quizzes there.</p></div></div>
+    <div class="step"><div class="step-num student">5</div><div class="step-body"><h4>View Your Programmes &amp; Timetable</h4><p>Use the sidebar to navigate to Programmes and Timetable. All data is managed by the admin team and synced to your account.</p><a class="step-url" href="http://system.sclsandbox.xyz/student/programmes" target="_blank">system.sclsandbox.xyz/student/programmes</a></div></div>
+    <div class="step"><div class="step-num student">6</div><div class="step-body"><h4>Get Support if Needed</h4><p>Use the Support Hub in the sidebar to raise a ticket, view FAQs, or contact your tutor. Responses appear in your notifications.</p><a class="step-url" href="http://system.sclsandbox.xyz/student/support" target="_blank">system.sclsandbox.xyz/student/support</a></div></div>
+  </div>
+  <div class="steps-title">What a Student Can Access</div>
+  <div class="card-grid cols-3">
+    <div class="info-card"><div class="info-card-icon">&#128202;</div><h4>My Dashboard</h4><p>Overview of courses, progress, notifications and upcoming events &mdash; all on one screen.</p></div>
+    <div class="info-card"><div class="info-card-icon">&#128218;</div><h4>My Courses</h4><p>List of enrolled courses with links into Moodle for each subject. Access lecture notes and resources.</p></div>
+    <div class="info-card"><div class="info-card-icon">&#128200;</div><h4>Grades &amp; Progress</h4><p>Full academic progress report with grade breakdown, charts, and transcripts.</p></div>
+    <div class="info-card"><div class="info-card-icon">&#127891;</div><h4>Moodle LMS (SSO)</h4><p>One-click access to the full Moodle learning platform &mdash; assignments, quizzes, and online courses.</p></div>
+    <div class="info-card"><div class="info-card-icon">&#128203;</div><h4>Programmes &amp; Timetable</h4><p>View your enrolled programme details, semester schedule, and class timetable.</p></div>
+    <div class="info-card"><div class="info-card-icon">&#128682;</div><h4>Support Hub</h4><p>Raise support requests, track responses, access student services and FAQs.</p></div>
+  </div>
+</div>
+
+<div class="section-divider">Next Role</div>
+
+<!-- ══ TEACHER ══ -->
+<div class="role-section" id="teacher">
+  <div class="role-banner teacher">
+    <div class="role-icon"><svg viewBox="0 0 24 24"><path d="M20 17a2 2 0 002-2V4a2 2 0 00-2-2H9.46c.35.61.54 1.3.54 2h10v11h-9v2h9zM15 7H9v2h6V7zM4 6c0-1.1.9-2 2-2h1V2H6a4 4 0 00-4 4v12l4-4h8a2 2 0 002-2v-1H4V6z"/></svg></div>
+    <div class="role-info">
+      <div class="role-badge">Role 2 of 4 &middot; Teacher / Lecturer</div>
+      <h2>Teacher Portal</h2>
+      <p>Teachers log in to the portal and use it as a launchpad into Moodle LMS &mdash; where courses, assignments, and student submissions are managed.</p>
+    </div>
+  </div>
+  <div class="login-card">
+    <div class="login-card-head">
+      <h3><span>&#128272;</span> Demo Login &ndash; Teacher Account (Live System)</h3>
+      <a class="login-btn teacher" href="http://system.sclsandbox.xyz/" target="_blank">&#8599; Go to Login Page</a>
+    </div>
+    <div class="creds">
+      <div class="cred-box"><div class="cred-label">&#128231; Email Address</div><div class="cred-value">test@teacher.com</div></div>
+      <div class="cred-box"><div class="cred-label">&#128273; Password</div><div class="cred-value">password123</div></div>
+      <div class="cred-box"><div class="cred-label">&#128100; Role</div><div class="cred-value">Editing Teacher</div></div>
+    </div>
+    <div class="login-note">&#8505;&#65039; Teachers see the portal dashboard and use the &ldquo;Open Moodle LMS&rdquo; button to manage courses.</div>
+  </div>
+  <div class="steps-title">What a Teacher Sees on the System</div>
+  <div class="screens cols-2">
+    <div class="screen-wrap">
+      <div class="screen-chrome"><div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div><div class="screen-url">system.sclsandbox.xyz/student/portal</div></div>
+      <img class="screen-img" src="Client-Overview-Screenshots/screenshots/11-teacher-portal.png" alt="Teacher Portal"/>
+      <div class="screen-cap">&#128187; Teacher dashboard &mdash; shows &ldquo;Open Moodle LMS&rdquo; button prominently at top right</div>
+    </div>
+    <div class="screen-wrap" style="display:flex;flex-direction:column;justify-content:center;background:var(--green-ll);padding:2rem">
+      <div style="font-size:2.5rem;margin-bottom:1rem">&#127979;</div>
+      <h3 style="color:#065f46;margin-bottom:.8rem">Teacher Workflow</h3>
+      <div style="display:flex;flex-direction:column;gap:.7rem">
+        <div style="display:flex;gap:.7rem;align-items:flex-start"><div style="width:24px;height:24px;border-radius:50%;background:var(--green);color:white;font-size:.72rem;font-weight:700;display:grid;place-items:center;flex-shrink:0">1</div><span style="font-size:.88rem;color:var(--slate-600)">Log in at <strong>system.sclsandbox.xyz</strong></span></div>
+        <div style="display:flex;gap:.7rem;align-items:flex-start"><div style="width:24px;height:24px;border-radius:50%;background:var(--green);color:white;font-size:.72rem;font-weight:700;display:grid;place-items:center;flex-shrink:0">2</div><span style="font-size:.88rem;color:var(--slate-600)">See portal dashboard with announcements &amp; notifications</span></div>
+        <div style="display:flex;gap:.7rem;align-items:flex-start"><div style="width:24px;height:24px;border-radius:50%;background:var(--green);color:white;font-size:.72rem;font-weight:700;display:grid;place-items:center;flex-shrink:0">3</div><span style="font-size:.88rem;color:var(--slate-600)">Click <strong>&ldquo;Open Moodle LMS&rdquo;</strong> &mdash; auto-logged in, no 2nd password</span></div>
+        <div style="display:flex;gap:.7rem;align-items:flex-start"><div style="width:24px;height:24px;border-radius:50%;background:var(--green);color:white;font-size:.72rem;font-weight:700;display:grid;place-items:center;flex-shrink:0">4</div><span style="font-size:.88rem;color:var(--slate-600)">Manage courses, add activities, grade submissions in Moodle</span></div>
       </div>
     </div>
   </div>
+  <div class="steps-title">Teacher Journey &ndash; Step by Step</div>
+  <div class="steps">
+    <div class="step"><div class="step-num teacher">1</div><div class="step-body"><h4>Log In to the Portal</h4><p>Go to the portal URL, enter your teacher email and password, and click Sign In. You will land on the portal dashboard.</p><a class="step-url" href="http://system.sclsandbox.xyz/" target="_blank">system.sclsandbox.xyz</a></div></div>
+    <div class="step"><div class="step-num teacher">2</div><div class="step-body"><h4>Review Announcements &amp; Notifications</h4><p>The dashboard shows latest college announcements, system notifications, and upcoming events. Stay informed before going to Moodle.</p></div></div>
+    <div class="step"><div class="step-num teacher">3</div><div class="step-body"><h4>Open Moodle LMS with One Click</h4><p>Click the blue <strong>&ldquo;Open Moodle LMS&rdquo;</strong> button at the top right. The system automatically logs you in as an Editing Teacher &mdash; no second password needed.</p></div></div>
+    <div class="step"><div class="step-num teacher">4</div><div class="step-body"><h4>Manage Your Courses in Moodle</h4><p>In Moodle you can add or edit course content, create assignments and quizzes, view student submissions, provide grades and feedback, and take attendance.</p></div></div>
+    <div class="step"><div class="step-num teacher">5</div><div class="step-body"><h4>Grade &amp; Give Feedback</h4><p>Use Moodle&rsquo;s gradebook to enter marks and written feedback. Grades sync back to the student&rsquo;s progress view in the portal automatically.</p></div></div>
+  </div>
+  <div class="card-grid cols-3">
+    <div class="info-card"><div class="info-card-icon">&#128187;</div><h4>Portal Dashboard</h4><p>See announcements, events and notifications before going to Moodle.</p></div>
+    <div class="info-card"><div class="info-card-icon">&#127891;</div><h4>Moodle LMS (SSO)</h4><p>One-click launch into Moodle as Editing Teacher. Manage all your assigned courses.</p></div>
+    <div class="info-card"><div class="info-card-icon">&#128221;</div><h4>Course Content</h4><p>Add lectures, readings, videos, and resources to course pages in Moodle.</p></div>
+    <div class="info-card"><div class="info-card-icon">&#9989;</div><h4>Assignments &amp; Quizzes</h4><p>Create and manage assignments, set deadlines, review submissions, and mark work.</p></div>
+    <div class="info-card"><div class="info-card-icon">&#128202;</div><h4>Gradebook</h4><p>Enter, update, and publish grades. Students see their results in real time on the portal.</p></div>
+    <div class="info-card"><div class="info-card-icon">&#128276;</div><h4>Notifications</h4><p>Receive alerts for new submissions, student messages, and course updates.</p></div>
+  </div>
+</div>
 
-  <!-- ===== SECTION 1: WHAT IS THIS SYSTEM ===== -->
-  <section id="overview">
-    <div class="section-hdr">
-      <div class="section-hdr-icon" style="background:#ede9fe">
-        <svg viewBox="0 0 24 24" fill="#7c3aed"><path d="M13 2.05v2.02c3.95.49 7 3.85 7 7.93 0 3.21-1.81 6-4.72 7.72L13 17v5h5l-1.22-1.22C19.91 19.07 22 15.76 22 12c0-5.18-3.95-9.45-9-9.95zM11 2.05C5.95 2.55 2 6.82 2 12c0 3.76 2.09 7.07 5.22 8.78L6 22h5V17l-2.28 2.72C7.01 18.17 6 15.22 6 12c0-4.08 3.05-7.44 7-7.93V2.05z"/></svg>
-      </div>
-      <div>
-        <h2>What is the SCL Institute System?</h2>
-        <p>A single platform that manages everything — from student applications to learning and reporting</p>
-      </div>
+<div class="section-divider">Next Role</div>
+
+<!-- ══ MANAGER ══ -->
+<div class="role-section" id="manager">
+  <div class="role-banner manager">
+    <div class="role-icon"><svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg></div>
+    <div class="role-info">
+      <div class="role-badge">Role 3 of 4 &middot; Manager</div>
+      <h2>Manager Dashboard</h2>
+      <p>Managers oversee day-to-day operations &mdash; reviewing student applications, managing programme intakes, tracking LMS enrolments, and monitoring overall institutional activity.</p>
     </div>
-
-    <div class="card-grid-2">
-      <div class="card">
-        <h3 style="color:var(--purple); margin-bottom:1rem; font-size:1.1rem;">🏫 The Platform</h3>
-        <p style="color:var(--gray-600); margin-bottom:1rem; font-size:.92rem;">SCL Institute is a custom-built Higher Education Management System. It replaces manual paperwork and disconnected spreadsheets with one smart, secure, online system. Staff and students can log in from anywhere, anytime.</p>
-        <p style="color:var(--gray-600); font-size:.92rem;">The system is hosted on a dedicated production server and backed up regularly. It is always online.</p>
-      </div>
-      <div class="card">
-        <h3 style="color:var(--purple); margin-bottom:1rem; font-size:1.1rem;">🧩 What It Handles</h3>
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:.6rem;">
-          <div style="padding:.6rem; background:var(--purple-l); border-radius:8px; font-size:.82rem; font-weight:600; color:var(--purple);">📋 Student Applications</div>
-          <div style="padding:.6rem; background:var(--green-l);  border-radius:8px; font-size:.82rem; font-weight:600; color:var(--green);">✅ Approvals & Enrolment</div>
-          <div style="padding:.6rem; background:var(--blue-l);   border-radius:8px; font-size:.82rem; font-weight:600; color:var(--blue);">📚 Online Learning (LMS)</div>
-          <div style="padding:.6rem; background:var(--orange-l); border-radius:8px; font-size:.82rem; font-weight:600; color:var(--orange);">📊 Reports & Dashboards</div>
-          <div style="padding:.6rem; background:var(--teal-l);   border-radius:8px; font-size:.82rem; font-weight:600; color:var(--teal);">👥 User & Role Management</div>
-          <div style="padding:.6rem; background:var(--red-l);    border-radius:8px; font-size:.82rem; font-weight:600; color:var(--red);">🔐 Secure SSO Login</div>
-          <div style="padding:.6rem; background:var(--purple-l); border-radius:8px; font-size:.82rem; font-weight:600; color:var(--purple);">📅 Programme Intakes</div>
-          <div style="padding:.6rem; background:var(--green-l);  border-radius:8px; font-size:.82rem; font-weight:600; color:var(--green);">🎓 Course Lifecycle</div>
-        </div>
-      </div>
+  </div>
+  <div class="login-card">
+    <div class="login-card-head">
+      <h3><span>&#128272;</span> Demo Login &ndash; Manager Account (Live System)</h3>
+      <a class="login-btn manager" href="http://system.sclsandbox.xyz/" target="_blank">&#8599; Go to Login Page</a>
     </div>
-  </section>
-
-  <!-- ===== SECTION 2: SCREENSHOTS ===== -->
-  <section id="screenshots">
-    <div class="section-hdr">
-      <div class="section-hdr-icon" style="background:#dbeafe">
-        <svg viewBox="0 0 24 24" fill="#2563eb"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H4V6h16v12z"/></svg>
-      </div>
-      <div>
-        <h2>System Screenshots</h2>
-        <p>How the platform looks in real use</p>
-      </div>
+    <div class="creds">
+      <div class="cred-box"><div class="cred-label">&#128231; Email Address</div><div class="cred-value">admin@sclsandbox.xyz</div></div>
+      <div class="cred-box"><div class="cred-label">&#128273; Password</div><div class="cred-value">password123</div></div>
+      <div class="cred-box"><div class="cred-label">&#128100; Name</div><div class="cred-value">System Administrator</div></div>
     </div>
-
-    <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:1.5rem;">
-      <!-- Row 1 -->
-      <div>
-        <div class="screen-frame">
-          <div class="screen-bar">
-            <div class="sbar-dot sbar-red"></div>
-            <div class="sbar-dot sbar-yellow"></div>
-            <div class="sbar-dot sbar-green"></div>
-            <span style="font-size:.78rem; color:#6b7280; margin-left:.5rem;">system.sclsandbox.xyz/login</span>
-          </div>
-          <img src="Client-Overview-Screenshots/screenshots/01-login-screen.png" alt="SCL Login Screen" style="width:100%;display:block;"/>
-          <div class="screen-caption">
-            <span>🔐</span> Login Page – Secure Email + Password Sign-In
-          </div>
-        </div>
-      </div>
-      <div>
-        <div class="screen-frame">
-          <div class="screen-bar">
-            <div class="sbar-dot sbar-red"></div>
-            <div class="sbar-dot sbar-yellow"></div>
-            <div class="sbar-dot sbar-green"></div>
-            <span style="font-size:.78rem; color:#6b7280; margin-left:.5rem;">system.sclsandbox.xyz/</span>
-          </div>
-          <img src="Client-Overview-Screenshots/screenshots/02-admin-dashboard.png" alt="Admin Dashboard" style="width:100%;display:block;"/>
-          <div class="screen-caption">
-            <span>📊</span> Admin Dashboard – Live Stats &amp; Overview (37 users, 108 registrations)
-          </div>
-        </div>
-      </div>
-      <div>
-        <div class="screen-frame">
-          <div class="screen-bar">
-            <div class="sbar-dot sbar-red"></div>
-            <div class="sbar-dot sbar-yellow"></div>
-            <div class="sbar-dot sbar-green"></div>
-            <span style="font-size:.78rem; color:#6b7280; margin-left:.5rem;">system.sclsandbox.xyz/applications</span>
-          </div>
-          <img src="Client-Overview-Screenshots/screenshots/03-applications.png" alt="Student Applications" style="width:100%;display:block;"/>
-          <div class="screen-caption">
-            <span>📋</span> Student Applications – Review, Approve &amp; Track (12 total)
-          </div>
-        </div>
-      </div>
-      <!-- Row 2 -->
-      <div>
-        <div class="screen-frame">
-          <div class="screen-bar">
-            <div class="sbar-dot sbar-red"></div>
-            <div class="sbar-dot sbar-yellow"></div>
-            <div class="sbar-dot sbar-green"></div>
-            <span style="font-size:.78rem; color:#6b7280; margin-left:.5rem;">system.sclsandbox.xyz/admin/lms-enrolments</span>
-          </div>
-          <img src="Client-Overview-Screenshots/screenshots/04-lms-enrolments.png" alt="LMS Enrolments" style="width:100%;display:block;"/>
-          <div class="screen-caption">
-            <span>🎓</span> LMS Enrolments – 70 Moodle Courses, 68 Enrolments
-          </div>
-        </div>
-      </div>
-      <div>
-        <div class="screen-frame">
-          <div class="screen-bar">
-            <div class="sbar-dot sbar-red"></div>
-            <div class="sbar-dot sbar-yellow"></div>
-            <div class="sbar-dot sbar-green"></div>
-            <span style="font-size:.78rem; color:#6b7280; margin-left:.5rem;">system.sclsandbox.xyz/admin/role-management</span>
-          </div>
-          <img src="Client-Overview-Screenshots/screenshots/05-role-management.png" alt="Role Management" style="width:100%;display:block;"/>
-          <div class="screen-caption">
-            <span>👥</span> User &amp; Role Management – Assign Roles to All Staff
-          </div>
-        </div>
-      </div>
-      <div>
-        <div class="screen-frame">
-          <div class="screen-bar">
-            <div class="sbar-dot sbar-red"></div>
-            <div class="sbar-dot sbar-yellow"></div>
-            <div class="sbar-dot sbar-green"></div>
-            <span style="font-size:.78rem; color:#6b7280; margin-left:.5rem;">system.sclsandbox.xyz/course-lifecycle</span>
-          </div>
-          <img src="Client-Overview-Screenshots/screenshots/06-course-lifecycle.png" alt="Course Lifecycle" style="width:100%;display:block;"/>
-          <div class="screen-caption">
-            <span>🔄</span> Course Lifecycle – 55 Courses Tracked (15 Fully Active)
-          </div>
-        </div>
-      </div>
-      <!-- Row 3 - full-width centred -->
-      <div style="grid-column:2;">
-        <div class="screen-frame">
-          <div class="screen-bar">
-            <div class="sbar-dot sbar-red"></div>
-            <div class="sbar-dot sbar-yellow"></div>
-            <div class="sbar-dot sbar-green"></div>
-            <span style="font-size:.78rem; color:#6b7280; margin-left:.5rem;">system.sclsandbox.xyz/programme-intakes</span>
-          </div>
-          <img src="Client-Overview-Screenshots/screenshots/07-programme-intakes.png" alt="Programme Intakes" style="width:100%;display:block;"/>
-          <div class="screen-caption">
-            <span>📅</span> Programme Intakes – Manage Cohorts &amp; Sync to Moodle
-          </div>
-        </div>
-      </div>
+    <div class="login-note">&#8505;&#65039; After login you land on the Admin Overview with live statistics across all modules.</div>
+  </div>
+  <div class="steps-title">What a Manager Sees on the System</div>
+  <div class="screens cols-2">
+    <div class="screen-wrap">
+      <div class="screen-chrome"><div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div><div class="screen-url">system.sclsandbox.xyz/</div></div>
+      <img class="screen-img" src="Client-Overview-Screenshots/screenshots/02-admin-dashboard.png" alt="Admin Overview"/>
+      <div class="screen-cap">&#128202; Admin Overview &mdash; live stats: 37 users, 12 applications, 108 registrations</div>
     </div>
-  </section>
-
-  <!-- ===== SECTION 3: TECHNOLOGY STACK ===== -->
-  <section id="tech">
-    <div class="section-hdr">
-      <div class="section-hdr-icon" style="background:#fef3c7">
-        <svg viewBox="0 0 24 24" fill="#d97706"><path d="M9.4 16.6L4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4zm5.2 0l4.6-4.6-4.6-4.6L16 6l6 6-6 6-1.4-1.4z"/></svg>
-      </div>
-      <div>
-        <h2>Technology Stack</h2>
-        <p>Built with modern, proven technologies — reliable, fast and secure</p>
-      </div>
+    <div class="screen-wrap">
+      <div class="screen-chrome"><div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div><div class="screen-url">system.sclsandbox.xyz/applications</div></div>
+      <img class="screen-img" src="Client-Overview-Screenshots/screenshots/03-applications.png" alt="Applications"/>
+      <div class="screen-cap">&#128203; Student Applications &mdash; 12 total: 10 accepted, 2 rejected</div>
     </div>
-
-    <div class="card-grid-4">
-      <div class="tech-item">
-        <div class="tech-dot" style="background:#dbeafe;">⚛️</div>
-        <div>
-          <div class="tech-name">React 18</div>
-          <div class="tech-desc">Frontend interface — fast, responsive web app</div>
-        </div>
-      </div>
-      <div class="tech-item">
-        <div class="tech-dot" style="background:#d1fae5;">🟢</div>
-        <div>
-          <div class="tech-name">Node.js + Express</div>
-          <div class="tech-desc">Backend API — handles all business logic</div>
-        </div>
-      </div>
-      <div class="tech-item">
-        <div class="tech-dot" style="background:#fce7f3;">🗄️</div>
-        <div>
-          <div class="tech-name">MySQL Database</div>
-          <div class="tech-desc">All data stored securely — users, courses, applications</div>
-        </div>
-      </div>
-      <div class="tech-item">
-        <div class="tech-dot" style="background:#fef3c7;">📚</div>
-        <div>
-          <div class="tech-name">Moodle LMS</div>
-          <div class="tech-desc">World's #1 open-source learning platform</div>
-        </div>
-      </div>
-      <div class="tech-item">
-        <div class="tech-dot" style="background:#ede9fe;">🐳</div>
-        <div>
-          <div class="tech-name">Docker</div>
-          <div class="tech-desc">Containerised deployment — easy to scale</div>
-        </div>
-      </div>
-      <div class="tech-item">
-        <div class="tech-dot" style="background:#cffafe;">🌐</div>
-        <div>
-          <div class="tech-name">Nginx</div>
-          <div class="tech-desc">Web server &amp; reverse proxy — handles traffic routing</div>
-        </div>
-      </div>
-      <div class="tech-item">
-        <div class="tech-dot" style="background:#d1fae5;">🔐</div>
-        <div>
-          <div class="tech-name">JWT + SSO</div>
-          <div class="tech-desc">Single sign-on — one login for everything</div>
-        </div>
-      </div>
-      <div class="tech-item">
-        <div class="tech-dot" style="background:#fee2e2;">☁️</div>
-        <div>
-          <div class="tech-name">VPS Production</div>
-          <div class="tech-desc">Dedicated server — system.sclsandbox.xyz, always online</div>
-        </div>
-      </div>
+  </div>
+  <div class="screens cols-2">
+    <div class="screen-wrap">
+      <div class="screen-chrome"><div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div><div class="screen-url">system.sclsandbox.xyz/programme-intakes</div></div>
+      <img class="screen-img" src="Client-Overview-Screenshots/screenshots/07-programme-intakes.png" alt="Programme Intakes"/>
+      <div class="screen-cap">&#128197; Programme Intakes &mdash; manage cohorts &amp; semester start dates (9 active)</div>
     </div>
-  </section>
-
-  <!-- ===== SECTION 4: ROLE-BASED OVERVIEW ===== -->
-  <section id="roles">
-    <div class="section-hdr">
-      <div class="section-hdr-icon" style="background:#ede9fe">
-        <svg viewBox="0 0 24 24" fill="#7c3aed"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
-      </div>
-      <div>
-        <h2>Who Uses the System &amp; What They Can Do</h2>
-        <p>Each person sees only what is relevant to their role — nothing more, nothing less</p>
-      </div>
+    <div class="screen-wrap">
+      <div class="screen-chrome"><div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div><div class="screen-url">system.sclsandbox.xyz/admin/lms-enrolments</div></div>
+      <img class="screen-img" src="Client-Overview-Screenshots/screenshots/04-lms-enrolments.png" alt="LMS Enrolments"/>
+      <div class="screen-cap">&#127891; LMS Enrolments &mdash; 70 Moodle courses, 68 student enrolments</div>
     </div>
+  </div>
+  <div class="steps-title">Manager Daily Workflow &ndash; Step by Step</div>
+  <div class="steps">
+    <div class="step"><div class="step-num manager">1</div><div class="step-body"><h4>Log In &amp; Check the Overview Dashboard</h4><p>Sign in and see a live snapshot &mdash; total users, applications received, course registrations, LMS enrolments, Moodle courses, and programme intakes all at a glance.</p><a class="step-url" href="http://system.sclsandbox.xyz/" target="_blank">system.sclsandbox.xyz</a></div></div>
+    <div class="step"><div class="step-num manager">2</div><div class="step-body"><h4>Review &amp; Process Student Applications</h4><p>Go to &ldquo;Applications&rdquo;. View each submitted application &mdash; check documents, personal info, and course details. Accept or reject with one click. The student is automatically notified.</p><a class="step-url" href="http://system.sclsandbox.xyz/applications" target="_blank">system.sclsandbox.xyz/applications</a></div></div>
+    <div class="step"><div class="step-num manager">3</div><div class="step-body"><h4>Manage Programme Intakes &amp; Cohorts</h4><p>Go to &ldquo;Programme Intakes&rdquo; to create or edit intake windows &mdash; set the programme, intake date, capacity, and link to Moodle categories. Students are assigned to the correct cohort automatically.</p><a class="step-url" href="http://system.sclsandbox.xyz/programme-intakes" target="_blank">system.sclsandbox.xyz/programme-intakes</a></div></div>
+    <div class="step"><div class="step-num manager">4</div><div class="step-body"><h4>Monitor LMS Enrolments</h4><p>Go to &ldquo;LMS Enrolments&rdquo; to see which students are enrolled in which Moodle courses. Manually enrol or unenrol students and sync with Moodle from here.</p><a class="step-url" href="http://system.sclsandbox.xyz/admin/lms-enrolments" target="_blank">system.sclsandbox.xyz/admin/lms-enrolments</a></div></div>
+    <div class="step"><div class="step-num manager">5</div><div class="step-body"><h4>View Reports &amp; Export Data</h4><p>Use the Applications Trend chart and overview stats to generate reports. Export student lists or application data for compliance and board reporting.</p></div></div>
+  </div>
+  <div class="card-grid cols-3">
+    <div class="info-card"><div class="info-card-icon">&#128202;</div><h4>Live Overview Dashboard</h4><p>Real-time snapshot of all key numbers &mdash; users, applications, enrolments, courses.</p></div>
+    <div class="info-card"><div class="info-card-icon">&#128203;</div><h4>Application Processing</h4><p>Review, accept, or reject student applications. Full document audit trail per applicant.</p></div>
+    <div class="info-card"><div class="info-card-icon">&#128197;</div><h4>Programme Intakes</h4><p>Create semester intake windows, set capacities, and manage cohort assignments.</p></div>
+    <div class="info-card"><div class="info-card-icon">&#127891;</div><h4>LMS Enrolments</h4><p>See and manage student enrolments in Moodle. Sync changes directly to the LMS.</p></div>
+    <div class="info-card"><div class="info-card-icon">&#128200;</div><h4>Trends &amp; Reports</h4><p>6-month application trends, acceptance rates, and exportable data for board reporting.</p></div>
+    <div class="info-card"><div class="info-card-icon">&#128276;</div><h4>Notifications</h4><p>Receive alerts for new applications, compliance deadlines, and system events.</p></div>
+  </div>
+</div>
 
-    <div class="card-grid-3" style="margin-bottom:1.5rem;">
+<div class="section-divider">Next Role</div>
 
-      <!-- SYSTEM ADMIN -->
-      <div class="role-card">
-        <div class="role-header rc-admin">
-          <div class="role-icon">
-            <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 2.18l7 3.12V11c0 4.52-2.98 8.69-7 9.93-4.02-1.24-7-5.41-7-9.93V6.3l7-3.12z"/></svg>
-          </div>
-          <div>
-            <div class="role-title">System Admin</div>
-            <div class="role-subtitle">Full control of everything</div>
-          </div>
-        </div>
-        <div class="role-body">
-          <span class="role-access-badge ba-admin">FULL ACCESS</span>
-          <div class="role-feature"><div class="role-check chk-admin"><svg viewBox="0 0 10 10"><path d="M1.5 5l2.5 2.5 5-5"/></svg></div>Overview &amp; live reports dashboard</div>
-          <div class="role-feature"><div class="role-check chk-admin"><svg viewBox="0 0 10 10"><path d="M1.5 5l2.5 2.5 5-5"/></svg></div>Module launcher — access all areas</div>
-          <div class="role-feature"><div class="role-check chk-admin"><svg viewBox="0 0 10 10"><path d="M1.5 5l2.5 2.5 5-5"/></svg></div>Student &amp; Teacher admissions</div>
-          <div class="role-feature"><div class="role-check chk-admin"><svg viewBox="0 0 10 10"><path d="M1.5 5l2.5 2.5 5-5"/></svg></div>Course lifecycle management</div>
-          <div class="role-feature"><div class="role-check chk-admin"><svg viewBox="0 0 10 10"><path d="M1.5 5l2.5 2.5 5-5"/></svg></div>Programme intakes &amp; cohorts</div>
-          <div class="role-feature"><div class="role-check chk-admin"><svg viewBox="0 0 10 10"><path d="M1.5 5l2.5 2.5 5-5"/></svg></div>LMS enrolments</div>
-          <div class="role-feature"><div class="role-check chk-admin"><svg viewBox="0 0 10 10"><path d="M1.5 5l2.5 2.5 5-5"/></svg></div>Users by role &amp; role management</div>
-          <div class="role-feature"><div class="role-check chk-admin"><svg viewBox="0 0 10 10"><path d="M1.5 5l2.5 2.5 5-5"/></svg></div>SSO access to Moodle LMS</div>
-          <div class="role-feature"><div class="role-check chk-admin"><svg viewBox="0 0 10 10"><path d="M1.5 5l2.5 2.5 5-5"/></svg></div>System settings</div>
-        </div>
-      </div>
-
-      <!-- COLLEGE ADMIN -->
-      <div class="role-card">
-        <div class="role-header rc-colladmin">
-          <div class="role-icon">
-            <svg viewBox="0 0 24 24"><path d="M12 3L1 9l11 6 9-4.91V17h2V9L12 3zM5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z"/></svg>
-          </div>
-          <div>
-            <div class="role-title">College Admin</div>
-            <div class="role-subtitle">Admissions &amp; student management</div>
-          </div>
-        </div>
-        <div class="role-body">
-          <span class="role-access-badge ba-colladmin">ADMISSIONS ACCESS</span>
-          <div class="role-feature"><div class="role-check chk-colladmin"><svg viewBox="0 0 10 10"><path d="M1.5 5l2.5 2.5 5-5"/></svg></div>Admissions hub &amp; dashboard</div>
-          <div class="role-feature"><div class="role-check chk-colladmin"><svg viewBox="0 0 10 10"><path d="M1.5 5l2.5 2.5 5-5"/></svg></div>All student applications</div>
-          <div class="role-feature"><div class="role-check chk-colladmin"><svg viewBox="0 0 10 10"><path d="M1.5 5l2.5 2.5 5-5"/></svg></div>New admissions &amp; applicant list</div>
-          <div class="role-feature"><div class="role-check chk-colladmin"><svg viewBox="0 0 10 10"><path d="M1.5 5l2.5 2.5 5-5"/></svg></div>Student list &amp; records</div>
-          <div class="role-feature"><div class="role-check chk-colladmin"><svg viewBox="0 0 10 10"><path d="M1.5 5l2.5 2.5 5-5"/></svg></div>Course change requests</div>
-          <div class="role-feature"><div class="role-check chk-colladmin"><svg viewBox="0 0 10 10"><path d="M1.5 5l2.5 2.5 5-5"/></svg></div>Programme intakes</div>
-          <div class="role-feature"><div class="role-check chk-colladmin"><svg viewBox="0 0 10 10"><path d="M1.5 5l2.5 2.5 5-5"/></svg></div>LMS enrolments</div>
-          <div class="role-feature"><div class="role-check chk-colladmin"><svg viewBox="0 0 10 10"><path d="M1.5 5l2.5 2.5 5-5"/></svg></div>Application reports</div>
-        </div>
-      </div>
-
-      <!-- MANAGER -->
-      <div class="role-card">
-        <div class="role-header rc-manager">
-          <div class="role-icon">
-            <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 14H7v-2h5v2zm5-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
-          </div>
-          <div>
-            <div class="role-title">Manager</div>
-            <div class="role-subtitle">Reports &amp; college overview</div>
-          </div>
-        </div>
-        <div class="role-body">
-          <span class="role-access-badge ba-manager">READ-ONLY OVERVIEW</span>
-          <div class="role-feature"><div class="role-check chk-manager"><svg viewBox="0 0 10 10"><path d="M1.5 5l2.5 2.5 5-5"/></svg></div>College overview dashboard</div>
-          <div class="role-feature"><div class="role-check chk-manager"><svg viewBox="0 0 10 10"><path d="M1.5 5l2.5 2.5 5-5"/></svg></div>Admissions dashboard (view)</div>
-          <div class="role-feature"><div class="role-check chk-manager"><svg viewBox="0 0 10 10"><path d="M1.5 5l2.5 2.5 5-5"/></svg></div>LMS enrolments (view)</div>
-          <div class="role-feature"><div class="role-check chk-manager"><svg viewBox="0 0 10 10"><path d="M1.5 5l2.5 2.5 5-5"/></svg></div>Student programmes overview</div>
-          <div class="role-feature"><div class="role-check chk-manager"><svg viewBox="0 0 10 10"><path d="M1.5 5l2.5 2.5 5-5"/></svg></div>Users by role (view)</div>
-          <div class="role-feature"><div class="role-check chk-manager"><svg viewBox="0 0 10 10"><path d="M1.5 5l2.5 2.5 5-5"/></svg></div>System settings</div>
-        </div>
-      </div>
-
-      <!-- TEACHER -->
-      <div class="role-card">
-        <div class="role-header rc-teacher">
-          <div class="role-icon">
-            <svg viewBox="0 0 24 24"><path d="M5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82zM12 3L1 9l11 6 11-6-11-6z"/></svg>
-          </div>
-          <div>
-            <div class="role-title">Teacher</div>
-            <div class="role-subtitle">Teaching &amp; course management</div>
-          </div>
-        </div>
-        <div class="role-body">
-          <span class="role-access-badge ba-teacher">TEACHING ACCESS</span>
-          <div class="role-feature"><div class="role-check chk-teacher"><svg viewBox="0 0 10 10"><path d="M1.5 5l2.5 2.5 5-5"/></svg></div>Teacher dashboard</div>
-          <div class="role-feature"><div class="role-check chk-teacher"><svg viewBox="0 0 10 10"><path d="M1.5 5l2.5 2.5 5-5"/></svg></div>My teaching programme</div>
-          <div class="role-feature"><div class="role-check chk-teacher"><svg viewBox="0 0 10 10"><path d="M1.5 5l2.5 2.5 5-5"/></svg></div>Assessments management</div>
-          <div class="role-feature"><div class="role-check chk-teacher"><svg viewBox="0 0 10 10"><path d="M1.5 5l2.5 2.5 5-5"/></svg></div>Teaching reports</div>
-          <div class="role-feature"><div class="role-check chk-teacher"><svg viewBox="0 0 10 10"><path d="M1.5 5l2.5 2.5 5-5"/></svg></div>Moodle LMS (SSO – 1 click)</div>
-          <div class="role-feature"><div class="role-check chk-teacher"><svg viewBox="0 0 10 10"><path d="M1.5 5l2.5 2.5 5-5"/></svg></div>My timetable</div>
-        </div>
-      </div>
-
-      <!-- STUDENT -->
-      <div class="role-card">
-        <div class="role-header rc-student">
-          <div class="role-icon">
-            <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></svg>
-          </div>
-          <div>
-            <div class="role-title">Student</div>
-            <div class="role-subtitle">Learning &amp; personal portal</div>
-          </div>
-        </div>
-        <div class="role-body">
-          <span class="role-access-badge ba-student">STUDENT ACCESS</span>
-          <div class="role-feature"><div class="role-check chk-student"><svg viewBox="0 0 10 10"><path d="M1.5 5l2.5 2.5 5-5"/></svg></div>Personal portal &amp; dashboard</div>
-          <div class="role-feature"><div class="role-check chk-student"><svg viewBox="0 0 10 10"><path d="M1.5 5l2.5 2.5 5-5"/></svg></div>My profile &amp; documents</div>
-          <div class="role-feature"><div class="role-check chk-student"><svg viewBox="0 0 10 10"><path d="M1.5 5l2.5 2.5 5-5"/></svg></div>Admissions &amp; enrolment status</div>
-          <div class="role-feature"><div class="role-check chk-student"><svg viewBox="0 0 10 10"><path d="M1.5 5l2.5 2.5 5-5"/></svg></div>Right to study &amp; contract</div>
-          <div class="role-feature"><div class="role-check chk-student"><svg viewBox="0 0 10 10"><path d="M1.5 5l2.5 2.5 5-5"/></svg></div>Moodle LMS (1-click access)</div>
-          <div class="role-feature"><div class="role-check chk-student"><svg viewBox="0 0 10 10"><path d="M1.5 5l2.5 2.5 5-5"/></svg></div>Timetable, grades &amp; attendance</div>
-          <div class="role-feature"><div class="role-check chk-student"><svg viewBox="0 0 10 10"><path d="M1.5 5l2.5 2.5 5-5"/></svg></div>Support &amp; wellbeing requests</div>
-          <div class="role-feature"><div class="role-check chk-student"><svg viewBox="0 0 10 10"><path d="M1.5 5l2.5 2.5 5-5"/></svg></div>Fees &amp; payments overview</div>
-        </div>
-      </div>
-
-      <!-- GENERAL -->
-      <div class="role-card">
-        <div class="role-header rc-general">
-          <div class="role-icon">
-            <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z"/></svg>
-          </div>
-          <div>
-            <div class="role-title">General User</div>
-            <div class="role-subtitle">Limited / LMS only</div>
-          </div>
-        </div>
-        <div class="role-body">
-          <span class="role-access-badge ba-general">MINIMAL ACCESS</span>
-          <div class="role-feature"><div class="role-check chk-general"><svg viewBox="0 0 10 10"><path d="M1.5 5l2.5 2.5 5-5"/></svg></div>Moodle LMS access only</div>
-          <div class="role-feature"><div class="role-check chk-general"><svg viewBox="0 0 10 10"><path d="M1.5 5l2.5 2.5 5-5"/></svg></div>No dashboard or management tools</div>
-          <div class="role-feature"><div class="role-check chk-general"><svg viewBox="0 0 10 10"><path d="M1.5 5l2.5 2.5 5-5"/></svg></div>Used for guests / external observers</div>
-        </div>
-      </div>
-
+<!-- ══ ADMIN ══ -->
+<div class="role-section" id="admin">
+  <div class="role-banner admin">
+    <div class="role-icon"><svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 4l5 2.18V11c0 3.5-2.33 6.79-5 7.93-2.67-1.14-5-4.43-5-7.93V7.18L12 5z"/></svg></div>
+    <div class="role-info">
+      <div class="role-badge">Role 4 of 4 &middot; System Admin</div>
+      <h2>System Administration</h2>
+      <p>System Admins have full access to everything &mdash; user management, role assignment, course lifecycle tracking, accreditation records, and all system settings.</p>
     </div>
-  </section>
-
-  <!-- ===== SECTION 5: PERMISSION MATRIX ===== -->
-  <section id="permissions">
-    <div class="section-hdr">
-      <div class="section-hdr-icon" style="background:#d1fae5">
-        <svg viewBox="0 0 24 24" fill="#059669"><path d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
-      </div>
-      <div>
-        <h2>Feature Access by Role</h2>
-        <p>Quick reference — who can access what across the platform</p>
-      </div>
+  </div>
+  <div class="login-card">
+    <div class="login-card-head">
+      <h3><span>&#128272;</span> Demo Login &ndash; Admin Account (Live System)</h3>
+      <a class="login-btn admin" href="http://system.sclsandbox.xyz/" target="_blank">&#8599; Go to Login Page</a>
     </div>
-
-    <div class="card" style="padding:0; overflow:hidden;">
-      <div class="matrix-wrap">
-        <table class="matrix">
-          <thead>
-            <tr>
-              <th style="min-width:200px;">Feature</th>
-              <th>System Admin</th>
-              <th>College Admin</th>
-              <th>Manager</th>
-              <th>Teacher</th>
-              <th>Student</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr><td class="mx-cat" colspan="6" style="padding:.5rem 1rem; color:var(--purple);">ADMINISTRATION</td></tr>
-            <tr>
-              <td class="feature-cell">Admissions Dashboard</td>
-              <td><span class="mx-yes">✅ Full</span></td>
-              <td><span class="mx-yes">✅ Full</span></td>
-              <td><span class="mx-ro">👁 View</span></td>
-              <td><span class="mx-no">—</span></td>
-              <td><span class="mx-no">—</span></td>
-            </tr>
-            <tr>
-              <td class="feature-cell">Student Applications</td>
-              <td><span class="mx-yes">✅ Full</span></td>
-              <td><span class="mx-yes">✅ Full</span></td>
-              <td><span class="mx-ro">👁 View</span></td>
-              <td><span class="mx-no">—</span></td>
-              <td><span class="mx-no">—</span></td>
-            </tr>
-            <tr>
-              <td class="feature-cell">Approve / Reject Applications</td>
-              <td><span class="mx-yes">✅ Yes</span></td>
-              <td><span class="mx-yes">✅ Yes</span></td>
-              <td><span class="mx-no">—</span></td>
-              <td><span class="mx-no">—</span></td>
-              <td><span class="mx-no">—</span></td>
-            </tr>
-            <tr>
-              <td class="feature-cell">Teacher Registrations</td>
-              <td><span class="mx-yes">✅ Full</span></td>
-              <td><span class="mx-no">—</span></td>
-              <td><span class="mx-no">—</span></td>
-              <td><span class="mx-no">—</span></td>
-              <td><span class="mx-no">—</span></td>
-            </tr>
-            <tr>
-              <td class="feature-cell">Role Management</td>
-              <td><span class="mx-yes">✅ Full</span></td>
-              <td><span class="mx-no">—</span></td>
-              <td><span class="mx-no">—</span></td>
-              <td><span class="mx-no">—</span></td>
-              <td><span class="mx-no">—</span></td>
-            </tr>
-            <tr><td class="mx-cat" colspan="6" style="padding:.5rem 1rem; color:var(--blue);">COURSES &amp; PROGRAMMES</td></tr>
-            <tr>
-              <td class="feature-cell">Course Lifecycle</td>
-              <td><span class="mx-yes">✅ Full</span></td>
-              <td><span class="mx-no">—</span></td>
-              <td><span class="mx-no">—</span></td>
-              <td><span class="mx-no">—</span></td>
-              <td><span class="mx-no">—</span></td>
-            </tr>
-            <tr>
-              <td class="feature-cell">Programme Intakes</td>
-              <td><span class="mx-yes">✅ Full</span></td>
-              <td><span class="mx-yes">✅ Full</span></td>
-              <td><span class="mx-no">—</span></td>
-              <td><span class="mx-no">—</span></td>
-              <td><span class="mx-no">—</span></td>
-            </tr>
-            <tr>
-              <td class="feature-cell">LMS Enrolments</td>
-              <td><span class="mx-yes">✅ Full</span></td>
-              <td><span class="mx-yes">✅ Full</span></td>
-              <td><span class="mx-ro">👁 View</span></td>
-              <td><span class="mx-no">—</span></td>
-              <td><span class="mx-no">—</span></td>
-            </tr>
-            <tr>
-              <td class="feature-cell">Student Programmes</td>
-              <td><span class="mx-yes">✅ Full</span></td>
-              <td><span class="mx-no">—</span></td>
-              <td><span class="mx-ro">👁 View</span></td>
-              <td><span class="mx-ro">👁 Own</span></td>
-              <td><span class="mx-ro">👁 Own</span></td>
-            </tr>
-            <tr><td class="mx-cat" colspan="6" style="padding:.5rem 1rem; color:var(--green);">LEARNING MANAGEMENT SYSTEM</td></tr>
-            <tr>
-              <td class="feature-cell">Access Moodle LMS (SSO)</td>
-              <td><span class="mx-yes">✅ Admin</span></td>
-              <td><span class="mx-yes">✅ Admin</span></td>
-              <td><span class="mx-no">—</span></td>
-              <td><span class="mx-yes">✅ Teacher</span></td>
-              <td><span class="mx-yes">✅ Student</span></td>
-            </tr>
-            <tr>
-              <td class="feature-cell">Manage Courses in Moodle</td>
-              <td><span class="mx-yes">✅ Full</span></td>
-              <td><span class="mx-no">—</span></td>
-              <td><span class="mx-no">—</span></td>
-              <td><span class="mx-yes">✅ Own Courses</span></td>
-              <td><span class="mx-no">—</span></td>
-            </tr>
-            <tr>
-              <td class="feature-cell">View Timetable</td>
-              <td><span class="mx-yes">✅ Full</span></td>
-              <td><span class="mx-no">—</span></td>
-              <td><span class="mx-no">—</span></td>
-              <td><span class="mx-yes">✅ Own</span></td>
-              <td><span class="mx-yes">✅ Own</span></td>
-            </tr>
-            <tr>
-              <td class="feature-cell">Grades &amp; Progress</td>
-              <td><span class="mx-yes">✅ Full</span></td>
-              <td><span class="mx-no">—</span></td>
-              <td><span class="mx-no">—</span></td>
-              <td><span class="mx-yes">✅ Own Students</span></td>
-              <td><span class="mx-ro">👁 Own Only</span></td>
-            </tr>
-            <tr><td class="mx-cat" colspan="6" style="padding:.5rem 1rem; color:var(--orange);">STUDENT SERVICES</td></tr>
-            <tr>
-              <td class="feature-cell">Student Portal</td>
-              <td><span class="mx-yes">✅ Full</span></td>
-              <td><span class="mx-yes">✅ Full</span></td>
-              <td><span class="mx-no">—</span></td>
-              <td><span class="mx-no">—</span></td>
-              <td><span class="mx-yes">✅ Own Only</span></td>
-            </tr>
-            <tr>
-              <td class="feature-cell">Support Requests</td>
-              <td><span class="mx-yes">✅ Manage</span></td>
-              <td><span class="mx-yes">✅ Manage</span></td>
-              <td><span class="mx-no">—</span></td>
-              <td><span class="mx-no">—</span></td>
-              <td><span class="mx-yes">✅ Submit</span></td>
-            </tr>
-            <tr>
-              <td class="feature-cell">Fees &amp; Payments</td>
-              <td><span class="mx-yes">✅ Full</span></td>
-              <td><span class="mx-yes">✅ Full</span></td>
-              <td><span class="mx-ro">👁 View</span></td>
-              <td><span class="mx-no">—</span></td>
-              <td><span class="mx-ro">👁 Own</span></td>
-            </tr>
-            <tr>
-              <td class="feature-cell">Induction &amp; Orientation</td>
-              <td><span class="mx-yes">✅ Full</span></td>
-              <td><span class="mx-yes">✅ Full</span></td>
-              <td><span class="mx-no">—</span></td>
-              <td><span class="mx-no">—</span></td>
-              <td><span class="mx-yes">✅ Own</span></td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+    <div class="creds">
+      <div class="cred-box"><div class="cred-label">&#128231; Email Address</div><div class="cred-value">admin@sclsandbox.xyz</div></div>
+      <div class="cred-box"><div class="cred-label">&#128273; Password</div><div class="cred-value">password123</div></div>
+      <div class="cred-box"><div class="cred-label">&#128274; Access Level</div><div class="cred-value">Full System Access</div></div>
     </div>
-    <p style="font-size:.8rem; color:var(--gray-400); margin-top:.7rem; padding-left:.5rem;">
-      ✅ = Full write access &nbsp;|&nbsp; 👁 = Read-only view &nbsp;|&nbsp; — = No access
-    </p>
-  </section>
-
-  <!-- ===== SECTION 6: HOW IT WORKS — WORKFLOW IN BLOCKS ===== -->
-  <section id="workflow">
-    <div class="section-hdr">
-      <div class="section-hdr-icon" style="background:#fef3c7">
-        <svg viewBox="0 0 24 24" fill="#d97706"><path d="M4 6h16v2H4zm0 5h16v2H4zm0 5h16v2H4z"/></svg>
-      </div>
-      <div>
-        <h2>How It Works — Step by Step</h2>
-        <p>Simple journey from application to graduation — what happens at each stage</p>
-      </div>
+    <div class="login-note">&#8505;&#65039; Same account as Manager &mdash; this role also unlocks User &amp; Role Management and Course Lifecycle.</div>
+  </div>
+  <div class="steps-title">Admin-Only Features</div>
+  <div class="screens cols-2">
+    <div class="screen-wrap">
+      <div class="screen-chrome"><div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div><div class="screen-url">system.sclsandbox.xyz/admin/role-management</div></div>
+      <img class="screen-img" src="Client-Overview-Screenshots/screenshots/05-role-management.png" alt="Role Management"/>
+      <div class="screen-cap">&#128101; User &amp; Role Management &mdash; assign roles to all staff and students</div>
     </div>
-
-    <!-- MAIN FLOW BAR -->
-    <div class="card" style="background:linear-gradient(135deg,var(--dark),var(--purple-d)); padding:2rem; margin-bottom:2rem;">
-      <div class="wf-steps">
-        <div class="wf-step">
-          <div class="wf-circle" style="background:#6366f1;">📝</div>
-          <div class="wf-num">1</div>
-          <div class="wf-title" style="color:white;">Apply</div>
-          <div class="wf-desc" style="color:rgba(255,255,255,.7);">Student submits application online</div>
-          <span class="wf-tag" style="background:rgba(255,255,255,.15); color:white;">STUDENT</span>
-        </div>
-        <div class="wf-step">
-          <div class="wf-circle" style="background:#0891b2;">🔍</div>
-          <div class="wf-num">2</div>
-          <div class="wf-title" style="color:white;">Review</div>
-          <div class="wf-desc" style="color:rgba(255,255,255,.7);">Admin reviews the application</div>
-          <span class="wf-tag" style="background:rgba(255,255,255,.15); color:white;">ADMIN</span>
-        </div>
-        <div class="wf-step">
-          <div class="wf-circle" style="background:#059669;">✅</div>
-          <div class="wf-num">3</div>
-          <div class="wf-title" style="color:white;">Approve</div>
-          <div class="wf-desc" style="color:rgba(255,255,255,.7);">Application approved, account created</div>
-          <span class="wf-tag" style="background:rgba(255,255,255,.15); color:white;">ADMIN</span>
-        </div>
-        <div class="wf-step">
-          <div class="wf-circle" style="background:#7c3aed;">📚</div>
-          <div class="wf-num">4</div>
-          <div class="wf-title" style="color:white;">Enrol</div>
-          <div class="wf-desc" style="color:rgba(255,255,255,.7);">Student enrolled in courses &amp; Moodle</div>
-          <span class="wf-tag" style="background:rgba(255,255,255,.15); color:white;">ADMIN</span>
-        </div>
-        <div class="wf-step">
-          <div class="wf-circle" style="background:#d97706;">🎓</div>
-          <div class="wf-num">5</div>
-          <div class="wf-title" style="color:white;">Learn</div>
-          <div class="wf-desc" style="color:rgba(255,255,255,.7);">Student accesses LMS with 1 click</div>
-          <span class="wf-tag" style="background:rgba(255,255,255,.15); color:white;">STUDENT</span>
-        </div>
-        <div class="wf-step">
-          <div class="wf-circle" style="background:#ef4444;">📊</div>
-          <div class="wf-num">6</div>
-          <div class="wf-title" style="color:white;">Monitor</div>
-          <div class="wf-desc" style="color:rgba(255,255,255,.7);">Progress tracked by admin &amp; teacher</div>
-          <span class="wf-tag" style="background:rgba(255,255,255,.15); color:white;">ADMIN + TEACHER</span>
-        </div>
-      </div>
+    <div class="screen-wrap">
+      <div class="screen-chrome"><div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div><div class="screen-url">system.sclsandbox.xyz/course-lifecycle</div></div>
+      <img class="screen-img" src="Client-Overview-Screenshots/screenshots/06-course-lifecycle.png" alt="Course Lifecycle"/>
+      <div class="screen-cap">&#128260; Course Lifecycle &mdash; 55 courses tracked through 5 stages (15 fully active)</div>
     </div>
+  </div>
+  <div class="steps-title">Admin Tasks &ndash; Step by Step</div>
+  <div class="steps">
+    <div class="step"><div class="step-num admin">1</div><div class="step-body"><h4>Manage Users &amp; Assign Roles</h4><p>Go to &ldquo;Role Management&rdquo;. See all users in the system. Change a user&rsquo;s role (Student, Teacher, Manager, Admin) with one click. Changes take effect immediately on next login.</p><a class="step-url" href="http://system.sclsandbox.xyz/admin/role-management" target="_blank">system.sclsandbox.xyz/admin/role-management</a></div></div>
+    <div class="step"><div class="step-num admin">2</div><div class="step-body"><h4>Track Course Lifecycle</h4><p>Go to &ldquo;Course Lifecycle&rdquo; to see every course moving through 5 stages: Accreditation &rarr; Site Visit &rarr; Induction &rarr; Registration &rarr; Active. Instantly see which stage each of the 55 courses is in.</p><a class="step-url" href="http://system.sclsandbox.xyz/course-lifecycle" target="_blank">system.sclsandbox.xyz/course-lifecycle</a></div></div>
+    <div class="step"><div class="step-num admin">3</div><div class="step-body"><h4>Manage Accreditation &amp; Course Records</h4><p>Open individual course records to upload accreditation documents, record site visit outcomes, log induction completion, and confirm registration status &mdash; all with a full audit trail.</p></div></div>
+    <div class="step"><div class="step-num admin">4</div><div class="step-body"><h4>System Settings &amp; Configuration</h4><p>Configure SSO tokens for Moodle, manage email notifications, and adjust system-wide preferences.</p><a class="step-url" href="http://system.sclsandbox.xyz/admin/settings" target="_blank">system.sclsandbox.xyz/admin/settings</a></div></div>
+  </div>
+  <div class="card-grid cols-3">
+    <div class="info-card"><div class="info-card-icon">&#128101;</div><h4>User &amp; Role Management</h4><p>Create users, change roles, activate/deactivate accounts. Full user list with search.</p></div>
+    <div class="info-card"><div class="info-card-icon">&#128260;</div><h4>Course Lifecycle Tracking</h4><p>Track all 55 courses through accreditation, site visit, induction, registration, and active stages.</p></div>
+    <div class="info-card"><div class="info-card-icon">&#128220;</div><h4>Accreditation Records</h4><p>Upload and manage accreditation documents, external reviewer sign-offs, and compliance records.</p></div>
+    <div class="info-card"><div class="info-card-icon">&#127979;</div><h4>Site Visit Management</h4><p>Record site visits, upload reports, and track outcomes linked to each course.</p></div>
+    <div class="info-card"><div class="info-card-icon">&#128272;</div><h4>SSO Configuration</h4><p>Manage Moodle Single Sign-On tokens so staff and students move between systems securely.</p></div>
+    <div class="info-card"><div class="info-card-icon">&#9881;&#65039;</div><h4>System Settings</h4><p>System-wide configuration: notification rules, access policies, and integration settings.</p></div>
+  </div>
 
-    <!-- DETAILED FLOW: STUDENT JOURNEY -->
-    <h3 style="font-size:1.1rem; font-weight:700; color:var(--dark); margin-bottom:1rem;">
-      🎓 Student Journey in Detail
-    </h3>
-    <div class="flow-row">
-      <div class="flow-block" style="border-color:#6366f1;">
-        <span class="flow-emoji">📝</span>
-        <div class="flow-title">1. Submit Application</div>
-        <div class="flow-text">Student fills in the online application form — personal details, course choice, documents.</div>
-        <span class="flow-by" style="background:#ede9fe; color:#6366f1;">Done by: Student</span>
-      </div>
-      <div class="flow-block" style="border-color:#0891b2;">
-        <span class="flow-emoji">📥</span>
-        <div class="flow-title">2. Application Received</div>
-        <div class="flow-text">System saves it. Admin sees it in the Admissions Hub. Notifications sent.</div>
-        <span class="flow-by" style="background:#cffafe; color:#0891b2;">System auto</span>
-      </div>
-      <div class="flow-block" style="border-color:#059669;">
-        <span class="flow-emoji">✅</span>
-        <div class="flow-title">3. Admin Reviews &amp; Approves</div>
-        <div class="flow-text">College Admin or System Admin reviews documents and approves or rejects the application.</div>
-        <span class="flow-by" style="background:#d1fae5; color:#059669;">Done by: Admin</span>
-      </div>
-      <div class="flow-block" style="border-color:#7c3aed;">
-        <span class="flow-emoji">👤</span>
-        <div class="flow-title">4. Account Created</div>
-        <div class="flow-text">Student gets login credentials. Profile created in the system and in Moodle LMS.</div>
-        <span class="flow-by" style="background:#ede9fe; color:#7c3aed;">System auto</span>
-      </div>
+  <div style="margin-top:2.5rem">
+    <div class="steps-title">Quick Reference &mdash; Who Can Access What</div>
+    <div style="overflow-x:auto">
+      <table style="width:100%;background:white;border:1px solid var(--slate-200);border-radius:var(--radius);border-collapse:collapse;box-shadow:var(--shadow)">
+        <thead>
+          <tr style="background:var(--slate-50)">
+            <th style="padding:.85rem 1.1rem;text-align:left;font-size:.8rem;font-weight:700;color:var(--slate-600);border-bottom:1px solid var(--slate-200)">Feature / Module</th>
+            <th style="padding:.85rem 1.1rem;text-align:center;font-size:.8rem;font-weight:700;color:var(--blue);border-bottom:1px solid var(--slate-200)">Student</th>
+            <th style="padding:.85rem 1.1rem;text-align:center;font-size:.8rem;font-weight:700;color:var(--green);border-bottom:1px solid var(--slate-200)">Teacher</th>
+            <th style="padding:.85rem 1.1rem;text-align:center;font-size:.8rem;font-weight:700;color:var(--amber);border-bottom:1px solid var(--slate-200)">Manager</th>
+            <th style="padding:.85rem 1.1rem;text-align:center;font-size:.8rem;font-weight:700;color:var(--purple);border-bottom:1px solid var(--slate-200)">Admin</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr style="border-bottom:1px solid var(--slate-200)"><td style="padding:.7rem 1.1rem;font-size:.87rem;font-weight:600">Student Dashboard &amp; Portal</td><td style="text-align:center">&#10003;</td><td style="text-align:center">&#10003;</td><td style="text-align:center">&mdash;</td><td style="text-align:center">&mdash;</td></tr>
+          <tr style="border-bottom:1px solid var(--slate-200);background:var(--slate-50)"><td style="padding:.7rem 1.1rem;font-size:.87rem;font-weight:600">Grades &amp; Academic Progress</td><td style="text-align:center">&#10003;</td><td style="text-align:center">&#10003;</td><td style="text-align:center">&mdash;</td><td style="text-align:center">&mdash;</td></tr>
+          <tr style="border-bottom:1px solid var(--slate-200)"><td style="padding:.7rem 1.1rem;font-size:.87rem;font-weight:600">Moodle LMS (via SSO)</td><td style="text-align:center">&#10003;</td><td style="text-align:center">&#10003; Edit</td><td style="text-align:center">View</td><td style="text-align:center">&#10003; Full</td></tr>
+          <tr style="border-bottom:1px solid var(--slate-200);background:var(--slate-50)"><td style="padding:.7rem 1.1rem;font-size:.87rem;font-weight:600">Admin Overview Dashboard</td><td style="text-align:center">&mdash;</td><td style="text-align:center">&mdash;</td><td style="text-align:center">&#10003;</td><td style="text-align:center">&#10003;</td></tr>
+          <tr style="border-bottom:1px solid var(--slate-200)"><td style="padding:.7rem 1.1rem;font-size:.87rem;font-weight:600">Student Applications</td><td style="text-align:center">&mdash;</td><td style="text-align:center">&mdash;</td><td style="text-align:center">&#10003;</td><td style="text-align:center">&#10003;</td></tr>
+          <tr style="border-bottom:1px solid var(--slate-200);background:var(--slate-50)"><td style="padding:.7rem 1.1rem;font-size:.87rem;font-weight:600">Programme Intakes</td><td style="text-align:center">&mdash;</td><td style="text-align:center">&mdash;</td><td style="text-align:center">&#10003;</td><td style="text-align:center">&#10003;</td></tr>
+          <tr style="border-bottom:1px solid var(--slate-200)"><td style="padding:.7rem 1.1rem;font-size:.87rem;font-weight:600">LMS Enrolments Management</td><td style="text-align:center">&mdash;</td><td style="text-align:center">&mdash;</td><td style="text-align:center">&#10003;</td><td style="text-align:center">&#10003;</td></tr>
+          <tr style="border-bottom:1px solid var(--slate-200);background:var(--slate-50)"><td style="padding:.7rem 1.1rem;font-size:.87rem;font-weight:600">User &amp; Role Management</td><td style="text-align:center">&mdash;</td><td style="text-align:center">&mdash;</td><td style="text-align:center">&mdash;</td><td style="text-align:center">&#10003;</td></tr>
+          <tr style="border-bottom:1px solid var(--slate-200)"><td style="padding:.7rem 1.1rem;font-size:.87rem;font-weight:600">Course Lifecycle Tracking</td><td style="text-align:center">&mdash;</td><td style="text-align:center">&mdash;</td><td style="text-align:center">&mdash;</td><td style="text-align:center">&#10003;</td></tr>
+          <tr><td style="padding:.7rem 1.1rem;font-size:.87rem;font-weight:600;background:var(--slate-50)">System Settings &amp; Configuration</td><td style="text-align:center;background:var(--slate-50)">&mdash;</td><td style="text-align:center;background:var(--slate-50)">&mdash;</td><td style="text-align:center;background:var(--slate-50)">&mdash;</td><td style="text-align:center;background:var(--slate-50)">&#10003;</td></tr>
+        </tbody>
+      </table>
     </div>
-    <div class="flow-row">
-      <div class="flow-block" style="border-color:#d97706;">
-        <span class="flow-emoji">📚</span>
-        <div class="flow-title">5. Enrolled in Courses</div>
-        <div class="flow-text">Admin enrolls student in their programme courses. Moodle LMS enrolment happens automatically.</div>
-        <span class="flow-by" style="background:#fef3c7; color:#d97706;">Done by: Admin</span>
-      </div>
-      <div class="flow-block" style="border-color:#7c3aed;">
-        <span class="flow-emoji">🖥️</span>
-        <div class="flow-title">6. Student Logs In</div>
-        <div class="flow-text">Student logs into SCL Institute portal. Sees their personalised dashboard with all their info.</div>
-        <span class="flow-by" style="background:#ede9fe; color:#7c3aed;">Done by: Student</span>
-      </div>
-      <div class="flow-block" style="border-color:#2563eb;">
-        <span class="flow-emoji">🔗</span>
-        <div class="flow-title">7. One-Click Moodle Access</div>
-        <div class="flow-text">Student clicks "Access LMS" — instantly logged into Moodle. No separate password needed.</div>
-        <span class="flow-by" style="background:#dbeafe; color:#2563eb;">SSO – Automatic</span>
-      </div>
-      <div class="flow-block" style="border-color:#059669;">
-        <span class="flow-emoji">📈</span>
-        <div class="flow-title">8. Progress Tracked</div>
-        <div class="flow-text">Teacher grades work in Moodle. Admin monitors attendance, grades, and support needs.</div>
-        <span class="flow-by" style="background:#d1fae5; color:#059669;">Teacher + Admin</span>
-      </div>
-    </div>
+  </div>
+</div>
 
-    <!-- ADMIN DAILY FLOW -->
-    <h3 style="font-size:1.1rem; font-weight:700; color:var(--dark); margin-bottom:1rem; margin-top:2rem;">
-      👩‍💼 Admin Daily Workflow
-    </h3>
-    <div class="flow-row">
-      <div class="flow-block" style="border-color:#4f46e5; min-width:160px;">
-        <span class="flow-emoji">🔑</span>
-        <div class="flow-title">Log In</div>
-        <div class="flow-text">Open browser → scl-institute.com → sign in with email &amp; password.</div>
-      </div>
-      <div class="flow-block" style="border-color:#0891b2; min-width:160px;">
-        <span class="flow-emoji">📊</span>
-        <div class="flow-title">Check Dashboard</div>
-        <div class="flow-text">View overview of all pending applications, recent activity, and alerts.</div>
-      </div>
-      <div class="flow-block" style="border-color:#d97706; min-width:160px;">
-        <span class="flow-emoji">📋</span>
-        <div class="flow-title">Process Applications</div>
-        <div class="flow-text">Open Admissions Hub → review new applications → approve or request more info.</div>
-      </div>
-      <div class="flow-block" style="border-color:#059669; min-width:160px;">
-        <span class="flow-emoji">🎓</span>
-        <div class="flow-title">Manage Enrolments</div>
-        <div class="flow-text">Check LMS Enrolments → confirm students are on their correct courses in Moodle.</div>
-      </div>
-      <div class="flow-block" style="border-color:#7c3aed; min-width:160px;">
-        <span class="flow-emoji">📈</span>
-        <div class="flow-title">Review Reports</div>
-        <div class="flow-text">Go to Student Programmes → check progress data → generate reports if needed.</div>
-      </div>
-    </div>
-  </section>
+<div class="section-divider">System Info</div>
+<div class="card-grid cols-3" style="margin-bottom:2rem">
+  <div class="info-card" style="border-top:3px solid var(--blue)"><div class="info-card-icon">&#127760;</div><h4>Production URL</h4><p><a href="http://system.sclsandbox.xyz/" target="_blank" style="color:var(--blue);font-family:monospace;font-size:.88rem">system.sclsandbox.xyz</a><br/>Always online &mdash; Docker hosted on dedicated VPS server.</p></div>
+  <div class="info-card" style="border-top:3px solid var(--green)"><div class="info-card-icon">&#128279;</div><h4>Single Sign-On</h4><p>Log in once to the portal &mdash; click &ldquo;Open Moodle LMS&rdquo; and you are automatically signed in. No second password ever needed.</p></div>
+  <div class="info-card" style="border-top:3px solid var(--purple)"><div class="info-card-icon">&#128051;</div><h4>Technology</h4><p>Built with React &middot; Node.js &middot; MySQL &middot; Moodle LMS &middot; Docker &middot; Nginx. Fully containerised.</p></div>
+</div>
 
-  <!-- ===== SECTION 7: SYSTEM ARCHITECTURE ===== -->
-  <section id="architecture">
-    <div class="section-hdr">
-      <div class="section-hdr-icon" style="background:#cffafe">
-        <svg viewBox="0 0 24 24" fill="#0891b2"><path d="M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z"/></svg>
-      </div>
-      <div>
-        <h2>System Architecture</h2>
-        <p>How all the pieces connect together</p>
-      </div>
-    </div>
+</div>
 
-    <!-- Architecture diagram in blocks -->
-    <div style="background:white; border-radius:var(--radius); padding:2.5rem; box-shadow:var(--shadow);">
-
-      <!-- Layer 1: Users -->
-      <div style="text-align:center; margin-bottom:1.5rem;">
-        <div style="font-size:.8rem; font-weight:700; color:var(--gray-400); letter-spacing:.08em; margin-bottom:.7rem;">USERS (Who Connects)</div>
-        <div style="display:flex; justify-content:center; gap:1rem; flex-wrap:wrap;">
-          <div style="padding:.6rem 1.2rem; background:#ede9fe; border-radius:8px; font-size:.85rem; font-weight:700; color:#4f46e5;">👑 System Admin</div>
-          <div style="padding:.6rem 1.2rem; background:#cffafe; border-radius:8px; font-size:.85rem; font-weight:700; color:#0891b2;">🏫 College Admin</div>
-          <div style="padding:.6rem 1.2rem; background:#d1fae5; border-radius:8px; font-size:.85rem; font-weight:700; color:#059669;">👔 Manager</div>
-          <div style="padding:.6rem 1.2rem; background:#fef3c7; border-radius:8px; font-size:.85rem; font-weight:700; color:#d97706;">👩‍🏫 Teacher</div>
-          <div style="padding:.6rem 1.2rem; background:#ede9fe; border-radius:8px; font-size:.85rem; font-weight:700; color:#7c3aed;">🎓 Student</div>
-        </div>
-        <div style="font-size:1.5rem; color:var(--gray-400); margin-top:.7rem;">↓</div>
-      </div>
-
-      <!-- Layer 2: Frontend -->
-      <div style="background:linear-gradient(135deg,#4f46e5,#7c3aed); border-radius:12px; padding:1.5rem 2rem; text-align:center; color:white; margin-bottom:1rem;">
-        <div style="font-size:.75rem; font-weight:700; opacity:.7; letter-spacing:.08em; margin-bottom:.3rem;">LAYER 1 — FRONTEND</div>
-        <div style="font-size:1.2rem; font-weight:800;">⚛️ React Web Application</div>
-        <div style="font-size:.85rem; opacity:.8; margin-top:.3rem;">What you see in your browser — the dashboards, forms, tables, sidebars</div>
-        <div style="margin-top:.7rem; display:flex; justify-content:center; gap:.6rem; flex-wrap:wrap;">
-          <span style="background:rgba(255,255,255,.15); border-radius:6px; padding:.2rem .7rem; font-size:.75rem;">Login Page</span>
-          <span style="background:rgba(255,255,255,.15); border-radius:6px; padding:.2rem .7rem; font-size:.75rem;">Admin Dashboard</span>
-          <span style="background:rgba(255,255,255,.15); border-radius:6px; padding:.2rem .7rem; font-size:.75rem;">Student Portal</span>
-          <span style="background:rgba(255,255,255,.15); border-radius:6px; padding:.2rem .7rem; font-size:.75rem;">Applications</span>
-          <span style="background:rgba(255,255,255,.15); border-radius:6px; padding:.2rem .7rem; font-size:.75rem;">Reports</span>
-        </div>
-      </div>
-      <div style="font-size:1.5rem; color:var(--gray-400); text-align:center;">↓ API Requests ↓</div>
-
-      <!-- Layer 3: Backend -->
-      <div style="background:linear-gradient(135deg,#059669,#0d9488); border-radius:12px; padding:1.5rem 2rem; text-align:center; color:white; margin-top:1rem; margin-bottom:1rem;">
-        <div style="font-size:.75rem; font-weight:700; opacity:.7; letter-spacing:.08em; margin-bottom:.3rem;">LAYER 2 — BACKEND API</div>
-        <div style="font-size:1.2rem; font-weight:800;">🟢 Node.js + Express Server</div>
-        <div style="font-size:.85rem; opacity:.8; margin-top:.3rem;">The brain — handles authentication, data processing, business rules, SSO tokens</div>
-        <div style="margin-top:.7rem; display:flex; justify-content:center; gap:.6rem; flex-wrap:wrap;">
-          <span style="background:rgba(255,255,255,.15); border-radius:6px; padding:.2rem .7rem; font-size:.75rem;">Auth / Login</span>
-          <span style="background:rgba(255,255,255,.15); border-radius:6px; padding:.2rem .7rem; font-size:.75rem;">Student Routes</span>
-          <span style="background:rgba(255,255,255,.15); border-radius:6px; padding:.2rem .7rem; font-size:.75rem;">Moodle SSO</span>
-          <span style="background:rgba(255,255,255,.15); border-radius:6px; padding:.2rem .7rem; font-size:.75rem;">Notifications</span>
-          <span style="background:rgba(255,255,255,.15); border-radius:6px; padding:.2rem .7rem; font-size:.75rem;">Accreditations</span>
-        </div>
-      </div>
-      <div style="font-size:1.5rem; color:var(--gray-400); text-align:center;">↓ Database Queries ↓ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ↓ Moodle API ↓</div>
-
-      <!-- Layer 4: DB + Moodle -->
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-top:1rem;">
-        <div style="background:linear-gradient(135deg,#d97706,#ea580c); border-radius:12px; padding:1.5rem 1.5rem; text-align:center; color:white;">
-          <div style="font-size:.75rem; font-weight:700; opacity:.7; letter-spacing:.08em; margin-bottom:.3rem;">LAYER 3 — DATABASE</div>
-          <div style="font-size:1.1rem; font-weight:800;">🗄️ MySQL Database</div>
-          <div style="font-size:.82rem; opacity:.8; margin-top:.3rem;">Stores all users, applications, courses, roles, settings, notifications</div>
-        </div>
-        <div style="background:linear-gradient(135deg,#7c3aed,#a855f7); border-radius:12px; padding:1.5rem 1.5rem; text-align:center; color:white;">
-          <div style="font-size:.75rem; font-weight:700; opacity:.7; letter-spacing:.08em; margin-bottom:.3rem;">LAYER 3 — LMS</div>
-          <div style="font-size:1.1rem; font-weight:800;">📚 Moodle LMS</div>
-          <div style="font-size:.82rem; opacity:.8; margin-top:.3rem;">Delivers all course content, activities, assignments, grades &amp; calendar</div>
-        </div>
-      </div>
-
-      <!-- Layer 5: Infrastructure -->
-      <div style="background:var(--dark); border-radius:12px; padding:1rem 1.5rem; text-align:center; color:white; margin-top:1rem;">
-        <div style="font-size:.75rem; font-weight:700; opacity:.6; letter-spacing:.08em; margin-bottom:.2rem;">INFRASTRUCTURE</div>
-        <div style="font-size:.9rem; opacity:.8;">🐳 Docker Containers &nbsp;|&nbsp; 🌐 Nginx Web Server &nbsp;|&nbsp; ☁️ VPS Server (system.sclsandbox.xyz) &nbsp;|&nbsp; 🔒 SSL/HTTPS</div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ===== SECTION 8: ACCESS URLS ===== -->
-  <section id="access">
-    <div class="section-hdr">
-      <div class="section-hdr-icon" style="background:#fee2e2">
-        <svg viewBox="0 0 24 24" fill="#dc2626"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
-      </div>
-      <div>
-        <h2>How to Access the System</h2>
-        <p>Direct links for each part of the platform</p>
-      </div>
-    </div>
-
-    <div class="card-grid-2">
-      <div class="url-card" style="border-color:var(--purple);">
-        <div class="url-icon">🖥️</div>
-        <div>
-          <div class="url-title">SCL Institute Portal (Main)</div>
-          <div class="url-link">http://system.sclsandbox.xyz/</div>
-          <div class="url-desc">Main login and dashboard — where all staff and students sign in</div>
-        </div>
-      </div>
-      <div class="url-card" style="border-color:var(--blue);">
-        <div class="url-icon">📚</div>
-        <div>
-          <div class="url-title">Moodle Learning System</div>
-          <div class="url-link">Accessed via "Access LMS" button inside the portal</div>
-          <div class="url-desc">Online learning — courses, assignments, grades. No separate login needed (SSO)</div>
-        </div>
-      </div>
-      <div class="url-card" style="border-color:var(--green);">
-        <div class="url-icon">📊</div>
-        <div>
-          <div class="url-title">Admin Dashboard</div>
-          <div class="url-link">http://system.sclsandbox.xyz/admin/dashboard</div>
-          <div class="url-desc">Administration hub — applications, enrolments, reports (Admin only)</div>
-        </div>
-      </div>
-      <div class="url-card" style="border-color:var(--orange);">
-        <div class="url-icon">🔌</div>
-        <div>
-          <div class="url-title">API Health Check</div>
-          <div class="url-link">http://system.sclsandbox.xyz/api/health</div>
-          <div class="url-desc">Technical endpoint to verify the backend is running (for IT support)</div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ===== SECTION 9: TEST USERS ===== -->
-  <section id="users">
-    <div class="section-hdr">
-      <div class="section-hdr-icon" style="background:#d1fae5">
-        <svg viewBox="0 0 24 24" fill="#059669"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
-      </div>
-      <div>
-        <h2>Demo Login Accounts</h2>
-        <p>Use these to explore each role — all on the live production system</p>
-      </div>
-    </div>
-
-    <div class="card-grid-2">
-      <div class="card" style="border-left:5px solid #4f46e5;">
-        <div style="display:flex; align-items:center; gap:.8rem; margin-bottom:1rem;">
-          <div style="width:44px; height:44px; background:#4f46e5; border-radius:50%; display:grid; place-items:center; color:white; font-weight:800; font-size:1.1rem;">SA</div>
-          <div>
-            <div style="font-weight:700;">System Admin – Sarah Johnson</div>
-            <div style="font-size:.8rem; color:var(--gray-400);">Full system access</div>
-          </div>
-        </div>
-        <div style="font-family:monospace; background:var(--gray-50); padding:.7rem; border-radius:8px; font-size:.85rem;">
-          📧 admin@sclsandbox.xyz<br>🔑 password123
-        </div>
-      </div>
-      <div class="card" style="border-left:5px solid #7c3aed;">
-        <div style="display:flex; align-items:center; gap:.8rem; margin-bottom:1rem;">
-          <div style="width:44px; height:44px; background:#7c3aed; border-radius:50%; display:grid; place-items:center; color:white; font-weight:800; font-size:1.1rem;">JD</div>
-          <div>
-            <div style="font-weight:700;">Student – John Doe</div>
-            <div style="font-size:.8rem; color:var(--gray-400);">Student portal access</div>
-          </div>
-        </div>
-        <div style="font-family:monospace; background:var(--gray-50); padding:.7rem; border-radius:8px; font-size:.85rem;">
-          📧 student.ali.001@scl.edu<br>🔑 password123
-        </div>
-      </div>
-      <div class="card" style="border-left:5px solid #d97706;">
-        <div style="display:flex; align-items:center; gap:.8rem; margin-bottom:1rem;">
-          <div style="width:44px; height:44px; background:#d97706; border-radius:50%; display:grid; place-items:center; color:white; font-weight:800; font-size:1rem;">EC</div>
-          <div>
-            <div style="font-weight:700;">Teacher – Dr. Emily Chen</div>
-            <div style="font-size:.8rem; color:var(--gray-400);">Teaching access + Moodle</div>
-          </div>
-        </div>
-        <div style="font-family:monospace; background:var(--gray-50); padding:.7rem; border-radius:8px; font-size:.85rem;">
-          📧 dr.ahmed.cs@scl.edu<br>🔑 password123
-        </div>
-      </div>
-      <div class="card" style="border-left:5px solid #059669;">
-        <div style="display:flex; align-items:center; gap:.8rem; margin-bottom:1rem;">
-          <div style="width:44px; height:44px; background:#059669; border-radius:50%; display:grid; place-items:center; color:white; font-weight:800; font-size:1rem;">MR</div>
-          <div>
-            <div style="font-weight:700;">Manager – Michael Rodriguez</div>
-            <div style="font-size:.8rem; color:var(--gray-400);">Reports &amp; overview access</div>
-          </div>
-        </div>
-        <div style="font-family:monospace; background:var(--gray-50); padding:.7rem; border-radius:8px; font-size:.85rem;">
-          📧 lmsmanager@scl.edu<br>🔑 password123
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ===== SECTION 10: KEY FEATURES SUMMARY ===== -->
-  <section id="features">
-    <div class="section-hdr">
-      <div class="section-hdr-icon" style="background:#ede9fe">
-        <svg viewBox="0 0 24 24" fill="#7c3aed"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zm4.24 16L12 15.45 7.77 18l1.12-4.81-3.73-3.23 4.92-.42L12 5l1.92 4.53 4.92.42-3.73 3.23L16.23 18z"/></svg>
-      </div>
-      <div>
-        <h2>Key Features at a Glance</h2>
-        <p>Everything the platform does — summarised simply</p>
-      </div>
-    </div>
-
-    <div class="card-grid-3">
-      <div class="card" style="border-top:4px solid #4f46e5;">
-        <div style="font-size:2rem; margin-bottom:.7rem;">🔐</div>
-        <h3 style="margin-bottom:.5rem; color:var(--dark);">Single Sign-On (SSO)</h3>
-        <p style="font-size:.88rem; color:var(--gray-600);">Login once to SCL Institute and access Moodle LMS with one click — no second password ever needed. Roles and names carry over automatically.</p>
-      </div>
-      <div class="card" style="border-top:4px solid #0891b2;">
-        <div style="font-size:2rem; margin-bottom:.7rem;">📋</div>
-        <h3 style="margin-bottom:.5rem; color:var(--dark);">Online Application System</h3>
-        <p style="font-size:.88rem; color:var(--gray-600);">Students apply online. Admins review, approve or reject. Full audit trail. Automated notifications at every stage.</p>
-      </div>
-      <div class="card" style="border-top:4px solid #059669;">
-        <div style="font-size:2rem; margin-bottom:.7rem;">📊</div>
-        <h3 style="margin-bottom:.5rem; color:var(--dark);">Live Dashboards &amp; Reports</h3>
-        <p style="font-size:.88rem; color:var(--gray-600);">Real-time data on enrolments, applications, attendance and progress. Export reports at any time. No more spreadsheets.</p>
-      </div>
-      <div class="card" style="border-top:4px solid #7c3aed;">
-        <div style="font-size:2rem; margin-bottom:.7rem;">👥</div>
-        <h3 style="margin-bottom:.5rem; color:var(--dark);">Role-Based Access Control</h3>
-        <p style="font-size:.88rem; color:var(--gray-600);">Each person only sees what they need. Admins control who has which role. Secure by design — no accidental access.</p>
-      </div>
-      <div class="card" style="border-top:4px solid #d97706;">
-        <div style="font-size:2rem; margin-bottom:.7rem;">🎓</div>
-        <h3 style="margin-bottom:.5rem; color:var(--dark);">Moodle LMS Integration</h3>
-        <p style="font-size:.88rem; color:var(--gray-600);">World-class learning platform built in. Course content, quizzes, assignments, attendance, gradebook — all managed inside Moodle.</p>
-      </div>
-      <div class="card" style="border-top:4px solid #dc2626;">
-        <div style="font-size:2rem; margin-bottom:.7rem;">🔔</div>
-        <h3 style="margin-bottom:.5rem; color:var(--dark);">Notifications System</h3>
-        <p style="font-size:.88rem; color:var(--gray-600);">In-app and email notifications for application updates, announcements, messages and system alerts. Nobody misses important updates.</p>
-      </div>
-      <div class="card" style="border-top:4px solid #0891b2;">
-        <div style="font-size:2rem; margin-bottom:.7rem;">📅</div>
-        <h3 style="margin-bottom:.5rem; color:var(--dark);">Programme Intakes &amp; Cohorts</h3>
-        <p style="font-size:.88rem; color:var(--gray-600);">Manage academic year intakes, cohorts and programme cycles. Track which students are in which intake. Prevents duplicate enrolments.</p>
-      </div>
-      <div class="card" style="border-top:4px solid #7c3aed;">
-        <div style="font-size:2rem; margin-bottom:.7rem;">🛡️</div>
-        <h3 style="margin-bottom:.5rem; color:var(--dark);">Accreditation &amp; Compliance</h3>
-        <p style="font-size:.88rem; color:var(--gray-600);">Track course accreditation status, approval workflows, risk conditions and sign-offs. Full audit trail for regulatory inspections.</p>
-      </div>
-      <div class="card" style="border-top:4px solid #059669;">
-        <div style="font-size:2rem; margin-bottom:.7rem;">💬</div>
-        <h3 style="margin-bottom:.5rem; color:var(--dark);">Student Support Hub</h3>
-        <p style="font-size:.88rem; color:var(--gray-600);">Students submit support requests, complaints, disability needs and safeguarding concerns directly through their portal. All tracked and managed.</p>
-      </div>
-    </div>
-  </section>
-
-</main>
-
-<!-- ===== FOOTER ===== -->
 <footer>
-  <div class="f-logo">SCL <span>Institute</span></div>
-  <p>Smart Learning Platform &mdash; Complete System Overview</p>
-  <p style="margin-top:.4rem;">Built with React &bull; Node.js &bull; MySQL &bull; Moodle &bull; Docker &nbsp;|&nbsp; Production: system.sclsandbox.xyz</p>
-  <p style="margin-top:.6rem; font-size:.75rem; opacity:.4;">Generated April 2026 &mdash; For internal and client use</p>
+  <strong>SCL Institute &ndash; Stratford College London</strong><br/>
+  <span>System Overview &nbsp;&middot;&nbsp; Production: system.sclsandbox.xyz &nbsp;&middot;&nbsp; React &middot; Node.js &middot; MySQL &middot; Moodle &middot; Docker</span>
 </footer>
 
 </body>
