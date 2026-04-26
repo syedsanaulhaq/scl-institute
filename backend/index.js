@@ -1230,6 +1230,7 @@ async function assignMoodleSystemRole(email, sclRole) {
     }
 }
 
+async function callMoodle(wsfunction, params = {}) {
     const moodleBaseUrl = process.env.MOODLE_INTERNAL_URL || process.env.MOODLE_URL || 'http://localhost:9090';
     const moodleToken = process.env.MOODLE_TOKEN;
 
