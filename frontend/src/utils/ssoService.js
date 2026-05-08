@@ -11,11 +11,6 @@ const LMS_WINDOW_NAME = 'scl_moodle_window';
 
 let lmsWindowRef = null;
 
-// Modal integration — LmsModal registers itself on mount
-let lmsModalCallback = null;
-export const registerLmsModal = (fn) => { lmsModalCallback = fn; };
-export const unregisterLmsModal = () => { lmsModalCallback = null; };
-
 const POPUP_FEATURES = (() => {
     const w = Math.min(1280, Math.round(window.screen.width * 0.85));
     const h = Math.min(900, Math.round(window.screen.height * 0.85));
@@ -120,11 +115,7 @@ export const openMoodleSSO = async (email, options = {}) => {
         const result = await generateSSOToken(email, redirectTo);
         
         if (result.success) {
-            // Use in-page modal if registered, otherwise fall back to popup window
-            if (lmsModalCallback) {
-                if (placeholderWindow && !placeholderWindow.closed) placeholderWindow.close();
-                lmsModalCallback(result.redirectUrl);
-            } else if (newWindow) {
+            if (newWindow) {
                 const opened = openOrReuseLmsWindow(result.redirectUrl, placeholderWindow);
                 if (!opened) {
                     const openError = 'Could not open Moodle window.';
@@ -183,7 +174,6 @@ export const logoutMoodleSession = () => {
         if (lmsWindowRef && !lmsWindowRef.closed) {
             lmsWindowRef.location.href = windowLogoutUrl;
         }
-        lmsModalCallback?.(null);
         lmsWindowRef = null;
     } catch (err) {
         // Cross-origin errors can occur if the window has already navigated
@@ -211,7 +201,5 @@ export default {
     generateSSOToken,
     openMoodleSSO,
     getMoodleUrl,
-    getSSOButtonConfig,
-    registerLmsModal,
-    unregisterLmsModal
+    getSSOButtonConfig
 };
