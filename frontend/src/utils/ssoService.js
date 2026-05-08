@@ -11,6 +11,13 @@ const LMS_WINDOW_NAME = 'scl_moodle_window';
 
 let lmsWindowRef = null;
 
+// Modal integration — set by LmsModal component on mount
+let lmsModalCallback = null;
+
+export const registerLmsModal = (fn) => { lmsModalCallback = fn; };
+export const unregisterLmsModal = () => { lmsModalCallback = null; };
+export const closeLmsModal = () => { lmsModalCallback?.(null); };
+
 const openOrReuseLmsWindow = (url, placeholderWindow = null) => {
     try {
         if (placeholderWindow && !placeholderWindow.closed) {
@@ -107,7 +114,13 @@ export const openMoodleSSO = async (email, options = {}) => {
         const result = await generateSSOToken(email, redirectTo);
         
         if (result.success) {
-            if (newWindow) {
+            // If the LmsModal is mounted, always use it instead of a new window
+            if (lmsModalCallback) {
+                if (placeholderWindow && !placeholderWindow.closed) {
+                    placeholderWindow.close();
+                }
+                lmsModalCallback(result.redirectUrl);
+            } else if (newWindow) {
                 const opened = openOrReuseLmsWindow(result.redirectUrl, placeholderWindow);
                 if (!opened) {
                     const openError = 'Could not open Moodle window.';
@@ -163,6 +176,9 @@ export const logoutMoodleSession = () => {
             keepalive: true
         }).catch(() => {});
 
+        // Close modal if open
+        closeLmsModal();
+
         if (lmsWindowRef && !lmsWindowRef.closed) {
             // Let the Moodle window complete server-side logout and close itself.
             lmsWindowRef.location.href = windowLogoutUrl;
@@ -194,5 +210,8 @@ export default {
     generateSSOToken,
     openMoodleSSO,
     getMoodleUrl,
-    getSSOButtonConfig
+    getSSOButtonConfig,
+    registerLmsModal,
+    unregisterLmsModal,
+    closeLmsModal
 };
