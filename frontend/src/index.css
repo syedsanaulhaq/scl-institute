@@ -11,7 +11,7 @@
  * smaller of vw/vh, naturally scaling with the screen's limiting dimension.
  */
 :root {
-    font-size: clamp(13px, 1.16vmin, 16px);
+    font-size: clamp(14px, 1.38vmin, 16px);
 }
 
 body {
