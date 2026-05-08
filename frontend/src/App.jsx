@@ -60,7 +60,6 @@ import TeacherRegistrationRequests from './components/TeacherRegistrationRequest
 import { getRoleContext } from './utils/roleAccess';
 import { logoutMoodleSession } from './utils/ssoService';
 import LmsModal from './components/LmsModal';
-import LmsModal from './components/LmsModal';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
 
