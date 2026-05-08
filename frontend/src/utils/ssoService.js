@@ -10,14 +10,44 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
 const LMS_WINDOW_NAME = 'scl_moodle_window';
 
 let lmsWindowRef = null;
+let blurCheckInterval = null;
 
 const POPUP_FEATURES = (() => {
     const w = Math.min(1280, Math.round(window.screen.width * 0.85));
-    const h = Math.min(900, Math.round(window.screen.height * 0.85));
+    const h = Math.min(780, Math.round(window.screen.height * 0.72));
     const left = Math.round((window.screen.width - w) / 2);
     const top = Math.round((window.screen.height - h) / 2);
     return `width=${w},height=${h},left=${left},top=${top},resizable=yes,scrollbars=yes,toolbar=no,menubar=no,location=yes`;
 })();
+
+const addBlurOverlay = () => {
+    if (document.getElementById('lms-blur-overlay')) return;
+    const overlay = document.createElement('div');
+    overlay.id = 'lms-blur-overlay';
+    overlay.style.cssText = [
+        'position:fixed', 'inset:0', 'z-index:9998',
+        'backdrop-filter:blur(5px)', '-webkit-backdrop-filter:blur(5px)',
+        'background:rgba(15,23,42,0.45)', 'pointer-events:none',
+        'transition:opacity 0.2s ease'
+    ].join(';');
+    document.body.appendChild(overlay);
+
+    // Poll until the popup is closed, then remove the overlay
+    blurCheckInterval = setInterval(() => {
+        if (!lmsWindowRef || lmsWindowRef.closed) {
+            clearInterval(blurCheckInterval);
+            blurCheckInterval = null;
+            removeBlurOverlay();
+        }
+    }, 500);
+};
+
+const removeBlurOverlay = () => {
+    clearInterval(blurCheckInterval);
+    blurCheckInterval = null;
+    const el = document.getElementById('lms-blur-overlay');
+    if (el) el.remove();
+};
 
 const openOrReuseLmsWindow = (url, placeholderWindow = null) => {
     try {
@@ -25,6 +55,7 @@ const openOrReuseLmsWindow = (url, placeholderWindow = null) => {
             placeholderWindow.location.href = url;
             placeholderWindow.focus();
             lmsWindowRef = placeholderWindow;
+            addBlurOverlay();
             return true;
         }
 
@@ -41,6 +72,7 @@ const openOrReuseLmsWindow = (url, placeholderWindow = null) => {
 
         lmsWindowRef = newWindow;
         lmsWindowRef.focus();
+        addBlurOverlay();
         return true;
     } catch (err) {
         console.error('[SSO] Failed to open/reuse LMS window:', err);
@@ -174,6 +206,7 @@ export const logoutMoodleSession = () => {
         if (lmsWindowRef && !lmsWindowRef.closed) {
             lmsWindowRef.location.href = windowLogoutUrl;
         }
+        removeBlurOverlay();
         lmsWindowRef = null;
     } catch (err) {
         // Cross-origin errors can occur if the window has already navigated
