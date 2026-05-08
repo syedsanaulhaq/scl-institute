@@ -17,7 +17,7 @@ const POPUP_FEATURES = (() => {
     const h = Math.min(780, Math.round(window.screen.height * 0.72));
     const left = Math.round((window.screen.width - w) / 2);
     const top = Math.round((window.screen.height - h) / 2);
-    return `width=${w},height=${h},left=${left},top=${top},resizable=yes,scrollbars=yes,toolbar=no,menubar=no,location=yes`;
+    return `width=${w},height=${h},left=${left},top=${top},resizable=yes,scrollbars=yes,toolbar=no,menubar=no,location=no`;
 })();
 
 const addBlurOverlay = () => {
