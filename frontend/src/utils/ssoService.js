@@ -11,12 +11,13 @@ const LMS_WINDOW_NAME = 'scl_moodle_window';
 
 let lmsWindowRef = null;
 
-// Modal integration — set by LmsModal component on mount
-let lmsModalCallback = null;
-
-export const registerLmsModal = (fn) => { lmsModalCallback = fn; };
-export const unregisterLmsModal = () => { lmsModalCallback = null; };
-export const closeLmsModal = () => { lmsModalCallback?.(null); };
+const POPUP_FEATURES = (() => {
+    const w = Math.min(1280, Math.round(window.screen.width * 0.85));
+    const h = Math.min(900, Math.round(window.screen.height * 0.85));
+    const left = Math.round((window.screen.width - w) / 2);
+    const top = Math.round((window.screen.height - h) / 2);
+    return `width=${w},height=${h},left=${left},top=${top},resizable=yes,scrollbars=yes,toolbar=no,menubar=no,location=yes`;
+})();
 
 const openOrReuseLmsWindow = (url, placeholderWindow = null) => {
     try {
@@ -33,7 +34,7 @@ const openOrReuseLmsWindow = (url, placeholderWindow = null) => {
             return true;
         }
 
-        const newWindow = window.open(url, LMS_WINDOW_NAME);
+        const newWindow = window.open(url, LMS_WINDOW_NAME, POPUP_FEATURES);
         if (!newWindow) {
             return false;
         }
@@ -103,7 +104,7 @@ export const openMoodleSSO = async (email, options = {}) => {
 
     try {
         if (newWindow) {
-            placeholderWindow = window.open('', LMS_WINDOW_NAME);
+            placeholderWindow = window.open('', LMS_WINDOW_NAME, POPUP_FEATURES);
             if (!placeholderWindow) {
                 const popupError = 'Popup blocked. Please allow popups for this site.';
                 onError?.(popupError);
@@ -114,13 +115,7 @@ export const openMoodleSSO = async (email, options = {}) => {
         const result = await generateSSOToken(email, redirectTo);
         
         if (result.success) {
-            // If the LmsModal is mounted, always use it instead of a new window
-            if (lmsModalCallback) {
-                if (placeholderWindow && !placeholderWindow.closed) {
-                    placeholderWindow.close();
-                }
-                lmsModalCallback(result.redirectUrl);
-            } else if (newWindow) {
+            if (newWindow) {
                 const opened = openOrReuseLmsWindow(result.redirectUrl, placeholderWindow);
                 if (!opened) {
                     const openError = 'Could not open Moodle window.';
@@ -176,9 +171,6 @@ export const logoutMoodleSession = () => {
             keepalive: true
         }).catch(() => {});
 
-        // Close modal if open
-        closeLmsModal();
-
         if (lmsWindowRef && !lmsWindowRef.closed) {
             // Let the Moodle window complete server-side logout and close itself.
             lmsWindowRef.location.href = windowLogoutUrl;
@@ -210,8 +202,5 @@ export default {
     generateSSOToken,
     openMoodleSSO,
     getMoodleUrl,
-    getSSOButtonConfig,
-    registerLmsModal,
-    unregisterLmsModal,
-    closeLmsModal
+    getSSOButtonConfig
 };
