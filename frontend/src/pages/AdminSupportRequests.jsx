@@ -81,13 +81,16 @@ function SupportRequestsTab() {
     };
 
     const saveReply = async (id) => {
+        const admin_reply = (replyDraft[id] ?? '').trim();
+        if (!admin_reply) return;
         setSavingReply(id);
         try {
             const current = items.find((i) => i.id === id);
             const status = current?.status || 'open';
-            const admin_reply = (replyDraft[id] ?? '').trim();
             await axios.put(`${API_URL}/support/admin/requests/${id}`, { status, admin_reply });
             setItems(prev => prev.map(i => i.id === id ? { ...i, admin_reply } : i));
+            // Clear the textarea after successful save
+            setReplyDraft(p => { const n = { ...p }; delete n[id]; return n; });
         } catch (e) {
             console.error(e);
             alert('Failed to save reply. Please try again.');
@@ -136,26 +139,42 @@ function SupportRequestsTab() {
                                         <ExpandRow label="Type"><Badge value={item.type} /></ExpandRow>
                                         <ExpandRow label="Submitted"><span className="flex items-center gap-1"><Calendar className="w-3 h-3" />{fmt(item.created_at)}</span></ExpandRow>
                                         <ExpandRow label="Description"><p className="whitespace-pre-wrap">{item.description}</p></ExpandRow>
-                                        <ExpandRow label="Reply">
-                                            <p className="whitespace-pre-wrap">{item.admin_reply || 'No reply yet.'}</p>
-                                        </ExpandRow>
                                     </div>
+
+                                    {/* Reply card — shown if a reply exists */}
+                                    {item.admin_reply ? (
+                                        <div className="mb-4 rounded-xl border border-indigo-100 bg-indigo-50 px-4 py-3">
+                                            <div className="flex items-center gap-2 mb-1.5">
+                                                <div className="w-6 h-6 rounded-full bg-indigo-600 flex items-center justify-center flex-shrink-0">
+                                                    <span className="text-white text-xs font-bold">A</span>
+                                                </div>
+                                                <span className="text-xs font-semibold text-indigo-700">Admin Reply</span>
+                                                <span className="text-xs text-slate-400 ml-auto">{fmt(item.updated_at)}</span>
+                                            </div>
+                                            <p className="text-sm text-slate-800 whitespace-pre-wrap leading-relaxed">{item.admin_reply}</p>
+                                        </div>
+                                    ) : (
+                                        <div className="mb-4 rounded-xl border border-dashed border-slate-200 bg-white px-4 py-3 text-center">
+                                            <p className="text-xs text-slate-400">No reply sent yet.</p>
+                                        </div>
+                                    )}
+
                                     <div className="mb-3">
-                                        <label className="text-xs text-slate-500 mb-1 block">Reply to Student</label>
+                                        <label className="text-xs text-slate-500 mb-1 block">{item.admin_reply ? 'Update Reply' : 'Reply to Student'}</label>
                                         <textarea
                                             rows={3}
-                                            value={replyDraft[item.id] ?? item.admin_reply ?? ''}
+                                            value={replyDraft[item.id] ?? ''}
                                             onChange={(e) => setReplyDraft((p) => ({ ...p, [item.id]: e.target.value }))}
                                             className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 resize-none focus:ring-2 focus:ring-indigo-300 outline-none"
-                                            placeholder="Write a reply that the student can see..."
+                                            placeholder={item.admin_reply ? 'Write an updated reply...' : 'Write a reply that the student can see...'}
                                         />
                                         <div className="mt-2 flex justify-end">
                                             <button
-                                                disabled={savingReply === item.id}
+                                                disabled={savingReply === item.id || !(replyDraft[item.id] ?? '').trim()}
                                                 onClick={() => saveReply(item.id)}
-                                                className="text-xs px-3 py-1.5 rounded-md border border-indigo-300 text-indigo-700 hover:bg-indigo-50 disabled:opacity-60"
+                                                className="text-xs px-4 py-1.5 rounded-md bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-40 transition"
                                             >
-                                                {savingReply === item.id ? 'Saving...' : 'Save Reply'}
+                                                {savingReply === item.id ? 'Saving…' : item.admin_reply ? 'Update Reply' : 'Send Reply'}
                                             </button>
                                         </div>
                                     </div>
