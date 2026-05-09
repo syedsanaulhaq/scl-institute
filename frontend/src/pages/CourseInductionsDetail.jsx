@@ -864,7 +864,7 @@ const CourseInductionsDetail = () => {
                         
                         {isNew && (
                             <div className="col-span-2">
-                                <label className="block text-sm font-semibold text-gray-700 mb-1">Select Accredited Course *</label>
+                                <label className="block text-sm font-semibold text-gray-700 mb-1">Select Course *</label>
                                 <select
                                     value={selectedAccreditationId}
                                     onChange={(e) => {
@@ -880,7 +880,7 @@ const CourseInductionsDetail = () => {
                                     disabled={isPrefilledCourseContext}
                                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-scl-purple focus:border-transparent disabled:bg-gray-100 disabled:text-gray-600"
                                 >
-                                    <option value="" disabled>-- Pick a course from Accreditation --</option>
+                                    <option value="" disabled>-- Select a Course --</option>
                                     {accreditedCourses.map(acc => (
                                         <option key={acc.id} value={acc.id}>
                                             {acc.course_title}{acc.course_code ? ` (${acc.course_code})` : ''}

@@ -264,7 +264,7 @@ const CourseMasterDetail = () => {
             Back to Lifecycle
           </button>
           <h1 className="text-2xl font-bold text-gray-900">New Course</h1>
-          <p className="text-sm text-gray-600">Use Moodle category hierarchy: Programme Type {'>'} Program {'>'} Year {'>'} Semester {'>'} Course</p>
+          <p className="text-sm text-gray-600">Use Moodle category hierarchy: Course Type {'>'} Course {'>'} Year {'>'} Semester {'>'} Subject</p>
         </div>
       </div>
 
@@ -272,18 +272,18 @@ const CourseMasterDetail = () => {
         <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-4">
           {/* Hierarchy Selection */}
           <div className="border border-gray-200 rounded-lg p-4 bg-gray-50/50 space-y-4">
-            <p className="text-sm font-semibold text-gray-800">Structure: Programme Type {'>'} Program {'>'} Year {'>'} Semester</p>
+            <p className="text-sm font-semibold text-gray-800">Structure: Course Type {'>'} Course {'>'} Year {'>'} Semester</p>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               {/* Type */}
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label className="text-sm font-semibold text-gray-700">Programme Type</label>
+                  <label className="text-sm font-semibold text-gray-700">Course Type</label>
                   <button
                     type="button"
                     onClick={() => { setModal('type'); setModalInput(''); }}
                     className="w-6 h-6 bg-blue-600 text-white rounded-full hover:bg-purple-700 flex items-center justify-center text-sm font-bold"
-                    title="Add new Programme Type"
+                    title="Add new Course Type"
                   >+</button>
                 </div>
                 <select
@@ -457,7 +457,7 @@ const CourseMasterDetail = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
           <div className="bg-white rounded-lg shadow-xl p-6 max-w-lg w-full mx-4">
             <h2 className="text-lg font-bold text-gray-900 mb-1">
-              Add New {modal === 'type' ? 'Programme Type' : modal === 'program' ? 'Program' : modal === 'year' ? 'Year' : 'Semester'}
+              Add New {modal === 'type' ? 'Course Type' : modal === 'program' ? 'Course' : modal === 'year' ? 'Year' : 'Semester'}
             </h2>
             <p className="text-xs text-gray-500 mb-4">Creates new category in hierarchy</p>
             <input

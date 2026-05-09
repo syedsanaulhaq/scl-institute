@@ -851,7 +851,7 @@ const CourseRegistrations = () => {
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
                     <div>
                         <h1 className="text-2xl font-bold text-gray-900">Course Registration (Moodle)</h1>
-                        <p className="text-sm text-gray-500">Loaded from Moodle categories in Programme Type {'>'} Program {'>'} Year {'>'} Semester order. Search existing values or type new values.</p>
+                        <p className="text-sm text-gray-500">Loaded from Moodle categories in Course Type {'>'} Course {'>'} Year {'>'} Semester order. Search existing values or type new values.</p>
                     </div>
                     <button onClick={fetchData} className="px-3 py-2 rounded-lg text-sm font-semibold bg-gray-100 hover:bg-gray-200 text-gray-800">
                         <RefreshCw className="w-4 h-4 inline mr-2" />Refresh
@@ -864,7 +864,7 @@ const CourseRegistrations = () => {
                     <p className="text-sm font-semibold text-gray-800">Registration Structure (applies to one-click register)</p>
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <div>
-                        <label className="block text-xs font-semibold text-gray-600 uppercase mb-1">Programme Type</label>
+                        <label className="block text-xs font-semibold text-gray-600 uppercase mb-1">Course Type</label>
                         <input
                             list="registration-programme-type-options"
                             value={getDisplayedStructureValue('programme_type_name', structureInput.programme_type_name)}
@@ -883,7 +883,7 @@ const CourseRegistrations = () => {
                     </div>
 
                     <div>
-                        <label className="block text-xs font-semibold text-gray-600 uppercase mb-1">Program</label>
+                        <label className="block text-xs font-semibold text-gray-600 uppercase mb-1">Course</label>
                         <input
                             list="registration-program-options"
                             value={getDisplayedStructureValue('program_name', structureInput.program_name)}
@@ -893,7 +893,7 @@ const CourseRegistrations = () => {
                             onChange={(e) => commitStructureInput('program_name', e.target.value, handleProgramInput)}
                             disabled={!structureInput.programme_type_name.trim()}
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"
-                            placeholder={structureInput.programme_type_name.trim() ? 'Search program or type new' : 'Select or type Programme Type first'}
+                            placeholder={structureInput.programme_type_name.trim() ? 'Search course or type new' : 'Select or type Course Type first'}
                         />
                         <datalist id="registration-program-options">
                             {programOptions.map((option) => (
@@ -901,7 +901,7 @@ const CourseRegistrations = () => {
                             ))}
                         </datalist>
                         {!structureInput.programme_type_name.trim() && (
-                            <p className="text-xs text-gray-500 mt-1">Choose Programme Type first to unlock Program.</p>
+                            <p className="text-xs text-gray-500 mt-1">Choose Course Type first to unlock Course.</p>
                         )}
                     </div>
 
@@ -1124,8 +1124,8 @@ const CourseRegistrations = () => {
                                     ['Course Code / ID', selectedAccreditation.course_code || '-'],
                                     ['Awarding Body', selectedAccreditation.awarding_body || '-'],
                                     ['Qualification Level', selectedAccreditation.qualification_level || selectedAccreditation.course_type || '-'],
-                                    ['Programme Type', selectedCourseStructure?.programme_type_name || '-'],
-                                    ['Program', getFullProgramName(selectedCourseStructure?.program_name, moodleProgrammeTypes) || '-'],
+                                    ['Course Type', selectedCourseStructure?.programme_type_name || '-'],
+                                    ['Course', getFullProgramName(selectedCourseStructure?.program_name, moodleProgrammeTypes) || '-'],
                                     ['Academic Year', selectedCourseStructure?.academic_year || '-'],
                                     ['Semester', selectedCourseStructure?.semester_name || '-']
                                 ].map(([label, value]) => (

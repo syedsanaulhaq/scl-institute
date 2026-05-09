@@ -539,10 +539,10 @@ const StudentAdmissionForm = ({ onSubmitSuccess, isEditMode = false }) => {
 
   const renderCourseSelection = () => (
     <div className="space-y-6">
-      {/* Programme Type & Programme */}
+      {/* Course Type & Course */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Programme Type *</label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Course Type *</label>
           <select
             value={formData.programmeTypeName}
             onChange={(e) => handleInputChange('programmeTypeName', e.target.value)}
@@ -550,7 +550,7 @@ const StudentAdmissionForm = ({ onSubmitSuccess, isEditMode = false }) => {
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
           >
             <option value="">
-              {loadingCourses ? 'Loading...' : 'Select programme type'}
+              {loadingCourses ? 'Loading...' : 'Select course type'}
             </option>
             {Object.keys(programmeTypes).map(pt => (
               <option key={pt} value={pt}>{pt}</option>
@@ -558,14 +558,14 @@ const StudentAdmissionForm = ({ onSubmitSuccess, isEditMode = false }) => {
           </select>
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Programme *</label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Course *</label>
           <select
             value={formData.programName}
             onChange={(e) => handleInputChange('programName', e.target.value)}
             disabled={!formData.programmeTypeName}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
           >
-            <option value="">Select programme</option>
+            <option value="">Select course</option>
             {availablePrograms.map(p => (
               <option key={p} value={p}>{p}</option>
             ))}

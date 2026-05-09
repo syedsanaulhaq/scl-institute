@@ -231,14 +231,24 @@ const CourseAccreditationsDetail = () => {
     const fetchCourses = async () => {
         try {
             setCourseLoading(true);
-            console.log('Fetching courses from:', `${API_URL}/students/courses`);
-            const response = await axios.get(`${API_URL}/students/courses`);
-            console.log('Courses response:', response.data);
-            const coursesList = Array.isArray(response.data?.data) ? response.data.data : response.data;
-            console.log('Processed courses list:', coursesList);
-            const coursesArray = Array.isArray(coursesList) ? coursesList : [];
-            setCourses(coursesArray);
-            return coursesArray; // Return the courses for use in async chain
+            const response = await axios.get(`${API_URL}/students/programme-intakes`);
+            const intakesList = Array.isArray(response.data?.data) ? response.data.data : [];
+            // De-duplicate by program_name so each Course appears once in the dropdown
+            const seen = new Set();
+            const uniqueProgrammes = [];
+            for (const intake of intakesList) {
+                const key = intake.program_name;
+                if (key && !seen.has(key)) {
+                    seen.add(key);
+                    uniqueProgrammes.push({
+                        id: intake.id,
+                        course_title: intake.program_name,
+                        course_code: intake.programme_type_name
+                    });
+                }
+            }
+            setCourses(uniqueProgrammes);
+            return uniqueProgrammes;
         } catch (err) {
             console.error('Failed to fetch courses:', err);
             setCourses([]);
@@ -256,8 +266,8 @@ const CourseAccreditationsDetail = () => {
             // Set the course info
             setFormData(prev => ({
                 ...prev,
-                course_title: course.fullname || course.course_title || '',
-                course_code: course.shortname || course.course_code || ''
+                course_title: course.course_title || '',
+                course_code: course.course_code || ''
             }));
 
             // Check if accreditation already exists for this course
@@ -265,7 +275,7 @@ const CourseAccreditationsDetail = () => {
                 const response = await axios.get(`${API_URL}/accreditations`, { 
                     params: { course_id: courseId } 
                 });
-                const existingAccreditation = response.data?.data?.find(acc => acc.course_id === courseId || acc.course_title === (course.fullname || course.course_title));
+                const existingAccreditation = response.data?.data?.find(acc => acc.course_id === courseId || acc.course_title === course.course_title);
                 
                 if (existingAccreditation) {
                     // Load existing accreditation data
@@ -630,7 +640,7 @@ const CourseAccreditationsDetail = () => {
             console.log('Looking for course with title:', accreditation.course_title);
             if (coursesList.length > 0) {
                 const matchingCourse = coursesList.find(c => 
-                    (c.fullname || c.course_title) === accreditation.course_title
+                    (c.course_title) === accreditation.course_title
                 );
                 console.log('Found matching course?', !!matchingCourse, matchingCourse);
                 if (matchingCourse) {

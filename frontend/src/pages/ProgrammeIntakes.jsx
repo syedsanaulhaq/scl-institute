@@ -104,7 +104,7 @@ const ProgrammeIntakes = () => {
 
     const handleCreateIntake = async () => {
         if (!intakeForm.programme_type_name || !intakeForm.program_name || !intakeForm.intake_label) {
-            showMessage('Please fill Programme Type, Programme, and Intake Label.', 'error');
+            showMessage('Please fill Course Type, Course, and Intake Label.', 'error');
             return;
         }
 
@@ -191,9 +191,9 @@ const ProgrammeIntakes = () => {
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900">Programme Intakes</h1>
+                    <h1 className="text-2xl font-bold text-gray-900">Course Intakes</h1>
                     <p className="text-sm text-gray-500">
-                        Manage student intake batches. Each intake creates a Moodle cohort and registers all courses in the programme.
+                        Manage student intake batches. Each intake creates a Moodle cohort and registers all subjects in the course.
                     </p>
                 </div>
                 <div className="flex gap-2">
@@ -231,31 +231,31 @@ const ProgrammeIntakes = () => {
                 <div className="bg-white border-2 border-scl-purple/30 rounded-xl p-6 space-y-4">
                     <h2 className="text-lg font-bold text-gray-900">Create New Intake</h2>
                     <p className="text-sm text-gray-500">
-                        Select the programme and intake period. All courses in this programme will be automatically registered and synced to Moodle.
+                        Select the course and intake period. All subjects in this course will be automatically registered and synced to Moodle.
                     </p>
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
-                            <label className="block text-xs font-semibold text-gray-600 uppercase mb-1">Programme Type</label>
+                            <label className="block text-xs font-semibold text-gray-600 uppercase mb-1">Course Type</label>
                             <select
                                 value={intakeForm.programme_type_name}
                                 onChange={(e) => setIntakeForm(prev => ({ ...prev, programme_type_name: e.target.value, program_name: '' }))}
                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:border-scl-purple focus:ring-2 focus:ring-scl-purple/20"
                             >
-                                <option value="">Select Programme Type</option>
+                                <option value="">Select Course Type</option>
                                 {programmeTypes.map(t => <option key={t} value={t}>{t}</option>)}
                             </select>
                         </div>
 
                         <div>
-                            <label className="block text-xs font-semibold text-gray-600 uppercase mb-1">Programme</label>
+                            <label className="block text-xs font-semibold text-gray-600 uppercase mb-1">Course</label>
                             <select
                                 value={intakeForm.program_name}
                                 onChange={(e) => setIntakeForm(prev => ({ ...prev, program_name: e.target.value }))}
                                 disabled={!intakeForm.programme_type_name}
                                 className={`w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:border-scl-purple focus:ring-2 focus:ring-scl-purple/20 ${!intakeForm.programme_type_name ? 'opacity-50' : ''}`}
                             >
-                                <option value="">{intakeForm.programme_type_name ? 'Select Programme' : 'Select Type first'}</option>
+                                <option value="">{intakeForm.programme_type_name ? 'Select Course' : 'Select Type first'}</option>
                                 {programs.map(p => <option key={p} value={p}>{p}</option>)}
                             </select>
                         </div>
@@ -322,7 +322,7 @@ const ProgrammeIntakes = () => {
                     <CircleDashed className="w-10 h-10 mx-auto text-gray-300 mb-3" />
                     <p className="text-gray-600 font-semibold">No intakes created yet</p>
                     <p className="text-sm text-gray-400 mt-1">
-                        Click "Add Intake" to create a student batch for a programme. All courses in that programme will be registered automatically.
+                        Click "Add Intake" to create a student batch for a course. All subjects in that course will be registered automatically.
                     </p>
                 </div>
             ) : (

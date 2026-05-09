@@ -303,7 +303,7 @@ const CollegeAdminDashboard = ({ user }) => {
                                     <th className="text-left px-4 py-3 font-medium">Ref</th>
                                     <th className="text-left px-4 py-3 font-medium">Name</th>
                                     <th className="text-left px-4 py-3 font-medium">Email</th>
-                                    <th className="text-left px-4 py-3 font-medium">Programme</th>
+                                    <th className="text-left px-4 py-3 font-medium">Course</th>
                                     <th className="text-left px-4 py-3 font-medium">Status</th>
                                     <th className="text-left px-4 py-3 font-medium">Submitted</th>
                                     <th className="px-4 py-3" />

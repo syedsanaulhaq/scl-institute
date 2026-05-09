@@ -139,7 +139,7 @@ const CollegeAdminOverview = ({ user }) => {
         { label: 'Conditional',        value: conditional, icon: AlertCircle,  color: 'orange',  path: '/applications?status=conditional_accept' },
         { label: 'New This Week',      value: stats?.recent_applications ?? 0, icon: TrendingUp, color: 'blue', path: '/applications' },
         { label: 'All Students',       value: total,       icon: Users,        color: 'purple',  path: '/student-list' },
-        { label: 'Programme Intakes',  value: '—',         icon: Calendar,     color: 'rose',    path: '/programme-intakes' },
+        { label: 'Course Intakes',  value: '—',         icon: Calendar,     color: 'rose',    path: '/programme-intakes' },
     ];
 
     const colorMap = {
@@ -171,7 +171,7 @@ const CollegeAdminOverview = ({ user }) => {
                 <div>
                     <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">College Admin Overview</h1>
                     <p className="text-sm text-gray-500 mt-1">
-                        Welcome, {user?.name || 'College Admin'} · Admissions, students & programmes at a glance.
+                        Welcome, {user?.name || 'College Admin'} · Admissions, students &amp; courses at a glance.
                     </p>
                 </div>
                 <button
@@ -269,11 +269,11 @@ const CollegeAdminOverview = ({ user }) => {
                 </div>
             </div>
 
-            {/* ── Applications by Programme ── */}
+            {/* ── Applications by Course ── */}}
             <div className="bg-white rounded-xl shadow border border-gray-100 p-6">
                 <div className="flex items-center mb-4">
                     <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-                        <BarChart3 className="w-5 h-5 text-emerald-600" /> Applications by Programme (Top 8)
+                        <BarChart3 className="w-5 h-5 text-emerald-600" /> Applications by Course (Top 8)
                     </h3>
                     <SectionLink to="/applications" navigate={navigate} />
                 </div>
@@ -291,7 +291,7 @@ const CollegeAdminOverview = ({ user }) => {
                         </BarChart>
                     </ResponsiveContainer>
                 ) : (
-                    <p className="text-gray-400 text-sm text-center py-12">No programme data</p>
+                    <p className="text-gray-400 text-sm text-center py-12">No course data</p>
                 )}
             </div>
 
@@ -305,7 +305,7 @@ const CollegeAdminOverview = ({ user }) => {
                         { label: 'New Admission',       path: '/student-application', icon: UserCheck,     color: 'text-emerald-600 bg-emerald-50 hover:bg-emerald-100' },
                         { label: 'All Applications',    path: '/applications',         icon: FileText,      color: 'text-indigo-600  bg-indigo-50  hover:bg-indigo-100'  },
                         { label: 'Student List',        path: '/student-list',         icon: Users,         color: 'text-blue-600    bg-blue-50    hover:bg-blue-100'    },
-                        { label: 'Programme Intakes',   path: '/programme-intakes',    icon: Calendar,      color: 'text-amber-600   bg-amber-50   hover:bg-amber-100'   },
+                        { label: 'Course Intakes',   path: '/programme-intakes',    icon: Calendar,      color: 'text-amber-600   bg-amber-50   hover:bg-amber-100'   },
                         { label: 'LMS Enrolments',      path: '/admin/lms-enrolments', icon: GraduationCap, color: 'text-cyan-600    bg-cyan-50    hover:bg-cyan-100'    },
                         { label: 'Application Reports', path: '/applications-report',  icon: BarChart3,     color: 'text-rose-600    bg-rose-50    hover:bg-rose-100'    },
                         { label: 'Admissions Hub',      path: '/college-admin/dashboard', icon: TrendingUp, color: 'text-gray-600    bg-gray-50    hover:bg-gray-100'   },
@@ -339,7 +339,7 @@ const CollegeAdminOverview = ({ user }) => {
                                 <tr className="bg-gray-50 text-gray-500 text-xs uppercase tracking-wide">
                                     <th className="text-left px-4 py-3 font-medium">Reference</th>
                                     <th className="text-left px-4 py-3 font-medium">Name</th>
-                                    <th className="text-left px-4 py-3 font-medium">Programme</th>
+                                    <th className="text-left px-4 py-3 font-medium">Course</th>
                                     <th className="text-left px-4 py-3 font-medium">Status</th>
                                     <th className="text-left px-4 py-3 font-medium">Submitted</th>
                                 </tr>

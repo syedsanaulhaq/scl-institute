@@ -93,7 +93,7 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
                 ]
             },
             { name: 'Course Lifecycle', icon: LayoutDashboard, path: '/course-lifecycle' },
-            { name: 'Programme Intakes', icon: Users, path: '/programme-intakes' },
+            { name: 'Course Intakes', icon: Users, path: '/programme-intakes' },
             { name: 'LMS Enrolments', icon: GraduationCap, path: '/admin/lms-enrolments' },
             { name: 'Student Programmes', icon: BookOpen, path: '/admin/student-programmes' },
             { name: 'Users by Role', icon: Users, path: '/admin/users-by-role' },
@@ -130,7 +130,7 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
                     { name: 'Student Report', icon: BarChart3, path: '/students/report' }
                 ]
             },
-            { name: 'Programme Intakes', icon: Users, path: '/programme-intakes' },
+            { name: 'Course Intakes', icon: Users, path: '/programme-intakes' },
             { name: 'LMS Enrolments', icon: GraduationCap, path: '/admin/lms-enrolments' },
             { name: 'Support Inbox', icon: HelpCircle, path: '/admin/support-requests' },
             { name: 'Settings', icon: Settings, path: '/settings' }

@@ -36,7 +36,7 @@ const AdminStudentProgrammes = () => {
         try {
             const token = localStorage.getItem('token');
             const res = await axios.get(`${API_URL}/admin/student-programmes`, {
-                headers: { Authorization: `Bearer ${token}` },
+                headers: { Authorization: `Bearer ${token}` }
             });
             if (res.data?.success) setRecords(res.data.data || []);
         } catch (err) {
@@ -88,7 +88,7 @@ const AdminStudentProgrammes = () => {
                         key={status}
                         onClick={() => setStatusFilter(statusFilter === status ? 'all' : status)}
                         className={`px-4 py-2 rounded-full text-sm font-semibold border transition ${
-                            statusFilter === status ? 'ring-2 ring-blue-500' : ''
+                            statusFilter === status ? 'ring-2 ring-purple-500' : ''
                         } ${STATUS_COLORS[status] || 'bg-gray-100 text-gray-700'}`}
                     >
                         {status?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())} ({count})
@@ -109,7 +109,7 @@ const AdminStudentProgrammes = () => {
                     placeholder="Search by name, email or intake..."
                     value={search}
                     onChange={e => setSearch(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                 />
             </div>
 
@@ -129,7 +129,7 @@ const AdminStudentProgrammes = () => {
                                     <th className="text-left py-3 px-4 font-semibold text-gray-700">#</th>
                                     <th className="text-left py-3 px-4 font-semibold text-gray-700">Student</th>
                                     <th className="text-left py-3 px-4 font-semibold text-gray-700">Email</th>
-                                    <th className="text-left py-3 px-4 font-semibold text-gray-700">Programme</th>
+                                    <th className="text-left py-3 px-4 font-semibold text-gray-700">Course</th>
                                     <th className="text-left py-3 px-4 font-semibold text-gray-700">Code</th>
                                     <th className="text-center py-3 px-4 font-semibold text-gray-700">Status</th>
                                     <th className="text-center py-3 px-4 font-semibold text-gray-700">Moodle</th>
@@ -177,5 +177,4 @@ const AdminStudentProgrammes = () => {
 };
 
 export default AdminStudentProgrammes;
-
 

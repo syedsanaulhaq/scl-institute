@@ -587,7 +587,7 @@ const CourseLifecycleDashboard = () => {
                                 }}
                                 className="px-3 py-2 rounded-lg border border-gray-300 focus:border-scl-purple focus:outline-none focus:ring-2 focus:ring-scl-purple/20 text-sm bg-white"
                             >
-                                <option value="">All Programme Types</option>
+                                <option value="">All Course Types</option>
                                 {programmeTypes.map(type => (
                                     <option key={type} value={type}>{type}</option>
                                 ))}
@@ -604,7 +604,7 @@ const CourseLifecycleDashboard = () => {
                                 disabled={!filterProgrammeType}
                                 className={`px-3 py-2 rounded-lg border border-gray-300 focus:border-scl-purple focus:outline-none focus:ring-2 focus:ring-scl-purple/20 text-sm bg-white ${!filterProgrammeType ? 'opacity-50 cursor-not-allowed' : ''}`}
                             >
-                                <option value="">{filterProgrammeType ? 'All Programmes' : 'Select Programme Type first'}</option>
+                                <option value="">{filterProgrammeType ? 'All Courses' : 'Select Course Type first'}</option>
                                 {programs.map(prog => (
                                     <option key={prog} value={prog}>{prog}</option>
                                 ))}
