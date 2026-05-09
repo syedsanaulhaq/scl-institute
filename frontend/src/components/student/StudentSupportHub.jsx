@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { AlertTriangle, MessageSquare, FileText, Scale, Accessibility, Shield, Plus, Send, Upload, Clock, CheckCircle, Megaphone } from 'lucide-react';
 import axios from 'axios';
@@ -352,7 +352,37 @@ const StudentSupportHub = ({ user }) => {
 
                     {showSupportForm && (
                         <div className="bg-white rounded-lg shadow p-6">
-                            <h3 className="text-xl font-bold mb-4">Submit Support Request</h3>
+                            <h3 className="text-lg font-bold px-5 py-4 bg-purple-50 border-b border-purple-100">My Feedback History</h3>
+                        {feedback.length === 0 ? (
+                            <p className="p-6 text-gray-500 text-center">No feedback submitted yet</p>
+                        ) : (
+                            <div className="divide-y divide-gray-100">
+                                {feedback.map(fb => (
+                                    <div key={fb.id} className="px-5 py-4">
+                                        <div className="flex items-start justify-between gap-4 mb-2">
+                                            <div>
+                                                <p className="font-semibold text-gray-900">{fb.module_code || 'General'}</p>
+                                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 capitalize mt-1">
+                                                    {fb.feedback_type}
+                                                </span>
+                                            </div>
+                                            <div className="flex flex-col items-end flex-shrink-0">
+                                                <div className="flex gap-0.5">
+                                                    {[1,2,3,4,5].map(star => (
+                                                        <span key={star} className={`text-lg ${star <= fb.rating ? 'text-yellow-400' : 'text-gray-200'}`}>{'\u2605'}</span>
+                                                    ))}
+                                                </div>
+                                                <span className="text-xs text-gray-400 mt-0.5">{fb.submitted_at ? new Date(fb.submitted_at).toLocaleDateString('en-GB') : 'N/A'}</span>
+                                            </div>
+                                        </div>
+                                        {fb.comments && (
+                                            <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed bg-gray-50 rounded-lg px-4 py-3 mt-2">{fb.comments}</p>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>lassName="text-xl font-bold mb-4">Submit Support Request</h3>
                             <form onSubmit={handleSubmitSupportRequest}>
                                 <select
                                     value={supportForm.type}
@@ -396,21 +426,46 @@ const StudentSupportHub = ({ user }) => {
                     )}
 
                     <div className="grid gap-4">
+                        {supportRequests.length === 0 && (
+                            <p className="text-center py-8 text-gray-500">No support requests submitted yet.</p>
+                        )}
                         {supportRequests.map(req => (
-                            <div key={req.id} className="bg-white rounded-lg shadow p-4">
-                                <div className="flex items-start justify-between">
-                                    <div className="flex-1">
-                                        <p className="font-bold text-gray-900">{req.subject}</p>
-                                        <p className="text-sm text-gray-600 mt-1">{req.description.substring(0, 100)}...</p>
-                                        <div className="flex gap-2 mt-3">
-                                            <span className={`px-3 py-1 rounded text-sm ${getStatusColor(req.status)}`}>{req.status}</span>
-                                            <span className="text-xs text-gray-600">{new Date(req.created_at).toLocaleDateString('en-GB')}</span>
-                                        </div>
-                                        <div className="mt-3 border-t border-gray-100 pt-3">
-                                            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Reply</p>
-                                            <p className="text-sm text-gray-700 mt-1 whitespace-pre-wrap">{req.admin_reply || 'No reply yet.'}</p>
-                                        </div>
+                            <div key={req.id} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                                {/* Header */}
+                                <div className="flex items-start justify-between px-5 py-4">
+                                    <div className="flex-1 min-w-0">
+                                        <p className="font-semibold text-gray-900">{req.subject}</p>
+                                        <p className="text-xs text-gray-500 mt-0.5 capitalize">{req.type} · {new Date(req.created_at).toLocaleDateString('en-GB')}</p>
                                     </div>
+                                    <span className={`ml-3 flex-shrink-0 px-3 py-1 rounded-full text-xs font-medium capitalize ${getStatusColor(req.status)}`}>{req.status?.replace(/_/g,' ')}</span>
+                                </div>
+                                {/* Description */}
+                                <div className="px-5 pb-4">
+                                    <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{req.description}</p>
+                                </div>
+                                {/* Admin Reply */}
+                                <div className="border-t border-gray-100 bg-gray-50 px-5 py-4">
+                                    {req.admin_reply ? (
+                                        <div className="flex gap-3">
+                                            <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center flex-shrink-0">
+                                                <span className="text-white text-xs font-bold">A</span>
+                                            </div>
+                                            <div className="flex-1">
+                                                <div className="flex items-center gap-2 mb-1">
+                                                    <span className="text-xs font-semibold text-indigo-700">Admin Reply</span>
+                                                    <span className="text-xs text-gray-400">{req.updated_at ? new Date(req.updated_at).toLocaleDateString('en-GB') : ''}</span>
+                                                </div>
+                                                <div className="bg-white rounded-lg border border-indigo-100 px-4 py-3">
+                                                    <p className="text-sm text-gray-800 whitespace-pre-wrap leading-relaxed">{req.admin_reply}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="flex items-center gap-2 text-gray-400">
+                                            <Clock className="w-4 h-4" />
+                                            <p className="text-sm">Awaiting reply from the support team.</p>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         ))}
@@ -430,7 +485,37 @@ const StudentSupportHub = ({ user }) => {
 
                     {showFeedbackForm && (
                         <div className="bg-white rounded-lg shadow p-6">
-                            <h3 className="text-xl font-bold mb-4">Course Feedback & Evaluation</h3>
+                            <h3 className="text-lg font-bold px-5 py-4 bg-purple-50 border-b border-purple-100">My Feedback History</h3>
+                        {feedback.length === 0 ? (
+                            <p className="p-6 text-gray-500 text-center">No feedback submitted yet</p>
+                        ) : (
+                            <div className="divide-y divide-gray-100">
+                                {feedback.map(fb => (
+                                    <div key={fb.id} className="px-5 py-4">
+                                        <div className="flex items-start justify-between gap-4 mb-2">
+                                            <div>
+                                                <p className="font-semibold text-gray-900">{fb.module_code || 'General'}</p>
+                                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 capitalize mt-1">
+                                                    {fb.feedback_type}
+                                                </span>
+                                            </div>
+                                            <div className="flex flex-col items-end flex-shrink-0">
+                                                <div className="flex gap-0.5">
+                                                    {[1,2,3,4,5].map(star => (
+                                                        <span key={star} className={`text-lg ${star <= fb.rating ? 'text-yellow-400' : 'text-gray-200'}`}>{'\u2605'}</span>
+                                                    ))}
+                                                </div>
+                                                <span className="text-xs text-gray-400 mt-0.5">{fb.submitted_at ? new Date(fb.submitted_at).toLocaleDateString('en-GB') : 'N/A'}</span>
+                                            </div>
+                                        </div>
+                                        {fb.comments && (
+                                            <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed bg-gray-50 rounded-lg px-4 py-3 mt-2">{fb.comments}</p>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>lassName="text-xl font-bold mb-4">Course Feedback & Evaluation</h3>
                             <form onSubmit={handleSubmitFeedback}>
                                 <div className="mb-4">
                                     <label className="block text-sm font-medium mb-2">Select Course *</label>
@@ -512,7 +597,37 @@ const StudentSupportHub = ({ user }) => {
                     )}
 
                     <div className="bg-white rounded-lg shadow overflow-hidden">
-                        <h3 className="text-lg font-bold p-4 bg-purple-50 border-b">My Feedback History</h3>
+                        <h3 className="text-lg font-bold px-5 py-4 bg-purple-50 border-b border-purple-100">My Feedback History</h3>
+                        {feedback.length === 0 ? (
+                            <p className="p-6 text-gray-500 text-center">No feedback submitted yet</p>
+                        ) : (
+                            <div className="divide-y divide-gray-100">
+                                {feedback.map(fb => (
+                                    <div key={fb.id} className="px-5 py-4">
+                                        <div className="flex items-start justify-between gap-4 mb-2">
+                                            <div>
+                                                <p className="font-semibold text-gray-900">{fb.module_code || 'General'}</p>
+                                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 capitalize mt-1">
+                                                    {fb.feedback_type}
+                                                </span>
+                                            </div>
+                                            <div className="flex flex-col items-end flex-shrink-0">
+                                                <div className="flex gap-0.5">
+                                                    {[1,2,3,4,5].map(star => (
+                                                        <span key={star} className={`text-lg ${star <= fb.rating ? 'text-yellow-400' : 'text-gray-200'}`}>{'\u2605'}</span>
+                                                    ))}
+                                                </div>
+                                                <span className="text-xs text-gray-400 mt-0.5">{fb.submitted_at ? new Date(fb.submitted_at).toLocaleDateString('en-GB') : 'N/A'}</span>
+                                            </div>
+                                        </div>
+                                        {fb.comments && (
+                                            <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed bg-gray-50 rounded-lg px-4 py-3 mt-2">{fb.comments}</p>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>lassName="text-lg font-bold p-4 bg-purple-50 border-b">My Feedback History</h3>
                         {feedback.length === 0 ? (
                             <p className="p-6 text-gray-600 text-center">No feedback submitted yet</p>
                         ) : (
@@ -576,7 +691,37 @@ const StudentSupportHub = ({ user }) => {
 
                     {showComplaintForm && (
                         <div className="bg-white rounded-lg shadow p-6">
-                            <h3 className="text-xl font-bold mb-4">Submit Complaint or Appeal</h3>
+                            <h3 className="text-lg font-bold px-5 py-4 bg-purple-50 border-b border-purple-100">My Feedback History</h3>
+                        {feedback.length === 0 ? (
+                            <p className="p-6 text-gray-500 text-center">No feedback submitted yet</p>
+                        ) : (
+                            <div className="divide-y divide-gray-100">
+                                {feedback.map(fb => (
+                                    <div key={fb.id} className="px-5 py-4">
+                                        <div className="flex items-start justify-between gap-4 mb-2">
+                                            <div>
+                                                <p className="font-semibold text-gray-900">{fb.module_code || 'General'}</p>
+                                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 capitalize mt-1">
+                                                    {fb.feedback_type}
+                                                </span>
+                                            </div>
+                                            <div className="flex flex-col items-end flex-shrink-0">
+                                                <div className="flex gap-0.5">
+                                                    {[1,2,3,4,5].map(star => (
+                                                        <span key={star} className={`text-lg ${star <= fb.rating ? 'text-yellow-400' : 'text-gray-200'}`}>{'\u2605'}</span>
+                                                    ))}
+                                                </div>
+                                                <span className="text-xs text-gray-400 mt-0.5">{fb.submitted_at ? new Date(fb.submitted_at).toLocaleDateString('en-GB') : 'N/A'}</span>
+                                            </div>
+                                        </div>
+                                        {fb.comments && (
+                                            <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed bg-gray-50 rounded-lg px-4 py-3 mt-2">{fb.comments}</p>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>lassName="text-xl font-bold mb-4">Submit Complaint or Appeal</h3>
                             <form onSubmit={handleSubmitComplaint}>
                                 <select
                                     value={complaintForm.type}
@@ -662,7 +807,37 @@ const StudentSupportHub = ({ user }) => {
 
                     {showDisabilityForm && (
                         <div className="bg-white rounded-lg shadow p-6">
-                            <h3 className="text-xl font-bold mb-4">Request Reasonable Adjustment</h3>
+                            <h3 className="text-lg font-bold px-5 py-4 bg-purple-50 border-b border-purple-100">My Feedback History</h3>
+                        {feedback.length === 0 ? (
+                            <p className="p-6 text-gray-500 text-center">No feedback submitted yet</p>
+                        ) : (
+                            <div className="divide-y divide-gray-100">
+                                {feedback.map(fb => (
+                                    <div key={fb.id} className="px-5 py-4">
+                                        <div className="flex items-start justify-between gap-4 mb-2">
+                                            <div>
+                                                <p className="font-semibold text-gray-900">{fb.module_code || 'General'}</p>
+                                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 capitalize mt-1">
+                                                    {fb.feedback_type}
+                                                </span>
+                                            </div>
+                                            <div className="flex flex-col items-end flex-shrink-0">
+                                                <div className="flex gap-0.5">
+                                                    {[1,2,3,4,5].map(star => (
+                                                        <span key={star} className={`text-lg ${star <= fb.rating ? 'text-yellow-400' : 'text-gray-200'}`}>{'\u2605'}</span>
+                                                    ))}
+                                                </div>
+                                                <span className="text-xs text-gray-400 mt-0.5">{fb.submitted_at ? new Date(fb.submitted_at).toLocaleDateString('en-GB') : 'N/A'}</span>
+                                            </div>
+                                        </div>
+                                        {fb.comments && (
+                                            <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed bg-gray-50 rounded-lg px-4 py-3 mt-2">{fb.comments}</p>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>lassName="text-xl font-bold mb-4">Request Reasonable Adjustment</h3>
                             <form onSubmit={handleSubmitDisability}>
                                 <select
                                     value={disabilityForm.request_type}
@@ -730,7 +905,37 @@ const StudentSupportHub = ({ user }) => {
 
                     {showSafeguardingForm && (
                         <div className="bg-white rounded-lg shadow p-6 border-l-4 border-red-600">
-                            <h3 className="text-xl font-bold mb-4">Report Safeguarding Concern</h3>
+                            <h3 className="text-lg font-bold px-5 py-4 bg-purple-50 border-b border-purple-100">My Feedback History</h3>
+                        {feedback.length === 0 ? (
+                            <p className="p-6 text-gray-500 text-center">No feedback submitted yet</p>
+                        ) : (
+                            <div className="divide-y divide-gray-100">
+                                {feedback.map(fb => (
+                                    <div key={fb.id} className="px-5 py-4">
+                                        <div className="flex items-start justify-between gap-4 mb-2">
+                                            <div>
+                                                <p className="font-semibold text-gray-900">{fb.module_code || 'General'}</p>
+                                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 capitalize mt-1">
+                                                    {fb.feedback_type}
+                                                </span>
+                                            </div>
+                                            <div className="flex flex-col items-end flex-shrink-0">
+                                                <div className="flex gap-0.5">
+                                                    {[1,2,3,4,5].map(star => (
+                                                        <span key={star} className={`text-lg ${star <= fb.rating ? 'text-yellow-400' : 'text-gray-200'}`}>{'\u2605'}</span>
+                                                    ))}
+                                                </div>
+                                                <span className="text-xs text-gray-400 mt-0.5">{fb.submitted_at ? new Date(fb.submitted_at).toLocaleDateString('en-GB') : 'N/A'}</span>
+                                            </div>
+                                        </div>
+                                        {fb.comments && (
+                                            <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed bg-gray-50 rounded-lg px-4 py-3 mt-2">{fb.comments}</p>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>lassName="text-xl font-bold mb-4">Report Safeguarding Concern</h3>
                             <form onSubmit={handleSubmitSafeguarding}>
                                 <select
                                     value={safeguardingForm.report_type}
