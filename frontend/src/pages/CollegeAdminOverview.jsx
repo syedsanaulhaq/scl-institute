@@ -350,8 +350,7 @@ const CollegeAdminOverview = ({ user }) => {
                                     const cfg = { accepted: 'bg-emerald-50 text-emerald-700', approved: 'bg-emerald-50 text-emerald-700', pending: 'bg-amber-50 text-amber-700', submitted: 'bg-blue-50 text-blue-700', rejected: 'bg-red-50 text-red-700', conditional_accept: 'bg-orange-50 text-orange-700' };
                                     const cls = cfg[app.application_status] || 'bg-gray-50 text-gray-700';
                                     return (
-                                        <tr key={app.id} className="hover:bg-gray-50 transition cursor-pointer" onClick={() => navigate(`/applications/${app.id}`)}>
-                                            <td className="px-4 py-3 font-mono text-xs text-gray-500">{app.application_reference || `#${app.id}`}</td>
+                                        <tr key={app.id} className="hover:bg-gray-50 transition cursor-pointer" onClick={() => navigate(`/applications/${app.id}/review`)}>                                            <td className="px-4 py-3 font-mono text-xs text-gray-500">{app.application_reference || `#${app.id}`}</td>
                                             <td className="px-4 py-3 font-medium text-gray-800">{app.first_name} {app.last_name}</td>
                                             <td className="px-4 py-3 text-gray-600 max-w-[200px] truncate">{app.course_title || app.course_code}</td>
                                             <td className="px-4 py-3">
