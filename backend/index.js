@@ -1068,6 +1068,11 @@ function buildRoleContext(roleValue, roleData = null) {
     const isCollegeAdmin = roles.some((role) => collegeAdminRoles.has(role));
     const isManagerOnly = roles.some((role) => managerOnlyRoles.has(role)) && !isSystemAdmin && !isCollegeAdmin;
 
+    // Management users should never appear as students even if they hold a Moodle student enrolment.
+    // This prevents the role-sync job from overwriting their admin role with 'student'.
+    const hasStudent = !hasManagement && roles.some((role) => learningRoles.has(role));
+    const hasTeaching = roles.some((role) => teachingRoles.has(role));
+
     return {
         primaryRole,
         roles,
@@ -1079,17 +1084,19 @@ function buildRoleContext(roleValue, roleData = null) {
         isSystemAdmin,
         isCollegeAdmin,
         isManagerOnly,
-        hasTeaching: roles.some((role) => teachingRoles.has(role)),
-        hasStudent: roles.some((role) => learningRoles.has(role)),
+        hasTeaching,
+        hasStudent,
         canAccessManagementPortal: hasSystemManagement || hasManagement,
-        canAccessStudentPortal: roles.some((role) => learningRoles.has(role) || teachingRoles.has(role))
+        canAccessStudentPortal: hasStudent || hasTeaching
     };
 }
 
 function getRolePriority(role) {
     const priority = {
-        manager: 1,
+        systemadmin: 1,
         admin: 1,
+        collegeadmin: 1,
+        manager: 1,
         coursecreator: 2,
         editingteacher: 3,
         teacher: 4,
