@@ -257,10 +257,10 @@ async function syncMoodleUsersToSCL() {
                 );
                 created++;
             } else {
-                // Skip management users entirely — they are managed in SCL, not Moodle.
-                // Moodle sync is only for students and teachers.
-                const existingIsMgmt = managementRoles.has(normalizeRole(existing.role));
-                if (existingIsMgmt) continue;
+                // Only freeze top-level admin roles — systemadmin, admin, collegeadmin are SCL-managed.
+                // manager, teacher, student etc. are still synced from Moodle.
+                const frozenRoles = new Set(['systemadmin', 'admin', 'collegeadmin']);
+                if (frozenRoles.has(normalizeRole(existing.role))) continue;
 
                 const nameChanged = existing.first_name !== mu.firstname || existing.last_name !== mu.lastname;
                 const moodleRoleNorm = normalizeRole(effectiveMoodleRole);
@@ -1536,8 +1536,9 @@ async function syncAllUserRoleSnapshots() {
         let failureCount = 0;
 
         for (const user of users) {
-            // Skip management users — they are not synced from Moodle
-            if (managementRoles.has(normalizeRole(user.role))) {
+            // Skip only top-level admin roles from Moodle snapshot sync
+            const frozenRoles = new Set(['systemadmin', 'admin', 'collegeadmin']);
+            if (frozenRoles.has(normalizeRole(user.role))) {
                 successCount += 1;
                 continue;
             }
