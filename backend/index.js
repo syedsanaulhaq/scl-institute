@@ -257,28 +257,23 @@ async function syncMoodleUsersToSCL() {
                 );
                 created++;
             } else {
-                // Update name if changed in Moodle.
-                // Never overwrite a management role that was explicitly assigned in SCL —
-                // Moodle's role (often 'student' from course enrolments) must not demote admins.
-                const nameChanged = existing.first_name !== mu.firstname || existing.last_name !== mu.lastname;
+                // Skip management users entirely — they are managed in SCL, not Moodle.
+                // Moodle sync is only for students and teachers.
                 const existingIsMgmt = managementRoles.has(normalizeRole(existing.role));
+                if (existingIsMgmt) continue;
+
+                const nameChanged = existing.first_name !== mu.firstname || existing.last_name !== mu.lastname;
                 const moodleRoleNorm = normalizeRole(effectiveMoodleRole);
                 const moodleRolePriority = getRolePriority(moodleRoleNorm);
                 const existingPriority = getRolePriority(normalizeRole(existing.role));
                 // Only update the role if the translated Moodle role is strictly more privileged
-                const roleChanged = !existingIsMgmt && moodleRolePriority < existingPriority && existing.role !== moodleRoleNorm;
+                const roleChanged = moodleRolePriority < existingPriority && existing.role !== moodleRoleNorm;
                 if (nameChanged || roleChanged) {
                     await db.query(
                         'UPDATE users SET first_name = ?, last_name = ?, role = ? WHERE id = ?',
                         [mu.firstname || '', mu.lastname || '', roleChanged ? moodleRoleNorm : existing.role, existing.id]
                     );
                     updated++;
-                }
-                // Bidirectional: if SCL has a management role, push it to Moodle so both stay in sync
-                if (existingIsMgmt && process.env.ENABLE_MOODLE_INTEGRATION !== 'false') {
-                    assignMoodleSystemRole(email, existing.role).catch(err =>
-                        console.warn(`[MOODLE SYNC] Could not push management role for ${email} to Moodle:`, err.message)
-                    );
                 }
             }
         }
@@ -1536,11 +1531,16 @@ async function syncAllUserRoleSnapshots() {
     const startedAt = Date.now();
 
     try {
-        const [users] = await pool.query('SELECT email FROM users WHERE email IS NOT NULL AND email != ""');
+        const [users] = await pool.query('SELECT email, role FROM users WHERE email IS NOT NULL AND email != ""');
         let successCount = 0;
         let failureCount = 0;
 
         for (const user of users) {
+            // Skip management users — they are not synced from Moodle
+            if (managementRoles.has(normalizeRole(user.role))) {
+                successCount += 1;
+                continue;
+            }
             try {
                 await forceResyncRoleSnapshot({ email: user.email });
                 successCount += 1;
