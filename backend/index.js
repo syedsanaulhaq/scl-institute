@@ -1380,10 +1380,25 @@ async function getMoodleRolesFromDbByEmail(email) {
 
     const roleData = { assignments };
 
+    // Merge local management role before storing snapshot so admin roles
+    // fetched from Moodle DB never overwrite a higher-privilege local role.
+    let snapshotRoles = roles;
+    try {
+        const [localRows] = await pool.query('SELECT role FROM users WHERE email = ? LIMIT 1', [email]);
+        const localRole = localRows?.[0]?.role || null;
+        const localTokens = parseRoleTokens(localRole);
+        const hasLocalMgmt = localTokens.some((r) => managementRoles.has(r));
+        if (hasLocalMgmt || isProtectedManagementEmail(email)) {
+            snapshotRoles = mergeRoles(localRole, roles, { forceManager: isProtectedManagementEmail(email) });
+        }
+    } catch (e) {
+        console.warn('[MOODLE DB ROLES] Could not read local role for snapshot merge:', e.message);
+    }
+
     await upsertRoleSnapshot({
         email,
         moodleUserId,
-        roles,
+        roles: snapshotRoles,
         roleData,
         source: 'moodle-db'
     });
@@ -1391,7 +1406,7 @@ async function getMoodleRolesFromDbByEmail(email) {
     return {
         source: 'moodle-db',
         moodleUserId,
-        roles,
+        roles: snapshotRoles,
         roleData
     };
 }
@@ -1456,11 +1471,19 @@ async function forceResyncRoleSnapshot({ email, moodleUserId = null }) {
     });
 
     // Keep local role roughly aligned for legacy readers.
+    // Only write back if the new primaryRole is at least as privileged as the current one.
     try {
         const roleContext = buildRoleContext(effectiveRoles.join(','), fresh.roleData || null);
         const primaryRole = roleContext.primaryRole;
         if (primaryRole) {
-            await pool.query('UPDATE users SET role = ? WHERE email = ?', [primaryRole, resolvedEmail]);
+            const [curRows] = await pool.query('SELECT role FROM users WHERE email = ? LIMIT 1', [resolvedEmail]);
+            const currentRole = curRows?.[0]?.role || null;
+            const currentPriority = getRolePriority(normalizeRole(currentRole));
+            const newPriority = getRolePriority(normalizeRole(primaryRole));
+            // Only update if the new role is equally or more privileged (lower priority number)
+            if (!currentRole || newPriority <= currentPriority) {
+                await pool.query('UPDATE users SET role = ? WHERE email = ?', [primaryRole, resolvedEmail]);
+            }
         }
     } catch (e) {
         console.warn('[SSO RESYNC] Could not update users.role:', e.message);
@@ -1576,10 +1599,26 @@ async function getMoodleRolesByEmail(email, options = {}) {
         const wsRoles = [...wsRoleTokens].sort((a, b) => getRolePriority(a) - getRolePriority(b));
         if (wsRoles.length > 0) {
             const roleData = { assignments: wsRoleData };
+
+            // Always merge local management role so a Moodle-only student enrolment
+            // never overwrites an admin's assigned role in the snapshot store.
+            let snapshotRoles = wsRoles;
+            try {
+                const [localRows] = await pool.query('SELECT role FROM users WHERE email = ? LIMIT 1', [email]);
+                const localRole = localRows?.[0]?.role || null;
+                const localTokens = parseRoleTokens(localRole);
+                const hasLocalMgmt = localTokens.some((r) => managementRoles.has(r));
+                if (hasLocalMgmt || isProtectedManagementEmail(email)) {
+                    snapshotRoles = mergeRoles(localRole, wsRoles, { forceManager: isProtectedManagementEmail(email) });
+                }
+            } catch (e) {
+                console.warn('[LOGIN] Could not read local role for snapshot merge:', e.message);
+            }
+
             await upsertRoleSnapshot({
                 email,
                 moodleUserId: moodleUser.id,
-                roles: wsRoles,
+                roles: snapshotRoles,
                 roleData,
                 source: 'moodle-ws'
             });
@@ -1587,7 +1626,7 @@ async function getMoodleRolesByEmail(email, options = {}) {
             return {
                 source: 'moodle-ws',
                 moodleUserId: moodleUser.id,
-                roles: wsRoles,
+                roles: snapshotRoles,
                 roleData
             };
         }
