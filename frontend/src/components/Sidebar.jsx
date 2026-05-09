@@ -105,6 +105,7 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
     // College Admin: student admissions & management focused
     const collegeAdminMenuItems = isCollegeAdmin
         ? [
+            { name: 'Dashboard', icon: LayoutDashboard, path: '/' },
             { name: 'Admissions Hub', icon: BarChart3, path: '/college-admin/dashboard' },
             {
                 name: 'Student Applications',
