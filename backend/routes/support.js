@@ -68,11 +68,15 @@ async function initSupportTables() {
             )
         `);
 
-        // Backfill admin reply column for existing environments.
-        await connection.query(`
-            ALTER TABLE support_requests
-            ADD COLUMN IF NOT EXISTS admin_reply LONGTEXT NULL AFTER description
-        `);
+        // Backfill admin reply column for existing environments (MySQL <8.0.3 safe).
+        try {
+            await connection.query(`
+                ALTER TABLE support_requests
+                ADD COLUMN admin_reply LONGTEXT NULL AFTER description
+            `);
+        } catch (e) {
+            if (!e.message.includes('Duplicate column name')) throw e;
+        }
 
         // Feedback Surveys Table
         await connection.query(`
