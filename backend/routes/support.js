@@ -116,7 +116,7 @@ async function initSupportTables() {
             )
         `);
 
-        // Complaints Timeline Table
+        // Complaint Timeline Table
         await connection.query(`
             CREATE TABLE IF NOT EXISTS complaint_timeline (
                 id INT AUTO_INCREMENT PRIMARY KEY,
@@ -887,8 +887,10 @@ router.put('/admin/requests/:id', async (req, res) => {
         const { status, assigned_to, admin_reply } = req.body;
         const connection = await pool.getConnection();
         await connection.query(
-            `UPDATE support_requests SET status = ?, assigned_to = ?, admin_reply = ?, updated_at = NOW() WHERE id = ?`,
-            [status || 'open', assigned_to || null, admin_reply || null, req.params.id]
+            `UPDATE support_requests
+             SET status = COALESCE(?, status), assigned_to = ?, admin_reply = ?, updated_at = NOW()
+             WHERE id = ?`,
+            [status || null, assigned_to || null, admin_reply || null, req.params.id]
         );
         connection.release();
         res.json({ success: true, message: 'Updated' });

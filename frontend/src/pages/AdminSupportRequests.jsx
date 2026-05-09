@@ -56,6 +56,7 @@ function SupportRequestsTab() {
     const [statusFilter, setStatusFilter] = useState('all');
     const [updating, setUpdating] = useState(null);
     const [replyDraft, setReplyDraft] = useState({});
+    const [savingReply, setSavingReply] = useState(null);
 
     const fetch = async () => {
         setLoading(true);
@@ -77,6 +78,21 @@ function SupportRequestsTab() {
             setItems(prev => prev.map(i => i.id === id ? { ...i, status, admin_reply } : i));
         } catch (e) { console.error(e); }
         setUpdating(null);
+    };
+
+    const saveReply = async (id) => {
+        setSavingReply(id);
+        try {
+            const current = items.find((i) => i.id === id);
+            const status = current?.status || 'open';
+            const admin_reply = (replyDraft[id] ?? '').trim();
+            await axios.put(`${API_URL}/support/admin/requests/${id}`, { status, admin_reply });
+            setItems(prev => prev.map(i => i.id === id ? { ...i, admin_reply } : i));
+        } catch (e) {
+            console.error(e);
+            alert('Failed to save reply. Please try again.');
+        }
+        setSavingReply(null);
     };
 
     return (
@@ -133,11 +149,20 @@ function SupportRequestsTab() {
                                             className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 resize-none focus:ring-2 focus:ring-indigo-300 outline-none"
                                             placeholder="Write a reply that the student can see..."
                                         />
+                                        <div className="mt-2 flex justify-end">
+                                            <button
+                                                disabled={savingReply === item.id}
+                                                onClick={() => saveReply(item.id)}
+                                                className="text-xs px-3 py-1.5 rounded-md border border-indigo-300 text-indigo-700 hover:bg-indigo-50 disabled:opacity-60"
+                                            >
+                                                {savingReply === item.id ? 'Saving...' : 'Save Reply'}
+                                            </button>
+                                        </div>
                                     </div>
                                     <div className="flex items-center gap-3">
                                         <span className="text-xs text-slate-500">Update Status:</span>
                                         {['open','in_progress','resolved','closed'].map(s => (
-                                            <button key={s} disabled={item.status === s || updating === item.id}
+                                            <button key={s} disabled={updating === item.id}
                                                 onClick={() => updateStatus(item.id, s)}
                                                 className={`text-xs px-3 py-1 rounded-full border transition ${item.status === s ? 'bg-indigo-600 text-white border-indigo-600' : 'border-slate-300 hover:border-indigo-400 hover:text-indigo-600'}`}>
                                                 {s.replace('_', ' ')}
