@@ -2,6 +2,18 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * Responsive root font scaling.
+ * 1920×1200 (reference): ~15.4px  → looks great, keep as-is
+ * 1920×1080             : ~13.9px  → slightly smaller so layout feels the same
+ * Anything below 900px tall uses 13px as a floor.
+ * clamp(min, preferred, max) — preferred is 1.16vmin which ties size to the
+ * smaller of vw/vh, naturally scaling with the screen's limiting dimension.
+ */
+:root {
+    font-size: clamp(15px, 1.42vmin, 16px);
+}
+
 body {
     margin: 0;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',

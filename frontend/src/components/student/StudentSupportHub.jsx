@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { AlertTriangle, MessageSquare, FileText, Scale, Accessibility, Shield, Plus, Send, Upload, Clock, CheckCircle, Megaphone } from 'lucide-react';
 import axios from 'axios';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
 
 const StudentSupportHub = ({ user }) => {
-    const [activeTab, setActiveTab] = useState('messages');
+    const [searchParams] = useSearchParams();
+    const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'messages');
     const [studentId, setStudentId] = useState(null);
 
     // Messages State
@@ -43,6 +45,12 @@ const StudentSupportHub = ({ user }) => {
     const [reportFile, setReportFile] = useState(null);
 
     const [loading, setLoading] = useState(false);
+
+    // Sync tab with URL ?tab= param whenever it changes
+    useEffect(() => {
+        const tab = searchParams.get('tab');
+        if (tab) setActiveTab(tab);
+    }, [searchParams]);
 
     useEffect(() => {
         const getStudentId = async () => {
@@ -388,17 +396,70 @@ const StudentSupportHub = ({ user }) => {
                     )}
 
                     <div className="grid gap-4">
+                        {supportRequests.length === 0 && (
+                            <p className="text-center py-8 text-gray-500">No support requests submitted yet.</p>
+                        )}
                         {supportRequests.map(req => (
-                            <div key={req.id} className="bg-white rounded-lg shadow p-4">
-                                <div className="flex items-start justify-between">
-                                    <div className="flex-1">
-                                        <p className="font-bold text-gray-900">{req.subject}</p>
-                                        <p className="text-sm text-gray-600 mt-1">{req.description.substring(0, 100)}...</p>
-                                        <div className="flex gap-2 mt-3">
-                                            <span className={`px-3 py-1 rounded text-sm ${getStatusColor(req.status)}`}>{req.status}</span>
-                                            <span className="text-xs text-gray-600">{new Date(req.created_at).toLocaleDateString('en-GB')}</span>
+                            <div key={req.id} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                                {/* Ticket header */}
+                                <div className="flex items-center justify-between px-5 py-3 bg-gray-50 border-b border-gray-100">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{req.type}</span>
+                                        <span className="text-gray-300">·</span>
+                                        <span className="text-xs text-gray-400">{new Date(req.created_at).toLocaleDateString('en-GB')}</span>
+                                    </div>
+                                    <span className={`px-3 py-1 rounded-full text-xs font-medium capitalize ${getStatusColor(req.status)}`}>{req.status?.replace(/_/g,' ')}</span>
+                                </div>
+
+                                {/* Thread body */}
+                                <div className="px-5 py-4 space-y-4">
+
+                                    {/* Student message */}
+                                    <div className="flex gap-3">
+                                        <div className="flex flex-col items-center">
+                                            <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0">
+                                                <span className="text-white text-xs font-bold">
+                                                    {user?.name?.charAt(0)?.toUpperCase() || 'S'}
+                                                </span>
+                                            </div>
+                                            {req.admin_reply && <div className="w-0.5 flex-1 bg-gray-200 mt-2"></div>}
+                                        </div>
+                                        <div className="flex-1 min-w-0 pb-1">
+                                            <div className="flex items-center gap-2 mb-1.5">
+                                                <span className="text-sm font-semibold text-gray-900">{user?.name || 'You'}</span>
+                                                <span className="text-xs text-gray-400">{new Date(req.created_at).toLocaleDateString('en-GB')}</span>
+                                            </div>
+                                            <div className="bg-blue-50 border border-blue-100 rounded-lg rounded-tl-none px-4 py-3">
+                                                <p className="text-sm font-semibold text-gray-900 mb-1">{req.subject}</p>
+                                                <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{req.description}</p>
+                                            </div>
                                         </div>
                                     </div>
+
+                                    {/* Admin reply (hierarchical, indented) */}
+                                    {req.admin_reply ? (
+                                        <div className="flex gap-3 pl-4">
+                                            <div className="flex flex-col items-center">
+                                                <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center flex-shrink-0">
+                                                    <span className="text-white text-xs font-bold">A</span>
+                                                </div>
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center gap-2 mb-1.5">
+                                                    <span className="text-sm font-semibold text-indigo-700">Support Team</span>
+                                                    <span className="text-xs text-gray-400">{req.updated_at ? new Date(req.updated_at).toLocaleDateString('en-GB') : ''}</span>
+                                                </div>
+                                                <div className="bg-indigo-50 border border-indigo-100 rounded-lg rounded-tl-none px-4 py-3">
+                                                    <p className="text-sm text-gray-800 whitespace-pre-wrap leading-relaxed">{req.admin_reply}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="flex items-center gap-2 text-gray-400 pl-11">
+                                            <Clock className="w-4 h-4" />
+                                            <p className="text-sm italic">Awaiting reply from the support team…</p>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         ))}
@@ -499,53 +560,35 @@ const StudentSupportHub = ({ user }) => {
                         </div>
                     )}
 
-                    <div className="bg-white rounded-lg shadow overflow-hidden">
-                        <h3 className="text-lg font-bold p-4 bg-purple-50 border-b">My Feedback History</h3>
+                    <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                        <h3 className="text-lg font-bold px-5 py-4 bg-purple-50 border-b border-purple-100">My Feedback History</h3>
                         {feedback.length === 0 ? (
-                            <p className="p-6 text-gray-600 text-center">No feedback submitted yet</p>
+                            <p className="p-6 text-gray-500 text-center">No feedback submitted yet</p>
                         ) : (
-                            <div className="overflow-x-auto">
-                                <table className="w-full">
-                                    <thead className="bg-gray-50">
-                                        <tr>
-                                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">Course</th>
-                                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">Category</th>
-                                            <th className="px-4 py-3 text-center text-xs font-medium text-gray-700 uppercase">Rating</th>
-                                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">Comments</th>
-                                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase">Date</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-gray-200">
-                                        {feedback.map(fb => (
-                                            <tr key={fb.id} className="hover:bg-gray-50">
-                                                <td className="px-4 py-3">
-                                                    <span className="font-medium text-gray-900">{fb.module_code || 'N/A'}</span>
-                                                </td>
-                                                <td className="px-4 py-3">
-                                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                                                        {fb.feedback_type}
-                                                    </span>
-                                                </td>
-                                                <td className="px-4 py-3">
-                                                    <div className="flex items-center justify-center gap-1">
-                                                        {[1, 2, 3, 4, 5].map(star => (
-                                                            <span key={star} className={`${star <= fb.rating ? 'text-yellow-400' : 'text-gray-300'}`}>
-                                                                {star <= fb.rating ? 'â—' : 'â—‹'}
-                                                            </span>
-                                                        ))}
-                                                        <span className="ml-2 text-sm font-semibold text-gray-700">{fb.rating}/5</span>
-                                                    </div>
-                                                </td>
-                                                <td className="px-4 py-3 text-sm text-gray-600 max-w-xs truncate">
-                                                    {fb.comments || 'No comments'}
-                                                </td>
-                                                <td className="px-4 py-3 text-sm text-gray-500">
-                                                    {fb.submitted_at ? new Date(fb.submitted_at).toLocaleDateString('en-GB') : 'N/A'}
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
+                            <div className="divide-y divide-gray-100">
+                                {feedback.map(fb => (
+                                    <div key={fb.id} className="px-5 py-4">
+                                        <div className="flex items-start justify-between gap-4 mb-2">
+                                            <div>
+                                                <p className="font-semibold text-gray-900">{fb.module_code || 'General'}</p>
+                                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 capitalize mt-1">
+                                                    {fb.feedback_type}
+                                                </span>
+                                            </div>
+                                            <div className="flex flex-col items-end flex-shrink-0">
+                                                <div className="flex gap-0.5 text-lg">
+                                                    {[1,2,3,4,5].map(star => (
+                                                        <span key={star} className={star <= fb.rating ? 'text-yellow-400' : 'text-gray-200'}>&#9733;</span>
+                                                    ))}
+                                                </div>
+                                                <span className="text-xs text-gray-400 mt-0.5">{fb.submitted_at ? new Date(fb.submitted_at).toLocaleDateString('en-GB') : 'N/A'}</span>
+                                            </div>
+                                        </div>
+                                        {fb.comments && (
+                                            <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed bg-gray-50 rounded-lg px-4 py-3 mt-2">{fb.comments}</p>
+                                        )}
+                                    </div>
+                                ))}
                             </div>
                         )}
                     </div>

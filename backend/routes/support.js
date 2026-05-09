@@ -54,6 +54,7 @@ async function initSupportTables() {
                 type VARCHAR(50) NOT NULL,
                 subject VARCHAR(255) NOT NULL,
                 description LONGTEXT NOT NULL,
+                admin_reply LONGTEXT NULL,
                 status VARCHAR(50) DEFAULT 'open',
                 priority VARCHAR(20) DEFAULT 'medium',
                 assigned_to VARCHAR(255),
@@ -66,6 +67,16 @@ async function initSupportTables() {
                 INDEX idx_created (created_at)
             )
         `);
+
+        // Backfill admin reply column for existing environments (MySQL <8.0.3 safe).
+        try {
+            await connection.query(`
+                ALTER TABLE support_requests
+                ADD COLUMN admin_reply LONGTEXT NULL AFTER description
+            `);
+        } catch (e) {
+            if (!e.message.includes('Duplicate column name')) throw e;
+        }
 
         // Feedback Surveys Table
         await connection.query(`
@@ -109,7 +120,7 @@ async function initSupportTables() {
             )
         `);
 
-        // Complaints Timeline Table
+        // Complaint Timeline Table
         await connection.query(`
             CREATE TABLE IF NOT EXISTS complaint_timeline (
                 id INT AUTO_INCREMENT PRIMARY KEY,
@@ -319,12 +330,12 @@ router.get('/requests/:student_id/:request_id', async (req, res) => {
 router.put('/requests/:request_id', async (req, res) => {
     try {
         const { request_id } = req.params;
-        const { status, assigned_to } = req.body;
+        const { status, assigned_to, admin_reply } = req.body;
         const connection = await pool.getConnection();
 
         await connection.query(
-            `UPDATE support_requests SET status = ?, assigned_to = ?, updated_at = NOW() WHERE id = ?`,
-            [status, assigned_to, request_id]
+            `UPDATE support_requests SET status = ?, assigned_to = ?, admin_reply = ?, updated_at = NOW() WHERE id = ?`,
+            [status, assigned_to || null, admin_reply || null, request_id]
         );
 
         connection.release();
@@ -762,6 +773,174 @@ router.get('/safeguarding/:student_id/:report_id', async (req, res) => {
     } catch (error) {
         console.error("[SAFEGUARDING] Fetch single failed:", error.message);
         res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// ============================================
+// ADMIN ENDPOINTS
+// ============================================
+
+// GET all support requests (admin)
+router.get('/admin/requests', async (req, res) => {
+    try {
+        const { status, type } = req.query;
+        const connection = await pool.getConnection();
+        let where = 'WHERE 1=1';
+        const params = [];
+        if (status && status !== 'all') { where += ' AND sr.status = ?'; params.push(status); }
+        if (type && type !== 'all')     { where += ' AND sr.type = ?';   params.push(type); }
+
+        const [rows] = await connection.query(
+            `SELECT sr.*, CONCAT(sa.first_name, ' ', sa.last_name) as student_name, sa.email as student_email
+             FROM support_requests sr
+             LEFT JOIN student_applications sa ON sr.student_id = sa.id
+             ${where}
+             ORDER BY sr.created_at DESC`,
+            params
+        );
+        connection.release();
+        res.json({ success: true, count: rows.length, requests: rows });
+    } catch (err) {
+        console.error('[ADMIN] Fetch support requests failed:', err.message);
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+// GET all feedback (admin)
+router.get('/admin/feedback', async (req, res) => {
+    try {
+        const connection = await pool.getConnection();
+        const [rows] = await connection.query(
+            `SELECT fs.*, CONCAT(sa.first_name, ' ', sa.last_name) as student_name, sa.email as student_email
+             FROM feedback_surveys fs
+             LEFT JOIN student_applications sa ON fs.student_id = sa.id
+             ORDER BY fs.submitted_at DESC`
+        );
+        connection.release();
+        res.json({ success: true, count: rows.length, feedback: rows });
+    } catch (err) {
+        console.error('[ADMIN] Fetch feedback failed:', err.message);
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+// GET all complaints (admin)
+router.get('/admin/complaints', async (req, res) => {
+    try {
+        const { status } = req.query;
+        const connection = await pool.getConnection();
+        let where = 'WHERE 1=1';
+        const params = [];
+        if (status && status !== 'all') { where += ' AND ca.status = ?'; params.push(status); }
+
+        const [rows] = await connection.query(
+            `SELECT ca.*, CONCAT(sa.first_name, ' ', sa.last_name) as student_name, sa.email as student_email
+             FROM complaints_appeals ca
+             LEFT JOIN student_applications sa ON ca.student_id = sa.id
+             ${where}
+             ORDER BY ca.created_at DESC`,
+            params
+        );
+        connection.release();
+        res.json({ success: true, count: rows.length, complaints: rows });
+    } catch (err) {
+        console.error('[ADMIN] Fetch complaints failed:', err.message);
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+// GET all disability requests (admin)
+router.get('/admin/disability', async (req, res) => {
+    try {
+        const connection = await pool.getConnection();
+        const [rows] = await connection.query(
+            `SELECT dr.*, CONCAT(sa.first_name, ' ', sa.last_name) as student_name, sa.email as student_email
+             FROM disability_requests dr
+             LEFT JOIN student_applications sa ON dr.student_id = sa.id
+             ORDER BY dr.created_at DESC`
+        );
+        connection.release();
+        res.json({ success: true, count: rows.length, requests: rows });
+    } catch (err) {
+        console.error('[ADMIN] Fetch disability requests failed:', err.message);
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+// GET all safeguarding reports (admin)
+router.get('/admin/safeguarding', async (req, res) => {
+    try {
+        const connection = await pool.getConnection();
+        const [rows] = await connection.query(
+            `SELECT sg.*, CONCAT(sa.first_name, ' ', sa.last_name) as student_name, sa.email as student_email
+             FROM safeguarding_reports sg
+             LEFT JOIN student_applications sa ON sg.student_id = sa.id
+             ORDER BY sg.created_at DESC`
+        );
+        connection.release();
+        res.json({ success: true, count: rows.length, reports: rows });
+    } catch (err) {
+        console.error('[ADMIN] Fetch safeguarding reports failed:', err.message);
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+// PUT update support request status (admin)
+router.put('/admin/requests/:id', async (req, res) => {
+    try {
+        const { status, assigned_to, admin_reply } = req.body;
+        const connection = await pool.getConnection();
+        await connection.query(
+            `UPDATE support_requests
+             SET status = COALESCE(?, status), assigned_to = ?, admin_reply = ?, updated_at = NOW()
+             WHERE id = ?`,
+            [status || null, assigned_to || null, admin_reply || null, req.params.id]
+        );
+        connection.release();
+        res.json({ success: true, message: 'Updated' });
+    } catch (err) {
+        console.error('[ADMIN] Update support request failed:', err.message);
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+// PUT update complaint status (admin)
+router.put('/admin/complaints/:id', async (req, res) => {
+    try {
+        const { status, decision, decision_notes, assigned_to } = req.body;
+        const connection = await pool.getConnection();
+        await connection.query(
+            `UPDATE complaints_appeals SET status = ?, decision = ?, decision_notes = ?, assigned_to = ?, updated_at = NOW() WHERE id = ?`,
+            [status, decision || null, decision_notes || null, assigned_to || null, req.params.id]
+        );
+        if (status === 'resolved' || status === 'rejected') {
+            await connection.query(
+                `INSERT INTO complaint_timeline (complaint_id, stage, description, updated_by) VALUES (?, ?, ?, ?)`,
+                [req.params.id, status, decision_notes || `Status changed to ${status}`, 'admin']
+            );
+        }
+        connection.release();
+        res.json({ success: true, message: 'Updated' });
+    } catch (err) {
+        console.error('[ADMIN] Update complaint failed:', err.message);
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+// PUT update disability request status (admin)
+router.put('/admin/disability/:id', async (req, res) => {
+    try {
+        const { status } = req.body;
+        const connection = await pool.getConnection();
+        await connection.query(
+            `UPDATE disability_requests SET status = ?, updated_at = NOW() WHERE id = ?`,
+            [status, req.params.id]
+        );
+        connection.release();
+        res.json({ success: true, message: 'Updated' });
+    } catch (err) {
+        console.error('[ADMIN] Update disability failed:', err.message);
+        res.status(500).json({ success: false, message: err.message });
     }
 });
 

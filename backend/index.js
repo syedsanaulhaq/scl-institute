@@ -13,6 +13,7 @@ const { router: notificationsRouter } = require('./routes/notifications');
 const courseInductionsRouter = require('./routes/course-inductions');
 const accreditationsRouter = require('./routes/accreditations');
 const courseVisitsRouter = require('./routes/course-visits');
+const supportRouter = require('./routes/support');
 
 process.on('unhandledRejection', (reason, p) => {
     console.error('Unhandled Rejection at:', p, 'reason:', reason);
@@ -213,12 +214,20 @@ async function initDB() {
 // Initialize DB on startup
 initDB();
 
-// ─── Moodle → SCL User Sync (Moodle is source of truth) ───
+// ─── Bidirectional User Sync: SCL management roles are source of truth ───
+// Moodle role → SCL role mapping (Moodle has no 'collegeadmin', uses 'manager' at system context)
+function moodleRoleToSclRole(moodleRole) {
+    // 'manager' in Moodle system context = 'collegeadmin' in SCL
+    if (moodleRole === 'manager') return 'collegeadmin';
+    return moodleRole || 'student';
+}
+
 async function syncMoodleUsersToSCL() {
     try {
         const [moodleUsers] = await moodlePool.query(`
             SELECT u.id, u.firstname, u.lastname, u.email,
-                   COALESCE(MIN(r.shortname), 'student') as role
+                   COALESCE(MIN(r.shortname), 'student') as role,
+                   MAX(CASE WHEN ra.contextid = 1 THEN r.shortname ELSE NULL END) as system_role
             FROM ${moodleTablePrefix}user u
             LEFT JOIN ${moodleTablePrefix}role_assignments ra ON ra.userid = u.id
             LEFT JOIN ${moodleTablePrefix}role r ON r.id = ra.roleid
@@ -234,22 +243,36 @@ async function syncMoodleUsersToSCL() {
         for (const mu of moodleUsers) {
             const email = mu.email.toLowerCase();
             const existing = sclMap[email];
+            // If user has manager role at Moodle system context, treat as collegeadmin in SCL.
+            // Otherwise translate the course-level Moodle role to the SCL equivalent.
+            const effectiveMoodleRole = mu.system_role
+                ? moodleRoleToSclRole(mu.system_role)
+                : moodleRoleToSclRole(mu.role || 'student');
+
             if (!existing) {
-                // Create in SCL DB
+                // Create in SCL DB using translated role
                 const hash = crypto.createHash('sha256').update('moodle-sync-' + mu.id).digest('hex');
                 await db.query(
                     'INSERT INTO users (email, password_hash, first_name, last_name, role, is_active) VALUES (?, ?, ?, ?, ?, 1)',
-                    [email, hash, mu.firstname || '', mu.lastname || '', mu.role || 'student']
+                    [email, hash, mu.firstname || '', mu.lastname || '', effectiveMoodleRole]
                 );
                 created++;
             } else {
-                // Update name/role if changed in Moodle
+                // Only freeze top-level admin roles — systemadmin, admin, collegeadmin are SCL-managed.
+                // manager, teacher, student etc. are still synced from Moodle.
+                const frozenRoles = new Set(['systemadmin', 'admin', 'collegeadmin']);
+                if (frozenRoles.has(normalizeRole(existing.role))) continue;
+
                 const nameChanged = existing.first_name !== mu.firstname || existing.last_name !== mu.lastname;
-                const roleChanged = existing.role !== mu.role;
+                const moodleRoleNorm = normalizeRole(effectiveMoodleRole);
+                const moodleRolePriority = getRolePriority(moodleRoleNorm);
+                const existingPriority = getRolePriority(normalizeRole(existing.role));
+                // Only update the role if the translated Moodle role is strictly more privileged
+                const roleChanged = moodleRolePriority < existingPriority && existing.role !== moodleRoleNorm;
                 if (nameChanged || roleChanged) {
                     await db.query(
                         'UPDATE users SET first_name = ?, last_name = ?, role = ? WHERE id = ?',
-                        [mu.firstname || '', mu.lastname || '', mu.role || 'student', existing.id]
+                        [mu.firstname || '', mu.lastname || '', roleChanged ? moodleRoleNorm : existing.role, existing.id]
                     );
                     updated++;
                 }
@@ -300,6 +323,7 @@ app.use('/api/notifications', notificationsRouter);
 app.use('/api/course-inductions', courseInductionsRouter);
 app.use('/api/accreditations', accreditationsRouter);
 app.use('/api/course-visits', courseVisitsRouter);
+app.use('/api/support', supportRouter);
 
 // ===============================
 // ROUTES
@@ -1068,6 +1092,11 @@ function buildRoleContext(roleValue, roleData = null) {
     const isCollegeAdmin = roles.some((role) => collegeAdminRoles.has(role));
     const isManagerOnly = roles.some((role) => managerOnlyRoles.has(role)) && !isSystemAdmin && !isCollegeAdmin;
 
+    // Management users should never appear as students even if they hold a Moodle student enrolment.
+    // This prevents the role-sync job from overwriting their admin role with 'student'.
+    const hasStudent = !hasManagement && roles.some((role) => learningRoles.has(role));
+    const hasTeaching = roles.some((role) => teachingRoles.has(role));
+
     return {
         primaryRole,
         roles,
@@ -1079,17 +1108,19 @@ function buildRoleContext(roleValue, roleData = null) {
         isSystemAdmin,
         isCollegeAdmin,
         isManagerOnly,
-        hasTeaching: roles.some((role) => teachingRoles.has(role)),
-        hasStudent: roles.some((role) => learningRoles.has(role)),
+        hasTeaching,
+        hasStudent,
         canAccessManagementPortal: hasSystemManagement || hasManagement,
-        canAccessStudentPortal: roles.some((role) => learningRoles.has(role) || teachingRoles.has(role))
+        canAccessStudentPortal: hasStudent || hasTeaching
     };
 }
 
 function getRolePriority(role) {
     const priority = {
-        manager: 1,
+        systemadmin: 1,
         admin: 1,
+        collegeadmin: 1,
+        manager: 1,
         coursecreator: 2,
         editingteacher: 3,
         teacher: 4,
@@ -1373,10 +1404,25 @@ async function getMoodleRolesFromDbByEmail(email) {
 
     const roleData = { assignments };
 
+    // Merge local management role before storing snapshot so admin roles
+    // fetched from Moodle DB never overwrite a higher-privilege local role.
+    let snapshotRoles = roles;
+    try {
+        const [localRows] = await pool.query('SELECT role FROM users WHERE email = ? LIMIT 1', [email]);
+        const localRole = localRows?.[0]?.role || null;
+        const localTokens = parseRoleTokens(localRole);
+        const hasLocalMgmt = localTokens.some((r) => managementRoles.has(r));
+        if (hasLocalMgmt || isProtectedManagementEmail(email)) {
+            snapshotRoles = mergeRoles(localRole, roles, { forceManager: isProtectedManagementEmail(email) });
+        }
+    } catch (e) {
+        console.warn('[MOODLE DB ROLES] Could not read local role for snapshot merge:', e.message);
+    }
+
     await upsertRoleSnapshot({
         email,
         moodleUserId,
-        roles,
+        roles: snapshotRoles,
         roleData,
         source: 'moodle-db'
     });
@@ -1384,7 +1430,7 @@ async function getMoodleRolesFromDbByEmail(email) {
     return {
         source: 'moodle-db',
         moodleUserId,
-        roles,
+        roles: snapshotRoles,
         roleData
     };
 }
@@ -1449,11 +1495,19 @@ async function forceResyncRoleSnapshot({ email, moodleUserId = null }) {
     });
 
     // Keep local role roughly aligned for legacy readers.
+    // Only write back if the new primaryRole is at least as privileged as the current one.
     try {
         const roleContext = buildRoleContext(effectiveRoles.join(','), fresh.roleData || null);
         const primaryRole = roleContext.primaryRole;
         if (primaryRole) {
-            await pool.query('UPDATE users SET role = ? WHERE email = ?', [primaryRole, resolvedEmail]);
+            const [curRows] = await pool.query('SELECT role FROM users WHERE email = ? LIMIT 1', [resolvedEmail]);
+            const currentRole = curRows?.[0]?.role || null;
+            const currentPriority = getRolePriority(normalizeRole(currentRole));
+            const newPriority = getRolePriority(normalizeRole(primaryRole));
+            // Only update if the new role is equally or more privileged (lower priority number)
+            if (!currentRole || newPriority <= currentPriority) {
+                await pool.query('UPDATE users SET role = ? WHERE email = ?', [primaryRole, resolvedEmail]);
+            }
         }
     } catch (e) {
         console.warn('[SSO RESYNC] Could not update users.role:', e.message);
@@ -1479,11 +1533,17 @@ async function syncAllUserRoleSnapshots() {
     const startedAt = Date.now();
 
     try {
-        const [users] = await pool.query('SELECT email FROM users WHERE email IS NOT NULL AND email != ""');
+        const [users] = await pool.query('SELECT email, role FROM users WHERE email IS NOT NULL AND email != ""');
         let successCount = 0;
         let failureCount = 0;
 
         for (const user of users) {
+            // Skip only top-level admin roles from Moodle snapshot sync
+            const frozenRoles = new Set(['systemadmin', 'admin', 'collegeadmin']);
+            if (frozenRoles.has(normalizeRole(user.role))) {
+                successCount += 1;
+                continue;
+            }
             try {
                 await forceResyncRoleSnapshot({ email: user.email });
                 successCount += 1;
@@ -1569,10 +1629,26 @@ async function getMoodleRolesByEmail(email, options = {}) {
         const wsRoles = [...wsRoleTokens].sort((a, b) => getRolePriority(a) - getRolePriority(b));
         if (wsRoles.length > 0) {
             const roleData = { assignments: wsRoleData };
+
+            // Always merge local management role so a Moodle-only student enrolment
+            // never overwrites an admin's assigned role in the snapshot store.
+            let snapshotRoles = wsRoles;
+            try {
+                const [localRows] = await pool.query('SELECT role FROM users WHERE email = ? LIMIT 1', [email]);
+                const localRole = localRows?.[0]?.role || null;
+                const localTokens = parseRoleTokens(localRole);
+                const hasLocalMgmt = localTokens.some((r) => managementRoles.has(r));
+                if (hasLocalMgmt || isProtectedManagementEmail(email)) {
+                    snapshotRoles = mergeRoles(localRole, wsRoles, { forceManager: isProtectedManagementEmail(email) });
+                }
+            } catch (e) {
+                console.warn('[LOGIN] Could not read local role for snapshot merge:', e.message);
+            }
+
             await upsertRoleSnapshot({
                 email,
                 moodleUserId: moodleUser.id,
-                roles: wsRoles,
+                roles: snapshotRoles,
                 roleData,
                 source: 'moodle-ws'
             });
@@ -1580,7 +1656,7 @@ async function getMoodleRolesByEmail(email, options = {}) {
             return {
                 source: 'moodle-ws',
                 moodleUserId: moodleUser.id,
-                roles: wsRoles,
+                roles: snapshotRoles,
                 roleData
             };
         }
