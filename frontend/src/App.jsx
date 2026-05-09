@@ -641,6 +641,15 @@ function App() {
                         <LoginPage onLoginSuccess={handleLoginSuccess} />
                     )
                 } />
+                <Route path="/applications/:id" element={
+                    user && canAccessManagementPortal ? (
+                        <Layout user={user} onLogout={handleLogout}>
+                            <ApplicationReview />
+                        </Layout>
+                    ) : (
+                        <LoginPage onLoginSuccess={handleLoginSuccess} />
+                    )
+                } />
                 <Route path="/applications/:id/review" element={
                     user && canAccessManagementPortal ? (
                         <Layout user={user} onLogout={handleLogout}>
