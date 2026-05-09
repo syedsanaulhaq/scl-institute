@@ -213,7 +213,7 @@ async function initDB() {
 // Initialize DB on startup
 initDB();
 
-// ─── Moodle → SCL User Sync (Moodle is source of truth) ───
+// ─── Bidirectional User Sync: SCL management roles are source of truth ───
 async function syncMoodleUsersToSCL() {
     try {
         const [moodleUsers] = await moodlePool.query(`
@@ -259,6 +259,12 @@ async function syncMoodleUsersToSCL() {
                         [mu.firstname || '', mu.lastname || '', roleChanged ? moodleRoleNorm : existing.role, existing.id]
                     );
                     updated++;
+                }
+                // Bidirectional: if SCL has a management role, push it to Moodle so both stay in sync
+                if (existingIsMgmt && process.env.ENABLE_MOODLE_INTEGRATION !== 'false') {
+                    assignMoodleSystemRole(email, existing.role).catch(err =>
+                        console.warn(`[MOODLE SYNC] Could not push management role for ${email} to Moodle:`, err.message)
+                    );
                 }
             }
         }
