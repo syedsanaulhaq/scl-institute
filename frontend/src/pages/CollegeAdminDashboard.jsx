@@ -314,7 +314,7 @@ const CollegeAdminDashboard = ({ user }) => {
                                     <tr
                                         key={app.id}
                                         className="hover:bg-slate-50 transition cursor-pointer"
-                                        onClick={() => navigate(`/applications/${app.id}`)}
+                                        onClick={() => navigate(`/applications/${app.id}/review`)}
                                     >
                                         <td className="px-4 py-3 font-mono text-xs text-slate-500">
                                             {app.application_reference || `#${app.id}`}
