@@ -401,36 +401,63 @@ const StudentSupportHub = ({ user }) => {
                         )}
                         {supportRequests.map(req => (
                             <div key={req.id} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                                <div className="flex items-start justify-between px-5 py-4">
-                                    <div className="flex-1 min-w-0">
-                                        <p className="font-semibold text-gray-900">{req.subject}</p>
-                                        <p className="text-xs text-gray-500 mt-0.5 capitalize">{req.type} &middot; {new Date(req.created_at).toLocaleDateString('en-GB')}</p>
+                                {/* Ticket header */}
+                                <div className="flex items-center justify-between px-5 py-3 bg-gray-50 border-b border-gray-100">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{req.type}</span>
+                                        <span className="text-gray-300">·</span>
+                                        <span className="text-xs text-gray-400">{new Date(req.created_at).toLocaleDateString('en-GB')}</span>
                                     </div>
-                                    <span className={`ml-3 flex-shrink-0 px-3 py-1 rounded-full text-xs font-medium capitalize ${getStatusColor(req.status)}`}>{req.status?.replace(/_/g,' ')}</span>
+                                    <span className={`px-3 py-1 rounded-full text-xs font-medium capitalize ${getStatusColor(req.status)}`}>{req.status?.replace(/_/g,' ')}</span>
                                 </div>
-                                <div className="px-5 pb-4">
-                                    <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{req.description}</p>
-                                </div>
-                                <div className="border-t border-gray-100 bg-gray-50 px-5 py-4">
-                                    {req.admin_reply ? (
-                                        <div className="flex gap-3">
-                                            <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center flex-shrink-0">
-                                                <span className="text-white text-xs font-bold">A</span>
+
+                                {/* Thread body */}
+                                <div className="px-5 py-4 space-y-4">
+
+                                    {/* Student message */}
+                                    <div className="flex gap-3">
+                                        <div className="flex flex-col items-center">
+                                            <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0">
+                                                <span className="text-white text-xs font-bold">
+                                                    {user?.name?.charAt(0)?.toUpperCase() || 'S'}
+                                                </span>
                                             </div>
-                                            <div className="flex-1">
-                                                <div className="flex items-center gap-2 mb-1">
-                                                    <span className="text-xs font-semibold text-indigo-700">Admin Reply</span>
+                                            {req.admin_reply && <div className="w-0.5 flex-1 bg-gray-200 mt-2"></div>}
+                                        </div>
+                                        <div className="flex-1 min-w-0 pb-1">
+                                            <div className="flex items-center gap-2 mb-1.5">
+                                                <span className="text-sm font-semibold text-gray-900">{user?.name || 'You'}</span>
+                                                <span className="text-xs text-gray-400">{new Date(req.created_at).toLocaleDateString('en-GB')}</span>
+                                            </div>
+                                            <div className="bg-blue-50 border border-blue-100 rounded-lg rounded-tl-none px-4 py-3">
+                                                <p className="text-sm font-semibold text-gray-900 mb-1">{req.subject}</p>
+                                                <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{req.description}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Admin reply (hierarchical, indented) */}
+                                    {req.admin_reply ? (
+                                        <div className="flex gap-3 pl-4">
+                                            <div className="flex flex-col items-center">
+                                                <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center flex-shrink-0">
+                                                    <span className="text-white text-xs font-bold">A</span>
+                                                </div>
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center gap-2 mb-1.5">
+                                                    <span className="text-sm font-semibold text-indigo-700">Support Team</span>
                                                     <span className="text-xs text-gray-400">{req.updated_at ? new Date(req.updated_at).toLocaleDateString('en-GB') : ''}</span>
                                                 </div>
-                                                <div className="bg-white rounded-lg border border-indigo-100 px-4 py-3">
+                                                <div className="bg-indigo-50 border border-indigo-100 rounded-lg rounded-tl-none px-4 py-3">
                                                     <p className="text-sm text-gray-800 whitespace-pre-wrap leading-relaxed">{req.admin_reply}</p>
                                                 </div>
                                             </div>
                                         </div>
                                     ) : (
-                                        <div className="flex items-center gap-2 text-gray-400">
+                                        <div className="flex items-center gap-2 text-gray-400 pl-11">
                                             <Clock className="w-4 h-4" />
-                                            <p className="text-sm">Awaiting reply from the support team.</p>
+                                            <p className="text-sm italic">Awaiting reply from the support team…</p>
                                         </div>
                                     )}
                                 </div>
