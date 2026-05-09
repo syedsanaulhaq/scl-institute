@@ -54,6 +54,7 @@ async function initSupportTables() {
                 type VARCHAR(50) NOT NULL,
                 subject VARCHAR(255) NOT NULL,
                 description LONGTEXT NOT NULL,
+                admin_reply LONGTEXT NULL,
                 status VARCHAR(50) DEFAULT 'open',
                 priority VARCHAR(20) DEFAULT 'medium',
                 assigned_to VARCHAR(255),
@@ -65,6 +66,12 @@ async function initSupportTables() {
                 INDEX idx_type (type),
                 INDEX idx_created (created_at)
             )
+        `);
+
+        // Backfill admin reply column for existing environments.
+        await connection.query(`
+            ALTER TABLE support_requests
+            ADD COLUMN IF NOT EXISTS admin_reply LONGTEXT NULL AFTER description
         `);
 
         // Feedback Surveys Table
@@ -319,12 +326,12 @@ router.get('/requests/:student_id/:request_id', async (req, res) => {
 router.put('/requests/:request_id', async (req, res) => {
     try {
         const { request_id } = req.params;
-        const { status, assigned_to } = req.body;
+        const { status, assigned_to, admin_reply } = req.body;
         const connection = await pool.getConnection();
 
         await connection.query(
-            `UPDATE support_requests SET status = ?, assigned_to = ?, updated_at = NOW() WHERE id = ?`,
-            [status, assigned_to, request_id]
+            `UPDATE support_requests SET status = ?, assigned_to = ?, admin_reply = ?, updated_at = NOW() WHERE id = ?`,
+            [status, assigned_to || null, admin_reply || null, request_id]
         );
 
         connection.release();
@@ -877,11 +884,11 @@ router.get('/admin/safeguarding', async (req, res) => {
 // PUT update support request status (admin)
 router.put('/admin/requests/:id', async (req, res) => {
     try {
-        const { status, assigned_to, admin_notes } = req.body;
+        const { status, assigned_to, admin_reply } = req.body;
         const connection = await pool.getConnection();
         await connection.query(
-            `UPDATE support_requests SET status = ?, assigned_to = ?, updated_at = NOW() WHERE id = ?`,
-            [status, assigned_to || null, req.params.id]
+            `UPDATE support_requests SET status = ?, assigned_to = ?, admin_reply = ?, updated_at = NOW() WHERE id = ?`,
+            [status || 'open', assigned_to || null, admin_reply || null, req.params.id]
         );
         connection.release();
         res.json({ success: true, message: 'Updated' });

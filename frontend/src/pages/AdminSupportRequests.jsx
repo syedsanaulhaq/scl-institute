@@ -55,6 +55,7 @@ function SupportRequestsTab() {
     const [expanded, setExpanded] = useState(null);
     const [statusFilter, setStatusFilter] = useState('all');
     const [updating, setUpdating] = useState(null);
+    const [replyDraft, setReplyDraft] = useState({});
 
     const fetch = async () => {
         setLoading(true);
@@ -71,8 +72,9 @@ function SupportRequestsTab() {
     const updateStatus = async (id, status) => {
         setUpdating(id);
         try {
-            await axios.put(`${API_URL}/support/admin/requests/${id}`, { status });
-            setItems(prev => prev.map(i => i.id === id ? { ...i, status } : i));
+            const admin_reply = (replyDraft[id] ?? '').trim();
+            await axios.put(`${API_URL}/support/admin/requests/${id}`, { status, admin_reply });
+            setItems(prev => prev.map(i => i.id === id ? { ...i, status, admin_reply } : i));
         } catch (e) { console.error(e); }
         setUpdating(null);
     };
@@ -118,6 +120,19 @@ function SupportRequestsTab() {
                                         <ExpandRow label="Type"><Badge value={item.type} /></ExpandRow>
                                         <ExpandRow label="Submitted"><span className="flex items-center gap-1"><Calendar className="w-3 h-3" />{fmt(item.created_at)}</span></ExpandRow>
                                         <ExpandRow label="Description"><p className="whitespace-pre-wrap">{item.description}</p></ExpandRow>
+                                        <ExpandRow label="Reply">
+                                            <p className="whitespace-pre-wrap">{item.admin_reply || 'No reply yet.'}</p>
+                                        </ExpandRow>
+                                    </div>
+                                    <div className="mb-3">
+                                        <label className="text-xs text-slate-500 mb-1 block">Reply to Student</label>
+                                        <textarea
+                                            rows={3}
+                                            value={replyDraft[item.id] ?? item.admin_reply ?? ''}
+                                            onChange={(e) => setReplyDraft((p) => ({ ...p, [item.id]: e.target.value }))}
+                                            className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 resize-none focus:ring-2 focus:ring-indigo-300 outline-none"
+                                            placeholder="Write a reply that the student can see..."
+                                        />
                                     </div>
                                     <div className="flex items-center gap-3">
                                         <span className="text-xs text-slate-500">Update Status:</span>

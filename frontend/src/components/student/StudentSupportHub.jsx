@@ -406,6 +406,10 @@ const StudentSupportHub = ({ user }) => {
                                             <span className={`px-3 py-1 rounded text-sm ${getStatusColor(req.status)}`}>{req.status}</span>
                                             <span className="text-xs text-gray-600">{new Date(req.created_at).toLocaleDateString('en-GB')}</span>
                                         </div>
+                                        <div className="mt-3 border-t border-gray-100 pt-3">
+                                            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Reply</p>
+                                            <p className="text-sm text-gray-700 mt-1 whitespace-pre-wrap">{req.admin_reply || 'No reply yet.'}</p>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
