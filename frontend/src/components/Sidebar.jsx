@@ -132,7 +132,6 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
             },
             { name: 'Programme Intakes', icon: Users, path: '/programme-intakes' },
             { name: 'LMS Enrolments', icon: GraduationCap, path: '/admin/lms-enrolments' },
-            { name: 'Access LMS', icon: GraduationCap, isSSO: true },
             { name: 'Settings', icon: Settings, path: '/settings' }
         ]
         : [];
