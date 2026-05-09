@@ -214,11 +214,19 @@ async function initDB() {
 initDB();
 
 // ─── Bidirectional User Sync: SCL management roles are source of truth ───
+// Moodle role → SCL role mapping (Moodle has no 'collegeadmin', uses 'manager' at system context)
+function moodleRoleToSclRole(moodleRole) {
+    // 'manager' in Moodle system context = 'collegeadmin' in SCL
+    if (moodleRole === 'manager') return 'collegeadmin';
+    return moodleRole || 'student';
+}
+
 async function syncMoodleUsersToSCL() {
     try {
         const [moodleUsers] = await moodlePool.query(`
             SELECT u.id, u.firstname, u.lastname, u.email,
-                   COALESCE(MIN(r.shortname), 'student') as role
+                   COALESCE(MIN(r.shortname), 'student') as role,
+                   MAX(CASE WHEN ra.contextid = 1 THEN r.shortname ELSE NULL END) as system_role
             FROM ${moodleTablePrefix}user u
             LEFT JOIN ${moodleTablePrefix}role_assignments ra ON ra.userid = u.id
             LEFT JOIN ${moodleTablePrefix}role r ON r.id = ra.roleid
@@ -234,12 +242,18 @@ async function syncMoodleUsersToSCL() {
         for (const mu of moodleUsers) {
             const email = mu.email.toLowerCase();
             const existing = sclMap[email];
+            // If user has manager role at Moodle system context, treat as collegeadmin in SCL.
+            // Otherwise translate the course-level Moodle role to the SCL equivalent.
+            const effectiveMoodleRole = mu.system_role
+                ? moodleRoleToSclRole(mu.system_role)
+                : moodleRoleToSclRole(mu.role || 'student');
+
             if (!existing) {
-                // Create in SCL DB
+                // Create in SCL DB using translated role
                 const hash = crypto.createHash('sha256').update('moodle-sync-' + mu.id).digest('hex');
                 await db.query(
                     'INSERT INTO users (email, password_hash, first_name, last_name, role, is_active) VALUES (?, ?, ?, ?, ?, 1)',
-                    [email, hash, mu.firstname || '', mu.lastname || '', mu.role || 'student']
+                    [email, hash, mu.firstname || '', mu.lastname || '', effectiveMoodleRole]
                 );
                 created++;
             } else {
@@ -248,10 +262,10 @@ async function syncMoodleUsersToSCL() {
                 // Moodle's role (often 'student' from course enrolments) must not demote admins.
                 const nameChanged = existing.first_name !== mu.firstname || existing.last_name !== mu.lastname;
                 const existingIsMgmt = managementRoles.has(normalizeRole(existing.role));
-                const moodleRoleNorm = normalizeRole(mu.role || 'student');
+                const moodleRoleNorm = normalizeRole(effectiveMoodleRole);
                 const moodleRolePriority = getRolePriority(moodleRoleNorm);
                 const existingPriority = getRolePriority(normalizeRole(existing.role));
-                // Only update the role if Moodle's role is strictly more privileged (lower priority number)
+                // Only update the role if the translated Moodle role is strictly more privileged
                 const roleChanged = !existingIsMgmt && moodleRolePriority < existingPriority && existing.role !== moodleRoleNorm;
                 if (nameChanged || roleChanged) {
                     await db.query(
