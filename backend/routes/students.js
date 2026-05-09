@@ -4224,10 +4224,10 @@ router.get('/programme-lifecycle-status', async (req, res) => {
                 FROM programme_intakes
                 WHERE program_name IS NOT NULL AND program_name != ''
             ) pi
-            LEFT JOIN course_accreditations ca ON ca.course_title = pi.program_name
-            LEFT JOIN course_visits cv ON cv.course_title = pi.program_name
-            LEFT JOIN course_inductions ci ON ci.course_title = pi.program_name
-            LEFT JOIN course_registrations cr ON cr.course_title = pi.program_name
+            LEFT JOIN course_accreditations ca ON ca.course_title COLLATE utf8mb4_unicode_ci = pi.program_name
+            LEFT JOIN course_visits cv ON cv.course_title COLLATE utf8mb4_unicode_ci = pi.program_name
+            LEFT JOIN course_inductions ci ON ci.course_title COLLATE utf8mb4_unicode_ci = pi.program_name
+            LEFT JOIN course_registrations cr ON cr.course_title COLLATE utf8mb4_unicode_ci = pi.program_name
             ORDER BY pi.programme_type_name, pi.program_name
         `);
 
