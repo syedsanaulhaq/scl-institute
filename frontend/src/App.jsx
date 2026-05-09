@@ -5,6 +5,7 @@ import LoginPage from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import AdminDashboard from './components/AdminDashboard';
 import AdminOverview from './pages/AdminOverview';
+import CollegeAdminOverview from './pages/CollegeAdminOverview';
 import LmsEnrolments from './pages/LmsEnrolments';
 import AdminStudentProgrammes from './pages/AdminStudentProgrammes';
 import AdminUsersByRole from './pages/AdminUsersByRole';
@@ -132,7 +133,9 @@ function App() {
                 <Route path="/" element={
                     user ? (
                         roleContext.isCollegeAdmin ? (
-                            <Navigate to="/college-admin/dashboard" replace />
+                            <Layout user={user} onLogout={handleLogout}>
+                                <CollegeAdminOverview user={user} />
+                            </Layout>
                         ) : canAccessManagementPortal ? (
                             <Layout user={user} onLogout={handleLogout}>
                                 <AdminOverview user={user} />
