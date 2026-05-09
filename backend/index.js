@@ -13,6 +13,7 @@ const { router: notificationsRouter } = require('./routes/notifications');
 const courseInductionsRouter = require('./routes/course-inductions');
 const accreditationsRouter = require('./routes/accreditations');
 const courseVisitsRouter = require('./routes/course-visits');
+const supportRouter = require('./routes/support');
 
 process.on('unhandledRejection', (reason, p) => {
     console.error('Unhandled Rejection at:', p, 'reason:', reason);
@@ -322,6 +323,7 @@ app.use('/api/notifications', notificationsRouter);
 app.use('/api/course-inductions', courseInductionsRouter);
 app.use('/api/accreditations', accreditationsRouter);
 app.use('/api/course-visits', courseVisitsRouter);
+app.use('/api/support', supportRouter);
 
 // ===============================
 // ROUTES

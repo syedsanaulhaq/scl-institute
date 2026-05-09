@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { AlertTriangle, MessageSquare, FileText, Scale, Accessibility, Shield, Plus, Send, Upload, Clock, CheckCircle, Megaphone } from 'lucide-react';
 import axios from 'axios';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
 
 const StudentSupportHub = ({ user }) => {
-    const [activeTab, setActiveTab] = useState('messages');
+    const [searchParams] = useSearchParams();
+    const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'messages');
     const [studentId, setStudentId] = useState(null);
 
     // Messages State
@@ -43,6 +45,12 @@ const StudentSupportHub = ({ user }) => {
     const [reportFile, setReportFile] = useState(null);
 
     const [loading, setLoading] = useState(false);
+
+    // Sync tab with URL ?tab= param whenever it changes
+    useEffect(() => {
+        const tab = searchParams.get('tab');
+        if (tab) setActiveTab(tab);
+    }, [searchParams]);
 
     useEffect(() => {
         const getStudentId = async () => {

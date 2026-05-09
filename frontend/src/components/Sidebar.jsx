@@ -50,6 +50,7 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
         return 'General Menu';
     });
     const [activeSubMenuKey, setActiveSubMenuKey] = useState(null);
+    const [activeSubItemKey, setActiveSubItemKey] = useState(null);
 
     const handleAccessLMS = async () => {
         try {
@@ -131,6 +132,7 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
             },
             { name: 'Programme Intakes', icon: Users, path: '/programme-intakes' },
             { name: 'LMS Enrolments', icon: GraduationCap, path: '/admin/lms-enrolments' },
+            { name: 'Support Inbox', icon: HelpCircle, path: '/admin/support-requests' },
             { name: 'Settings', icon: Settings, path: '/settings' }
         ]
         : [];
@@ -198,12 +200,12 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
                 isParent: true,
                 key: 'support',
                 subItems: [
-                    { name: 'Messages & Announcements', icon: Bell, path: '/student/messages' },
-                    { name: 'Support Requests', icon: HelpCircle, path: '/student/support' },
-                    { name: 'Feedback & Evaluations', icon: ClipboardList, path: '/student/support' },
-                    { name: 'Complaints & Appeals', icon: FileText, path: '/student/support' },
-                    { name: 'Disability Support', icon: ShieldCheck, path: '/student/support' },
-                    { name: 'Safeguarding & Prevent', icon: ShieldCheck, path: '/student/support' }
+                    { name: 'Messages & Announcements', icon: Bell, path: '/student/support?tab=messages' },
+                    { name: 'Support Requests', icon: HelpCircle, path: '/student/support?tab=support' },
+                    { name: 'Feedback & Evaluations', icon: ClipboardList, path: '/student/support?tab=feedback' },
+                    { name: 'Complaints & Appeals', icon: FileText, path: '/student/support?tab=complaints' },
+                    { name: 'Disability Support', icon: ShieldCheck, path: '/student/support?tab=disability' },
+                    { name: 'Safeguarding & Prevent', icon: ShieldCheck, path: '/student/support?tab=safeguarding' }
                 ]
             },
             {
@@ -271,10 +273,12 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
     const toggleSection = (sectionTitle) => {
         setActiveSectionTitle((prev) => (prev === sectionTitle ? '' : sectionTitle));
         setActiveSubMenuKey(null);
+        setActiveSubItemKey(null);
     };
 
     const toggleSubMenu = (menuKey) => {
         setActiveSubMenuKey((prev) => (prev === menuKey ? null : menuKey));
+        setActiveSubItemKey(null);
     };
 
     const handleMenuClick = (item) => {
@@ -289,10 +293,11 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
         }
     };
 
-    const handleSubItemClick = (subItem) => {
+    const handleSubItemClick = (subItem, parentKey) => {
         if (subItem.isSSO) {
             handleAccessLMS();
         } else if (subItem.path) {
+            setActiveSubItemKey(`${parentKey}::${subItem.name}`);
             navigate(subItem.path);
         }
     };
@@ -394,11 +399,16 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
                                         {item.isParent && isExpanded && isOpen && (
                                             <div className="ml-4 mt-1 space-y-1">
                                                 {item.subItems.map((subItem) => {
-                                                    const isSubActive = location.pathname === subItem.path;
+                                                    const subKey = `${item.key}::${subItem.name}`;
+                                                    const subPathname = subItem.path?.split('?')[0];
+                                                    const subSearch = subItem.path?.includes('?') ? '?' + subItem.path.split('?')[1] : '';
+                                                    const isSubActive = activeSubItemKey
+                                                        ? activeSubItemKey === subKey
+                                                        : location.pathname === subPathname && (!subSearch || location.search === subSearch);
                                                     return (
                                                         <button
                                                             key={subItem.name}
-                                                            onClick={() => handleSubItemClick(subItem)}
+                                                            onClick={() => handleSubItemClick(subItem, item.key)}
                                                             disabled={subItem.isSSO && loading}
                                                             className={`w-full flex items-center justify-start h-10 rounded-lg transition-all duration-200 group relative pl-4 ${
                                                                 subItem.isSSO && loading ? 'opacity-50 cursor-not-allowed' : ''
