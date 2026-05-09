@@ -4908,19 +4908,24 @@ router.get('/dashboard-stats', async (req, res) => {
                 application_status,
                 COUNT(*) as count
             FROM student_applications 
+            WHERE is_deleted = FALSE
             GROUP BY application_status
         `);
 
-        // Get applications by course
+        // Get applications by course (top 10)
         const [courseCounts] = await db.execute(`
             SELECT 
                 sa.course_code,
                 sa.course_title,
                 COUNT(*) as applications,
-                COUNT(CASE WHEN sa.application_status = 'accepted' THEN 1 END) as accepted
+                COUNT(CASE WHEN sa.application_status IN ('accepted','approved') THEN 1 END) as accepted,
+                COUNT(CASE WHEN sa.application_status = 'pending' THEN 1 END) as pending,
+                COUNT(CASE WHEN sa.application_status = 'rejected' THEN 1 END) as rejected
             FROM student_applications sa
+            WHERE sa.is_deleted = FALSE
             GROUP BY sa.course_code, sa.course_title
             ORDER BY applications DESC
+            LIMIT 10
         `);
 
         // Get recent applications (last 7 days)
@@ -4928,6 +4933,33 @@ router.get('/dashboard-stats', async (req, res) => {
             SELECT COUNT(*) as count
             FROM student_applications 
             WHERE submitted_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+              AND is_deleted = FALSE
+        `);
+
+        // Monthly trend for last 12 months
+        const [monthlyTrend] = await db.execute(`
+            SELECT 
+                DATE_FORMAT(submitted_at, '%Y-%m') as month,
+                COUNT(*) as total,
+                COUNT(CASE WHEN application_status IN ('accepted','approved') THEN 1 END) as accepted,
+                COUNT(CASE WHEN application_status = 'pending' THEN 1 END) as pending,
+                COUNT(CASE WHEN application_status = 'rejected' THEN 1 END) as rejected
+            FROM student_applications
+            WHERE submitted_at >= DATE_SUB(NOW(), INTERVAL 12 MONTH)
+              AND is_deleted = FALSE
+            GROUP BY DATE_FORMAT(submitted_at, '%Y-%m')
+            ORDER BY month ASC
+        `);
+
+        // Recent 10 applications
+        const [recentList] = await db.execute(`
+            SELECT 
+                id, application_reference, first_name, last_name,
+                email, course_title, course_code, application_status, submitted_at
+            FROM student_applications
+            WHERE is_deleted = FALSE
+            ORDER BY submitted_at DESC
+            LIMIT 10
         `);
 
         res.json({
@@ -4936,6 +4968,8 @@ router.get('/dashboard-stats', async (req, res) => {
                 status_summary: statusCounts,
                 course_summary: courseCounts,
                 recent_applications: recentApplications[0].count,
+                monthly_trend: monthlyTrend,
+                recent_list: recentList,
                 last_updated: new Date().toISOString()
             }
         });
