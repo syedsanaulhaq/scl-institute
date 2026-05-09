@@ -131,7 +131,9 @@ function App() {
                 <Route path="/login" element={<LoginPage onLoginSuccess={handleLoginSuccess} />} />
                 <Route path="/" element={
                     user ? (
-                        canAccessManagementPortal ? (
+                        roleContext.isCollegeAdmin ? (
+                            <Navigate to="/college-admin/dashboard" replace />
+                        ) : canAccessManagementPortal ? (
                             <Layout user={user} onLogout={handleLogout}>
                                 <AdminOverview user={user} />
                             </Layout>
