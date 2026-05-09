@@ -1,4 +1,9 @@
-<!DOCTYPE html>
+const fs = require('fs');
+const path = require('path');
+
+const ss = 'Client-Overview-Screenshots/screenshots';
+
+const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -166,7 +171,7 @@
   <h3 style="font-size:1.1rem;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.5px;margin-bottom:16px;">Login Screen</h3>
   <div class="ss-grid ss-1">
     <div class="ss-item" style="max-width: 800px; margin: 0 auto;">
-      <img src="Client-Overview-Screenshots/screenshots/s00-login-screen.jpg" alt="SCL Login Screen" loading="lazy">
+      <img src="${ss}/s00-login-screen.jpg" alt="SCL Login Screen" loading="lazy">
       <div class="ss-caption">SCL Institute Login — system.sclsandbox.xyz</div>
     </div>
   </div>
@@ -191,11 +196,11 @@
 
   <div class="ss-grid ss-2">
     <div class="ss-item">
-      <img src="Client-Overview-Screenshots/screenshots/s01-student-portal.png" alt="Student Portal Dashboard" loading="lazy">
+      <img src="${ss}/s01-student-portal.png" alt="Student Portal Dashboard" loading="lazy">
       <div class="ss-caption">Student Dashboard — Sarah Johnson</div>
     </div>
     <div class="ss-item">
-      <img src="Client-Overview-Screenshots/screenshots/s02-student-grades.png" alt="Student Grades" loading="lazy">
+      <img src="${ss}/s02-student-grades.png" alt="Student Grades" loading="lazy">
       <div class="ss-caption">Grades &amp; Academic Progress</div>
     </div>
   </div>
@@ -241,11 +246,11 @@
 
   <div class="ss-grid ss-2">
     <div class="ss-item">
-      <img src="Client-Overview-Screenshots/screenshots/s11-teacher-portal.png" alt="Teacher Dashboard" loading="lazy">
+      <img src="${ss}/s11-teacher-portal.png" alt="Teacher Dashboard" loading="lazy">
       <div class="ss-caption">Teacher Dashboard — test teacher (EDITINGTEACHER)</div>
     </div>
     <div class="ss-item">
-      <img src="Client-Overview-Screenshots/screenshots/s13-teacher-programme.png" alt="My Teaching Programme" loading="lazy">
+      <img src="${ss}/s13-teacher-programme.png" alt="My Teaching Programme" loading="lazy">
       <div class="ss-caption">My Teaching Programme — Assigned Courses</div>
     </div>
   </div>
@@ -291,26 +296,26 @@
 
   <div class="ss-grid ss-2">
     <div class="ss-item">
-      <img src="Client-Overview-Screenshots/screenshots/s21-manager-dashboard.png" alt="Admin Overview Dashboard" loading="lazy">
+      <img src="${ss}/s21-manager-dashboard.png" alt="Admin Overview Dashboard" loading="lazy">
       <div class="ss-caption">Admin Overview — System Administrator (MANAGER)</div>
     </div>
     <div class="ss-item">
-      <img src="Client-Overview-Screenshots/screenshots/s22-manager-applications.jpg" alt="Student Applications" loading="lazy">
+      <img src="${ss}/s22-manager-applications.jpg" alt="Student Applications" loading="lazy">
       <div class="ss-caption">Student Applications — 12 Total, 10 Accepted</div>
     </div>
   </div>
 
   <div class="ss-grid ss-3">
     <div class="ss-item">
-      <img src="Client-Overview-Screenshots/screenshots/s23-manager-intakes.jpg" alt="Programme Intakes" loading="lazy">
+      <img src="${ss}/s23-manager-intakes.jpg" alt="Programme Intakes" loading="lazy">
       <div class="ss-caption">Programme Intakes — 9 Active</div>
     </div>
     <div class="ss-item">
-      <img src="Client-Overview-Screenshots/screenshots/s24-manager-lms.jpg" alt="LMS Enrolments" loading="lazy">
+      <img src="${ss}/s24-manager-lms.jpg" alt="LMS Enrolments" loading="lazy">
       <div class="ss-caption">LMS Enrolments — 93 Students Enrolled</div>
     </div>
     <div class="ss-item">
-      <img src="Client-Overview-Screenshots/screenshots/s25-manager-lifecycle.jpg" alt="Course Lifecycle" loading="lazy">
+      <img src="${ss}/s25-manager-lifecycle.jpg" alt="Course Lifecycle" loading="lazy">
       <div class="ss-caption">Course Lifecycle Dashboard — 55 Courses</div>
     </div>
   </div>
@@ -356,18 +361,18 @@
 
   <div class="ss-grid ss-2">
     <div class="ss-item">
-      <img src="Client-Overview-Screenshots/screenshots/s31-cadmin-dashboard.jpg" alt="College Admin Overview" loading="lazy">
+      <img src="${ss}/s31-cadmin-dashboard.jpg" alt="College Admin Overview" loading="lazy">
       <div class="ss-caption">College Admin Overview — Admissions Dashboard</div>
     </div>
     <div class="ss-item">
-      <img src="Client-Overview-Screenshots/screenshots/s32-cadmin-applications.jpg" alt="Student Applications" loading="lazy">
+      <img src="${ss}/s32-cadmin-applications.jpg" alt="Student Applications" loading="lazy">
       <div class="ss-caption">Student Applications — Admissions Pipeline</div>
     </div>
   </div>
 
   <div class="ss-grid ss-1">
     <div class="ss-item" style="max-width: 700px; margin: 0 auto;">
-      <img src="Client-Overview-Screenshots/screenshots/s33-cadmin-students.jpg" alt="Student Management" loading="lazy">
+      <img src="${ss}/s33-cadmin-students.jpg" alt="Student Management" loading="lazy">
       <div class="ss-caption">Student Management — Student Records</div>
     </div>
   </div>
@@ -456,4 +461,7 @@
 </footer>
 
 </body>
-</html>
+</html>`;
+
+fs.writeFileSync(path.join('C:\\SCL System', 'scl-institute', 'SCL_COMPLETE_OVERVIEW.html'), html, 'utf8');
+console.log('HTML written:', html.length, 'chars');
