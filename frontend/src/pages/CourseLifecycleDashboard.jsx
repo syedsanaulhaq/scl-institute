@@ -204,9 +204,26 @@ const CourseLifecycleDashboard = () => {
     const [filterCourse, setFilterCourse] = useState('');
     const [filterStatus, setFilterStatus] = useState(''); // 'accreditation', 'visit', 'induction', 'registration', 'fully_active'
     const [moodleHierarchy, setMoodleHierarchy] = useState([]);
+    const [programmeLifecycle, setProgrammeLifecycle] = useState([]);
     const [deletingCategoryId, setDeletingCategoryId] = useState(null);
     const [editingItem, setEditingItem] = useState(null); // { type: 'category'|'course', id: number, key: string }
     const [editingName, setEditingName] = useState('');
+
+    const getProgrammeLifecycle = (programName) => {
+        const found = programmeLifecycle.find(p => p.program_name === programName);
+        return found || {
+            programme_type_name: '',
+            program_name: programName,
+            accreditation_id: null,
+            accreditation_status: 'not_started',
+            visit_id: null,
+            visit_status: 'not_started',
+            induction_id: null,
+            induction_status: 'not_started',
+            registration_id: null,
+            registration_status: 'not_started'
+        };
+    };
     
     const fetchDashboard = async () => {
         try {
@@ -233,6 +250,15 @@ const CourseLifecycleDashboard = () => {
                 }
             } catch (hierErr) {
                 console.warn('Failed to fetch hierarchy:', hierErr.message);
+            }
+
+            // Fetch programme-level lifecycle status
+            try {
+                const progRes = await axios.get(`${API_URL}/students/programme-lifecycle-status`);
+                const progData = Array.isArray(progRes.data?.data) ? progRes.data.data : [];
+                setProgrammeLifecycle(progData);
+            } catch (progErr) {
+                console.warn('Failed to fetch programme lifecycle status:', progErr.message);
             }
 
         } catch (err) {
@@ -620,7 +646,7 @@ const CourseLifecycleDashboard = () => {
                                 disabled={!filterProgram}
                                 className={`px-3 py-2 rounded-lg border border-gray-300 focus:border-scl-purple focus:outline-none focus:ring-2 focus:ring-scl-purple/20 text-sm bg-white ${!filterProgram ? 'opacity-50 cursor-not-allowed' : ''}`}
                             >
-                                <option value="">{filterProgram ? 'All Years' : 'Select Programme first'}</option>
+                                <option value="">{filterProgram ? 'All Years' : 'Select Course first'}</option>
                                 {years.map(year => (
                                     <option key={year} value={year}>{year}</option>
                                 ))}
@@ -769,7 +795,7 @@ const CourseLifecycleDashboard = () => {
                                                     </>
                                                 )}
                                                 <span className="ml-auto text-xs font-normal text-gray-500">
-                                                    {Object.keys(programs).length} {Object.keys(programs).length === 1 ? 'Programme' : 'Programmes'}
+                                                    {Object.keys(programs).length} {Object.keys(programs).length === 1 ? 'Course' : 'Courses'}
                                                 </span>
                                             </div>
                                             <button
@@ -812,13 +838,66 @@ const CourseLifecycleDashboard = () => {
                                                                         </div>
                                                                     ) : (
                                                                         <>
-                                                                            <span>{program}</span>
+                                                                            <span
+                                                                                className="cursor-pointer hover:text-scl-purple transition-colors"
+                                                                                onClick={() => {
+                                                                                    const pl = getProgrammeLifecycle(program);
+                                                                                    handleSelectCourse({
+                                                                                        course_title: program,
+                                                                                        course_code: programmeType,
+                                                                                        programme_type_name: programmeType,
+                                                                                        program_name: program,
+                                                                                        accreditation_status: pl.accreditation_status,
+                                                                                        visit_status: pl.visit_status,
+                                                                                        induction_status: pl.induction_status,
+                                                                                        registration_status: pl.registration_status,
+                                                                                        lifecycle_key: `prog-lifecycle-${programmeType}-${program}`
+                                                                                    });
+                                                                                }}
+                                                                            >{program}</span>
                                                                             <button onClick={(e) => startEditing(e, 'category', progCatId, program, programKey)} className="p-1 rounded hover:bg-gray-200 text-gray-400 hover:text-gray-700" title="Rename"><Pencil className="w-3 h-3" /></button>
                                                                         </>
                                                                     )}
-                                                                    <span className="ml-auto text-xs font-normal text-gray-500">
-                                                                        {Object.keys(years).length} {Object.keys(years).length === 1 ? 'Year' : 'Years'}
-                                                                    </span>
+                                                                    <div className="ml-auto flex items-center gap-4">
+                                                                        {(() => {
+                                                                            const pl = getProgrammeLifecycle(program);
+                                                                            return (
+                                                                                <div className="flex items-center gap-3">
+                                                                                    <div
+                                                                                        className="text-center cursor-pointer"
+                                                                                        title="Manage Accreditation for this course"
+                                                                                        onClick={(e) => { e.stopPropagation(); navigate(buildAccreditationCreatePath({ course_title: program, course_code: programmeType })); }}
+                                                                                    >
+                                                                                        <div className="text-xs text-gray-400">Accred.</div>
+                                                                                        <div className="flex justify-center mt-0.5">{statusIcon(pl.accreditation_status)}</div>
+                                                                                    </div>
+                                                                                    <div
+                                                                                        className="text-center cursor-pointer"
+                                                                                        title="Manage Visit for this course"
+                                                                                        onClick={(e) => { e.stopPropagation(); navigate(buildVisitCreatePath({ course_title: program, course_code: programmeType })); }}
+                                                                                    >
+                                                                                        <div className="text-xs text-gray-400">Visit</div>
+                                                                                        <div className="flex justify-center mt-0.5">{statusIcon(pl.visit_status)}</div>
+                                                                                    </div>
+                                                                                    <div
+                                                                                        className="text-center cursor-pointer"
+                                                                                        title="Manage Induction for this course"
+                                                                                        onClick={(e) => { e.stopPropagation(); navigate(buildInductionCreatePath({ course_title: program, course_code: programmeType })); }}
+                                                                                    >
+                                                                                        <div className="text-xs text-gray-400">Induct.</div>
+                                                                                        <div className="flex justify-center mt-0.5">{statusIcon(pl.induction_status)}</div>
+                                                                                    </div>
+                                                                                    <div className="text-center">
+                                                                                        <div className="text-xs text-gray-400">Reg.</div>
+                                                                                        <div className="flex justify-center mt-0.5">{statusIcon(pl.registration_status)}</div>
+                                                                                    </div>
+                                                                                </div>
+                                                                            );
+                                                                        })()}
+                                                                        <span className="text-xs font-normal text-gray-500 ml-2 border-l border-gray-200 pl-3">
+                                                                            {Object.keys(years).length} {Object.keys(years).length === 1 ? 'Year' : 'Years'}
+                                                                        </span>
+                                                                    </div>
                                                                 </div>
                                                                 <button
                                                                     onClick={(e) => handleDeleteCategory(e, progCatId, program)}
@@ -934,8 +1013,7 @@ const CourseLifecycleDashboard = () => {
                                                                                                                 return (
                                                                                                                 <div
                                                                                                                     key={course.lifecycle_key}
-                                                                                                                    onClick={() => !courseEditing && handleSelectCourse(course)}
-                                                                                                                    className="p-3 rounded border border-gray-200 bg-white hover:border-scl-purple hover:bg-scl-purple/5 cursor-pointer transition-all"
+                                                                                                                    className="p-3 rounded border border-gray-200 bg-white transition-all"
                                                                                                                 >
                                                                                                                     <div className="flex items-center justify-between gap-3">
                                                                                                                         <div className="flex-1 min-w-0">
@@ -956,39 +1034,13 @@ const CourseLifecycleDashboard = () => {
                                                                                                                                     <button
                                                                                                                                         onClick={(e) => { e.stopPropagation(); startEditing(e, 'course', course.moodle_course_id || course.course_id, course.course_title, courseKey); }}
                                                                                                                                         className="p-0.5 rounded hover:bg-gray-200 text-gray-400 hover:text-gray-700"
-                                                                                                                                        title="Rename course"
+                                                                                                                                        title="Rename subject"
                                                                                                                                     >
                                                                                                                                         <Pencil className="w-3 h-3" />
                                                                                                                                     </button>
                                                                                                                                 </div>
                                                                                                                             )}
                                                                                                                             <div className="text-xs text-gray-500">{course.course_code || 'No Code'}</div>
-                                                                                                                        </div>
-                                                                                                                        <div className="flex items-center gap-4 ml-4 flex-shrink-0">
-                                                                                                                            <div className="text-center">
-                                                                                                                                <div className="text-xs text-gray-500">Accred.</div>
-                                                                                                                                <div className="flex justify-center mt-0.5">
-                                                                                                                                    {statusIcon(getDisplayStepStatus(course, 'accreditation'))}
-                                                                                                                                </div>
-                                                                                                                            </div>
-                                                                                                                            <div className="text-center">
-                                                                                                                                <div className="text-xs text-gray-500">Visit</div>
-                                                                                                                                <div className="flex justify-center mt-0.5">
-                                                                                                                                    {statusIcon(getDisplayStepStatus(course, 'visit'))}
-                                                                                                                                </div>
-                                                                                                                            </div>
-                                                                                                                            <div className="text-center">
-                                                                                                                                <div className="text-xs text-gray-500">Induct.</div>
-                                                                                                                                <div className="flex justify-center mt-0.5">
-                                                                                                                                    {statusIcon(getDisplayStepStatus(course, 'induction'))}
-                                                                                                                                </div>
-                                                                                                                            </div>
-                                                                                                                            <div className="text-center">
-                                                                                                                                <div className="text-xs text-gray-500">Reg.</div>
-                                                                                                                                <div className="flex justify-center mt-0.5">
-                                                                                                                                    {statusIcon(getDisplayStepStatus(course, 'registration'))}
-                                                                                                                                </div>
-                                                                                                                            </div>
                                                                                                                         </div>
                                                                                                                     </div>
                                                                                                                 </div>

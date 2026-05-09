@@ -4201,6 +4201,56 @@ router.get('/course-lifecycle/dashboard', async (req, res) => {
     }
 });
 
+router.get('/programme-lifecycle-status', async (req, res) => {
+    try {
+        const rows = await safeSelectRows(`
+            SELECT
+                pi.programme_type_name,
+                pi.program_name,
+                ca.id AS accreditation_id,
+                ca.overall_status AS accreditation_raw_status,
+                ca.completion_percentage AS accreditation_pct,
+                cv.id AS visit_id,
+                cv.overall_status AS visit_raw_status,
+                cv.completion_percentage AS visit_pct,
+                ci.id AS induction_id,
+                ci.overall_status AS induction_raw_status,
+                ci.completion_percentage AS induction_pct,
+                cr.id AS registration_id,
+                cr.application_status AS registration_raw_status,
+                cr.moodle_sync_status AS registration_sync_status
+            FROM (
+                SELECT DISTINCT programme_type_name, program_name
+                FROM programme_intakes
+                WHERE program_name IS NOT NULL AND program_name != ''
+            ) pi
+            LEFT JOIN course_accreditations ca ON ca.course_title = pi.program_name
+            LEFT JOIN course_visits cv ON cv.course_title = pi.program_name
+            LEFT JOIN course_inductions ci ON ci.course_title = pi.program_name
+            LEFT JOIN course_registrations cr ON cr.course_title = pi.program_name
+            ORDER BY pi.programme_type_name, pi.program_name
+        `);
+
+        const result = rows.map(row => ({
+            programme_type_name: row.programme_type_name,
+            program_name: row.program_name,
+            accreditation_id: row.accreditation_id || null,
+            accreditation_status: toLifecycleStatus(row.accreditation_raw_status, row.accreditation_pct),
+            visit_id: row.visit_id || null,
+            visit_status: toLifecycleStatus(row.visit_raw_status, row.visit_pct),
+            induction_id: row.induction_id || null,
+            induction_status: toLifecycleStatus(row.induction_raw_status, row.induction_pct),
+            registration_id: row.registration_id || null,
+            registration_status: toRegistrationLifecycleStatus(row.registration_raw_status, row.registration_sync_status)
+        }));
+
+        return res.json({ success: true, data: result });
+    } catch (error) {
+        console.error('Error fetching programme lifecycle status:', error);
+        return res.status(500).json({ success: false, message: 'Failed to fetch programme lifecycle status' });
+    }
+});
+
 router.get('/course-lifecycle/details', async (req, res) => {
     try {
         const normalizedCode = String(req.query.course_code || '').trim();
