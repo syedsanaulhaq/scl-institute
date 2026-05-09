@@ -41,7 +41,7 @@ const ApplicationRequests = () => {
     const [applications, setApplications] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
-    const [statusFilter, setStatusFilter] = useState('all');
+    const [statusFilter, setStatusFilter] = useState(searchParams.get('status') || 'all');
     const [selectedApp, setSelectedApp] = useState(null);
     const [error, setError] = useState('');
     const [reviewStatus, setReviewStatus] = useState({});

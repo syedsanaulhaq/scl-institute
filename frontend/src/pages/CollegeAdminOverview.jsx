@@ -133,10 +133,10 @@ const CollegeAdminOverview = ({ user }) => {
 
     const kpiCards = [
         { label: 'Total Applications', value: total,       icon: FileText,     color: 'indigo',  path: '/applications' },
-        { label: 'Accepted',           value: accepted,    icon: CheckCircle2, color: 'emerald', path: '/applications' },
-        { label: 'Pending / Review',   value: pending,     icon: Clock,        color: 'amber',   path: '/applications' },
-        { label: 'Rejected',           value: rejected,    icon: XCircle,      color: 'red',     path: '/applications' },
-        { label: 'Conditional',        value: conditional, icon: AlertCircle,  color: 'orange',  path: '/applications' },
+        { label: 'Accepted',           value: accepted,    icon: CheckCircle2, color: 'emerald', path: '/applications?status=accepted' },
+        { label: 'Pending / Review',   value: pending,     icon: Clock,        color: 'amber',   path: '/applications?status=submitted' },
+        { label: 'Rejected',           value: rejected,    icon: XCircle,      color: 'red',     path: '/applications?status=rejected' },
+        { label: 'Conditional',        value: conditional, icon: AlertCircle,  color: 'orange',  path: '/applications?status=conditional_accept' },
         { label: 'New This Week',      value: stats?.recent_applications ?? 0, icon: TrendingUp, color: 'blue', path: '/applications' },
         { label: 'All Students',       value: total,       icon: Users,        color: 'purple',  path: '/student-list' },
         { label: 'Programme Intakes',  value: '—',         icon: Calendar,     color: 'rose',    path: '/programme-intakes' },
@@ -306,7 +306,6 @@ const CollegeAdminOverview = ({ user }) => {
                         { label: 'All Applications',    path: '/applications',         icon: FileText,      color: 'text-indigo-600  bg-indigo-50  hover:bg-indigo-100'  },
                         { label: 'Student List',        path: '/student-list',         icon: Users,         color: 'text-blue-600    bg-blue-50    hover:bg-blue-100'    },
                         { label: 'Programme Intakes',   path: '/programme-intakes',    icon: Calendar,      color: 'text-amber-600   bg-amber-50   hover:bg-amber-100'   },
-                        { label: 'Applicants List',     path: '/applicants',           icon: UserCheck,     color: 'text-purple-600  bg-purple-50  hover:bg-purple-100'  },
                         { label: 'LMS Enrolments',      path: '/admin/lms-enrolments', icon: GraduationCap, color: 'text-cyan-600    bg-cyan-50    hover:bg-cyan-100'    },
                         { label: 'Application Reports', path: '/applications-report',  icon: BarChart3,     color: 'text-rose-600    bg-rose-50    hover:bg-rose-100'    },
                         { label: 'Admissions Hub',      path: '/college-admin/dashboard', icon: TrendingUp, color: 'text-gray-600    bg-gray-50    hover:bg-gray-100'   },

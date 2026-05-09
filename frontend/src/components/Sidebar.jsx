@@ -115,7 +115,6 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
                 subItems: [
                     { name: 'All Applications', icon: ClipboardList, path: '/applications' },
                     { name: 'New Admission', icon: UserPlus, path: '/student-application' },
-                    { name: 'Applicants List', icon: UserCheck, path: '/applicants' },
                     { name: 'Application Reports', icon: FileText, path: '/applications-report' }
                 ]
             },

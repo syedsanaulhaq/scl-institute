@@ -46,8 +46,8 @@ const StatusBadge = ({ status }) => {
     );
 };
 
-const StatCard = ({ icon: Icon, label, value, sub, iconColor, borderColor }) => (
-    <div className={`bg-white rounded-xl border-l-4 ${borderColor} shadow-sm p-4 flex items-center gap-4`}>
+const StatCard = ({ icon: Icon, label, value, sub, iconColor, borderColor, onClick }) => (
+    <div className={`bg-white rounded-xl border-l-4 ${borderColor} shadow-sm p-4 flex items-center gap-4 ${onClick ? 'cursor-pointer hover:shadow-md transition' : ''}`} onClick={onClick}>
         <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${iconColor} bg-opacity-10 flex-shrink-0`}>
             <Icon className={`w-6 h-6 ${iconColor}`} />
         </div>
@@ -174,12 +174,12 @@ const CollegeAdminDashboard = ({ user }) => {
 
             {/* ── Stat Cards ── */}
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-                <StatCard icon={Users}        label="Total Applications" value={total}      iconColor="text-indigo-600" borderColor="border-indigo-500" />
-                <StatCard icon={CheckCircle2} label="Accepted"           value={accepted}   iconColor="text-emerald-600" borderColor="border-emerald-500" />
-                <StatCard icon={Clock}        label="Pending / In Review" value={pending}   iconColor="text-amber-500"  borderColor="border-amber-400" />
-                <StatCard icon={XCircle}      label="Rejected"           value={rejected}   iconColor="text-red-500"    borderColor="border-red-500" />
-                <StatCard icon={AlertCircle}  label="Conditional"        value={conditional} iconColor="text-orange-500" borderColor="border-orange-400" />
-                <StatCard icon={TrendingUp}   label="Last 7 Days"        value={data?.recent_applications ?? 0} sub="new applications" iconColor="text-blue-500" borderColor="border-blue-500" />
+                <StatCard icon={Users}        label="Total Applications" value={total}      iconColor="text-indigo-600" borderColor="border-indigo-500" onClick={() => navigate('/applications')} />
+                <StatCard icon={CheckCircle2} label="Accepted"           value={accepted}   iconColor="text-emerald-600" borderColor="border-emerald-500" onClick={() => navigate('/applications?status=accepted')} />
+                <StatCard icon={Clock}        label="Pending / In Review" value={pending}   iconColor="text-amber-500"  borderColor="border-amber-400" onClick={() => navigate('/applications?status=submitted')} />
+                <StatCard icon={XCircle}      label="Rejected"           value={rejected}   iconColor="text-red-500"    borderColor="border-red-500" onClick={() => navigate('/applications?status=rejected')} />
+                <StatCard icon={AlertCircle}  label="Conditional"        value={conditional} iconColor="text-orange-500" borderColor="border-orange-400" onClick={() => navigate('/applications?status=conditional_accept')} />
+                <StatCard icon={TrendingUp}   label="Last 7 Days"        value={data?.recent_applications ?? 0} sub="new applications" iconColor="text-blue-500" borderColor="border-blue-500" onClick={() => navigate('/applications')} />
             </div>
 
             {/* ── Charts Row ── */}

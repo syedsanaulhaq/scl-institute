@@ -76,7 +76,12 @@ const ManagerCourseChangeRequests = () => {
         try {
             const response = await axios.get(`${API_URL}/students/programmes`);
             if (response.data?.success) {
-                setCourses(response.data.data || []);
+                const data = response.data.data;
+                // API returns an object grouped by category — flatten to array
+                const flat = Array.isArray(data)
+                    ? data
+                    : Object.values(data || {}).flat();
+                setCourses(flat);
             }
         } catch (err) {
             console.error('Error fetching programmes:', err);
