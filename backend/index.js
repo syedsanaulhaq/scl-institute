@@ -243,13 +243,20 @@ async function syncMoodleUsersToSCL() {
                 );
                 created++;
             } else {
-                // Update name/role if changed in Moodle
+                // Update name if changed in Moodle.
+                // Never overwrite a management role that was explicitly assigned in SCL —
+                // Moodle's role (often 'student' from course enrolments) must not demote admins.
                 const nameChanged = existing.first_name !== mu.firstname || existing.last_name !== mu.lastname;
-                const roleChanged = existing.role !== mu.role;
+                const existingIsMgmt = managementRoles.has(normalizeRole(existing.role));
+                const moodleRoleNorm = normalizeRole(mu.role || 'student');
+                const moodleRolePriority = getRolePriority(moodleRoleNorm);
+                const existingPriority = getRolePriority(normalizeRole(existing.role));
+                // Only update the role if Moodle's role is strictly more privileged (lower priority number)
+                const roleChanged = !existingIsMgmt && moodleRolePriority < existingPriority && existing.role !== moodleRoleNorm;
                 if (nameChanged || roleChanged) {
                     await db.query(
                         'UPDATE users SET first_name = ?, last_name = ?, role = ? WHERE id = ?',
-                        [mu.firstname || '', mu.lastname || '', mu.role || 'student', existing.id]
+                        [mu.firstname || '', mu.lastname || '', roleChanged ? moodleRoleNorm : existing.role, existing.id]
                     );
                     updated++;
                 }
