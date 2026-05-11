@@ -263,8 +263,8 @@ const CourseMasterDetail = () => {
             <ArrowLeft className="w-4 h-4" />
             Back to Lifecycle
           </button>
-          <h1 className="text-2xl font-bold text-gray-900">New Course</h1>
-          <p className="text-sm text-gray-600">Use Moodle category hierarchy: Course Type {'>'} Course {'>'} Year {'>'} Semester {'>'} Subject</p>
+          <h1 className="text-2xl font-bold text-gray-900">New Subject</h1>
+          <p className="text-sm text-gray-600">Select the hierarchy position: Course Type {'>'} Course {'>'} Year {'>'} Semester {'>'} Subject</p>
         </div>
       </div>
 
@@ -272,7 +272,7 @@ const CourseMasterDetail = () => {
         <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-4">
           {/* Hierarchy Selection */}
           <div className="border border-gray-200 rounded-lg p-4 bg-gray-50/50 space-y-4">
-            <p className="text-sm font-semibold text-gray-800">Structure: Course Type {'>'} Course {'>'} Year {'>'} Semester</p>
+            <p className="text-sm font-semibold text-gray-800">Course Type {'>'} Course {'>'} Year {'>'} Semester {'>'} Subject</p>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               {/* Type */}
@@ -387,24 +387,24 @@ const CourseMasterDetail = () => {
             <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1">Course Title *</label>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">Subject Title *</label>
                   <input
                     type="text"
                     value={formData.course_title}
                     onChange={(e) => handleChange('course_title', e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent"
-                    placeholder="Enter course title"
+                    placeholder="Enter subject title"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1">Course Code</label>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">Subject Code</label>
                   <input
                     type="text"
                     value={formData.course_code}
                     onChange={(e) => handleChange('course_code', e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent"
-                    placeholder="e.g., COURSE-001"
+                    placeholder="e.g., HND-BUS-Y1-S1-C1"
                   />
                 </div>
 
@@ -447,7 +447,7 @@ const CourseMasterDetail = () => {
             disabled={saving || !selectedSemesterId || !formData.course_title.trim()}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-purple-700 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {saving ? 'Saving...' : 'Save Course'}
+            {saving ? 'Saving...' : 'Save Subject'}
           </button>
         </div>
       </div>

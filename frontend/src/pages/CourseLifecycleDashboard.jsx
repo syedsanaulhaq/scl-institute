@@ -576,7 +576,7 @@ const CourseLifecycleDashboard = () => {
                         className="px-4 py-2 rounded-lg text-sm font-semibold bg-scl-purple text-white hover:bg-scl-purple/90 flex items-center gap-2"
                     >
                         <Plus className="w-4 h-4" />
-                        New Course
+                        New Subject
                     </button>
                     <button
                         onClick={fetchDashboard}
