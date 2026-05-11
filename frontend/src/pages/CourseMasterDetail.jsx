@@ -128,7 +128,7 @@ const CourseMasterDetail = () => {
         return;
       }
       if (modal === 'year' && !selectedProgramId) {
-        alert('Select a Program first');
+        alert('Select a Course first');
         setModalLoading(false);
         return;
       }
@@ -304,13 +304,13 @@ const CourseMasterDetail = () => {
               {/* Program */}
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label className="text-sm font-semibold text-gray-700">Program</label>
+                  <label className="text-sm font-semibold text-gray-700">Course</label>
                   <button
                     type="button"
                     onClick={() => { setModal('program'); setModalInput(''); }}
                     disabled={!selectedTypeId}
                     className="w-6 h-6 bg-blue-600 text-white rounded-full hover:bg-purple-700 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center text-sm font-bold"
-                    title="Add new Program"
+                    title="Add new Course"
                   >+</button>
                 </div>
                 <select
@@ -323,10 +323,10 @@ const CourseMasterDetail = () => {
                   disabled={!selectedTypeId}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"
                 >
-                  <option value="">Select Program</option>
+                  <option value="">Select Course</option>
                   {programs.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                 </select>
-                {!selectedTypeId && <p className="text-xs text-gray-500 mt-1">Choose Type first</p>}
+                {!selectedTypeId && <p className="text-xs text-gray-500 mt-1">Choose Course Type first</p>}
               </div>
 
               {/* Year */}
@@ -353,7 +353,7 @@ const CourseMasterDetail = () => {
                   <option value="">Select Year</option>
                   {years.map(y => <option key={y.id} value={y.id}>{y.name}</option>)}
                 </select>
-                {!selectedProgramId && <p className="text-xs text-gray-500 mt-1">Choose Program first</p>}
+                {!selectedProgramId && <p className="text-xs text-gray-500 mt-1">Choose Course first</p>}
               </div>
 
               {/* Semester */}
