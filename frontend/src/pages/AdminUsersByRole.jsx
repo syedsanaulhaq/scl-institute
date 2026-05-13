@@ -7,7 +7,7 @@ import { openMoodleSSO } from '../utils/ssoService';
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
 
 const ROLE_COLORS = {
-    admin: 'bg-blue-100 text-blue-800',
+    admin: 'bg-purple-100 text-purple-800',
     manager: 'bg-indigo-100 text-indigo-800',
     coursecreator: 'bg-blue-100 text-blue-800',
     editingteacher: 'bg-cyan-100 text-cyan-800',
@@ -98,7 +98,7 @@ const AdminUsersByRole = () => {
             <div className="flex flex-wrap gap-2">
                 <button
                     onClick={() => handleRoleChange('all')}
-                    className={`px-4 py-2 rounded-full text-sm font-semibold border transition ${roleFilter === 'all' ? 'ring-2 ring-blue-500 bg-blue-50 text-blue-700' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+                    className={`px-4 py-2 rounded-full text-sm font-semibold border transition ${roleFilter === 'all' ? 'ring-2 ring-purple-500 bg-purple-50 text-purple-700' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
                 >
                     All ({users.length})
                 </button>
@@ -107,7 +107,7 @@ const AdminUsersByRole = () => {
                         key={role}
                         onClick={() => handleRoleChange(role)}
                         className={`px-4 py-2 rounded-full text-sm font-semibold border transition ${
-                            roleFilter === role ? 'ring-2 ring-blue-500' : ''
+                            roleFilter === role ? 'ring-2 ring-purple-500' : ''
                         } ${ROLE_COLORS[role] || 'bg-gray-100 text-gray-700'}`}
                     >
                         {role.charAt(0).toUpperCase() + role.slice(1)} ({roleCounts[role] || 0})
@@ -123,7 +123,7 @@ const AdminUsersByRole = () => {
                     placeholder="Search by name or email..."
                     value={search}
                     onChange={e => setSearch(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                 />
             </div>
 
@@ -187,5 +187,4 @@ const AdminUsersByRole = () => {
 };
 
 export default AdminUsersByRole;
-
 

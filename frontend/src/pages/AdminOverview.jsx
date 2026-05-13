@@ -59,7 +59,7 @@ const AdminOverview = ({ user }) => {
         return (
             <div className="p-8 flex items-center justify-center min-h-[60vh]">
                 <div className="text-center">
-                    <RefreshCw className="w-8 h-8 text-blue-600 animate-spin mx-auto mb-3" />
+                    <RefreshCw className="w-8 h-8 text-purple-600 animate-spin mx-auto mb-3" />
                     <p className="text-gray-500 text-sm">Loading overview...</p>
                 </div>
             </div>
@@ -139,7 +139,7 @@ const AdminOverview = ({ user }) => {
     ];
 
     const colorMap = {
-        purple: 'bg-blue-50 text-blue-700 border-blue-200',
+        purple: 'bg-purple-50 text-purple-700 border-purple-200',
         blue: 'bg-blue-50 text-blue-700 border-blue-200',
         emerald: 'bg-emerald-50 text-emerald-700 border-emerald-200',
         indigo: 'bg-indigo-50 text-indigo-700 border-indigo-200',
@@ -150,7 +150,7 @@ const AdminOverview = ({ user }) => {
     };
 
     const iconColorMap = {
-        purple: 'bg-blue-100 text-blue-600',
+        purple: 'bg-purple-100 text-purple-600',
         blue: 'bg-blue-100 text-blue-600',
         emerald: 'bg-emerald-100 text-emerald-600',
         indigo: 'bg-indigo-100 text-indigo-600',
@@ -179,7 +179,7 @@ const AdminOverview = ({ user }) => {
     const SectionLink = ({ to, children }) => (
         <button
             onClick={() => navigate(to)}
-            className="text-xs font-semibold text-blue-600 hover:text-blue-800 flex items-center gap-1 transition ml-auto"
+            className="text-xs font-semibold text-purple-600 hover:text-purple-800 flex items-center gap-1 transition ml-auto"
         >
             {children || 'View Details'} <ArrowUpRight className="w-3.5 h-3.5" />
         </button>
@@ -229,7 +229,7 @@ const AdminOverview = ({ user }) => {
                 <div className="bg-white rounded-xl shadow border border-gray-100 p-6">
                     <div className="flex items-center mb-4">
                         <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-                            <FileText className="w-5 h-5 text-blue-600" /> Application Status
+                            <FileText className="w-5 h-5 text-purple-600" /> Application Status
                         </h3>
                         <SectionLink to="/applications" />
                     </div>
@@ -353,7 +353,7 @@ const AdminOverview = ({ user }) => {
                 <div className="bg-white rounded-xl shadow border border-gray-100 p-6">
                     <div className="flex items-center mb-4">
                         <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-                            <GraduationCap className="w-5 h-5 text-blue-600" /> LMS Course Enrolments (Top 10)
+                            <GraduationCap className="w-5 h-5 text-purple-600" /> LMS Course Enrolments (Top 10)
                         </h3>
                         <SectionLink to="/admin/lms-enrolments" />
                     </div>
@@ -385,7 +385,7 @@ const AdminOverview = ({ user }) => {
                     </div>
                     <div className="space-y-3">
                         {[
-                            { label: 'Master Courses', value: courseLifecycle?.total || 0, color: 'bg-blue-100 text-blue-700' },
+                            { label: 'Master Courses', value: courseLifecycle?.total || 0, color: 'bg-purple-100 text-purple-700' },
                             { label: 'Accreditations', value: courseLifecycle?.accreditations || 0, color: 'bg-blue-100 text-blue-700' },
                             { label: 'Inductions', value: courseLifecycle?.inductions || 0, color: 'bg-emerald-100 text-emerald-700' },
                             { label: 'Visits', value: courseLifecycle?.visits || 0, color: 'bg-amber-100 text-amber-700' },
@@ -570,7 +570,7 @@ const AdminOverview = ({ user }) => {
                 {/* Quick Links */}
                 <div className="bg-white rounded-xl shadow border border-gray-100 p-6">
                     <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                        <ArrowUpRight className="w-5 h-5 text-blue-600" /> Quick Links
+                        <ArrowUpRight className="w-5 h-5 text-purple-600" /> Quick Links
                     </h3>
                     <div className="space-y-2">
                         {[
@@ -584,7 +584,7 @@ const AdminOverview = ({ user }) => {
                             <button
                                 key={i}
                                 onClick={() => navigate(link.path)}
-                                className="w-full flex items-center gap-3 p-3 rounded-lg text-sm font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition text-left"
+                                className="w-full flex items-center gap-3 p-3 rounded-lg text-sm font-medium text-gray-700 hover:bg-purple-50 hover:text-purple-700 transition text-left"
                             >
                                 <link.icon className="w-4 h-4" />
                                 {link.label}
@@ -604,4 +604,3 @@ const AdminOverview = ({ user }) => {
 };
 
 export default AdminOverview;
-
