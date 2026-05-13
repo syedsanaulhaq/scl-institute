@@ -180,11 +180,27 @@ const CourseMasterDetail = () => {
         payload.explicit_code = `${typeCode}-001-Y${yearNum}-S${semNum}`;
       }
 
-      await axios.post(`${API_URL}/students/moodle/create-level-category`, payload);
-      
+      const createRes = await axios.post(`${API_URL}/students/moodle/create-level-category`, payload);
+      const newId = Number(
+        createRes.data?.data?.programme_type_category_id ||
+        createRes.data?.data?.program_category_id ||
+        createRes.data?.data?.year_category_id ||
+        createRes.data?.data?.semester_category_id ||
+        0
+      );
+
+      const capturedModal = modal;
       setModalInput('');
       setModal(null);
       await fetchHierarchy();
+
+      // Auto-select the newly created item so the user doesn't have to pick it manually
+      if (newId > 0) {
+        if (capturedModal === 'type') setSelectedTypeId(newId);
+        else if (capturedModal === 'program') setSelectedProgramId(newId);
+        else if (capturedModal === 'year') setSelectedYearId(newId);
+        else if (capturedModal === 'semester') setSelectedSemesterId(newId);
+      }
     } catch (error) {
       alert(`Error: ${error.response?.data?.message || error.message}`);
     } finally {
@@ -468,7 +484,7 @@ const CourseMasterDetail = () => {
                 if (e.key === 'Enter') handleCreateCategory();
               }}
               autoFocus
-              placeholder={`Enter ${modal} name`}
+              placeholder={`Enter ${modal === 'type' ? 'Course Type' : modal === 'program' ? 'Course' : modal === 'year' ? 'Year' : 'Semester'} name`}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent mb-4"
             />
             <div className="flex gap-2 justify-end">
