@@ -208,6 +208,9 @@ const CourseLifecycleDashboard = () => {
     const [deletingCategoryId, setDeletingCategoryId] = useState(null);
     const [editingItem, setEditingItem] = useState(null); // { type: 'category'|'course', id: number, key: string }
     const [editingName, setEditingName] = useState('');
+    const [addModal, setAddModal] = useState(null); // { level: 'type'|'program'|'year'|'semester', context: {} }
+    const [addForm, setAddForm] = useState({});
+    const [addSaving, setAddSaving] = useState(false);
 
     const getProgrammeLifecycle = (programName) => {
         const found = programmeLifecycle.find(p => p.program_name === programName);
@@ -449,6 +452,70 @@ const CourseLifecycleDashboard = () => {
         if (!type) return '';
         const prog = (type.programs || []).find(p => norm(p.name) === norm(programName));
         return prog?.idnumber || '';
+    };
+
+    const openAddModal = (level, context) => {
+        const defaults = { name: '' };
+        if (level === 'program') {
+            Object.assign(defaults, {
+                course_type: context.programmeTypeName || '',
+                awarding_body_accreditation: '',
+                regulation_level: '',
+                subject_area_discipline: '',
+                learning_outcomes: '',
+                units_modules_covered: '',
+                entry_requirements: '',
+            });
+        }
+        setAddForm(defaults);
+        setAddModal({ level, context });
+    };
+
+    const closeAddModal = () => { setAddModal(null); setAddForm({}); };
+
+    const handleAddSubmit = async () => {
+        if (!addForm.name?.trim()) { alert('Name is required'); return; }
+        const { level, context } = addModal;
+        setAddSaving(true);
+        try {
+            if (level === 'program') {
+                await axios.post(`${API_URL}/students/moodle/create-programme-with-info`, {
+                    name: addForm.name.trim(),
+                    parent_category_id: context.parentCatId,
+                    course_type: addForm.course_type || '',
+                    awarding_body_accreditation: addForm.awarding_body_accreditation || '',
+                    regulation_level: addForm.regulation_level || '',
+                    subject_area_discipline: addForm.subject_area_discipline || '',
+                    learning_outcomes: addForm.learning_outcomes || '',
+                    units_modules_covered: addForm.units_modules_covered || '',
+                    entry_requirements: addForm.entry_requirements || '',
+                });
+            } else {
+                const levelKey = level === 'type' ? 'programme_type' : level;
+                const payload = {
+                    name: addForm.name.trim(),
+                    level: levelKey,
+                    parent_category_id: context.parentCatId || null,
+                };
+                if (level === 'type') {
+                    payload.explicit_code = addForm.name.trim().replace(/[^a-zA-Z0-9]/g, '').slice(0, 3).toUpperCase() || 'CRS';
+                } else if (level === 'year') {
+                    payload.programme_type_name = context.programmeTypeName || '';
+                    payload.program_name = context.programName || '';
+                } else if (level === 'semester') {
+                    payload.programme_type_name = context.programmeTypeName || '';
+                    payload.program_name = context.programName || '';
+                    payload.academic_year = context.yearName || '';
+                }
+                await axios.post(`${API_URL}/students/moodle/create-level-category`, payload);
+            }
+            closeAddModal();
+            await fetchDashboard();
+        } catch (err) {
+            alert(err.response?.data?.message || err.message);
+        } finally {
+            setAddSaving(false);
+        }
     };
 
     const handleDeleteCategory = async (e, categoryId, categoryName) => {
@@ -770,6 +837,14 @@ const CourseLifecycleDashboard = () => {
                         </div>
                     ) : (
                         <div className="space-y-0">
+                            <div className="flex justify-end px-4 py-2 border-b border-gray-100 bg-gray-50">
+                                <button
+                                    onClick={() => openAddModal('type', {})}
+                                    className="text-xs text-blue-600 hover:text-blue-800 font-semibold flex items-center gap-1 px-3 py-1 rounded hover:bg-blue-50"
+                                >
+                                    <Plus className="w-3 h-3" /> Add Course Type
+                                </button>
+                            </div>
                             {Object.entries(groupedCourses).map(([programmeType, programs]) => {
                                 const programmeTypeKey = `type-${programmeType}`;
                                 const isExpanded = expandedSections[programmeTypeKey];
@@ -806,6 +881,13 @@ const CourseLifecycleDashboard = () => {
                                                     {Object.keys(programs).length} {Object.keys(programs).length === 1 ? 'Course' : 'Courses'}
                                                 </span>
                                             </div>
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); openAddModal('program', { parentCatId: ptCatId, programmeTypeName: programmeType }); }}
+                                                className="px-3 py-2 mr-1 rounded hover:bg-blue-50 text-gray-400 hover:text-blue-600"
+                                                title={`Add Programme to ${programmeType}`}
+                                            >
+                                                <Plus className="w-4 h-4" />
+                                            </button>
                                             <button
                                                 onClick={(e) => handleDeleteCategory(e, ptCatId, programmeType)}
                                                 disabled={deletingCategoryId != null && deletingCategoryId === ptCatId}
@@ -912,6 +994,13 @@ const CourseLifecycleDashboard = () => {
                                                                     </div>
                                                                 </div>
                                                                 <button
+                                                                    onClick={(e) => { e.stopPropagation(); openAddModal('year', { parentCatId: progCatId, programmeTypeName: programmeType, programName: program }); }}
+                                                                    className="px-3 py-2 mr-1 rounded hover:bg-blue-50 text-gray-400 hover:text-blue-600"
+                                                                    title={`Add Year to ${program}`}
+                                                                >
+                                                                    <Plus className="w-3.5 h-3.5" />
+                                                                </button>
+                                                                <button
                                                                     onClick={(e) => handleDeleteCategory(e, progCatId, program)}
                                                                     disabled={deletingCategoryId != null && deletingCategoryId === progCatId}
                                                                     className="px-3 py-2 mr-3 rounded hover:bg-red-50 text-gray-400 hover:text-red-600 disabled:opacity-50"
@@ -960,6 +1049,13 @@ const CourseLifecycleDashboard = () => {
                                                                                         </span>
                                                                                     </div>
                                                                                     <button
+                                                                                        onClick={(e) => { e.stopPropagation(); openAddModal('semester', { parentCatId: yearCatId, programmeTypeName: programmeType, programName: program, yearName: year }); }}
+                                                                                        className="px-3 py-2 mr-1 rounded hover:bg-blue-50 text-gray-400 hover:text-blue-600"
+                                                                                        title={`Add Semester to ${year}`}
+                                                                                    >
+                                                                                        <Plus className="w-3.5 h-3.5" />
+                                                                                    </button>
+                                                                                    <button
                                                                                         onClick={(e) => handleDeleteCategory(e, yearCatId, year)}
                                                                                         disabled={deletingCategoryId != null && deletingCategoryId === yearCatId}
                                                                                         className="px-3 py-2 mr-3 rounded hover:bg-red-50 text-gray-400 hover:text-red-600 disabled:opacity-50"
@@ -1007,6 +1103,13 @@ const CourseLifecycleDashboard = () => {
                                                                                                                 {semesterCourses.length} {semesterCourses.length === 1 ? 'Course' : 'Courses'}
                                                                                                             </span>
                                                                                                         </div>
+                                                                                                        <button
+                                                                                                            onClick={(e) => { e.stopPropagation(); navigate('/course-master/new'); }}
+                                                                                                            className="px-3 py-2 mr-1 rounded hover:bg-blue-50 text-gray-400 hover:text-blue-600"
+                                                                                                            title={`Add Subject to ${semester}`}
+                                                                                                        >
+                                                                                                            <Plus className="w-3.5 h-3.5" />
+                                                                                                        </button>
                                                                                                         <button
                                                                                                             onClick={(e) => handleDeleteCategory(e, semCatId, semester)}
                                                                                                             disabled={deletingCategoryId != null && deletingCategoryId === semCatId}
@@ -1080,6 +1183,82 @@ const CourseLifecycleDashboard = () => {
                             })}
                         </div>
                     )}
+                </div>
+            )}
+
+            {/* Add Level Modal */}
+            {addModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50" onClick={(e) => { if (e.target === e.currentTarget) closeAddModal(); }}>
+                    <div className="bg-white rounded-xl shadow-2xl p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+                        <div className="flex items-center justify-between mb-1">
+                            <h2 className="text-lg font-bold text-gray-900">
+                                {addModal.level === 'type' && 'Add New Course Type'}
+                                {addModal.level === 'program' && `Add New Programme — ${addModal.context.programmeTypeName}`}
+                                {addModal.level === 'year' && `Add New Year — ${addModal.context.programName}`}
+                                {addModal.level === 'semester' && `Add New Semester — ${addModal.context.yearName}`}
+                            </h2>
+                            <button onClick={closeAddModal} className="p-1 rounded hover:bg-gray-100 text-gray-400"><X className="w-4 h-4" /></button>
+                        </div>
+                        <p className="text-xs text-gray-500 mb-4">
+                            {addModal.level === 'program' ? 'Creates a programme category and an INFO course in Moodle containing the details below.' : 'Adds a new category level to the Moodle hierarchy.'}
+                        </p>
+                        <div className="space-y-3">
+                            <div>
+                                <label className="block text-sm font-semibold text-gray-700 mb-1">
+                                    {addModal.level === 'type' ? 'Course Type Name' : addModal.level === 'program' ? 'Programme Name' : addModal.level === 'year' ? 'Year (e.g. Year 1)' : 'Semester (e.g. Semester 1)'} *
+                                </label>
+                                <input
+                                    autoFocus
+                                    type="text"
+                                    value={addForm.name || ''}
+                                    onChange={(e) => setAddForm(prev => ({ ...prev, name: e.target.value }))}
+                                    onKeyDown={(e) => { if (e.key === 'Enter' && addModal.level !== 'program') handleAddSubmit(); if (e.key === 'Escape') closeAddModal(); }}
+                                    placeholder={addModal.level === 'year' ? 'e.g. Year 1' : addModal.level === 'semester' ? 'e.g. Semester 1' : addModal.level === 'program' ? 'e.g. HND in Computing' : 'e.g. HND'}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                                />
+                            </div>
+                            {addModal.level === 'program' && (
+                                <>
+                                    <div className="grid grid-cols-2 gap-3 pt-1">
+                                        <div>
+                                            <label className="block text-xs font-semibold text-gray-600 mb-1">Awarding Body</label>
+                                            <input type="text" value={addForm.awarding_body_accreditation || ''} onChange={(e) => setAddForm(prev => ({ ...prev, awarding_body_accreditation: e.target.value }))} placeholder="e.g. Pearson UK (BTEC)" className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-semibold text-gray-600 mb-1">Qualification Level</label>
+                                            <input type="text" value={addForm.regulation_level || ''} onChange={(e) => setAddForm(prev => ({ ...prev, regulation_level: e.target.value }))} placeholder="e.g. RQF Level 5" className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-semibold text-gray-600 mb-1">Course Type</label>
+                                            <input type="text" value={addForm.course_type || ''} onChange={(e) => setAddForm(prev => ({ ...prev, course_type: e.target.value }))} placeholder="e.g. HND" className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-semibold text-gray-600 mb-1">Subject Area</label>
+                                            <input type="text" value={addForm.subject_area_discipline || ''} onChange={(e) => setAddForm(prev => ({ ...prev, subject_area_discipline: e.target.value }))} placeholder="e.g. Business" className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-semibold text-gray-600 mb-1">Learning Outcomes</label>
+                                        <textarea rows={3} value={addForm.learning_outcomes || ''} onChange={(e) => setAddForm(prev => ({ ...prev, learning_outcomes: e.target.value }))} placeholder="List key learning outcomes..." className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-semibold text-gray-600 mb-1">Units / Modules Covered</label>
+                                        <textarea rows={2} value={addForm.units_modules_covered || ''} onChange={(e) => setAddForm(prev => ({ ...prev, units_modules_covered: e.target.value }))} placeholder="e.g. Business Environment; Marketing; HR Management..." className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-semibold text-gray-600 mb-1">Entry Requirements</label>
+                                        <textarea rows={2} value={addForm.entry_requirements || ''} onChange={(e) => setAddForm(prev => ({ ...prev, entry_requirements: e.target.value }))} placeholder="e.g. A-Level or equivalent; English B2..." className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none" />
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                        <div className="flex gap-2 justify-end mt-5">
+                            <button type="button" onClick={closeAddModal} className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 text-sm">Cancel</button>
+                            <button type="button" onClick={handleAddSubmit} disabled={addSaving || !addForm.name?.trim()} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-semibold">
+                                {addSaving ? 'Creating...' : 'Create'}
+                            </button>
+                        </div>
+                    </div>
                 </div>
             )}
 

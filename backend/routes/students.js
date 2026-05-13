@@ -2973,6 +2973,67 @@ router.post('/moodle/create-level-category', async (req, res) => {
     }
 });
 
+// POST /api/students/moodle/create-programme-with-info
+// Creates a programme Moodle category + INFO course with programme-level custom fields.
+router.post('/moodle/create-programme-with-info', async (req, res) => {
+    try {
+        const name = String(req.body?.name || '').trim();
+        const parentCatId = req.body?.parent_category_id ? Number(req.body.parent_category_id) : null;
+        if (!name || !parentCatId) {
+            return res.status(400).json({ success: false, message: 'name and parent_category_id are required' });
+        }
+
+        // 1. Auto-compute programme code (e.g., HND-001, HND-002) from sibling count
+        const [parentRows] = await moodleDbPool.execute(
+            'SELECT idnumber FROM mdl_course_categories WHERE id = ? LIMIT 1',
+            [parentCatId]
+        );
+        const parentIdnumber = String(parentRows[0]?.idnumber || '').trim();
+        const [siblingRows] = await moodleDbPool.execute(
+            'SELECT COUNT(*) AS cnt FROM mdl_course_categories WHERE parent = ?',
+            [parentCatId]
+        );
+        const siblingCount = Number(siblingRows[0]?.cnt || 0);
+        const nextNum = String(siblingCount + 1).padStart(3, '0');
+        const programCode = parentIdnumber ? `${parentIdnumber}-${nextNum}` : `PROG-${nextNum}`;
+
+        // 2. Find or create the programme category in Moodle
+        const programCatId = await findOrCreateMoodleCategory(name, parentCatId, 'program', programCode);
+
+        // 3. Build registration-like object for INFO course creation
+        const infoRegistration = {
+            course_code: programCode,
+            course_title: name,
+            course_type: String(req.body?.course_type || '').trim(),
+            awarding_body_accreditation: String(req.body?.awarding_body_accreditation || '').trim(),
+            regulation_level: String(req.body?.regulation_level || '').trim(),
+            subject_area_discipline: String(req.body?.subject_area_discipline || '').trim(),
+            learning_outcomes: String(req.body?.learning_outcomes || '').trim(),
+            units_modules_covered: String(req.body?.units_modules_covered || '').trim(),
+            entry_requirements: String(req.body?.entry_requirements || '').trim(),
+        };
+
+        // 4. Create the INFO course (or reuse if it already exists)
+        const infoResult = await ensureProgrammeInfoCourse(infoRegistration, programCatId);
+
+        // 5. Push programme-level custom fields onto the INFO course
+        await upsertMoodleCourseCustomFields(infoResult.moodleCourseId, infoRegistration, PROGRAMME_CUSTOM_FIELD_ALIASES);
+
+        return res.json({
+            success: true,
+            data: {
+                program_category_id: programCatId,
+                course_code: programCode,
+                info_course_id: infoResult.moodleCourseId,
+                info_course_created: infoResult.created,
+            }
+        });
+    } catch (error) {
+        console.error('[create-programme-with-info] ERROR:', error.message);
+        return res.status(500).json({ success: false, message: error.message });
+    }
+});
+
 // POST /api/students/moodle/sync-master-course
 // Create or update a course in Moodle immediately using the category IDs from a master course record.
 router.post('/moodle/sync-master-course', async (req, res) => {
