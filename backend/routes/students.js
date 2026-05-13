@@ -8211,34 +8211,42 @@ async function ensureManualEnrolmentForCourse(courseId) {
     return Number(insertResult.insertId);
 }
 
-const COURSE_CUSTOM_FIELD_ALIASES = {
-    course_type: ['course_type', 'course_type_id', 'type_of_course'],
-    awarding_body_accreditation: ['awarding_body_accreditation', 'awarding_body', 'accreditation'],
-    regulation_level: ['regulation_level', 'rqf_level'],
-    mode_of_delivery: ['mode_of_delivery', 'delivery_mode'],
-    end_date_or_duration: ['end_date_or_duration', 'duration'],
-    subject_area_discipline: ['subject_area_discipline', 'subject_area', 'discipline'],
-    learning_outcomes: ['learning_outcomes'],
-    units_modules_covered: ['units_modules_covered', 'units_modules'],
-    assessment_methods: ['assessment_methods', 'assessment_method'],
-    entry_requirements: ['entry_requirements'],
-    tuition_fee_gbp: ['tuition_fee_gbp', 'tuition_fee'],
-    additional_costs: ['additional_costs'],
-    funding_options: ['funding_options'],
-    learning_resources_provided: ['learning_resources_provided'],
-    special_equipment_needed: ['special_equipment_needed'],
-    work_placement_included: ['work_placement_included', 'work_placement_internship_included'],
-    course_leader_programme_director: ['course_leader_programme_director', 'course_leader'],
-    internal_verification_contact: ['internal_verification_contact'],
-    ukvi_approved_course: ['ukvi_approved_course'],
-    approval_date: ['approval_date'],
-    review_date: ['review_date'],
+// Fields that describe the programme itself — go on the HND-001-INFO course (stable, same across all cohorts)
+const PROGRAMME_CUSTOM_FIELD_ALIASES = {
+    course_type:                    ['course_type', 'course_type_id', 'type_of_course'],
+    awarding_body_accreditation:    ['awarding_body_accreditation', 'awarding_body', 'accreditation'],
+    regulation_level:               ['regulation_level', 'rqf_level'],
+    subject_area_discipline:        ['subject_area_discipline', 'subject_area', 'discipline'],
+    learning_outcomes:              ['learning_outcomes'],
+    units_modules_covered:          ['units_modules_covered', 'units_modules'],
+    entry_requirements:             ['entry_requirements'],
+    learning_resources_provided:    ['learning_resources_provided'],
     special_admission_considerations: ['special_admission_considerations'],
-    progression_opportunities: ['progression_opportunities'],
-    industry_partnerships: ['industry_partnerships']
+    progression_opportunities:      ['progression_opportunities'],
+    industry_partnerships:          ['industry_partnerships'],
 };
 
-async function upsertMoodleCourseCustomFields(courseId, registration) {
+// Fields that are specific to a cohort intake — go on the HND-001-SEP-2025 cohort course
+const COHORT_CUSTOM_FIELD_ALIASES = {
+    mode_of_delivery:               ['mode_of_delivery', 'delivery_mode'],
+    end_date_or_duration:           ['end_date_or_duration', 'duration'],
+    assessment_methods:             ['assessment_methods', 'assessment_method'],
+    tuition_fee_gbp:                ['tuition_fee_gbp', 'tuition_fee'],
+    additional_costs:               ['additional_costs'],
+    funding_options:                ['funding_options'],
+    special_equipment_needed:       ['special_equipment_needed'],
+    work_placement_included:        ['work_placement_included', 'work_placement_internship_included'],
+    course_leader_programme_director: ['course_leader_programme_director', 'course_leader'],
+    internal_verification_contact:  ['internal_verification_contact'],
+    ukvi_approved_course:           ['ukvi_approved_course'],
+    approval_date:                  ['approval_date'],
+    review_date:                    ['review_date'],
+};
+
+// Combined (used by existing single-course sync path)
+const COURSE_CUSTOM_FIELD_ALIASES = { ...PROGRAMME_CUSTOM_FIELD_ALIASES, ...COHORT_CUSTOM_FIELD_ALIASES };
+
+async function upsertMoodleCourseCustomFields(courseId, registration, aliasMap = COURSE_CUSTOM_FIELD_ALIASES) {
     let fields = [];
     try {
         const [rows] = await moodleDbPool.execute(
@@ -8263,7 +8271,7 @@ async function upsertMoodleCourseCustomFields(courseId, registration) {
     });
 
     let updates = 0;
-    for (const [payloadKey, aliases] of Object.entries(COURSE_CUSTOM_FIELD_ALIASES)) {
+    for (const [payloadKey, aliases] of Object.entries(aliasMap)) {
         const rawValue = registration[payloadKey];
         if (rawValue === null || rawValue === undefined || rawValue === '') {
             continue;
@@ -8352,6 +8360,28 @@ async function upsertMoodleCourseSections(courseId, unitsModulesCovered) {
     return { updated, message: `Synced ${updated} Moodle section(s)` };
 }
 
+// Returns the Moodle course ID for the programme INFO course (e.g. HND-001-INFO).
+// Creates it inside the programme category if it doesn't exist yet.
+async function ensureProgrammeInfoCourse(registration, programmeCategoryId) {
+    const infoIdNumber = `${String(registration.course_code || '').trim()}-INFO`;
+    const existing = await getMoodleCourseByCode(infoIdNumber);
+    if (existing?.id) return { moodleCourseId: Number(existing.id), created: false };
+
+    const infoReg = {
+        ...registration,
+        // Override idnumber/shortname derivation by injecting into course_code
+        course_code: infoIdNumber,
+        cohort_label: '',           // no cohort suffix
+        programme_type_category_id: null,
+        program_category_id: programmeCategoryId, // place directly inside HND-001 category
+        year_category_id: null,
+        semester_category_id: null,
+    };
+    const result = await createOrUpdateMoodleCourseCore(infoReg);
+    await ensureManualEnrolmentForCourse(result.moodleCourseId);
+    return result;
+}
+
 async function syncCourseRegistrationToMoodle(registrationId) {
     const [rows] = await db.execute('SELECT * FROM course_registrations WHERE id = ? LIMIT 1', [registrationId]);
     if (rows.length === 0) {
@@ -8361,8 +8391,26 @@ async function syncCourseRegistrationToMoodle(registrationId) {
     const registration = rows[0];
 
     try {
-        // Check if course already exists in Moodle
-        const existingMoodleCourse = await getMoodleCourseByCode(registration.course_code);
+        // ── 1. Resolve the programme category (e.g. cat 164 for HND-001) ────────
+        // programme_type_category_id points to the type (HND), program_category_id to the programme (HND-001)
+        const programmeCategoryId = registration.program_category_id || registration.programme_type_category_id || null;
+
+        // ── 2. Ensure the HND-001-INFO programme course exists ───────────────────
+        let infoMessage = '';
+        let infoCourseId = null;
+        if (programmeCategoryId) {
+            const infoSync = await ensureProgrammeInfoCourse(registration, programmeCategoryId);
+            infoCourseId = infoSync.moodleCourseId;
+            infoMessage = infoSync.created ? 'Programme INFO course created' : 'Programme INFO course exists';
+            // Push programme-level custom fields + sections onto INFO course
+            await upsertMoodleCourseCustomFields(infoCourseId, registration, PROGRAMME_CUSTOM_FIELD_ALIASES);
+            await upsertMoodleCourseSections(infoCourseId, registration.units_modules_covered);
+        }
+
+        // ── 3. Create/update the cohort course (HND-001-SEP-2025) ────────────────
+        const existingMoodleCourse = await getMoodleCourseByCode(
+            `${String(registration.course_code || '').trim()}-${toCategorySlug(registration.cohort_label || '').toUpperCase()}`
+        ) || await getMoodleCourseByCode(registration.course_code);
         const courseAlreadyExists = Boolean(existingMoodleCourse?.id);
 
         let moodleCourseId = existingMoodleCourse?.id || null;
@@ -8371,22 +8419,24 @@ async function syncCourseRegistrationToMoodle(registrationId) {
         let sectionSync = null;
         let courseMessage = '';
 
-        // Only create course in Moodle if it doesn't already exist
+        // Place cohort course inside the programme category (same level as INFO course)
+        const cohortReg = programmeCategoryId
+            ? { ...registration, program_category_id: programmeCategoryId, programme_type_category_id: null, year_category_id: null, semester_category_id: null }
+            : registration;
+
         if (!courseAlreadyExists) {
-            courseSync = await createOrUpdateMoodleCourseCore(registration);
+            courseSync = await createOrUpdateMoodleCourseCore(cohortReg);
             moodleCourseId = courseSync.moodleCourseId;
             courseMessage = courseSync.created ? 'Course created in Moodle' : 'Course updated in Moodle';
             await ensureManualEnrolmentForCourse(moodleCourseId);
         } else {
-            // Course already exists, just get the ID
             moodleCourseId = existingMoodleCourse.id;
             courseMessage = 'Course already exists in Moodle';
         }
 
-        // Always sync custom fields and sections (even for existing courses)
-        // This ensures each intake's course gets the 22 detail fields pushed to Moodle
-        customFieldSync = await upsertMoodleCourseCustomFields(moodleCourseId, registration);
-        sectionSync = await upsertMoodleCourseSections(moodleCourseId, registration.units_modules_covered);
+        // Push cohort-specific custom fields onto the cohort course
+        customFieldSync = await upsertMoodleCourseCustomFields(moodleCourseId, registration, COHORT_CUSTOM_FIELD_ALIASES);
+        sectionSync = { message: '' }; // sections live on INFO course only
 
         // Create cohort if cohort_label provided (applies to any registration)
         let cohortSync = null;
@@ -8395,9 +8445,9 @@ async function syncCourseRegistrationToMoodle(registrationId) {
         }
 
         const syncMessage = [
+            infoMessage,
             courseMessage,
             customFieldSync?.message || '',
-            sectionSync?.message || '',
             cohortSync?.message || ''
         ].filter(Boolean).join(' | ');
 
