@@ -294,15 +294,16 @@ const CourseRegistrations = () => {
                 }
             }
 
-            // Filter out program-level codes (e.g. HND-001, DEG-001) — those have ≤2 dash-separated parts.
-            // Subject-level codes (e.g. HND-BUS-Y1-S1-C1) have 4+ parts and are what belongs here.
-            const isProgramLevel = (code) => {
+            // Keep only program-level codes (e.g. HND-001, DEG-001 with ≤2 dash parts).
+            // Subject-level codes (e.g. HND-BUS-Y1-S1-C1 with 4+ parts) belong in the
+            // LMS Enrolments / Moodle sync pages, not here.
+            const isSubjectLevel = (code) => {
                 const s = String(code || '').trim();
-                return s.length > 0 && s.split('-').length <= 2;
+                return s.length > 0 && s.split('-').length > 2;
             };
             const eligible = enriched.filter((a) => {
                 if (!a.course_title && !a.course_code) return false;
-                if (isProgramLevel(a.course_code)) return false;
+                if (isSubjectLevel(a.course_code)) return false;
                 return true;
             });
             setAccreditations(eligible);
