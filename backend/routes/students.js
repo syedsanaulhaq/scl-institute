@@ -2915,32 +2915,7 @@ router.post('/moodle/create-level-category', async (req, res) => {
         const resultIds = {};
         const hierarchyCodes = buildHierarchyCodePattern(courseCode, programmeTypeName, programName, academicYear, name);
 
-        // For program level: auto-increment code based on existing siblings (HND-001, HND-002 → HND-003)
-        let autoIncrementedCode = explicitCode;
-        if (level === 'program' && directParentId && directParentId > 0) {
-            // Get parent type's idnumber (e.g. "HND")
-            const [parentRows] = await moodleDbPool.execute(
-                'SELECT idnumber FROM mdl_course_categories WHERE id = ?',
-                [directParentId]
-            ).catch(() => [[]]);
-            const parentCode = String(parentRows[0]?.idnumber || '').trim().toUpperCase() || 'CRS';
-            // Find max existing sibling code matching pattern {parentCode}-NNN
-            const [siblingRows] = await moodleDbPool.execute(
-                'SELECT idnumber FROM mdl_course_categories WHERE parent = ?',
-                [directParentId]
-            ).catch(() => [[]]);
-            const maxNum = (siblingRows || []).reduce((max, r) => {
-                const parts = String(r.idnumber || '').split('-');
-                if (parts.length >= 2 && parts[0] === parentCode) {
-                    const n = parseInt(parts[1], 10);
-                    if (!isNaN(n)) return Math.max(max, n);
-                }
-                return max;
-            }, 0);
-            autoIncrementedCode = `${parentCode}-${String(maxNum + 1).padStart(3, '0')}`;
-        }
-
-        const thisCode = autoIncrementedCode || (
+        const thisCode = explicitCode || (
             level === 'programme_type' ? hierarchyCodes.programmeTypeCode :
             level === 'program' ? hierarchyCodes.programCode :
             level === 'year' ? hierarchyCodes.yearCode :
@@ -4249,10 +4224,42 @@ router.get('/programme-lifecycle-status', async (req, res) => {
                 FROM programme_intakes
                 WHERE program_name IS NOT NULL AND program_name != ''
             ) pi
-            LEFT JOIN course_accreditations ca ON ca.course_title COLLATE utf8mb4_unicode_ci = pi.program_name
-            LEFT JOIN course_visits cv ON cv.course_title COLLATE utf8mb4_unicode_ci = pi.program_name
-            LEFT JOIN course_inductions ci ON ci.course_title COLLATE utf8mb4_unicode_ci = pi.program_name
-            LEFT JOIN course_registrations cr ON cr.course_title COLLATE utf8mb4_unicode_ci = pi.program_name
+            LEFT JOIN (
+                SELECT course_title, id, overall_status, completion_percentage
+                FROM course_accreditations
+                WHERE id IN (
+                    SELECT MAX(id) FROM course_accreditations
+                    WHERE course_title IS NOT NULL AND course_title != ''
+                    GROUP BY course_title
+                )
+            ) ca ON ca.course_title COLLATE utf8mb4_unicode_ci = pi.program_name
+            LEFT JOIN (
+                SELECT course_title, id, overall_status, completion_percentage
+                FROM course_visits
+                WHERE id IN (
+                    SELECT MAX(id) FROM course_visits
+                    WHERE course_title IS NOT NULL AND course_title != ''
+                    GROUP BY course_title
+                )
+            ) cv ON cv.course_title COLLATE utf8mb4_unicode_ci = pi.program_name
+            LEFT JOIN (
+                SELECT course_title, id, overall_status, completion_percentage
+                FROM course_inductions
+                WHERE id IN (
+                    SELECT MAX(id) FROM course_inductions
+                    WHERE course_title IS NOT NULL AND course_title != ''
+                    GROUP BY course_title
+                )
+            ) ci ON ci.course_title COLLATE utf8mb4_unicode_ci = pi.program_name
+            LEFT JOIN (
+                SELECT program_name, id, application_status, moodle_sync_status
+                FROM course_registrations
+                WHERE id IN (
+                    SELECT MAX(id) FROM course_registrations
+                    WHERE program_name IS NOT NULL AND program_name != ''
+                    GROUP BY program_name
+                )
+            ) cr ON cr.program_name COLLATE utf8mb4_unicode_ci = pi.program_name
             ORDER BY pi.programme_type_name, pi.program_name
         `);
 
