@@ -1193,7 +1193,7 @@ const CourseLifecycleDashboard = () => {
                         <div className="flex items-center justify-between mb-1">
                             <h2 className="text-lg font-bold text-gray-900">
                                 {addModal.level === 'type' && 'Add New Course Type'}
-                                {addModal.level === 'program' && `Add New Programme — ${addModal.context.programmeTypeName}`}
+                                {addModal.level === 'program' && `Add New Course — ${addModal.context.programmeTypeName}`}
                                 {addModal.level === 'year' && `Add New Year — ${addModal.context.programName}`}
                                 {addModal.level === 'semester' && `Add New Semester — ${addModal.context.yearName}`}
                             </h2>
@@ -1205,7 +1205,7 @@ const CourseLifecycleDashboard = () => {
                         <div className="space-y-3">
                             <div>
                                 <label className="block text-sm font-semibold text-gray-700 mb-1">
-                                    {addModal.level === 'type' ? 'Course Type Name' : addModal.level === 'program' ? 'Programme Name' : addModal.level === 'year' ? 'Year (e.g. Year 1)' : 'Semester (e.g. Semester 1)'} *
+                                    {addModal.level === 'type' ? 'Course Type Name' : addModal.level === 'program' ? 'Course Name' : addModal.level === 'year' ? 'Year (e.g. Year 1)' : 'Semester (e.g. Semester 1)'} *
                                 </label>
                                 <input
                                     autoFocus
