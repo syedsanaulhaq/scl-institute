@@ -4097,6 +4097,13 @@ router.get('/course-lifecycle/dashboard', async (req, res) => {
             return courseMap.get(key);
         };
 
+        // Helper: program-level codes like HND-001, DEG-001 have ≤2 dash-separated parts.
+        // These are Programme/Course categories, not Subject courses — skip creating courseMap entries for them.
+        const isProgramLevelCode = (code) => {
+            const s = String(code || '').trim();
+            return s.length > 0 && s.split('-').length <= 2;
+        };
+
         // Populate from Moodle category hierarchy first
         for (const course of lifecycleCourses) {
             const item = ensureCourseRow(course.course_code, course.course_name);
@@ -4132,6 +4139,7 @@ router.get('/course-lifecycle/dashboard', async (req, res) => {
         }
 
         for (const row of accreditations) {
+            if (isProgramLevelCode(row.course_code)) continue; // skip program-level accreditations
             const item = ensureCourseRow(row.course_code, row.course_title);
             if (!item.accreditation_id || item.accreditation_id === row.id) {
                 item.accreditation_id = row.id;
@@ -4145,6 +4153,7 @@ router.get('/course-lifecycle/dashboard', async (req, res) => {
         }
 
         for (const row of visits) {
+            if (isProgramLevelCode(row.course_code)) continue; // skip program-level visits
             const item = ensureCourseRow(row.course_code, row.course_title);
             if (!item.visit_id || item.visit_id === row.id) {
                 item.visit_id = row.id;
@@ -4158,6 +4167,7 @@ router.get('/course-lifecycle/dashboard', async (req, res) => {
         }
 
         for (const row of inductions) {
+            if (isProgramLevelCode(row.course_code)) continue; // skip program-level inductions
             const item = ensureCourseRow(row.course_code, row.course_title);
             if (!item.induction_id || item.induction_id === row.id) {
                 item.induction_id = row.id;
@@ -4171,6 +4181,7 @@ router.get('/course-lifecycle/dashboard', async (req, res) => {
         }
 
         for (const row of registrations) {
+            if (isProgramLevelCode(row.course_code)) continue; // skip program-level registrations in subject dashboard
             const item = ensureCourseRow(row.course_code, row.course_title);
             if (!item.registration_id || item.registration_id === row.id) {
                 item.registration_id = row.id;
