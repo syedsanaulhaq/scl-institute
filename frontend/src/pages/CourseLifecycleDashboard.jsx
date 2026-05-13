@@ -1230,7 +1230,7 @@ const CourseLifecycleDashboard = () => {
                                         </div>
                                         <div>
                                             <label className="block text-xs font-semibold text-gray-600 mb-1">Course Type</label>
-                                            <input type="text" value={addForm.course_type || ''} onChange={(e) => setAddForm(prev => ({ ...prev, course_type: e.target.value }))} placeholder="e.g. HND" className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                                            <input type="text" value={addForm.course_type || ''} readOnly disabled className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-100 text-gray-500 cursor-not-allowed" />
                                         </div>
                                         <div>
                                             <label className="block text-xs font-semibold text-gray-600 mb-1">Subject Area</label>
