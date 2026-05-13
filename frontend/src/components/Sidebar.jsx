@@ -94,6 +94,8 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
             },
             { name: 'Course Lifecycle', icon: LayoutDashboard, path: '/course-lifecycle' },
             { name: 'Course Intakes', icon: Users, path: '/programme-intakes' },
+            { name: 'Student Fees', icon: DollarSign, path: '/admin/student-fees' },
+            { name: 'Compliance Calendar', icon: Calendar, path: '/compliance-calendar' },
             { name: 'LMS Enrolments', icon: GraduationCap, path: '/admin/lms-enrolments' },
             { name: 'Student Programmes', icon: BookOpen, path: '/admin/student-programmes' },
             { name: 'Users by Role', icon: Users, path: '/admin/users-by-role' },

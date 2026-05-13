@@ -5024,6 +5024,22 @@ router.post('/applications/:id/review', async (req, res) => {
                             normalizedCourseCode
                         );
                     }
+
+                    // ── Auto-create fee record from induction Section 5 ──
+                    try {
+                        const axios = require('axios');
+                        await axios.post('http://localhost:4000/api/induction-driven/student-fees/create-from-induction', {
+                            application_id: id,
+                            course_code: normalizedCourseCode,
+                            student_name: `${app.first_name} ${app.last_name}`.trim(),
+                            student_email: app.email,
+                            intake_start_date: app.intake_start_date
+                        }).catch(feeErr => {
+                            console.warn(`[FEE AUTO-CREATE] Application ${id}: ${feeErr.message}`);
+                        });
+                    } catch (feeCreateErr) {
+                        console.warn(`[FEE AUTO-CREATE] Skipped for application ${id}: ${feeCreateErr.message}`);
+                    }
                 }
             } catch (enrollError) {
                 console.warn(`[REVIEW ENROLLMENT WARNING] Application ${id}: ${enrollError.message}`);

@@ -48,6 +48,8 @@ import CourseAccreditationsView from './pages/CourseAccreditationsView';
 import CourseMasterDetail from './pages/CourseMasterDetail';
 import CourseInductions from './pages/CourseInductions';
 import CourseInductionsDetail from './pages/CourseInductionsDetail';
+import StudentFeesManagement from './pages/StudentFeesManagement';
+import ComplianceCalendar from './pages/ComplianceCalendar';
 import CourseVisits from './pages/CourseVisits';
 import CourseVisitsDetail from './pages/CourseVisitsDetail';
 import CourseLifecycleDashboard from './pages/CourseLifecycleDashboard';
@@ -520,6 +522,24 @@ function App() {
                     user && canAccessManagementPortal ? (
                         <Layout user={user} onLogout={handleLogout}>
                             <AdminSupportRequests user={user} />
+                        </Layout>
+                    ) : (
+                        <LoginPage onLoginSuccess={handleLoginSuccess} />
+                    )
+                } />
+                <Route path="/admin/student-fees" element={
+                    user && canAccessManagementPortal ? (
+                        <Layout user={user} onLogout={handleLogout}>
+                            <StudentFeesManagement user={user} />
+                        </Layout>
+                    ) : (
+                        <LoginPage onLoginSuccess={handleLoginSuccess} />
+                    )
+                } />
+                <Route path="/compliance-calendar" element={
+                    user && canAccessManagementPortal ? (
+                        <Layout user={user} onLogout={handleLogout}>
+                            <ComplianceCalendar user={user} />
                         </Layout>
                     ) : (
                         <LoginPage onLoginSuccess={handleLoginSuccess} />

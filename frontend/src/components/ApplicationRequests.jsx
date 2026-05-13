@@ -47,6 +47,22 @@ const ApplicationRequests = () => {
     const [reviewStatus, setReviewStatus] = useState({});
     const [highlightedRef, setHighlightedRef] = useState(searchParams.get('highlight'));
     const [showSuccessMsg, setShowSuccessMsg] = useState(!!highlightedRef);
+    const [inductionContext, setInductionContext] = useState(null);
+    const [inductionLoading, setInductionLoading] = useState(false);
+
+    // Load induction context whenever selectedApp changes and has a course_code
+    useEffect(() => {
+        if (selectedApp?.course_code) {
+            setInductionLoading(true);
+            setInductionContext(null);
+            axios.get(`${API_URL}/induction-driven/induction-context/${selectedApp.course_code}`)
+                .then(res => setInductionContext(res.data.data || null))
+                .catch(() => setInductionContext(null))
+                .finally(() => setInductionLoading(false));
+        } else {
+            setInductionContext(null);
+        }
+    }, [selectedApp?.course_code]);
 
     useEffect(() => {
         fetchApplications();
@@ -505,6 +521,83 @@ const ApplicationRequests = () => {
                                     <p className="text-sm text-gray-900 mt-1">{selectedApp.relevant_work_experience || 'Not provided'}</p>
                                 </div>
                             </div>
+
+                            {/* ── Induction Entry Requirements Panel ── */}
+                            {inductionLoading && (
+                                <div className="bg-purple-50 rounded-lg p-4 flex items-center gap-2 text-sm text-purple-700">
+                                    <Clock className="w-4 h-4 animate-spin" />
+                                    Loading course induction entry requirements...
+                                </div>
+                            )}
+                            {!inductionLoading && inductionContext && (() => {
+                                const section4 = inductionContext.sections?.[4] || [];
+                                const section5 = inductionContext.sections?.[5] || [];
+                                if (!section4.length && !section5.length) return null;
+                                return (
+                                    <div className="border border-purple-200 rounded-lg overflow-hidden">
+                                        <div className="bg-purple-600 px-4 py-2.5">
+                                            <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                                                <FileText className="w-4 h-4" />
+                                                Course Induction: Entry Requirements &amp; Fees
+                                                <span className="ml-auto text-purple-200 text-xs font-normal">
+                                                    Source: {inductionContext.course_code} Induction
+                                                </span>
+                                            </h3>
+                                        </div>
+                                        <div className="p-4 space-y-3 bg-purple-50">
+                                            {section4.length > 0 && (
+                                                <div>
+                                                    <p className="text-xs font-bold text-purple-800 uppercase tracking-wider mb-2">Section 4 — Admission &amp; Enrolment</p>
+                                                    <div className="space-y-2">
+                                                        {section4.map((r, i) => {
+                                                            const appQual = (selectedApp.highest_qualification || '').toLowerCase();
+                                                            const reqDesc = (r.description || '').toLowerCase();
+                                                            const reqArea = (r.area || '').toLowerCase();
+                                                            let match = null;
+                                                            if (reqArea.includes('english') || reqArea.includes('ielts') || reqArea.includes('proficiency')) {
+                                                                const appEnglish = (selectedApp.english_proficiency || '') + ' ' + (selectedApp.english_score || '');
+                                                                match = appEnglish.trim() ? { label: appEnglish, ok: true } : null;
+                                                            } else if (reqArea.includes('qualification') || reqArea.includes('academic')) {
+                                                                match = appQual ? { label: selectedApp.highest_qualification, ok: true } : null;
+                                                            }
+                                                            return (
+                                                                <div key={i} className="bg-white rounded border border-purple-100 p-2.5 flex gap-3 text-sm">
+                                                                    <div className="flex-1">
+                                                                        <p className="font-semibold text-gray-700">{r.area || `Requirement ${i+1}`}</p>
+                                                                        <p className="text-gray-600 text-xs mt-0.5">{r.description || '—'}</p>
+                                                                        {r.review_notes && <p className="text-gray-500 text-xs italic mt-0.5">Note: {r.review_notes}</p>}
+                                                                    </div>
+                                                                    {match && (
+                                                                        <div className="flex-shrink-0 text-right">
+                                                                            <span className="text-xs text-gray-500">Applicant:</span>
+                                                                            <p className={`text-xs font-semibold ${match.ok ? 'text-emerald-600' : 'text-red-600'}`}>
+                                                                                {match.ok ? '✓' : '✗'} {match.label}
+                                                                            </p>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </div>
+                                            )}
+                                            {section5.length > 0 && (
+                                                <div>
+                                                    <p className="text-xs font-bold text-purple-800 uppercase tracking-wider mb-2">Section 5 — Fee Structure</p>
+                                                    <div className="space-y-2">
+                                                        {section5.map((r, i) => (
+                                                            <div key={i} className="bg-white rounded border border-purple-100 p-2.5 text-sm">
+                                                                <p className="font-semibold text-gray-700">{r.area || `Fee Item ${i+1}`}</p>
+                                                                <p className="text-gray-600 text-xs mt-0.5">{r.description || '—'}</p>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                );
+                            })()}
 
                             {/* Status and Action */}
                             <div className="bg-gray-50 rounded-lg p-4">
