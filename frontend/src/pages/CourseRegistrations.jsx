@@ -43,36 +43,39 @@ const uniqueByName = (items = []) => {
 function deriveProgramName(course) {
     const explicit = String(course?.program_name || '').trim();
     if (explicit) return explicit;
-
-    const courseCode = String(course?.course_code || '').trim();
-    if (courseCode.includes('-')) {
-        return courseCode.split('-')[0];
-    }
-
-    return String(course?.course_title || 'General Programme').trim() || 'General Programme';
+    // Return full course_code so getFullProgramName can match by exact idnumber
+    return String(course?.course_code || course?.course_title || 'General Programme').trim() || 'General Programme';
 }
 
 function getFullProgramName(programCode, moodleProgrammeTypes) {
     if (!programCode || !moodleProgrammeTypes?.length) return programCode;
-    
-    // Search through the hierarchy to find the matching program
+    // Exact idnumber match first (e.g. 'HND-001' → 'HND in Business (Business Management)')
     for (const progType of moodleProgrammeTypes) {
         if (progType.programs?.length) {
-            const foundProgram = progType.programs.find(p => 
-                String(p.name || '').startsWith(programCode) || 
-                String(p.idnumber || '').startsWith(programCode)
-            );
-            if (foundProgram) {
-                return foundProgram.name;
-            }
+            const exact = progType.programs.find(p => String(p.idnumber || '') === programCode);
+            if (exact) return exact.name;
         }
     }
-    
+    // Fall back to starts-with match
+    for (const progType of moodleProgrammeTypes) {
+        if (progType.programs?.length) {
+            const byStart = progType.programs.find(p =>
+                String(p.name || '').startsWith(programCode) ||
+                String(p.idnumber || '').startsWith(programCode)
+            );
+            if (byStart) return byStart.name;
+        }
+    }
     return programCode;
 }
 
 function deriveProgrammeTypeName(course) {
-    return String(course?.programme_type_name || '').trim() || '';
+    const explicit = String(course?.programme_type_name || '').trim();
+    if (explicit) return explicit;
+    // Derive from course_code prefix (e.g. 'HND-001' → 'HND')
+    const code = String(course?.course_code || '').trim();
+    if (code) return code.split('-')[0];
+    return '';
 }
 
 function deriveAcademicYear(course) {
@@ -1130,16 +1133,20 @@ const CourseRegistrations = () => {
                                 <p className="text-xs text-gray-500 mt-0.5">These values are read-only and act as the parent course for all cohorts.</p>
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 p-4 bg-gray-50">
-                                {[
-                                    ['Course Title', selectedAccreditation.course_title || '-'],
-                                    ['Course Code / ID', selectedAccreditation.course_code || '-'],
-                                    ['Awarding Body', selectedAccreditation.awarding_body || '-'],
-                                    ['Qualification Level', selectedAccreditation.qualification_level || selectedAccreditation.course_type || '-'],
-                                    ['Course Type', selectedCourseStructure?.programme_type_name || '-'],
-                                    ['Course', getFullProgramName(selectedCourseStructure?.program_name, moodleProgrammeTypes) || '-'],
-                                    ['Academic Year', selectedCourseStructure?.academic_year || '-'],
-                                    ['Semester', selectedCourseStructure?.semester_name || '-']
-                                ].map(([label, value]) => (
+                                {(() => {
+                                    const firstCohort = cohortRegistrationsForSelected[0];
+                                    const startDate = firstCohort?.start_date ? new Date(firstCohort.start_date).toLocaleDateString('en-GB') : '-';
+                                    return [
+                                        ['Course Title', selectedAccreditation.course_title || '-'],
+                                        ['Course Code / ID', selectedAccreditation.course_code || '-'],
+                                        ['Awarding Body', selectedAccreditation.awarding_body || '-'],
+                                        ['Qualification Level', selectedAccreditation.qualification_level || firstCohort?.regulation_level || '-'],
+                                        ['Course Type', selectedCourseStructure?.programme_type_name || firstCohort?.course_type || '-'],
+                                        ['Programme', getFullProgramName(selectedCourseStructure?.program_name, moodleProgrammeTypes) || '-'],
+                                        ['Start Date', startDate],
+                                        ['Delivery Mode', firstCohort?.mode_of_delivery || '-']
+                                    ];
+                                })().map(([label, value]) => (
                                     <div key={label}>
                                         <label className="block text-xs font-semibold text-gray-600 uppercase mb-1">{label}</label>
                                         <div className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white text-gray-700 min-h-[42px] flex items-center">
