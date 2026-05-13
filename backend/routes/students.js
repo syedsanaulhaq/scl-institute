@@ -2915,7 +2915,32 @@ router.post('/moodle/create-level-category', async (req, res) => {
         const resultIds = {};
         const hierarchyCodes = buildHierarchyCodePattern(courseCode, programmeTypeName, programName, academicYear, name);
 
-        const thisCode = explicitCode || (
+        // For program level: auto-increment code based on existing siblings (HND-001, HND-002 → HND-003)
+        let autoIncrementedCode = explicitCode;
+        if (level === 'program' && directParentId && directParentId > 0) {
+            // Get parent type's idnumber (e.g. "HND")
+            const [parentRows] = await moodleDbPool.execute(
+                'SELECT idnumber FROM mdl_course_categories WHERE id = ?',
+                [directParentId]
+            ).catch(() => [[]]);
+            const parentCode = String(parentRows[0]?.idnumber || '').trim().toUpperCase() || 'CRS';
+            // Find max existing sibling code matching pattern {parentCode}-NNN
+            const [siblingRows] = await moodleDbPool.execute(
+                'SELECT idnumber FROM mdl_course_categories WHERE parent = ?',
+                [directParentId]
+            ).catch(() => [[]]);
+            const maxNum = (siblingRows || []).reduce((max, r) => {
+                const parts = String(r.idnumber || '').split('-');
+                if (parts.length >= 2 && parts[0] === parentCode) {
+                    const n = parseInt(parts[1], 10);
+                    if (!isNaN(n)) return Math.max(max, n);
+                }
+                return max;
+            }, 0);
+            autoIncrementedCode = `${parentCode}-${String(maxNum + 1).padStart(3, '0')}`;
+        }
+
+        const thisCode = autoIncrementedCode || (
             level === 'programme_type' ? hierarchyCodes.programmeTypeCode :
             level === 'program' ? hierarchyCodes.programCode :
             level === 'year' ? hierarchyCodes.yearCode :

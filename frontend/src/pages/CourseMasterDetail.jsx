@@ -161,12 +161,8 @@ const CourseMasterDetail = () => {
       if (modal === 'type') {
         payload.explicit_code = abbreviateProgrammeType(modalInput.trim());
       } else if (modal === 'program') {
-        const selectedType = types.find(t => t.id === selectedTypeId);
-        const typeCode = abbreviateProgrammeType(selectedType?.name || '');
-        // Generate a unique code from the course name initials to avoid collisions
-        const cleanName = modalInput.trim().replace(/^(HND|HNC|BSc|BA|MSc|MA|Degree|Foundation)\s+(in|of)\s+/i, '');
-        const nameCode = cleanName.split(/\s+/).map(w => (w[0] || '').toUpperCase()).join('').replace(/[^A-Z0-9]/g, '').slice(0, 6) || 'CRS';
-        payload.explicit_code = `${typeCode}-${nameCode}`;
+        // Backend auto-increments: HND-001, HND-002, HND-003...
+        // No explicit_code needed — backend queries siblings and picks next number.
       } else if (modal === 'year') {
         const selectedType = types.find(t => t.id === selectedTypeId);
         const selectedProgram = programs.find(p => p.id === selectedProgramId);
