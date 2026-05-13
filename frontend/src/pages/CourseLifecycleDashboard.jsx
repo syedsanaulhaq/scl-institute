@@ -443,6 +443,14 @@ const CourseLifecycleDashboard = () => {
         return sem ? sem.id : null;
     };
 
+    const findProgramIdnumber = (programmeTypeName, programName) => {
+        const norm = (s) => String(s || '').trim().toLowerCase();
+        const type = moodleHierarchy.find(t => norm(t.name) === norm(programmeTypeName));
+        if (!type) return '';
+        const prog = (type.programs || []).find(p => norm(p.name) === norm(programName));
+        return prog?.idnumber || '';
+    };
+
     const handleDeleteCategory = async (e, categoryId, categoryName) => {
         e.stopPropagation();
         if (!categoryId) {
@@ -866,7 +874,7 @@ const CourseLifecycleDashboard = () => {
                                                                                     <div
                                                                                         className="text-center cursor-pointer"
                                                                                         title="Manage Accreditation for this course"
-                                                                                        onClick={(e) => { e.stopPropagation(); navigate(buildAccreditationCreatePath({ course_title: program, course_code: programmeType })); }}
+                                                                                        onClick={(e) => { e.stopPropagation(); navigate(buildAccreditationCreatePath({ course_title: program, course_code: findProgramIdnumber(programmeType, program) })); }}
                                                                                     >
                                                                                         <div className="text-xs text-gray-400">Accred.</div>
                                                                                         <div className="flex justify-center mt-0.5">{statusIcon(pl.accreditation_status)}</div>
@@ -874,7 +882,7 @@ const CourseLifecycleDashboard = () => {
                                                                                     <div
                                                                                         className="text-center cursor-pointer"
                                                                                         title="Manage Visit for this course"
-                                                                                        onClick={(e) => { e.stopPropagation(); navigate(buildVisitCreatePath({ course_title: program, course_code: programmeType })); }}
+                                                                                        onClick={(e) => { e.stopPropagation(); navigate(buildVisitCreatePath({ course_title: program, course_code: findProgramIdnumber(programmeType, program) })); }}
                                                                                     >
                                                                                         <div className="text-xs text-gray-400">Visit</div>
                                                                                         <div className="flex justify-center mt-0.5">{statusIcon(pl.visit_status)}</div>
@@ -882,7 +890,7 @@ const CourseLifecycleDashboard = () => {
                                                                                     <div
                                                                                         className="text-center cursor-pointer"
                                                                                         title="Manage Induction for this course"
-                                                                                        onClick={(e) => { e.stopPropagation(); navigate(buildInductionCreatePath({ course_title: program, course_code: programmeType })); }}
+                                                                                        onClick={(e) => { e.stopPropagation(); navigate(buildInductionCreatePath({ course_title: program, course_code: findProgramIdnumber(programmeType, program) })); }}
                                                                                     >
                                                                                         <div className="text-xs text-gray-400">Induct.</div>
                                                                                         <div className="flex justify-center mt-0.5">{statusIcon(pl.induction_status)}</div>

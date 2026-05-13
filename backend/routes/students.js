@@ -2697,7 +2697,7 @@ router.get('/moodle/category-hierarchy', async (req, res) => {
         const includeInactiveParam = String(req.query.include_inactive || 'false').trim().toLowerCase();
         const includeInactive = includeInactiveParam === 'true' || includeInactiveParam === '1' || includeInactiveParam === 'yes';
         const rows = await safeMoodleSelectRows(
-            `SELECT id, parent, name, sortorder, depth, path, visible
+            `SELECT id, parent, name, idnumber, sortorder, depth, path, visible
              FROM mdl_course_categories
              ${includeInactive ? '' : 'WHERE COALESCE(visible, 1) = 1'}
              ORDER BY depth ASC, parent ASC, sortorder ASC, name ASC`,
@@ -2708,6 +2708,7 @@ router.get('/moodle/category-hierarchy', async (req, res) => {
             id: Number(row.id),
             parent: Number(row.parent || 0),
             name: String(row.name || '').trim(),
+            idnumber: String(row.idnumber || '').trim(),
             sortorder: Number(row.sortorder || 0),
             depth: Number(row.depth || 0),
             path: String(row.path || '').trim(),
@@ -2793,7 +2794,7 @@ router.get('/moodle/category-hierarchy', async (req, res) => {
                         return { id: year.id, name: year.name, parent: year.parent, depth: year.depth, path: year.path, sortorder: year.sortorder, semesters };
                     });
                     return {
-                        id: program.id, name: program.name, parent: program.parent, depth: program.depth, path: program.path, sortorder: program.sortorder,
+                        id: program.id, name: program.name, idnumber: program.idnumber || '', parent: program.parent, depth: program.depth, path: program.path, sortorder: program.sortorder,
                         years: [...moodleYears, ...makeLocalYears(null, program.id)]
                     };
                 });
