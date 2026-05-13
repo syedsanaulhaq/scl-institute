@@ -305,6 +305,12 @@ async function upsertLifecycleMasterFromAccreditation(accreditation) {
     const lifecycleKey = buildLifecycleMasterKey(accreditation.course_code, accreditation.course_title);
     if (!lifecycleKey || lifecycleKey === 'title:') return;
 
+    // Skip program-level codes (e.g. "HND-001", "DEG-001") — these are Course/Program
+    // level accreditations tracked via programme_intakes, not course_lifecycle_master (subject level).
+    // Subject codes have 4+ dash-separated parts: HND-BUS-Y1-S1-C1
+    const codeStr = String(accreditation.course_code || '').trim();
+    if (codeStr && codeStr.split('-').length <= 2) return;
+
     const columns = await getLifecycleMasterColumnSet();
     const insertMap = {};
     const updateMap = {};
