@@ -874,7 +874,7 @@ const CourseLifecycleDashboard = () => {
                                                                                     <div
                                                                                         className="text-center cursor-pointer"
                                                                                         title="Manage Accreditation for this course"
-                                                                                        onClick={(e) => { e.stopPropagation(); navigate(buildAccreditationCreatePath({ course_title: program, course_code: findProgramIdnumber(programmeType, program) })); }}
+                                                                                        onClick={(e) => { e.stopPropagation(); navigate(pl.accreditation_id ? `/course-accreditations/${pl.accreditation_id}` : buildAccreditationCreatePath({ course_title: program, course_code: findProgramIdnumber(programmeType, program) })); }}
                                                                                     >
                                                                                         <div className="text-xs text-gray-400">Accred.</div>
                                                                                         <div className="flex justify-center mt-0.5">{statusIcon(pl.accreditation_status)}</div>
@@ -882,7 +882,7 @@ const CourseLifecycleDashboard = () => {
                                                                                     <div
                                                                                         className="text-center cursor-pointer"
                                                                                         title="Manage Visit for this course"
-                                                                                        onClick={(e) => { e.stopPropagation(); navigate(buildVisitCreatePath({ course_title: program, course_code: findProgramIdnumber(programmeType, program) })); }}
+                                                                                        onClick={(e) => { e.stopPropagation(); navigate(pl.visit_id ? `/course-visits/${pl.visit_id}` : buildVisitCreatePath({ course_title: program, course_code: findProgramIdnumber(programmeType, program) })); }}
                                                                                     >
                                                                                         <div className="text-xs text-gray-400">Visit</div>
                                                                                         <div className="flex justify-center mt-0.5">{statusIcon(pl.visit_status)}</div>
@@ -890,12 +890,16 @@ const CourseLifecycleDashboard = () => {
                                                                                     <div
                                                                                         className="text-center cursor-pointer"
                                                                                         title="Manage Induction for this course"
-                                                                                        onClick={(e) => { e.stopPropagation(); navigate(buildInductionCreatePath({ course_title: program, course_code: findProgramIdnumber(programmeType, program) })); }}
+                                                                                        onClick={(e) => { e.stopPropagation(); navigate(pl.induction_id ? `/course-inductions/${pl.induction_id}` : buildInductionCreatePath({ course_title: program, course_code: findProgramIdnumber(programmeType, program) })); }}
                                                                                     >
                                                                                         <div className="text-xs text-gray-400">Induct.</div>
                                                                                         <div className="flex justify-center mt-0.5">{statusIcon(pl.induction_status)}</div>
                                                                                     </div>
-                                                                                    <div className="text-center">
+                                                                                    <div
+                                                                                        className="text-center cursor-pointer"
+                                                                                        title="Manage Registration for this course"
+                                                                                        onClick={(e) => { e.stopPropagation(); navigate(`/course-registrations?course_code=${encodeURIComponent(findProgramIdnumber(programmeType, program))}&course_title=${encodeURIComponent(program)}`); }}
+                                                                                    >
                                                                                         <div className="text-xs text-gray-400">Reg.</div>
                                                                                         <div className="flex justify-center mt-0.5">{statusIcon(pl.registration_status)}</div>
                                                                                     </div>
