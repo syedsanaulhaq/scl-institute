@@ -73,41 +73,17 @@ async function getInductionForCourse(courseCode) {
     if (!courseCode) return null;
     const code = String(courseCode).trim();
 
-    // Try exact match first, then partial (strip cohort suffix like -SEP-2025)
+    // Try exact match first, then partial (strip cohort suffix like -INFO, -SEP-2025)
     let [rows] = await pool.execute(
-        `SELECT ci.*, 
-                GROUP_CONCAT(
-                    CONCAT(ir.section_number,'||',COALESCE(ir.requirement_area,''),'||',
-                           COALESCE(ir.description,''),'||',COALESCE(ir.review_notes,''),'||',
-                           COALESCE(ir.compliance_status,''),'||',COALESCE(ir.responsible_person,''))
-                    ORDER BY ir.section_number, ir.id
-                    SEPARATOR ';;'
-                ) AS reqs_raw
-         FROM course_inductions ci
-         LEFT JOIN induction_requirements ir ON ir.induction_id = ci.id
-         WHERE ci.course_code = ?
-         GROUP BY ci.id
-         ORDER BY ci.id DESC LIMIT 1`,
+        `SELECT ci.* FROM course_inductions ci WHERE ci.course_code = ? ORDER BY ci.id DESC LIMIT 1`,
         [code]
     );
 
     if (!rows.length) {
-        // Try base programme code (e.g. HND-001 from HND-001-SEP-2025)
+        // Try base programme code (e.g. HND-001 from HND-001-INFO or HND-001-SEP-2025)
         const baseParts = code.split('-').slice(0, 2).join('-');
         [rows] = await pool.execute(
-            `SELECT ci.*,
-                    GROUP_CONCAT(
-                        CONCAT(ir.section_number,'||',COALESCE(ir.requirement_area,''),'||',
-                               COALESCE(ir.description,''),'||',COALESCE(ir.review_notes,''),'||',
-                               COALESCE(ir.compliance_status,''),'||',COALESCE(ir.responsible_person,''))
-                        ORDER BY ir.section_number, ir.id
-                        SEPARATOR ';;'
-                    ) AS reqs_raw
-             FROM course_inductions ci
-             LEFT JOIN induction_requirements ir ON ir.induction_id = ci.id
-             WHERE ci.course_code LIKE ?
-             GROUP BY ci.id
-             ORDER BY ci.id DESC LIMIT 1`,
+            `SELECT ci.* FROM course_inductions ci WHERE ci.course_code LIKE ? ORDER BY ci.id DESC LIMIT 1`,
             [`${baseParts}%`]
         );
     }
@@ -115,17 +91,26 @@ async function getInductionForCourse(courseCode) {
     if (!rows.length) return null;
 
     const induction = rows[0];
-    // Parse sections
+
+    // Fetch requirements in a separate query to avoid GROUP_CONCAT 1024-byte truncation
+    const [reqRows] = await pool.execute(
+        `SELECT section_number, requirement_area, description, review_notes, compliance_status, responsible_person
+         FROM induction_requirements WHERE induction_id = ? ORDER BY section_number, id`,
+        [induction.id]
+    );
+
     const sections = {};
     for (let i = 1; i <= 11; i++) sections[i] = [];
-
-    if (induction.reqs_raw) {
-        for (const rawReq of induction.reqs_raw.split(';;')) {
-            const [secNum, area, desc, notes, status, person] = rawReq.split('||');
-            const s = parseInt(secNum, 10);
-            if (s >= 1 && s <= 11) {
-                sections[s].push({ area, description: desc, review_notes: notes, compliance_status: status, responsible_person: person });
-            }
+    for (const r of reqRows) {
+        const s = parseInt(r.section_number, 10);
+        if (s >= 1 && s <= 11) {
+            sections[s].push({
+                area: r.requirement_area,
+                description: r.description,
+                review_notes: r.review_notes,
+                compliance_status: r.compliance_status,
+                responsible_person: r.responsible_person
+            });
         }
     }
 
