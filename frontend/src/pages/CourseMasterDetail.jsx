@@ -163,21 +163,28 @@ const CourseMasterDetail = () => {
       } else if (modal === 'program') {
         const selectedType = types.find(t => t.id === selectedTypeId);
         const typeCode = abbreviateProgrammeType(selectedType?.name || '');
-        payload.explicit_code = `${typeCode}-001`; // Default to 001, backend can handle increments
+        // Generate a unique code from the course name initials to avoid collisions
+        const cleanName = modalInput.trim().replace(/^(HND|HNC|BSc|BA|MSc|MA|Degree|Foundation)\s+(in|of)\s+/i, '');
+        const nameCode = cleanName.split(/\s+/).map(w => (w[0] || '').toUpperCase()).join('').replace(/[^A-Z0-9]/g, '').slice(0, 6) || 'CRS';
+        payload.explicit_code = `${typeCode}-${nameCode}`;
       } else if (modal === 'year') {
         const selectedType = types.find(t => t.id === selectedTypeId);
         const selectedProgram = programs.find(p => p.id === selectedProgramId);
         const typeCode = abbreviateProgrammeType(selectedType?.name || '');
+        const cleanProgName = (selectedProgram?.name || '').replace(/^(HND|HNC|BSc|BA|MSc|MA|Degree|Foundation)\s+(in|of)\s+/i, '');
+        const progCode = cleanProgName.split(/\s+/).map(w => (w[0] || '').toUpperCase()).join('').replace(/[^A-Z0-9]/g, '').slice(0, 6) || 'CRS';
         const yearNum = extractNumber(modalInput.trim());
-        payload.explicit_code = `${typeCode}-001-Y${yearNum}`;
+        payload.explicit_code = `${typeCode}-${progCode}-Y${yearNum}`;
       } else if (modal === 'semester') {
         const selectedType = types.find(t => t.id === selectedTypeId);
         const selectedProgram = programs.find(p => p.id === selectedProgramId);
         const selectedYear = years.find(y => y.id === selectedYearId);
         const typeCode = abbreviateProgrammeType(selectedType?.name || '');
+        const cleanProgName = (selectedProgram?.name || '').replace(/^(HND|HNC|BSc|BA|MSc|MA|Degree|Foundation)\s+(in|of)\s+/i, '');
+        const progCode = cleanProgName.split(/\s+/).map(w => (w[0] || '').toUpperCase()).join('').replace(/[^A-Z0-9]/g, '').slice(0, 6) || 'CRS';
         const yearNum = extractNumber(selectedYear?.name || '');
         const semNum = extractNumber(modalInput.trim());
-        payload.explicit_code = `${typeCode}-001-Y${yearNum}-S${semNum}`;
+        payload.explicit_code = `${typeCode}-${progCode}-Y${yearNum}-S${semNum}`;
       }
 
       const createRes = await axios.post(`${API_URL}/students/moodle/create-level-category`, payload);
