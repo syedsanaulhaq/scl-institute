@@ -522,73 +522,154 @@ const ApplicationRequests = () => {
                                 </div>
                             </div>
 
-                            {/* ── Induction Entry Requirements Panel ── */}
+                            {/* ── Induction Scrutiny Gate Panel ── */}
                             {inductionLoading && (
                                 <div className="bg-purple-50 rounded-lg p-4 flex items-center gap-2 text-sm text-purple-700">
                                     <Clock className="w-4 h-4 animate-spin" />
-                                    Loading course induction entry requirements...
+                                    Running induction scrutiny check...
                                 </div>
                             )}
                             {!inductionLoading && inductionContext && (() => {
                                 const section4 = inductionContext.sections?.[4] || [];
                                 const section5 = inductionContext.sections?.[5] || [];
                                 if (!section4.length && !section5.length) return null;
+
+                                // ── Gate check function ────────────────────────────────────────
+                                // Returns { status: 'pass'|'fail'|'review', verdict, applicantValue }
+                                const gateCheck = (req, app) => {
+                                    const area = (req.area || '').toLowerCase();
+
+                                    // ── 1. English Language ──────────────────────────────────────
+                                    if (area.includes('english') || area.includes('language') || area.includes('ielts') || area.includes('proficiency')) {
+                                        const prof = (app.english_proficiency || '').trim();
+                                        const score = parseFloat(app.english_score) || 0;
+                                        if (!prof) return { status: 'fail', verdict: 'No English qualification provided', applicantValue: '—' };
+                                        const p = prof.toUpperCase();
+                                        if (p.includes('IELTS'))  return score >= 5.5 ? { status: 'pass', verdict: `IELTS ${score} meets minimum 5.5`,   applicantValue: `IELTS ${score}` }
+                                                                                      : { status: 'fail', verdict: `IELTS ${score} — minimum 5.5 required`, applicantValue: `IELTS ${score}` };
+                                        if (p.includes('TOEFL'))  return score >= 60  ? { status: 'pass', verdict: `TOEFL ${score} meets minimum 60`,     applicantValue: `TOEFL ${score}` }
+                                                                                      : { status: 'fail', verdict: `TOEFL ${score} — minimum 60 required`,  applicantValue: `TOEFL ${score}` };
+                                        if (p.includes('PTE'))    return score >= 42  ? { status: 'pass', verdict: `PTE ${score} meets minimum 42`,        applicantValue: `PTE ${score}` }
+                                                                                      : { status: 'fail', verdict: `PTE ${score} — minimum 42 required`,    applicantValue: `PTE ${score}` };
+                                        if (p.includes('GCSE') && area.includes('english')) return { status: 'pass', verdict: 'GCSE English accepted', applicantValue: `GCSE English` };
+                                        if (['NATIVE', 'FIRST LANGUAGE', 'UK', 'EXEMPT'].some(k => p.includes(k))) return { status: 'pass', verdict: 'Native/exempt — no test required', applicantValue: prof };
+                                        return { status: 'review', verdict: `${prof} — manual verification needed`, applicantValue: `${prof}${score ? ` ${score}` : ''}` };
+                                    }
+
+                                    // ── 2. Academic / Entry Qualification ───────────────────────
+                                    if (area.includes('entry') || area.includes('qualification') || area.includes('academic') || area.includes('minimum qual')) {
+                                        const qual = (app.highest_qualification || '').toLowerCase();
+                                        if (!qual) return { status: 'fail', verdict: 'No qualification recorded', applicantValue: '—' };
+                                        const level3Plus = ['a-level', 'a level', 'as level', 'btec', 'nvq level 3', 'level 3', 'hnc', 'hnd', 'access to he', 'access to higher', 'foundation degree', 'fd ', 'degree', 'bachelor', 'bsc', 'ba ', 'msc', 'ma ', 'phd', 'pgce', 'diploma of higher', 'higher national'];
+                                        if (level3Plus.some(q => qual.includes(q)))
+                                            return { status: 'pass', verdict: 'Meets Level 3+ entry requirement', applicantValue: app.highest_qualification };
+                                        // Below Level 3 — check if work experience may compensate
+                                        const hasExp = (app.relevant_work_experience || '').trim().length > 20;
+                                        if (hasExp)
+                                            return { status: 'review', verdict: `${app.highest_qualification} is below Level 3 — work experience to be assessed`, applicantValue: app.highest_qualification };
+                                        return { status: 'fail', verdict: `${app.highest_qualification} does not meet Level 3 entry requirement`, applicantValue: app.highest_qualification };
+                                    }
+
+                                    // ── 3. RPL / Prior Learning ──────────────────────────────────
+                                    if (area.includes('rpl') || area.includes('prior learning') || area.includes('credit transfer')) {
+                                        const exp = (app.relevant_work_experience || '').trim();
+                                        if (exp.length > 20) return { status: 'review', verdict: 'Work/prior learning experience provided — RPL assessment required', applicantValue: exp.slice(0, 60) + (exp.length > 60 ? '…' : '') };
+                                        return { status: 'review', verdict: 'No prior learning documented — RPL not applicable', applicantValue: '—' };
+                                    }
+
+                                    // ── 4. Enrolment Documentation ──────────────────────────────
+                                    if (area.includes('documentation') || area.includes('enrolment doc') || area.includes('enrollment doc')) {
+                                        const compStatus = (req.compliance_status || '').toLowerCase();
+                                        if (compStatus === 'completed') return { status: 'pass', verdict: 'Documentation checklist completed', applicantValue: 'Completed' };
+                                        return { status: 'review', verdict: 'ID, qualifications & visa to be verified at enrolment', applicantValue: 'Pending' };
+                                    }
+
+                                    // ── 5. Application Process / Offer Letter / Other process items
+                                    return { status: 'review', verdict: 'Reviewed by admissions team', applicantValue: 'N/A' };
+                                };
+
+                                // ── Compute all results ────────────────────────────────────────
+                                const results = section4.map(req => ({ req, check: gateCheck(req, selectedApp) }));
+                                const failCount   = results.filter(r => r.check.status === 'fail').length;
+                                const reviewCount = results.filter(r => r.check.status === 'review').length;
+                                const passCount   = results.filter(r => r.check.status === 'pass').length;
+                                const overallStatus = failCount > 0 ? 'fail' : reviewCount > 0 ? 'review' : 'pass';
+
+                                const overallCfg = {
+                                    fail:   { bg: 'bg-red-600',    badge: 'bg-red-100 text-red-800',     icon: '✗', label: 'INDUCTION SCRUTINY: FAILED',             sub: `${failCount} condition${failCount>1?'s':''} not met — application cannot proceed` },
+                                    review: { bg: 'bg-amber-500',  badge: 'bg-amber-100 text-amber-800', icon: '⚠', label: 'INDUCTION SCRUTINY: NEEDS REVIEW',         sub: `${passCount} passed · ${reviewCount} require manual verification` },
+                                    pass:   { bg: 'bg-emerald-600',badge: 'bg-emerald-100 text-emerald-800', icon: '✓', label: 'INDUCTION SCRUTINY: ALL CONDITIONS MET', sub: `All ${passCount} admission requirements satisfied` },
+                                };
+                                const cfg = overallCfg[overallStatus];
+
+                                const statusCfg = {
+                                    pass:   { border: 'border-emerald-200', bg: 'bg-emerald-50',  icon: '✓', iconCls: 'text-emerald-600 bg-emerald-100', badge: 'text-emerald-700 font-bold' },
+                                    fail:   { border: 'border-red-200',     bg: 'bg-red-50',      icon: '✗', iconCls: 'text-red-600 bg-red-100',         badge: 'text-red-700 font-bold' },
+                                    review: { border: 'border-amber-200',   bg: 'bg-amber-50',    icon: '⚠', iconCls: 'text-amber-600 bg-amber-100',     badge: 'text-amber-700 font-bold' },
+                                };
+
                                 return (
                                     <div className="border border-purple-200 rounded-lg overflow-hidden">
-                                        <div className="bg-purple-600 px-4 py-2.5">
+                                        {/* Header */}
+                                        <div className="bg-purple-700 px-4 py-2.5 flex items-center justify-between">
                                             <h3 className="text-sm font-bold text-white flex items-center gap-2">
                                                 <FileText className="w-4 h-4" />
-                                                Course Induction: Entry Requirements &amp; Fees
-                                                <span className="ml-auto text-purple-200 text-xs font-normal">
-                                                    Source: {inductionContext.course_code} Induction
-                                                </span>
+                                                Induction Scrutiny Gate
                                             </h3>
+                                            <span className="text-purple-200 text-xs">{inductionContext.course_code} Induction v{inductionContext.version}</span>
                                         </div>
-                                        <div className="p-4 space-y-3 bg-purple-50">
-                                            {section4.length > 0 && (
-                                                <div>
-                                                    <p className="text-xs font-bold text-purple-800 uppercase tracking-wider mb-2">Section 4 — Admission &amp; Enrolment</p>
-                                                    <div className="space-y-2">
-                                                        {section4.map((r, i) => {
-                                                            const appQual = (selectedApp.highest_qualification || '').toLowerCase();
-                                                            const reqDesc = (r.description || '').toLowerCase();
-                                                            const reqArea = (r.area || '').toLowerCase();
-                                                            let match = null;
-                                                            if (reqArea.includes('english') || reqArea.includes('ielts') || reqArea.includes('proficiency')) {
-                                                                const appEnglish = (selectedApp.english_proficiency || '') + ' ' + (selectedApp.english_score || '');
-                                                                match = appEnglish.trim() ? { label: appEnglish, ok: true } : null;
-                                                            } else if (reqArea.includes('qualification') || reqArea.includes('academic')) {
-                                                                match = appQual ? { label: selectedApp.highest_qualification, ok: true } : null;
-                                                            }
-                                                            return (
-                                                                <div key={i} className="bg-white rounded border border-purple-100 p-2.5 flex gap-3 text-sm">
-                                                                    <div className="flex-1">
-                                                                        <p className="font-semibold text-gray-700">{r.area || `Requirement ${i+1}`}</p>
-                                                                        <p className="text-gray-600 text-xs mt-0.5">{r.description || '—'}</p>
-                                                                        {r.review_notes && <p className="text-gray-500 text-xs italic mt-0.5">Note: {r.review_notes}</p>}
+
+                                        {/* Overall gate result banner */}
+                                        <div className={`${cfg.bg} px-4 py-3 flex items-center gap-3`}>
+                                            <span className="text-white text-xl font-bold w-8 h-8 flex items-center justify-center rounded-full bg-white/20 flex-shrink-0">{cfg.icon}</span>
+                                            <div className="flex-1">
+                                                <p className="text-white font-bold text-sm tracking-wide">{cfg.label}</p>
+                                                <p className="text-white/80 text-xs mt-0.5">{cfg.sub}</p>
+                                            </div>
+                                            <div className="text-right text-xs text-white/70 flex-shrink-0">
+                                                <div>{passCount} PASS</div>
+                                                <div>{reviewCount} REVIEW</div>
+                                                <div>{failCount} FAIL</div>
+                                            </div>
+                                        </div>
+
+                                        <div className="p-4 space-y-3 bg-gray-50">
+                                            {/* Section 4 — per-requirement results */}
+                                            <div>
+                                                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Section 4 — Admission &amp; Enrolment Conditions</p>
+                                                <div className="space-y-2">
+                                                    {results.map(({ req, check }, i) => {
+                                                        const s = statusCfg[check.status];
+                                                        return (
+                                                            <div key={i} className={`rounded-lg border ${s.border} ${s.bg} p-3 flex gap-3 items-start`}>
+                                                                <span className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${s.iconCls}`}>{s.icon}</span>
+                                                                <div className="flex-1 min-w-0">
+                                                                    <div className="flex items-start justify-between gap-2">
+                                                                        <p className="text-sm font-semibold text-gray-800">{req.area}</p>
+                                                                        {check.applicantValue && check.applicantValue !== 'N/A' && (
+                                                                            <span className={`flex-shrink-0 text-xs px-2 py-0.5 rounded-full bg-white/70 border ${s.border} ${s.badge}`}>
+                                                                                {check.applicantValue}
+                                                                            </span>
+                                                                        )}
                                                                     </div>
-                                                                    {match && (
-                                                                        <div className="flex-shrink-0 text-right">
-                                                                            <span className="text-xs text-gray-500">Applicant:</span>
-                                                                            <p className={`text-xs font-semibold ${match.ok ? 'text-emerald-600' : 'text-red-600'}`}>
-                                                                                {match.ok ? '✓' : '✗'} {match.label}
-                                                                            </p>
-                                                                        </div>
-                                                                    )}
+                                                                    <p className="text-xs text-gray-500 mt-0.5">{req.description}</p>
+                                                                    <p className={`text-xs mt-1 font-medium ${s.badge}`}>{check.verdict}</p>
                                                                 </div>
-                                                            );
-                                                        })}
-                                                    </div>
+                                                            </div>
+                                                        );
+                                                    })}
                                                 </div>
-                                            )}
+                                            </div>
+
+                                            {/* Section 5 — Fee structure (informational) */}
                                             {section5.length > 0 && (
                                                 <div>
-                                                    <p className="text-xs font-bold text-purple-800 uppercase tracking-wider mb-2">Section 5 — Fee Structure</p>
-                                                    <div className="space-y-2">
+                                                    <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Section 5 — Fee Structure (Informational)</p>
+                                                    <div className="grid grid-cols-1 gap-1.5">
                                                         {section5.map((r, i) => (
-                                                            <div key={i} className="bg-white rounded border border-purple-100 p-2.5 text-sm">
-                                                                <p className="font-semibold text-gray-700">{r.area || `Fee Item ${i+1}`}</p>
-                                                                <p className="text-gray-600 text-xs mt-0.5">{r.description || '—'}</p>
+                                                            <div key={i} className="bg-white rounded border border-gray-200 px-3 py-2 text-sm flex justify-between items-center">
+                                                                <span className="font-medium text-gray-700">{r.area}</span>
+                                                                <span className="text-xs text-gray-400">{r.description}</span>
                                                             </div>
                                                         ))}
                                                     </div>
