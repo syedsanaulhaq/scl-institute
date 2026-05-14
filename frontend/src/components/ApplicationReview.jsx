@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
     ArrowLeft, 
@@ -13,7 +13,9 @@ import {
     Upload,
     Trash2,
     FileAudio,
-    Play
+    Play,
+    ShieldAlert,
+    ShieldCheck
 } from 'lucide-react';
 import axios from 'axios';
 
@@ -32,6 +34,10 @@ const ApplicationReview = () => {
     const [showCredentialsModal, setShowCredentialsModal] = useState(false);
     const [existingReview, setExistingReview] = useState(null);
     const [isEditMode, setIsEditMode] = useState(false);
+
+    // Induction scrutiny gate
+    const [inductionContext, setInductionContext] = useState(null);
+    const [inductionLoading, setInductionLoading] = useState(false);
 
     // Interview recordings state
     const [recordings, setRecordings] = useState([]);
@@ -88,6 +94,60 @@ const ApplicationReview = () => {
         fetchExistingReview();
         fetchRecordings();
     }, [id]);
+
+    // Fetch induction context once we have the application course code
+    useEffect(() => {
+        if (!application?.course_code) return;
+        setInductionLoading(true);
+        axios.get(`${API_URL}/induction-driven/induction-context/${application.course_code}`)
+            .then(r => setInductionContext(r.data?.data || r.data || null))
+            .catch(() => setInductionContext(null))
+            .finally(() => setInductionLoading(false));
+    }, [application?.course_code]);
+
+    // ── Gate check (same rules as ApplicationRequests) ─────────────────────────
+    const gateResult = useMemo(() => {
+        if (!inductionContext || !application) return null;
+        const section4 = inductionContext.sections?.[4] || [];
+        if (!section4.length) return null;
+
+        const gateCheck = (req, app) => {
+            const area = (req.area || '').toLowerCase();
+            if (area.includes('english') || area.includes('language') || area.includes('ielts') || area.includes('proficiency')) {
+                const prof = (app.english_proficiency || '').trim();
+                const score = parseFloat(app.english_score) || 0;
+                if (!prof) return { status: 'fail', verdict: 'No English qualification provided' };
+                const p = prof.toUpperCase();
+                if (p.includes('IELTS'))  return score >= 5.5 ? { status: 'pass', verdict: `IELTS ${score} ≥ 5.5` }   : { status: 'fail', verdict: `IELTS ${score} — minimum 5.5 required` };
+                if (p.includes('TOEFL'))  return score >= 60  ? { status: 'pass', verdict: `TOEFL ${score} ≥ 60` }    : { status: 'fail', verdict: `TOEFL ${score} — minimum 60 required` };
+                if (p.includes('PTE'))    return score >= 42  ? { status: 'pass', verdict: `PTE ${score} ≥ 42` }      : { status: 'fail', verdict: `PTE ${score} — minimum 42 required` };
+                if (['NATIVE','FIRST LANGUAGE','UK','EXEMPT'].some(k => p.includes(k))) return { status: 'pass', verdict: 'Native/exempt' };
+                return { status: 'review', verdict: `${prof} — manual verification needed` };
+            }
+            if (area.includes('entry') || area.includes('qualification') || area.includes('academic') || area.includes('minimum qual')) {
+                const qual = (app.highest_qualification || '').toLowerCase();
+                if (!qual) return { status: 'fail', verdict: 'No qualification recorded' };
+                const level3Plus = ['a-level','a level','as level','btec','nvq level 3','level 3','hnc','hnd','access to he','access to higher','foundation degree','fd ','degree','bachelor','bsc','ba ','msc','ma ','phd','pgce','diploma of higher','higher national'];
+                if (level3Plus.some(q => qual.includes(q))) return { status: 'pass', verdict: 'Level 3+ qualification confirmed' };
+                const hasExp = (app.relevant_work_experience || '').trim().length > 20;
+                if (hasExp) return { status: 'review', verdict: `${app.highest_qualification} — work experience review required` };
+                return { status: 'fail', verdict: `${app.highest_qualification} does not meet Level 3 entry requirement` };
+            }
+            if (area.includes('documentation') || area.includes('enrolment doc')) {
+                return (req.compliance_status || '').toLowerCase() === 'completed'
+                    ? { status: 'pass', verdict: 'Documentation completed' }
+                    : { status: 'review', verdict: 'Pending verification at enrolment' };
+            }
+            return { status: 'review', verdict: 'Manual admissions review required' };
+        };
+
+        const results = section4.map(req => ({ req, check: gateCheck(req, application) }));
+        const failCount   = results.filter(r => r.check.status === 'fail').length;
+        const reviewCount = results.filter(r => r.check.status === 'review').length;
+        const passCount   = results.filter(r => r.check.status === 'pass').length;
+        const overall = failCount > 0 ? 'fail' : reviewCount > 0 ? 'review' : 'pass';
+        return { results, failCount, reviewCount, passCount, overall };
+    }, [inductionContext, application]);
 
     // Interview recordings CRUD
     const fetchRecordings = async () => {
@@ -263,6 +323,12 @@ const ApplicationReview = () => {
         // Validate required fields
         if (!review.reviewer_name || !review.decision) {
             setError('Please fill in all required fields (Reviewer Name and Decision)');
+            return;
+        }
+
+        // Gate enforcement — block Offer/Conditional Offer if induction gate failed
+        if (gateResult?.overall === 'fail' && ['Offer', 'Conditional Offer'].includes(review.decision)) {
+            setError(`Cannot issue an offer: ${gateResult.failCount} induction requirement(s) failed. Please select Refusal or Waitlist, or override with documented justification in the comments.`);
             return;
         }
 
@@ -786,19 +852,61 @@ const ApplicationReview = () => {
                                 />
                             </div>
 
+                            {/* Induction Gate Banner — shown above Decision */}
+                            {inductionLoading && (
+                                <div className="flex items-center gap-2 text-xs text-purple-600 bg-purple-50 border border-purple-200 rounded-lg px-3 py-2">
+                                    <Loader2 className="w-3 h-3 animate-spin" /> Running induction scrutiny check...
+                                </div>
+                            )}
+                            {!inductionLoading && gateResult && (() => {
+                                const cfg = {
+                                    fail:   { bg: 'bg-red-50',    border: 'border-red-300',    icon: <ShieldAlert className="w-4 h-4 text-red-600" />,    title: 'Induction Gate: FAILED', titleCls: 'text-red-700 font-bold', sub: `${gateResult.failCount} entry condition(s) not met` },
+                                    review: { bg: 'bg-amber-50',  border: 'border-amber-300',  icon: <AlertCircle  className="w-4 h-4 text-amber-600" />,  title: 'Induction Gate: REVIEW REQUIRED', titleCls: 'text-amber-700 font-bold', sub: `${gateResult.reviewCount} item(s) require manual verification` },
+                                    pass:   { bg: 'bg-emerald-50',border: 'border-emerald-300',icon: <ShieldCheck  className="w-4 h-4 text-emerald-600" />,icon: <ShieldCheck className="w-4 h-4 text-emerald-600" />, title: 'Induction Gate: ALL CONDITIONS MET', titleCls: 'text-emerald-700 font-bold', sub: `All ${gateResult.passCount} requirements satisfied` },
+                                }[gateResult.overall];
+                                return (
+                                    <div className={`rounded-lg border ${cfg.border} ${cfg.bg} p-3`}>
+                                        <div className="flex items-center gap-2 mb-1">{cfg.icon}<span className={`text-sm ${cfg.titleCls}`}>{cfg.title}</span></div>
+                                        <p className="text-xs text-gray-500 mb-2">{cfg.sub}</p>
+                                        <div className="space-y-1">
+                                            {gateResult.results.map(({ req, check }, i) => (
+                                                <div key={i} className="flex items-start gap-2 text-xs">
+                                                    <span className={`flex-shrink-0 font-bold mt-0.5 ${check.status === 'pass' ? 'text-emerald-600' : check.status === 'fail' ? 'text-red-600' : 'text-amber-600'}`}>
+                                                        {check.status === 'pass' ? '✓' : check.status === 'fail' ? '✗' : '⚠'}
+                                                    </span>
+                                                    <span className="text-gray-700"><span className="font-medium">{req.area}:</span> {check.verdict}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        {gateResult.overall === 'fail' && (
+                                            <p className="text-xs text-red-600 font-semibold mt-2 border-t border-red-200 pt-2">
+                                                ⚠ Offer / Conditional Offer are blocked until failed conditions are resolved or overridden with documented justification.
+                                            </p>
+                                        )}
+                                    </div>
+                                );
+                            })()}
+
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Decision *</label>
                                 <select
                                     value={review.decision}
                                     onChange={(e) => handleReviewChange('decision', e.target.value)}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 font-semibold"
+                                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 font-semibold ${
+                                        gateResult?.overall === 'fail' && ['Offer','Conditional Offer'].includes(review.decision)
+                                            ? 'border-red-400 bg-red-50'
+                                            : 'border-gray-300'
+                                    }`}
                                 >
                                     <option value="">Select...</option>
-                                    <option value="Offer">Offer</option>
-                                    <option value="Conditional Offer">Conditional Offer</option>
+                                    <option value="Offer" disabled={gateResult?.overall === 'fail'}>Offer{gateResult?.overall === 'fail' ? ' (blocked — gate failed)' : ''}</option>
+                                    <option value="Conditional Offer" disabled={gateResult?.overall === 'fail'}>Conditional Offer{gateResult?.overall === 'fail' ? ' (blocked — gate failed)' : ''}</option>
                                     <option value="Refusal">Refusal</option>
                                     <option value="Waitlist">Waitlist</option>
                                 </select>
+                                {gateResult?.overall === 'fail' && review.decision === '' && (
+                                    <p className="text-xs text-red-500 mt-1">Entry conditions not met — only Refusal or Waitlist are available</p>
+                                )}
                             </div>
 
                             {review.decision === 'Refusal' && (

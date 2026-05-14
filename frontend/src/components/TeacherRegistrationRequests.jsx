@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
-import { AlertCircle, CheckCircle2, Clock, FileText, Search, UserPlus, XCircle } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Clock, FileText, Search, ShieldAlert, ShieldCheck, UserPlus, XCircle } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
 
@@ -101,8 +101,54 @@ const TeacherRegistrationRequests = ({ user }) => {
 
     const selectedRegistration = filteredRegistrations.find((registration) => registration.id === selectedId) || null;
 
-    const handleDecision = async (decision) => {
+    // ── Teacher qualification gate ──────────────────────────────────
+    const teacherGate = useMemo(() => {
+        if (!selectedRegistration) return null;
+        const qual = (selectedRegistration.highest_qualification || '').toLowerCase();
+        const years = parseInt(selectedRegistration.years_of_experience) || 0;
+
+        const checks = [];
+
+        // Qualification check — must be Level 6+ (degree or above)
+        const level6Plus = ['degree','bachelor','bsc','ba ','llb','beng','bmed','msc','ma ','mba','meng','llm','pgce','pgcert','pgdip','phd','doctorate','dphil','doctor'];
+        const level5 = ['hnc','hnd','foundation degree','fd '];
+        const qualOk = level6Plus.some(q => qual.includes(q));
+        const qualReview = !qualOk && level5.some(q => qual.includes(q));
+
+        if (qualOk) {
+            checks.push({ status: 'pass', label: 'Qualification', verdict: `${selectedRegistration.highest_qualification} meets Level 6+ requirement` });
+        } else if (qualReview) {
+            checks.push({ status: 'review', label: 'Qualification', verdict: `${selectedRegistration.highest_qualification} (Level 5) — may qualify with 5+ years' experience` });
+        } else if (!qual) {
+            checks.push({ status: 'fail', label: 'Qualification', verdict: 'No qualification recorded' });
+        } else {
+            checks.push({ status: 'fail', label: 'Qualification', verdict: `${selectedRegistration.highest_qualification} does not meet minimum Level 6 (degree) requirement` });
+        }
+
+        // Experience check — minimum 2 years
+        if (years >= 5) {
+            checks.push({ status: 'pass', label: 'Experience', verdict: `${years} years — exceeds 2-year minimum` });
+        } else if (years >= 2) {
+            checks.push({ status: 'pass', label: 'Experience', verdict: `${years} years meets minimum requirement` });
+        } else if (years === 1) {
+            checks.push({ status: 'review', label: 'Experience', verdict: '1 year — below 2-year minimum, exceptional approval may apply' });
+        } else {
+            checks.push({ status: 'fail', label: 'Experience', verdict: `${years || 0} years does not meet 2-year minimum teaching/industry experience` });
+        }
+
+        const failCount   = checks.filter(c => c.status === 'fail').length;
+        const reviewCount = checks.filter(c => c.status === 'review').length;
+        const passCount   = checks.filter(c => c.status === 'pass').length;
+        const overall = failCount > 0 ? 'fail' : reviewCount > 0 ? 'review' : 'pass';
+        return { checks, failCount, reviewCount, passCount, overall };
+    }, [selectedRegistration]);
         if (!selectedRegistration) return;
+
+        // Block approval if teacher gate failed
+        if (decision === 'accepted' && teacherGate?.overall === 'fail') {
+            setError(`Cannot approve: ${teacherGate.failCount} teacher qualification requirement(s) not met. Add justification in reviewer notes if overriding.`);
+            return;
+        }
 
         try {
             setSubmittingDecision(true);
@@ -274,12 +320,55 @@ const TeacherRegistrationRequests = ({ user }) => {
                                 <textarea value={reviewerNotes} onChange={(e) => setReviewerNotes(e.target.value)} rows={4} className="w-full px-3 py-2 border border-gray-300 rounded-lg" placeholder="Add approval or rejection notes" />
                             </div>
 
+                            {/* Teacher Qualification Gate */}
+                            {teacherGate && (() => {
+                                const cfg = {
+                                    fail:   { bg: 'bg-red-50',    border: 'border-red-300',    Icon: ShieldAlert,  iconCls: 'text-red-600',    title: 'Teacher Gate: QUALIFICATION NOT MET',  titleCls: 'text-red-700 font-bold' },
+                                    review: { bg: 'bg-amber-50',  border: 'border-amber-300',  Icon: AlertCircle,  iconCls: 'text-amber-600',  title: 'Teacher Gate: REVIEW REQUIRED',         titleCls: 'text-amber-700 font-bold' },
+                                    pass:   { bg: 'bg-emerald-50',border: 'border-emerald-300',Icon: ShieldCheck,  iconCls: 'text-emerald-600',title: 'Teacher Gate: QUALIFICATION CONFIRMED',  titleCls: 'text-emerald-700 font-bold' },
+                                }[teacherGate.overall];
+                                const { Icon } = cfg;
+                                return (
+                                    <div className={`rounded-lg border ${cfg.border} ${cfg.bg} p-3`}>
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <Icon className={`w-4 h-4 flex-shrink-0 ${cfg.iconCls}`} />
+                                            <span className={`text-sm ${cfg.titleCls}`}>{cfg.title}</span>
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            {teacherGate.checks.map((c, i) => (
+                                                <div key={i} className="flex items-start gap-2 text-xs">
+                                                    <span className={`flex-shrink-0 font-bold mt-0.5 ${c.status === 'pass' ? 'text-emerald-600' : c.status === 'fail' ? 'text-red-600' : 'text-amber-600'}`}>
+                                                        {c.status === 'pass' ? '\u2713' : c.status === 'fail' ? '\u2717' : '\u26a0'}
+                                                    </span>
+                                                    <span className="text-gray-700"><span className="font-semibold">{c.label}:</span> {c.verdict}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        {teacherGate.overall === 'fail' && (
+                                            <p className="text-xs text-red-600 font-semibold mt-2 pt-2 border-t border-red-200">
+                                                ⚠ Approve is blocked. Add documented justification in reviewer notes to override.
+                                            </p>
+                                        )}
+                                    </div>
+                                );
+                            })()}
+
                             <div className="flex flex-wrap gap-3">
                                 <button onClick={() => handleDecision('under_review')} disabled={submittingDecision} className="px-4 py-2 bg-yellow-100 text-yellow-800 rounded-lg hover:bg-yellow-200 inline-flex items-center gap-2 disabled:opacity-60">
                                     <Clock className="w-4 h-4" /> Mark Under Review
                                 </button>
-                                <button onClick={() => handleDecision('accepted')} disabled={submittingDecision} className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 inline-flex items-center gap-2 disabled:opacity-60">
-                                    <CheckCircle2 className="w-4 h-4" /> Approve & Assign to Moodle
+                                <button
+                                    onClick={() => handleDecision('accepted')}
+                                    disabled={submittingDecision || teacherGate?.overall === 'fail'}
+                                    title={teacherGate?.overall === 'fail' ? 'Blocked: qualification requirements not met' : 'Approve and assign to Moodle'}
+                                    className={`px-4 py-2 rounded-lg inline-flex items-center gap-2 disabled:opacity-60 ${
+                                        teacherGate?.overall === 'fail'
+                                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                            : 'bg-green-600 text-white hover:bg-green-700'
+                                    }`}
+                                >
+                                    <CheckCircle2 className="w-4 h-4" />
+                                    {teacherGate?.overall === 'fail' ? 'Approve (Blocked)' : 'Approve & Assign to Moodle'}
                                 </button>
                                 <button onClick={() => handleDecision('rejected')} disabled={submittingDecision} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 inline-flex items-center gap-2 disabled:opacity-60">
                                     <XCircle className="w-4 h-4" /> Reject
