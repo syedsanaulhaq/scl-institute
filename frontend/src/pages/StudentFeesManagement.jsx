@@ -320,21 +320,17 @@ const StudentFeesManagement = () => {
                         {/* Donut — status distribution */}
                         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
                             <h3 className="text-sm font-semibold text-gray-700 mb-4">Status Distribution</h3>
-                            <div className="flex items-center gap-6">
-                                <div style={{ width: 180, height: 180, flexShrink: 0 }}>
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <PieChart>
-                                            <Pie data={pieData} cx="50%" cy="50%" innerRadius={50} outerRadius={78}
-                                                paddingAngle={3} dataKey="value" stroke="none">
-                                                {pieData.map((entry, i) => (
-                                                    <Cell key={i} fill={entry.color} />
-                                                ))}
-                                            </Pie>
-                                            <RTooltip formatter={(v, n) => [`${v} student${v !== 1 ? 's' : ''}`, n]} />
-                                        </PieChart>
-                                    </ResponsiveContainer>
-                                </div>
-                                <div className="flex flex-col gap-2.5 flex-1 min-w-0">
+                            <div className="flex items-center gap-4">
+                                <PieChart width={180} height={180}>
+                                    <Pie data={pieData} cx={90} cy={90} innerRadius={52} outerRadius={80}
+                                        paddingAngle={3} dataKey="value" stroke="none">
+                                        {pieData.map((entry, i) => (
+                                            <Cell key={i} fill={entry.color} />
+                                        ))}
+                                    </Pie>
+                                    <RTooltip formatter={(v, n) => [`${v} student${v !== 1 ? 's' : ''}`, n]} />
+                                </PieChart>
+                                <div className="flex flex-col gap-3 flex-1 min-w-0">
                                     {pieData.map(d => (
                                         <div key={d.name} className="flex items-center justify-between text-xs">
                                             <div className="flex items-center gap-1.5">
