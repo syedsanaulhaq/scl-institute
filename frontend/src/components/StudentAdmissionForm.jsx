@@ -1431,7 +1431,7 @@ const StudentAdmissionForm = ({ onSubmitSuccess, isEditMode = false }) => {
   return (
     <div className="mx-auto w-full max-w-5xl space-y-4 px-4 py-6 md:px-6">
       {/* Page Header */}
-      <div className="flex items-center justify-between rounded-xl bg-scl-dark px-5 py-4 text-white shadow-sm">
+      <div className="flex items-center justify-between rounded-xl bg-gray-800 px-5 py-4 text-white shadow-sm">
         <div>
           <h1 className="text-xl font-bold text-white">Student Admission Application</h1>
           <p className="mt-1 text-sm text-slate-100">Complete all sections to submit your application</p>
