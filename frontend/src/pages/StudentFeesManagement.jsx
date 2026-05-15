@@ -300,7 +300,7 @@ const StudentFeesManagement = () => {
                     { key: 'waived',  label: 'Waived',  color: '#9ca3af' },
                 ];
                 const pieData = STATUS_CHART
-                    .map(s => ({ name: s.label, value: stats[s.key] || 0, color: s.color }))
+                    .map(s => ({ name: s.label, value: Number(stats[s.key]) || 0, color: s.color }))
                     .filter(d => d.value > 0);
 
                 // Bar data — collected vs balance per course
@@ -323,7 +323,7 @@ const StudentFeesManagement = () => {
                             <div className="flex items-center gap-5">
                                 {/* Hand-crafted SVG donut */}
                                 {(() => {
-                                    const total = pieData.reduce((s, d) => s + d.value, 0);
+                                    const total = pieData.reduce((s, d) => s + Number(d.value), 0);
                                     const r = 60; const cx = 80; const cy = 80;
                                     const circumference = 2 * Math.PI * r;
                                     let offset = 0;
