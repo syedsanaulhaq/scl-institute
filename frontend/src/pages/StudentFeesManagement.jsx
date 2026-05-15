@@ -368,12 +368,13 @@ const StudentFeesManagement = () => {
                                     {expandedRows[f.id] && (
                                         <tr key={`${f.id}-exp`} className="bg-gray-50">
                                             <td colSpan={8} className="px-6 py-4">
-                                                <div className="grid grid-cols-3 gap-4 text-xs">
+                                                <div className="grid grid-cols-2 gap-4 text-xs">
                                                     {[
-                                                        { label: 'Instalment 1', amount: f.instalment_1_amount, due: f.instalment_1_due, paid: f.instalment_1_paid },
-                                                        { label: 'Instalment 2', amount: f.instalment_2_amount, due: f.instalment_2_due, paid: f.instalment_2_paid },
-                                                        { label: 'Instalment 3', amount: f.instalment_3_amount, due: f.instalment_3_due, paid: f.instalment_3_paid },
-                                                    ].map(ins => (
+                                                        { label: 'Year 1 — Semester 1', amount: f.instalment_1_amount, due: f.instalment_1_due, paid: f.instalment_1_paid },
+                                                        { label: 'Year 1 — Semester 2', amount: f.instalment_2_amount, due: f.instalment_2_due, paid: f.instalment_2_paid },
+                                                        { label: 'Year 2 — Semester 1', amount: f.instalment_3_amount, due: f.instalment_3_due, paid: f.instalment_3_paid },
+                                                        { label: 'Year 2 — Semester 2', amount: f.instalment_4_amount, due: f.instalment_4_due, paid: f.instalment_4_paid },
+                                                    ].filter(ins => parseFloat(ins.amount) > 0).map(ins => (
                                                         <div key={ins.label} className={`p-3 rounded-lg border ${ins.paid ? 'bg-emerald-50 border-emerald-200' : 'bg-white border-gray-200'}`}>
                                                             <div className="flex items-center gap-1.5 mb-1">
                                                                 {ins.paid
