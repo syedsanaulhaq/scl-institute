@@ -1,9 +1,10 @@
 import { useEffect, useState, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import {
     PoundSterling, CheckCircle2, Clock, AlertCircle, RefreshCw,
     Search, ChevronDown, ChevronUp, Edit2, Save, X, Loader2,
-    TrendingUp, Users, BadgeCheck, AlertTriangle
+    TrendingUp, Users, BadgeCheck, AlertTriangle, FileText
 } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
@@ -55,7 +56,7 @@ const InstalmentRow = ({ label, amount, due, paid, onToggle, saving }) => (
 );
 
 // ── Fee Detail Modal ──────────────────────────────────────────────────────────
-const FeeDetailModal = ({ fee, onClose, onSaved }) => {
+const FeeDetailModal = ({ fee, onClose, onSaved, onInvoice }) => {
     const [form, setForm] = useState({ ...fee });
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
@@ -176,6 +177,10 @@ const FeeDetailModal = ({ fee, onClose, onSaved }) => {
                         <button onClick={onClose} className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50">
                             Close
                         </button>
+                        <button onClick={onInvoice}
+                            className="px-4 py-2 border border-scl-purple/40 bg-scl-purple/5 text-scl-purple rounded-lg text-sm font-semibold hover:bg-scl-purple/10 flex items-center gap-2">
+                            <FileText className="w-4 h-4" /> Invoice
+                        </button>
                         <button onClick={() => save()} disabled={saving}
                             className="flex-1 px-4 py-2 bg-scl-purple text-white rounded-lg text-sm font-semibold hover:bg-purple-800 disabled:opacity-50 flex items-center justify-center gap-2">
                             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
@@ -190,6 +195,7 @@ const FeeDetailModal = ({ fee, onClose, onSaved }) => {
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
 const StudentFeesManagement = () => {
+    const navigate = useNavigate();
     const [fees, setFees] = useState([]);
     const [stats, setStats] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -228,6 +234,10 @@ const StudentFeesManagement = () => {
         setFees(prev => prev.map(f => f.id === updated.id ? { ...f, ...updated } : f));
         if (selectedFee?.id === updated.id) setSelectedFee({ ...selectedFee, ...updated });
         load(); // refresh stats
+    };
+
+    const openInvoice = (feeId) => {
+        window.open(`/admin/student-fees/${feeId}/invoice`, '_blank');
     };
 
     const toggleRow = (id) => setExpandedRows(prev => ({ ...prev, [id]: !prev[id] }));
@@ -359,10 +369,17 @@ const StudentFeesManagement = () => {
                                         <td className="px-4 py-3 text-right font-semibold text-amber-600">{fmt(f.balance_due)}</td>
                                         <td className="px-4 py-3 text-center"><StatusBadge status={f.fee_status} /></td>
                                         <td className="px-4 py-3 text-center">
-                                            <button onClick={() => setSelectedFee(f)}
-                                                className="px-3 py-1.5 text-xs font-semibold bg-scl-purple/10 text-scl-purple rounded-lg hover:bg-scl-purple/20 flex items-center gap-1 mx-auto">
-                                                <Edit2 className="w-3 h-3" /> Manage
-                                            </button>
+                                            <div className="flex items-center justify-center gap-1.5">
+                                                <button onClick={() => setSelectedFee(f)}
+                                                    className="px-3 py-1.5 text-xs font-semibold bg-scl-purple/10 text-scl-purple rounded-lg hover:bg-scl-purple/20 flex items-center gap-1">
+                                                    <Edit2 className="w-3 h-3" /> Manage
+                                                </button>
+                                                <button onClick={() => openInvoice(f.id)}
+                                                    title="Open Invoice"
+                                                    className="p-1.5 text-gray-400 rounded-lg hover:bg-gray-100 hover:text-gray-600">
+                                                    <FileText className="w-3.5 h-3.5" />
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                     {expandedRows[f.id] && (
@@ -407,7 +424,8 @@ const StudentFeesManagement = () => {
 
             {/* Detail Modal */}
             {selectedFee && (
-                <FeeDetailModal fee={selectedFee} onClose={() => setSelectedFee(null)} onSaved={handleSaved} />
+                <FeeDetailModal fee={selectedFee} onClose={() => setSelectedFee(null)} onSaved={handleSaved}
+                    onInvoice={() => openInvoice(selectedFee.id)} />
             )}
         </div>
     );

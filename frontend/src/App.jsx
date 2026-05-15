@@ -50,6 +50,7 @@ import CourseMasterDetail from './pages/CourseMasterDetail';
 import CourseInductions from './pages/CourseInductions';
 import CourseInductionsDetail from './pages/CourseInductionsDetail';
 import StudentFeesManagement from './pages/StudentFeesManagement';
+import FeeInvoice from './pages/FeeInvoice';
 import ComplianceCalendar from './pages/ComplianceCalendar';
 import CourseVisits from './pages/CourseVisits';
 import CourseVisitsDetail from './pages/CourseVisitsDetail';
@@ -536,6 +537,9 @@ function App() {
                     ) : (
                         <LoginPage onLoginSuccess={handleLoginSuccess} />
                     )
+                } />
+                <Route path="/admin/student-fees/:id/invoice" element={
+                    user ? <FeeInvoice /> : <LoginPage onLoginSuccess={handleLoginSuccess} />
                 } />
                 <Route path="/compliance-calendar" element={
                     user && canAccessManagementPortal ? (
