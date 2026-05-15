@@ -112,7 +112,7 @@ const TeacherDashboard = ({ user }) => {
                         </p>
                     </div>
                     <button
-                        onClick={() => handleOpenMoodle()}
+                        onClick={() => handleOpenMoodle('/my/')}
                         disabled={ssoLoading}
                         className="flex items-center gap-2 text-white text-sm font-medium px-4 py-2.5 rounded-lg transition disabled:opacity-50 self-start md:self-auto"
                         style={{ background: '#2563EB' }}
@@ -142,7 +142,7 @@ const TeacherDashboard = ({ user }) => {
                         <button onClick={() => navigate('/teacher/programme')} className="text-xs font-medium" style={{ color: '#2563EB' }}>View all →</button>
                     </div>
                     <div className="p-4">
-                        <TeacherCoursesTab courses={topCourses} onCourseClick={(id) => handleOpenMoodle(`/course/view.php?id=${id}`)} />
+                        <TeacherCoursesTab courses={topCourses} onCourseClick={() => navigate('/teacher/programme')} />
                     </div>
                 </div>
 
@@ -207,7 +207,7 @@ const TeacherDashboard = ({ user }) => {
                         { icon: '📄', label: 'My Programme', path: '/teacher/programme' },
                         { icon: '📊', label: 'Reports', path: '/teacher/reports' },
                         { icon: '📅', label: 'Timetable', path: '/teacher/timetable' },
-                        { icon: '🎓', label: 'Teaching (LMS)', action: () => handleOpenMoodle() },
+                        { icon: '🎓', label: 'Teaching (LMS)', action: () => handleOpenMoodle('/my/') },
                         { icon: '⚙️', label: 'Settings', path: '/settings' },
                     ].map((item, i) => (
                         <button
