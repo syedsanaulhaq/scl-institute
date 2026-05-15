@@ -320,17 +320,37 @@ const StudentFeesManagement = () => {
                         {/* Donut — status distribution */}
                         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
                             <h3 className="text-sm font-semibold text-gray-700 mb-4">Status Distribution</h3>
-                            <div className="flex items-center gap-4">
-                                <PieChart width={180} height={180}>
-                                    <Pie data={pieData} cx={90} cy={90} innerRadius={52} outerRadius={80}
-                                        paddingAngle={3} dataKey="value" stroke="none">
-                                        {pieData.map((entry, i) => (
-                                            <Cell key={i} fill={entry.color} />
-                                        ))}
-                                    </Pie>
-                                    <RTooltip formatter={(v, n) => [`${v} student${v !== 1 ? 's' : ''}`, n]} />
-                                </PieChart>
-                                <div className="flex flex-col gap-3 flex-1 min-w-0">
+                            <div className="flex items-center gap-5">
+                                {/* Hand-crafted SVG donut */}
+                                {(() => {
+                                    const total = pieData.reduce((s, d) => s + d.value, 0);
+                                    const r = 60; const cx = 80; const cy = 80;
+                                    const circumference = 2 * Math.PI * r;
+                                    let offset = 0;
+                                    return (
+                                        <svg width="160" height="160" style={{ flexShrink: 0 }}>
+                                            {/* background track */}
+                                            <circle cx={cx} cy={cy} r={r} fill="none" stroke="#f3f4f6" strokeWidth="22" />
+                                            {pieData.map((d, i) => {
+                                                const dash = (d.value / total) * circumference;
+                                                const gap = circumference - dash;
+                                                const seg = (
+                                                    <circle key={i} cx={cx} cy={cy} r={r} fill="none"
+                                                        stroke={d.color} strokeWidth="22"
+                                                        strokeDasharray={`${dash - 3} ${gap + 3}`}
+                                                        strokeDashoffset={-offset + circumference / 4}
+                                                        style={{ transition: 'stroke-dashoffset 0.3s' }} />
+                                                );
+                                                offset += dash;
+                                                return seg;
+                                            })}
+                                            {/* centre label */}
+                                            <text x={cx} y={cy - 6} textAnchor="middle" fontSize="22" fontWeight="700" fill="#111827">{total}</text>
+                                            <text x={cx} y={cy + 12} textAnchor="middle" fontSize="10" fill="#9ca3af">students</text>
+                                        </svg>
+                                    );
+                                })()}
+                                <div className="flex flex-col gap-3 flex-1">
                                     {pieData.map(d => (
                                         <div key={d.name} className="flex items-center justify-between text-xs">
                                             <div className="flex items-center gap-1.5">
