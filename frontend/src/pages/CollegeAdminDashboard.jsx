@@ -66,15 +66,25 @@ const CollegeAdminDashboard = ({ user }) => {
     const [loading, setLoading] = useState(true);
     const [error, setError]     = useState('');
     const [refreshing, setRefreshing] = useState(false);
+    const [feeStats, setFeeStats]         = useState(null);
+    const [feeCourses, setFeeCourses]     = useState([]);
 
     const fetchStats = async (silent = false) => {
         if (!silent) setLoading(true);
         else setRefreshing(true);
         setError('');
         try {
-            const res = await axios.get(`${API_URL}/students/dashboard-stats`);
-            if (res.data?.success) setData(res.data.data);
+            const token = sessionStorage.getItem('authToken');
+            const headers = token ? { Authorization: `Bearer ${token}` } : {};
+            const [admRes, statsRes, coursesRes] = await Promise.all([
+                axios.get(`${API_URL}/students/dashboard-stats`),
+                axios.get(`${API_URL}/induction-driven/student-fees/summary/stats`, { headers }),
+                axios.get(`${API_URL}/induction-driven/student-fees/summary/by-course`, { headers }),
+            ]);
+            if (admRes.data?.success) setData(admRes.data.data);
             else setError('Failed to load dashboard data.');
+            if (statsRes.data?.success) setFeeStats(statsRes.data.data);
+            if (coursesRes.data?.success) setFeeCourses(coursesRes.data.data);
         } catch {
             setError('Unable to fetch dashboard statistics. Please try again.');
         } finally {
@@ -277,6 +287,93 @@ const CollegeAdminDashboard = ({ user }) => {
                     </ResponsiveContainer>
                 </div>
             )}
+
+            {/* ── Fee Payment Charts ── */}
+            {(feeStats || feeCourses.length > 0) && (() => {
+                const fmtK = v => v >= 1000 ? `£${(v/1000).toFixed(0)}k` : `£${v}`;
+
+                const statusBarData = [
+                    { name: 'Paid',    value: Number(feeStats?.fully_paid || 0), color: '#16a34a' },
+                    { name: 'Partial', value: Number(feeStats?.partial    || 0), color: '#d97706' },
+                    { name: 'Unpaid',  value: Number(feeStats?.unpaid     || 0), color: '#dc2626' },
+                    { name: 'Overdue', value: Number(feeStats?.overdue    || 0), color: '#9f1239' },
+                    { name: 'Waived',  value: Number(feeStats?.waived     || 0), color: '#9ca3af' },
+                ];
+
+                const courseBarData = feeCourses.map(c => ({
+                    course: c.course_code,
+                    Collected: Number(c.collected),
+                    Outstanding: Number(c.outstanding),
+                }));
+
+                return (
+                    <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-5">
+                        <div className="flex items-center justify-between mb-4">
+                            <h2 className="text-base font-semibold text-slate-700 flex items-center gap-2">
+                                <BarChart3 className="w-4 h-4 text-indigo-500" />
+                                Fee Payment Overview
+                            </h2>
+                            <button onClick={() => navigate('/admin/student-fees')}
+                                className="flex items-center gap-1 text-sm text-indigo-600 hover:text-indigo-800 font-medium">
+                                Manage Fees <ArrowRight className="w-4 h-4" />
+                            </button>
+                        </div>
+
+                        {/* Summary stat pills */}
+                        {feeStats && (
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
+                                {[['Total Expected', `£${Number(feeStats.total_expected||0).toLocaleString('en-GB',{minimumFractionDigits:0})}`, 'bg-indigo-50 text-indigo-700'],
+                                  ['Collected',      `£${Number(feeStats.total_collected||0).toLocaleString('en-GB',{minimumFractionDigits:0})}`, 'bg-emerald-50 text-emerald-700'],
+                                  ['Outstanding',    `£${Number(feeStats.total_outstanding||0).toLocaleString('en-GB',{minimumFractionDigits:0})}`, 'bg-amber-50 text-amber-700'],
+                                  ['Students',       Number(feeStats.total_records||0), 'bg-slate-50 text-slate-700'],
+                                ].map(([label, val, cls]) => (
+                                    <div key={label} className={`rounded-lg p-3 ${cls}`}>
+                                        <p className="text-xs font-medium opacity-70">{label}</p>
+                                        <p className="text-lg font-bold mt-0.5">{val}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {/* Status distribution bar */}
+                            <div>
+                                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Status Distribution</p>
+                                <ResponsiveContainer width="100%" height={180}>
+                                    <BarChart data={statusBarData} barSize={32} margin={{ top: 4, right: 8, left: -16, bottom: 0 }}>
+                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
+                                        <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#6b7280' }} axisLine={false} tickLine={false} />
+                                        <YAxis allowDecimals={false} tick={{ fontSize: 10, fill: '#9ca3af' }} axisLine={false} tickLine={false} width={24} />
+                                        <Tooltip formatter={(v, n) => [`${v} student${v !== 1 ? 's' : ''}`, n]}
+                                            contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e5e7eb' }} />
+                                        <Bar dataKey="value" radius={[4,4,0,0]} label={{ position: 'top', fontSize: 11, fontWeight: 600, fill: '#374151' }}>
+                                            {statusBarData.map((entry, i) => (
+                                                <Cell key={i} fill={entry.color} />
+                                            ))}
+                                        </Bar>
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            </div>
+                            {/* Collected vs Outstanding per course */}
+                            <div>
+                                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Collected vs Outstanding by Course</p>
+                                <ResponsiveContainer width="100%" height={180}>
+                                    <BarChart data={courseBarData} barSize={28} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
+                                        <XAxis dataKey="course" tick={{ fontSize: 11, fill: '#6b7280' }} axisLine={false} tickLine={false} />
+                                        <YAxis tickFormatter={fmtK} tick={{ fontSize: 10, fill: '#9ca3af' }} axisLine={false} tickLine={false} width={38} />
+                                        <Tooltip formatter={(v) => [`£${v.toLocaleString('en-GB',{minimumFractionDigits:0})}`]}
+                                            contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e5e7eb' }} />
+                                        <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: '11px' }} />
+                                        <Bar dataKey="Collected"   fill="#16a34a" radius={[4,4,0,0]} />
+                                        <Bar dataKey="Outstanding" fill="#fbbf24" radius={[4,4,0,0]} />
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            </div>
+                        </div>
+                    </div>
+                );
+            })()}
 
             {/* ── Recent Applications Table ── */}
             <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">

@@ -514,4 +514,29 @@ router.get('/student-fees/summary/stats', async (req, res) => {
     }
 });
 
+// GET /api/induction-driven/student-fees/summary/by-course
+// Per-course collected vs outstanding breakdown
+// ══════════════════════════════════════════════════════════════════════════════
+router.get('/student-fees/summary/by-course', async (req, res) => {
+    try {
+        const [rows] = await pool.execute(`
+            SELECT
+                course_code,
+                MAX(course_title) AS course_title,
+                COUNT(*) AS students,
+                ROUND(SUM(total_paid), 2) AS collected,
+                ROUND(SUM(balance_due), 2) AS outstanding,
+                SUM(fee_status = 'paid') AS paid_count,
+                SUM(fee_status = 'partial') AS partial_count,
+                SUM(fee_status = 'unpaid') AS unpaid_count
+            FROM student_fees
+            GROUP BY course_code
+            ORDER BY collected DESC
+        `);
+        return res.json({ success: true, data: rows });
+    } catch (err) {
+        return res.status(500).json({ success: false, message: err.message });
+    }
+});
+
 module.exports = router;
