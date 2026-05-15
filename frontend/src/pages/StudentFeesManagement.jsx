@@ -9,7 +9,7 @@ import {
     PoundSterling, CheckCircle2, Clock, AlertCircle, RefreshCw,
     Search, ChevronDown, ChevronUp, Edit2, Save, X, Loader2,
     TrendingUp, Users, BadgeCheck, AlertTriangle, FileText,
-    Download, Bell, AlertOctagon
+    Download, Bell, AlertOctagon, Ban, Pencil
 } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
@@ -38,25 +38,47 @@ const StatusBadge = ({ status }) => {
     );
 };
 
-const InstalmentRow = ({ label, amount, due, paid, onToggle, saving }) => (
-    <div className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
+const InstalmentRow = ({ label, amount, due, paid, waived, editMode, onToggle, onWaive, onAmountChange, onDueChange, saving }) => (
+    <div className={`flex items-center justify-between py-2 border-b border-gray-100 last:border-0 ${waived ? 'opacity-60' : ''}`}>
         <div className="flex items-center gap-3">
             <button
-                onClick={onToggle}
-                disabled={saving}
+                onClick={waived ? undefined : onToggle}
+                disabled={saving || waived}
+                title={waived ? 'Waived' : paid ? 'Mark as unpaid' : 'Mark as paid'}
                 className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors
-                    ${paid ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-gray-300 hover:border-emerald-400'}`}
+                    ${waived ? 'bg-gray-100 border-gray-200 cursor-default'
+                        : paid ? 'bg-emerald-500 border-emerald-500 text-white'
+                            : 'border-gray-300 hover:border-emerald-400'}`}
             >
-                {paid && <CheckCircle2 className="w-3 h-3" />}
+                {waived ? <Ban className="w-3 h-3 text-gray-400" /> : paid ? <CheckCircle2 className="w-3 h-3" /> : null}
             </button>
             <div>
-                <p className="text-sm font-medium text-gray-700">{label}</p>
-                <p className="text-xs text-gray-500">Due: {fmtDate(due)}</p>
+                <p className={`text-sm font-medium ${waived ? 'text-gray-400 line-through' : 'text-gray-700'}`}>{label}</p>
+                {editMode && !waived ? (
+                    <input type="date" value={due ? new Date(due).toISOString().slice(0, 10) : ''}
+                        onChange={e => onDueChange(e.target.value)}
+                        className="text-xs border border-gray-300 rounded px-1.5 py-0.5 mt-0.5 focus:ring-1 focus:ring-scl-purple w-32" />
+                ) : (
+                    <p className="text-xs text-gray-500">Due: {fmtDate(due)}</p>
+                )}
             </div>
         </div>
-        <span className={`text-sm font-semibold ${paid ? 'text-emerald-600' : 'text-gray-700'}`}>
-            {fmt(amount)}
-        </span>
+        <div className="flex items-center gap-1.5">
+            {editMode && !waived ? (
+                <input type="number" value={amount} onChange={e => onAmountChange(e.target.value)} min="0" step="0.01"
+                    className="w-24 text-sm text-right border border-gray-300 rounded px-2 py-0.5 focus:ring-1 focus:ring-scl-purple" />
+            ) : (
+                <span className={`text-sm font-semibold ${waived ? 'text-gray-400 line-through' : paid ? 'text-emerald-600' : 'text-gray-700'}`}>
+                    {fmt(amount)}
+                </span>
+            )}
+            {waived && <span className="text-xs bg-purple-100 text-purple-600 px-1.5 py-0.5 rounded-full font-medium">Waived</span>}
+            <button onClick={onWaive} disabled={saving}
+                title={waived ? 'Un-waive instalment' : 'Waive this instalment (forgive payment)'}
+                className={`p-1 rounded transition-colors ${waived ? 'text-purple-500 hover:bg-purple-50' : 'text-gray-300 hover:text-purple-500 hover:bg-purple-50'}`}>
+                <Ban className="w-3.5 h-3.5" />
+            </button>
+        </div>
     </div>
 );
 
@@ -67,14 +89,7 @@ const FeeDetailModal = ({ fee, onClose, onSaved, onInvoice }) => {
     const [reminding, setReminding] = useState(false);
     const [error, setError] = useState('');
     const [reminderSent, setReminderSent] = useState(false);
-
-    const toggleInstalment = async (num) => {
-        const key = `instalment_${num}_paid`;
-        const newVal = !form[key];
-        const updated = { ...form, [key]: newVal };
-        setForm(updated);
-        await save(updated);
-    };
+    const [instalmentEditMode, setInstalmentEditMode] = useState(false);
 
     const save = async (data = form) => {
         setSaving(true); setError('');
@@ -87,6 +102,25 @@ const FeeDetailModal = ({ fee, onClose, onSaved, onInvoice }) => {
         } finally {
             setSaving(false);
         }
+    };
+
+    const toggleInstalment = async (num) => {
+        const key = `instalment_${num}_paid`;
+        const updated = { ...form, [key]: !form[key] };
+        setForm(updated);
+        await save(updated);
+    };
+
+    const waiveInstalment = async (num) => {
+        const waivedKey = `instalment_${num}_waived`;
+        const currentlyWaived = Boolean(form[waivedKey]);
+        const updated = { ...form, [waivedKey]: !currentlyWaived };
+        // If un-waiving, also un-mark as paid so balance is correct
+        if (currentlyWaived) {
+            updated[`instalment_${num}_paid`] = false;
+        }
+        setForm(updated);
+        await save(updated);
     };
 
     const sendReminder = async () => {
@@ -102,6 +136,9 @@ const FeeDetailModal = ({ fee, onClose, onSaved, onInvoice }) => {
             setReminding(false);
         }
     };
+
+    const instalments = [1, 2, 3, 4].filter(n => parseFloat(form[`instalment_${n}_amount`]) > 0 || form[`instalment_${n}_waived`]);
+    const instalmentLabels = ['Year 1 — Semester 1', 'Year 1 — Semester 2', 'Year 2 — Semester 1', 'Year 2 — Semester 2'];
 
     return (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
@@ -136,25 +173,67 @@ const FeeDetailModal = ({ fee, onClose, onSaved, onInvoice }) => {
                         </div>
                     </div>
 
+                    {/* Status Override + Payment Method */}
+                    <div className="grid grid-cols-2 gap-3">
+                        <div>
+                            <label className="block text-xs font-semibold text-gray-600 mb-1">Override Status</label>
+                            <select value={form.fee_status || 'unpaid'}
+                                onChange={e => setForm(prev => ({ ...prev, fee_status: e.target.value }))}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-scl-purple focus:border-transparent bg-white">
+                                <option value="unpaid">Unpaid</option>
+                                <option value="partial">Partial</option>
+                                <option value="paid">Paid</option>
+                                <option value="overdue">Overdue</option>
+                                <option value="waived">Waived</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-xs font-semibold text-gray-600 mb-1">Payment Method</label>
+                            <select value={form.payment_method || ''}
+                                onChange={e => setForm(prev => ({ ...prev, payment_method: e.target.value }))}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-scl-purple focus:border-transparent bg-white">
+                                <option value="">— Not set —</option>
+                                <option value="Bank Transfer">Bank Transfer</option>
+                                <option value="Card">Card</option>
+                                <option value="Cash">Cash</option>
+                                <option value="Online">Online</option>
+                                <option value="Scholarship">Scholarship</option>
+                                <option value="Student Finance">Student Finance</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                    </div>
+
                     {/* Semester charges */}
                     <div>
-                        <h3 className="text-sm font-semibold text-gray-700 mb-2">Semester Charges</h3>
-                        <div className="bg-gray-50 rounded-xl p-3">
-                            <InstalmentRow label="Year 1 — Semester 1" amount={form.instalment_1_amount} due={form.instalment_1_due}
-                                paid={Boolean(form.instalment_1_paid)} onToggle={() => toggleInstalment(1)} saving={saving} />
-                            {parseFloat(form.instalment_2_amount) > 0 && (
-                            <InstalmentRow label="Year 1 — Semester 2" amount={form.instalment_2_amount} due={form.instalment_2_due}
-                                paid={Boolean(form.instalment_2_paid)} onToggle={() => toggleInstalment(2)} saving={saving} />
-                            )}
-                            {parseFloat(form.instalment_3_amount) > 0 && (
-                            <InstalmentRow label="Year 2 — Semester 1" amount={form.instalment_3_amount} due={form.instalment_3_due}
-                                paid={Boolean(form.instalment_3_paid)} onToggle={() => toggleInstalment(3)} saving={saving} />
-                            )}
-                            {parseFloat(form.instalment_4_amount) > 0 && (
-                            <InstalmentRow label="Year 2 — Semester 2" amount={form.instalment_4_amount} due={form.instalment_4_due}
-                                paid={Boolean(form.instalment_4_paid)} onToggle={() => toggleInstalment(4)} saving={saving} />
-                            )}
+                        <div className="flex items-center justify-between mb-2">
+                            <h3 className="text-sm font-semibold text-gray-700">Semester Charges</h3>
+                            <button onClick={() => setInstalmentEditMode(m => !m)}
+                                className={`flex items-center gap-1 text-xs px-2 py-1 rounded-lg border transition-colors
+                                    ${instalmentEditMode ? 'bg-scl-purple text-white border-scl-purple' : 'border-gray-300 text-gray-600 hover:border-scl-purple hover:text-scl-purple'}`}>
+                                <Pencil className="w-3 h-3" />
+                                {instalmentEditMode ? 'Done Editing' : 'Edit Amounts'}
+                            </button>
                         </div>
+                        <div className="bg-gray-50 rounded-xl p-3">
+                            {instalments.map(n => (
+                                <InstalmentRow key={n}
+                                    label={instalmentLabels[n - 1]}
+                                    amount={form[`instalment_${n}_amount`]}
+                                    due={form[`instalment_${n}_due`]}
+                                    paid={Boolean(form[`instalment_${n}_paid`])}
+                                    waived={Boolean(form[`instalment_${n}_waived`])}
+                                    editMode={instalmentEditMode}
+                                    onToggle={() => toggleInstalment(n)}
+                                    onWaive={() => waiveInstalment(n)}
+                                    onAmountChange={val => setForm(prev => ({ ...prev, [`instalment_${n}_amount`]: val }))}
+                                    onDueChange={val => setForm(prev => ({ ...prev, [`instalment_${n}_due`]: val }))}
+                                    saving={saving} />
+                            ))}
+                        </div>
+                        {instalmentEditMode && (
+                            <p className="text-xs text-gray-400 mt-1.5">Edit amounts and due dates above, then click <strong>Save Changes</strong> below.</p>
+                        )}
                     </div>
 
                     {/* Other Fees */}
@@ -187,13 +266,11 @@ const FeeDetailModal = ({ fee, onClose, onSaved, onInvoice }) => {
                             placeholder="Payment notes, special arrangements..." />
                     </div>
 
-                    {/* Source badge */}
+                    {/* Meta */}
                     <p className="text-xs text-gray-400">
                         Fee structure source: <span className="font-medium capitalize">{form.source}</span>
                         {form.induction_id && ` (Induction #${form.induction_id})`}
                     </p>
-
-                    {/* Reminder note */}
                     {form.reminder_sent_at && (
                         <p className="text-xs text-gray-400">Last reminder: {new Date(form.reminder_sent_at).toLocaleString('en-GB')}</p>
                     )}
@@ -207,7 +284,7 @@ const FeeDetailModal = ({ fee, onClose, onSaved, onInvoice }) => {
                             className={`px-3 py-2 rounded-lg text-sm font-semibold flex items-center gap-1.5 transition-colors
                                 ${reminderSent ? 'bg-emerald-100 text-emerald-700' : 'border border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100'} disabled:opacity-50`}>
                             {reminding ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Bell className="w-3.5 h-3.5" />}
-                            {reminderSent ? 'Sent!' : 'Remind'}
+                            {reminderSent ? 'Sent!' : 'Send Reminder'}
                         </button>
                         <button onClick={onInvoice}
                             className="px-3 py-2 border border-scl-purple/40 bg-scl-purple/5 text-scl-purple rounded-lg text-sm font-semibold hover:bg-scl-purple/10 flex items-center gap-1.5">
@@ -216,7 +293,7 @@ const FeeDetailModal = ({ fee, onClose, onSaved, onInvoice }) => {
                         <button onClick={() => save()} disabled={saving}
                             className="flex-1 px-4 py-2 bg-scl-purple text-white rounded-lg text-sm font-semibold hover:bg-purple-800 disabled:opacity-50 flex items-center justify-center gap-2">
                             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                            Save Notes
+                            Save Changes
                         </button>
                     </div>
                 </div>

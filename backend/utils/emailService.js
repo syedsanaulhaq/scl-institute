@@ -243,8 +243,92 @@ const sendAdminNotificationEmail = async (email, studentName, programmeName, dec
     }
 };
 
+// ===============================================
+// Fee Reminder Email
+// ===============================================
+const sendFeeReminderEmail = async (feeRecord) => {
+    try {
+        const subject = `Payment Reminder — ${feeRecord.course_code} — SCL Institute`;
+
+        const fmtGbp = (n) => `£${(parseFloat(n) || 0).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        const fmtDate = (d) => d ? new Date(d).toLocaleDateString('en-GB') : '—';
+
+        const labels = ['Year 1 — Semester 1', 'Year 1 — Semester 2', 'Year 2 — Semester 1', 'Year 2 — Semester 2'];
+        const unpaid = [];
+        for (let i = 1; i <= 4; i++) {
+            const amt = parseFloat(feeRecord[`instalment_${i}_amount`]);
+            const waived = feeRecord[`instalment_${i}_waived`];
+            if (amt > 0 && !feeRecord[`instalment_${i}_paid`] && !waived) {
+                unpaid.push({ label: labels[i - 1], amount: amt, due: feeRecord[`instalment_${i}_due`] });
+            }
+        }
+
+        const rows = unpaid.map(ins =>
+            `<tr>
+              <td style="padding:8px 12px;border-bottom:1px solid #f0f0f0;color:#374151">${ins.label}</td>
+              <td style="padding:8px 12px;border-bottom:1px solid #f0f0f0;text-align:right;color:#6b7280">Due: ${fmtDate(ins.due)}</td>
+              <td style="padding:8px 12px;border-bottom:1px solid #f0f0f0;text-align:right;font-weight:bold;color:#b45309">${fmtGbp(ins.amount)}</td>
+            </tr>`
+        ).join('');
+
+        const html = `<!DOCTYPE html>
+<html><head><style>body{font-family:Arial,sans-serif;color:#333;margin:0;padding:0}table{border-collapse:collapse}</style></head>
+<body>
+  <div style="max-width:600px;margin:0 auto;padding:20px">
+    <div style="background:linear-gradient(135deg,#5b21b6 0%,#7c3aed 100%);color:white;padding:24px;border-radius:8px 8px 0 0;text-align:center">
+      <h1 style="margin:0;font-size:22px">SCL Institute — Payment Reminder</h1>
+    </div>
+    <div style="background:#f9fafb;padding:24px;border-radius:0 0 8px 8px;border:1px solid #e5e7eb">
+      <p>Dear <strong>${feeRecord.student_name || 'Student'}</strong>,</p>
+      <p>This is a friendly reminder that you have outstanding fee payments for your course at SCL Institute.</p>
+      <div style="background:white;border-radius:8px;border:1px solid #e5e7eb;margin:16px 0;overflow:hidden">
+        <div style="background:#f3f4f6;padding:12px 16px;font-weight:bold;font-size:14px;color:#1f2937">
+          ${feeRecord.course_code} — ${feeRecord.course_title || ''}
+        </div>
+        <table width="100%" style="font-size:14px">
+          <thead>
+            <tr style="background:#fafafa">
+              <th style="text-align:left;padding:8px 12px;color:#6b7280;font-weight:600">Semester</th>
+              <th style="text-align:right;padding:8px 12px;color:#6b7280;font-weight:600">Due Date</th>
+              <th style="text-align:right;padding:8px 12px;color:#6b7280;font-weight:600">Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows || '<tr><td colspan="3" style="padding:12px;text-align:center;color:#9ca3af">All instalments up to date</td></tr>'}
+          </tbody>
+        </table>
+      </div>
+      <div style="background:#fef3c7;border:1px solid #f59e0b;border-radius:8px;padding:12px 16px;margin:16px 0">
+        <table width="100%" style="font-size:14px">
+          <tr><td style="color:#92400e;padding:4px 0">Total Fee:</td><td style="text-align:right;font-weight:bold;color:#92400e">${fmtGbp(feeRecord.total_fee_gbp)}</td></tr>
+          <tr><td style="color:#065f46;padding:4px 0">Paid:</td><td style="text-align:right;font-weight:bold;color:#065f46">${fmtGbp(feeRecord.total_paid)}</td></tr>
+          <tr><td style="color:#b45309;font-weight:bold;padding:4px 0">Balance Due:</td><td style="text-align:right;font-weight:bold;color:#b45309">${fmtGbp(feeRecord.balance_due)}</td></tr>
+        </table>
+      </div>
+      <p style="font-size:14px;color:#374151">If you have any questions about your fees or need to discuss payment arrangements, please contact the SCL Institute finance team.</p>
+      <p style="font-size:14px;margin-top:24px">Regards,<br><strong>SCL Institute Finance Team</strong></p>
+      <hr style="border:none;border-top:1px solid #e5e7eb;margin:20px 0">
+      <p style="font-size:11px;color:#9ca3af;text-align:center">SCL Institute — This is an automated reminder. Please do not reply to this email.</p>
+    </div>
+  </div>
+</body></html>`;
+
+        const result = await transporter.sendMail({
+            from: process.env.SMTP_FROM || process.env.SMTP_USER || process.env.GMAIL_USER || 'noreply@sclsandbox.xyz',
+            to: feeRecord.student_email,
+            subject,
+            html
+        });
+        return { success: true, messageId: result.messageId };
+    } catch (error) {
+        console.error('[EMAIL ERROR] Failed to send fee reminder:', error.message);
+        return { success: false, error: error.message };
+    }
+};
+
 module.exports = {
     sendStudentWelcomeEmail,
     sendConditionalApprovalEmail,
-    sendAdminNotificationEmail
+    sendAdminNotificationEmail,
+    sendFeeReminderEmail
 };

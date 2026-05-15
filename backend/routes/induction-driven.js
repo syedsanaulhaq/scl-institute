@@ -9,6 +9,7 @@
 
 const express = require('express');
 const pool = require('../db');
+const { sendFeeReminderEmail } = require('../utils/emailService');
 
 const router = express.Router();
 
@@ -412,6 +413,8 @@ router.put('/student-fees/:id', async (req, res) => {
             instalment_2_paid, instalment_2_paid_at,
             instalment_3_paid, instalment_3_paid_at,
             instalment_4_paid, instalment_4_paid_at,
+            instalment_1_waived, instalment_2_waived,
+            instalment_3_waived, instalment_4_waived,
             total_fee_gbp,
             instalment_1_amount, instalment_1_due,
             instalment_2_amount, instalment_2_due,
@@ -419,7 +422,7 @@ router.put('/student-fees/:id', async (req, res) => {
             instalment_4_amount, instalment_4_due,
             additional_costs, funding_option,
             partner_reg_fee, exam_fee,
-            fee_status, notes
+            fee_status, notes, payment_method
         } = req.body;
 
         // Calculate total_paid from paid instalments
@@ -427,23 +430,33 @@ router.put('/student-fees/:id', async (req, res) => {
         if (!current.length) return res.status(404).json({ success: false, message: 'Fee record not found' });
         const cur = current[0];
 
-        const i1Paid = instalment_1_paid !== undefined ? Boolean(instalment_1_paid) : Boolean(cur.instalment_1_paid);
-        const i2Paid = instalment_2_paid !== undefined ? Boolean(instalment_2_paid) : Boolean(cur.instalment_2_paid);
-        const i3Paid = instalment_3_paid !== undefined ? Boolean(instalment_3_paid) : Boolean(cur.instalment_3_paid);
-        const i4Paid = instalment_4_paid !== undefined ? Boolean(instalment_4_paid) : Boolean(cur.instalment_4_paid);
+        const i1Paid   = instalment_1_paid   !== undefined ? Boolean(instalment_1_paid)   : Boolean(cur.instalment_1_paid);
+        const i2Paid   = instalment_2_paid   !== undefined ? Boolean(instalment_2_paid)   : Boolean(cur.instalment_2_paid);
+        const i3Paid   = instalment_3_paid   !== undefined ? Boolean(instalment_3_paid)   : Boolean(cur.instalment_3_paid);
+        const i4Paid   = instalment_4_paid   !== undefined ? Boolean(instalment_4_paid)   : Boolean(cur.instalment_4_paid);
+        const i1Waived = instalment_1_waived !== undefined ? Boolean(instalment_1_waived) : Boolean(cur.instalment_1_waived);
+        const i2Waived = instalment_2_waived !== undefined ? Boolean(instalment_2_waived) : Boolean(cur.instalment_2_waived);
+        const i3Waived = instalment_3_waived !== undefined ? Boolean(instalment_3_waived) : Boolean(cur.instalment_3_waived);
+        const i4Waived = instalment_4_waived !== undefined ? Boolean(instalment_4_waived) : Boolean(cur.instalment_4_waived);
 
         const i1Amt = instalment_1_amount !== undefined ? parseFloat(instalment_1_amount) : parseFloat(cur.instalment_1_amount);
         const i2Amt = instalment_2_amount !== undefined ? parseFloat(instalment_2_amount) : parseFloat(cur.instalment_2_amount);
         const i3Amt = instalment_3_amount !== undefined ? parseFloat(instalment_3_amount) : parseFloat(cur.instalment_3_amount);
         const i4Amt = instalment_4_amount !== undefined ? parseFloat(instalment_4_amount) : parseFloat(cur.instalment_4_amount || 0);
 
-        const calcTotalPaid = (i1Paid ? i1Amt : 0) + (i2Paid ? i2Amt : 0) + (i3Paid ? i3Amt : 0) + (i4Paid ? i4Amt : 0);
+        // total_paid = sum of paid (not waived) instalments
+        const calcTotalPaid = (!i1Waived && i1Paid ? i1Amt : 0)
+                            + (!i2Waived && i2Paid ? i2Amt : 0)
+                            + (!i3Waived && i3Paid ? i3Amt : 0)
+                            + (!i4Waived && i4Paid ? i4Amt : 0);
+
         const newTotalFee = total_fee_gbp !== undefined ? parseFloat(total_fee_gbp) : parseFloat(cur.total_fee_gbp);
 
-        // Auto-derive fee_status; only honour an explicit 'waived' override from the admin
+        // Auto-derive fee_status; honour explicit overrides from admin
         let derivedStatus;
-        if (fee_status === 'waived') {
-            derivedStatus = 'waived';
+        if (fee_status && ['unpaid', 'partial', 'paid', 'overdue', 'waived'].includes(fee_status)) {
+            // Admin forced a specific status
+            derivedStatus = fee_status;
         } else if (newTotalFee === 0) {
             derivedStatus = 'waived';
         } else if (calcTotalPaid >= newTotalFee) {
@@ -457,20 +470,20 @@ router.put('/student-fees/:id', async (req, res) => {
         await pool.execute(`
             UPDATE student_fees SET
                 total_fee_gbp       = ?,
-                instalment_1_amount = ?, instalment_1_due = ?, instalment_1_paid = ?, instalment_1_paid_at = ?,
-                instalment_2_amount = ?, instalment_2_due = ?, instalment_2_paid = ?, instalment_2_paid_at = ?,
-                instalment_3_amount = ?, instalment_3_due = ?, instalment_3_paid = ?, instalment_3_paid_at = ?,
-                instalment_4_amount = ?, instalment_4_due = ?, instalment_4_paid = ?, instalment_4_paid_at = ?,
+                instalment_1_amount = ?, instalment_1_due = ?, instalment_1_paid = ?, instalment_1_paid_at = ?, instalment_1_waived = ?,
+                instalment_2_amount = ?, instalment_2_due = ?, instalment_2_paid = ?, instalment_2_paid_at = ?, instalment_2_waived = ?,
+                instalment_3_amount = ?, instalment_3_due = ?, instalment_3_paid = ?, instalment_3_paid_at = ?, instalment_3_waived = ?,
+                instalment_4_amount = ?, instalment_4_due = ?, instalment_4_paid = ?, instalment_4_paid_at = ?, instalment_4_waived = ?,
                 additional_costs = ?, funding_option = ?,
                 partner_reg_fee = ?, exam_fee = ?,
-                total_paid = ?, fee_status = ?, notes = ?
+                total_paid = ?, fee_status = ?, notes = ?, payment_method = ?
             WHERE id = ?
         `, [
             newTotalFee,
-            i1Amt, toMysqlDate(instalment_1_due || cur.instalment_1_due), i1Paid ? 1 : 0, i1Paid ? (instalment_1_paid_at || cur.instalment_1_paid_at || new Date()) : null,
-            i2Amt, toMysqlDate(instalment_2_due || cur.instalment_2_due), i2Paid ? 1 : 0, i2Paid ? (instalment_2_paid_at || cur.instalment_2_paid_at || new Date()) : null,
-            i3Amt, toMysqlDate(instalment_3_due || cur.instalment_3_due), i3Paid ? 1 : 0, i3Paid ? (instalment_3_paid_at || cur.instalment_3_paid_at || new Date()) : null,
-            i4Amt, toMysqlDate(instalment_4_due || cur.instalment_4_due), i4Paid ? 1 : 0, i4Paid ? (instalment_4_paid_at || cur.instalment_4_paid_at || new Date()) : null,
+            i1Amt, toMysqlDate(instalment_1_due || cur.instalment_1_due), i1Paid && !i1Waived ? 1 : 0, i1Paid && !i1Waived ? (instalment_1_paid_at || cur.instalment_1_paid_at || new Date()) : null, i1Waived ? 1 : 0,
+            i2Amt, toMysqlDate(instalment_2_due || cur.instalment_2_due), i2Paid && !i2Waived ? 1 : 0, i2Paid && !i2Waived ? (instalment_2_paid_at || cur.instalment_2_paid_at || new Date()) : null, i2Waived ? 1 : 0,
+            i3Amt, toMysqlDate(instalment_3_due || cur.instalment_3_due), i3Paid && !i3Waived ? 1 : 0, i3Paid && !i3Waived ? (instalment_3_paid_at || cur.instalment_3_paid_at || new Date()) : null, i3Waived ? 1 : 0,
+            i4Amt, toMysqlDate(instalment_4_due || cur.instalment_4_due), i4Paid && !i4Waived ? 1 : 0, i4Paid && !i4Waived ? (instalment_4_paid_at || cur.instalment_4_paid_at || new Date()) : null, i4Waived ? 1 : 0,
             additional_costs !== undefined ? additional_costs : cur.additional_costs,
             funding_option !== undefined ? funding_option : cur.funding_option,
             partner_reg_fee !== undefined ? parseFloat(partner_reg_fee) : parseFloat(cur.partner_reg_fee),
@@ -478,6 +491,7 @@ router.put('/student-fees/:id', async (req, res) => {
             calcTotalPaid,
             derivedStatus,
             notes !== undefined ? notes : cur.notes,
+            payment_method !== undefined ? payment_method : cur.payment_method,
             req.params.id
         ]);
 
@@ -488,6 +502,7 @@ router.put('/student-fees/:id', async (req, res) => {
         return res.status(500).json({ success: false, message: err.message });
     }
 });
+
 
 // ══════════════════════════════════════════════════════════════════════════════
 // GET /api/induction-driven/student-fees/summary/stats
@@ -541,15 +556,21 @@ router.get('/student-fees/summary/by-course', async (req, res) => {
 
 // ══════════════════════════════════════════════════════════════════════════════
 // POST /api/induction-driven/student-fees/:id/remind
-// Record that a payment reminder was sent to the student
+// Send a payment reminder email to the student and record the timestamp
 // ══════════════════════════════════════════════════════════════════════════════
 router.post('/student-fees/:id/remind', async (req, res) => {
     try {
-        const [check] = await pool.execute('SELECT id FROM student_fees WHERE id = ? LIMIT 1', [req.params.id]);
-        if (!check.length) return res.status(404).json({ success: false, message: 'Fee record not found' });
+        const [rows] = await pool.execute('SELECT * FROM student_fees WHERE id = ? LIMIT 1', [req.params.id]);
+        if (!rows.length) return res.status(404).json({ success: false, message: 'Fee record not found' });
+        const feeRecord = rows[0];
         await pool.execute('UPDATE student_fees SET reminder_sent_at = NOW() WHERE id = ?', [req.params.id]);
+        // Send email (non-blocking — log errors but don't fail the request)
+        const emailResult = await sendFeeReminderEmail(feeRecord);
+        if (!emailResult.success) {
+            console.warn('[remind] Email not sent:', emailResult.error);
+        }
         const [updated] = await pool.execute('SELECT * FROM student_fees WHERE id = ?', [req.params.id]);
-        return res.json({ success: true, data: updated[0] });
+        return res.json({ success: true, data: updated[0], emailSent: emailResult.success });
     } catch (err) {
         return res.status(500).json({ success: false, message: err.message });
     }
