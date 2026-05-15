@@ -16,6 +16,7 @@ import StudentList from './components/StudentList';
 import StudentDetail from './components/StudentDetail';
 import StudentReport from './components/StudentReport';
 import ApplicationRequests from './components/ApplicationRequests';
+import ApplicationDetail from './pages/ApplicationDetail';
 import ApplicantsList from './components/ApplicantsList';
 import ApplicationReport from './components/ApplicationReport';
 import ApplicationReview from './components/ApplicationReview';
@@ -666,6 +667,15 @@ function App() {
                     user && canAccessManagementPortal ? (
                         <Layout user={user} onLogout={handleLogout}>
                             <StudentDetail />
+                        </Layout>
+                    ) : (
+                        <LoginPage onLoginSuccess={handleLoginSuccess} />
+                    )
+                } />
+                <Route path="/applications/:id" element={
+                    user && canAccessManagementPortal ? (
+                        <Layout user={user} onLogout={handleLogout}>
+                            <ApplicationDetail />
                         </Layout>
                     ) : (
                         <LoginPage onLoginSuccess={handleLoginSuccess} />

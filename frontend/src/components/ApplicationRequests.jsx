@@ -42,27 +42,10 @@ const ApplicationRequests = () => {
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState(searchParams.get('status') || 'all');
-    const [selectedApp, setSelectedApp] = useState(null);
     const [error, setError] = useState('');
     const [reviewStatus, setReviewStatus] = useState({});
     const [highlightedRef, setHighlightedRef] = useState(searchParams.get('highlight'));
     const [showSuccessMsg, setShowSuccessMsg] = useState(!!highlightedRef);
-    const [inductionContext, setInductionContext] = useState(null);
-    const [inductionLoading, setInductionLoading] = useState(false);
-
-    // Load induction context whenever selectedApp changes and has a course_code
-    useEffect(() => {
-        if (selectedApp?.course_code) {
-            setInductionLoading(true);
-            setInductionContext(null);
-            axios.get(`${API_URL}/induction-driven/induction-context/${selectedApp.course_code}`)
-                .then(res => setInductionContext(res.data.data || null))
-                .catch(() => setInductionContext(null))
-                .finally(() => setInductionLoading(false));
-        } else {
-            setInductionContext(null);
-        }
-    }, [selectedApp?.course_code]);
 
     useEffect(() => {
         fetchApplications();
@@ -332,7 +315,7 @@ const ApplicationRequests = () => {
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-2">
                                                 <button 
-                                                    onClick={() => setSelectedApp(app)}
+                                                    onClick={() => navigate(`/applications/${app.id}`)}
                                                     className="text-sm font-mono font-semibold text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
                                                 >
                                                     {app.application_reference}
@@ -368,6 +351,13 @@ const ApplicationRequests = () => {
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-2">
                                                 <button
+                                                    onClick={() => navigate(`/applications/${app.id}`)}
+                                                    className="p-1.5 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white transition-colors"
+                                                    title="View Details"
+                                                >
+                                                    <Eye className="w-4 h-4" />
+                                                </button>
+                                                <button
                                                     onClick={() => navigate(`/applications/${app.id}/edit`)}
                                                     className="p-1.5 rounded-full bg-gray-600 hover:bg-gray-700 text-white transition-colors"
                                                     title="Edit Application"
@@ -401,28 +391,12 @@ const ApplicationRequests = () => {
                     </div>
                 )}
             </div>
+        </div>
+    );
+};
 
-            {/* Detail Modal */}
-            {selectedApp && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-auto">
-                        {/* Modal Header */}
-                        <div className="sticky top-0 bg-gradient-to-r from-blue-600 to-blue-700 text-white p-6 flex justify-between items-center">
-                            <div>
-                                <h2 className="text-xl font-bold">Application Details</h2>
-                                <p className="text-blue-100 text-sm mt-1">Reference: {selectedApp.application_reference}</p>
-                            </div>
-                            <button
-                                onClick={() => setSelectedApp(null)}
-                                className="text-white hover:bg-white/20 p-2 rounded transition-colors"
-                            >
-                                ✕
-                            </button>
-                        </div>
+export default ApplicationRequests;
 
-                        {/* Modal Content */}
-                        <div className="p-6 space-y-6">
-                            {/* Personal Information */}
                             <div>
                                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Personal Information</h3>
                                 <div className="grid grid-cols-2 gap-4">
