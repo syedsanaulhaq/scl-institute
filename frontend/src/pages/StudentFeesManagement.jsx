@@ -299,9 +299,10 @@ const StudentFeesManagement = () => {
                     { key: 'overdue', label: 'Overdue', color: '#9f1239' },
                     { key: 'waived',  label: 'Waived',  color: '#9ca3af' },
                 ];
-                const pieData = STATUS_CHART
-                    .map(s => ({ name: s.label, value: Number(stats[s.key]) || 0, color: s.color }))
-                    .filter(d => d.value > 0);
+                // All statuses including zeros (for bar chart)
+                const allStatusData = STATUS_CHART
+                    .map(s => ({ name: s.label, value: Number(stats[s.key]) || 0, color: s.color }));
+                const pieData = allStatusData.filter(d => d.value > 0);
 
                 // Bar data — collected vs balance per course
                 const courseMap = {};
@@ -317,42 +318,23 @@ const StudentFeesManagement = () => {
 
                 return (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {/* Status bars */}
+                        {/* Status bar chart */}
                         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
-                            <h3 className="text-sm font-semibold text-gray-700 mb-1">Status Distribution</h3>
-                            {(() => {
-                                const total = pieData.reduce((s, d) => s + Number(d.value), 0);
-                                return (
-                                    <>
-                                        {/* Stacked segmented bar */}
-                                        <div className="flex rounded-lg overflow-hidden h-5 mb-5 mt-3">
-                                            {pieData.map(d => (
-                                                <div key={d.name} title={`${d.name}: ${d.value}`}
-                                                    style={{ width: `${(d.value / total) * 100}%`, backgroundColor: d.color }} />
-                                            ))}
-                                        </div>
-                                        {/* Individual bars per status */}
-                                        <div className="flex flex-col gap-3">
-                                            {pieData.map(d => (
-                                                <div key={d.name}>
-                                                    <div className="flex items-center justify-between mb-1">
-                                                        <div className="flex items-center gap-1.5">
-                                                            <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: d.color }} />
-                                                            <span className="text-xs text-gray-600 font-medium">{d.name}</span>
-                                                        </div>
-                                                        <span className="text-xs font-bold text-gray-800">{d.value} student{d.value !== 1 ? 's' : ''}</span>
-                                                    </div>
-                                                    <div className="w-full bg-gray-100 rounded-full h-2.5">
-                                                        <div className="h-2.5 rounded-full transition-all duration-500"
-                                                            style={{ width: `${(d.value / total) * 100}%`, backgroundColor: d.color }} />
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                        <p className="text-xs text-gray-400 mt-4 text-right">{total} students total</p>
-                                    </>
-                                );
-                            })()}
+                            <h3 className="text-sm font-semibold text-gray-700 mb-4">Status Distribution</h3>
+                            <ResponsiveContainer width="100%" height={180}>
+                                <BarChart data={allStatusData} barSize={32} margin={{ top: 4, right: 8, left: -16, bottom: 0 }}>
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
+                                    <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#6b7280' }} axisLine={false} tickLine={false} />
+                                    <YAxis allowDecimals={false} tick={{ fontSize: 10, fill: '#9ca3af' }} axisLine={false} tickLine={false} width={24} />
+                                    <RTooltip formatter={(v, n) => [`${v} student${v !== 1 ? 's' : ''}`, n]}
+                                        contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e5e7eb' }} />
+                                    <Bar dataKey="value" radius={[4, 4, 0, 0]} label={{ position: 'top', fontSize: 11, fontWeight: 600, fill: '#374151' }}>
+                                        {allStatusData.map((entry, i) => (
+                                            <Cell key={i} fill={entry.color} />
+                                        ))}
+                                    </Bar>
+                                </BarChart>
+                            </ResponsiveContainer>
                         </div>
 
                         {/* Bar — collected vs outstanding per course */}
