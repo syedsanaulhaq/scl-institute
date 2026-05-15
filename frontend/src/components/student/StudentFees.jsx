@@ -1,264 +1,272 @@
-import { useState } from 'react';
-import { DollarSign, CreditCard, FileText, Download, Clock, CheckCircle } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { PoundSterling, CreditCard, FileText, Clock, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
+import axios from 'axios';
 
-const StudentFees = () => {
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
+
+const fmt = (n) => {
+    const num = parseFloat(n) || 0;
+    return `£${num.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+};
+const fmtDate = (d) => d ? new Date(d).toLocaleDateString('en-GB') : '—';
+
+const StatusBadge = ({ status }) => {
+    const map = {
+        paid:    { label: 'Paid',    cls: 'bg-emerald-100 text-emerald-800' },
+        partial: { label: 'Partial', cls: 'bg-amber-100 text-amber-800' },
+        unpaid:  { label: 'Unpaid',  cls: 'bg-red-100 text-red-700' },
+        overdue: { label: 'Overdue', cls: 'bg-red-200 text-red-900' },
+        waived:  { label: 'Waived',  cls: 'bg-gray-100 text-gray-600' },
+    };
+    const cfg = map[status] || map.unpaid;
+    return <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${cfg.cls}`}>{cfg.label}</span>;
+};
+
+const StudentFees = ({ user }) => {
+    const [fees, setFees] = useState([]);
+    const [loading, setLoading] = useState(true);
     const [selectedTab, setSelectedTab] = useState('overview');
 
-    const feeAccount = {
-        totalTuition: 12000,
-        paid: 8000,
-        outstanding: 4000,
-        nextPayment: 4000,
-        nextPaymentDate: '2026-03-01'
-    };
+    useEffect(() => {
+        if (!user?.email) return;
+        setLoading(true);
+        axios.get(`${API_URL}/induction-driven/student-fees?email=${encodeURIComponent(user.email)}`)
+            .then(r => setFees(r.data.data || []))
+            .catch(() => {})
+            .finally(() => setLoading(false));
+    }, [user?.email]);
 
-    const paymentHistory = [
-        { id: 1, date: '2025-10-15', amount: 4000, method: 'Bank Transfer', status: 'Completed', receipt: 'RCP-2025-001' },
-        { id: 2, date: '2026-01-10', amount: 4000, method: 'Card Payment', status: 'Completed', receipt: 'RCP-2026-001' }
-    ];
+    if (loading) return (
+        <div className="flex items-center justify-center h-64">
+            <Loader2 className="w-8 h-8 animate-spin text-scl-purple" />
+        </div>
+    );
 
-    const paymentSchedule = [
-        { installment: 1, dueDate: '2025-10-15', amount: 4000, status: 'paid' },
-        { installment: 2, dueDate: '2026-01-15', amount: 4000, status: 'paid' },
-        { installment: 3, dueDate: '2026-03-01', amount: 4000, status: 'pending' }
-    ];
+    if (!fees.length) return (
+        <div className="p-6 max-w-3xl mx-auto">
+            <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2 mb-6">
+                <PoundSterling className="w-6 h-6 text-scl-purple" /> Fees & Payments
+            </h1>
+            <div className="bg-gray-50 rounded-2xl border border-gray-200 p-12 text-center">
+                <PoundSterling className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+                <p className="text-gray-500 font-medium">No fee records found</p>
+                <p className="text-sm text-gray-400 mt-1">Your fee schedule will appear here once your enrolment is confirmed.</p>
+            </div>
+        </div>
+    );
 
-    const getStatusBadge = (status) => {
-        switch (status) {
-            case 'paid':
-                return <span className="flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
-                    <CheckCircle className="w-3 h-3" /> Paid
-                </span>;
-            case 'pending':
-                return <span className="flex items-center gap-1 px-2 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs font-medium">
-                    <Clock className="w-3 h-3" /> Pending
-                </span>;
-            default:
-                return <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-xs font-medium">
-                    {status}
-                </span>;
-        }
-    };
+    const fee = fees[0];
+    const instalments = [
+        { num: 1, label: 'Year 1 — Semester 1', amount: fee.instalment_1_amount, due: fee.instalment_1_due, paid: Boolean(fee.instalment_1_paid), paidAt: fee.instalment_1_paid_at },
+        { num: 2, label: 'Year 1 — Semester 2', amount: fee.instalment_2_amount, due: fee.instalment_2_due, paid: Boolean(fee.instalment_2_paid), paidAt: fee.instalment_2_paid_at },
+        { num: 3, label: 'Year 2 — Semester 1', amount: fee.instalment_3_amount, due: fee.instalment_3_due, paid: Boolean(fee.instalment_3_paid), paidAt: fee.instalment_3_paid_at },
+        { num: 4, label: 'Year 2 — Semester 2', amount: fee.instalment_4_amount, due: fee.instalment_4_due, paid: Boolean(fee.instalment_4_paid), paidAt: fee.instalment_4_paid_at },
+    ].filter(i => parseFloat(i.amount) > 0);
+
+    const totalFee = parseFloat(fee.total_fee_gbp) || 0;
+    const totalPaid = parseFloat(fee.total_paid) || 0;
+    const balance = parseFloat(fee.balance_due) || 0;
+    const pct = totalFee > 0 ? Math.round((totalPaid / totalFee) * 100) : 0;
+    const nextUnpaid = instalments.find(i => !i.paid);
 
     return (
-        <div className="p-6 bg-gray-50 min-h-screen">
-            <h1 className="text-3xl font-bold text-gray-900 mb-8">Fees & Payments</h1>
-
-            {/* Account Summary */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                <div className="bg-white rounded-lg shadow p-6">
-                    <div className="flex items-center gap-3 mb-2">
-                        <DollarSign className="w-8 h-8 text-blue-600" />
-                        <p className="text-sm text-gray-600">Total Tuition</p>
-                    </div>
-                    <p className="text-2xl font-bold text-gray-900">GBP {feeAccount.totalTuition.toLocaleString()}</p>
+        <div className="p-6 max-w-4xl mx-auto space-y-6">
+            {/* Header */}
+            <div className="flex items-center justify-between">
+                <div>
+                    <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                        <PoundSterling className="w-6 h-6 text-scl-purple" /> Fees & Payments
+                    </h1>
+                    <p className="text-sm text-gray-500 mt-1">{fee.course_code} — {fee.course_title}</p>
                 </div>
-                <div className="bg-white rounded-lg shadow p-6">
-                    <div className="flex items-center gap-3 mb-2">
-                        <CheckCircle className="w-8 h-8 text-green-600" />
-                        <p className="text-sm text-gray-600">Paid</p>
-                    </div>
-                    <p className="text-2xl font-bold text-green-600">GBP {feeAccount.paid.toLocaleString()}</p>
-                </div>
-                <div className="bg-white rounded-lg shadow p-6">
-                    <div className="flex items-center gap-3 mb-2">
-                        <Clock className="w-8 h-8 text-orange-600" />
-                        <p className="text-sm text-gray-600">Outstanding</p>
-                    </div>
-                    <p className="text-2xl font-bold text-orange-600">GBP {feeAccount.outstanding.toLocaleString()}</p>
-                </div>
-                <div className="bg-white rounded-lg shadow p-6">
-                    <div className="flex items-center gap-3 mb-2">
-                        <CreditCard className="w-8 h-8 text-purple-600" />
-                        <p className="text-sm text-gray-600">Next Payment</p>
-                    </div>
-                    <p className="text-2xl font-bold text-purple-600">GBP {feeAccount.nextPayment.toLocaleString()}</p>
-                    <p className="text-xs text-gray-500 mt-1">Due: {new Date(feeAccount.nextPaymentDate).toLocaleDateString('en-GB')}</p>
-                </div>
+                <StatusBadge status={fee.fee_status} />
             </div>
 
-            {/* Progress Bar */}
-            <div className="bg-white rounded-lg shadow p-6 mb-6">
-                <div className="flex items-center justify-between mb-2">
-                    <h3 className="font-semibold text-gray-900">Payment Progress</h3>
-                    <span className="text-sm text-gray-600">{Math.round((feeAccount.paid / feeAccount.totalTuition) * 100)}% Complete</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-4">
-                    <div 
-                        className="bg-green-600 h-4 rounded-full transition-all duration-500"
-                        style={{ width: `${(feeAccount.paid / feeAccount.totalTuition) * 100}%` }}
-                    ></div>
-                </div>
+            {/* Summary cards */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {[
+                    { label: 'Total Fee', value: fmt(totalFee), color: 'text-gray-900', bg: 'bg-gray-50', icon: PoundSterling },
+                    { label: 'Paid', value: fmt(totalPaid), color: 'text-emerald-700', bg: 'bg-emerald-50', icon: CheckCircle2 },
+                    { label: 'Outstanding', value: fmt(balance), color: 'text-amber-700', bg: 'bg-amber-50', icon: Clock },
+                    { label: 'Next Due', value: nextUnpaid ? fmt(nextUnpaid.amount) : '—', sub: nextUnpaid ? fmtDate(nextUnpaid.due) : 'All paid', color: 'text-scl-purple', bg: 'bg-purple-50', icon: CreditCard },
+                ].map(s => {
+                    const Icon = s.icon;
+                    return (
+                        <div key={s.label} className={`${s.bg} rounded-xl p-4`}>
+                            <div className="flex items-center gap-2 mb-1">
+                                <Icon className={`w-4 h-4 ${s.color}`} />
+                                <p className="text-xs text-gray-500">{s.label}</p>
+                            </div>
+                            <p className={`text-xl font-bold ${s.color}`}>{s.value}</p>
+                            {s.sub && <p className="text-xs text-gray-400 mt-0.5">{s.sub}</p>}
+                        </div>
+                    );
+                })}
             </div>
 
-            {/* Tab Navigation */}
-            <div className="flex gap-4 mb-6 border-b">
-                <button
-                    onClick={() => setSelectedTab('overview')}
-                    className={`px-4 py-2 font-medium ${selectedTab === 'overview' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-600'}`}
-                >
-                    Overview
-                </button>
-                <button
-                    onClick={() => setSelectedTab('schedule')}
-                    className={`px-4 py-2 font-medium ${selectedTab === 'schedule' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-600'}`}
-                >
-                    Payment Schedule
-                </button>
-                <button
-                    onClick={() => setSelectedTab('history')}
-                    className={`px-4 py-2 font-medium ${selectedTab === 'history' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-600'}`}
-                >
-                    Payment History
-                </button>
+            {/* Progress bar */}
+            <div className="bg-white rounded-xl border border-gray-200 p-5">
+                <div className="flex justify-between mb-2">
+                    <span className="text-sm font-semibold text-gray-700">Payment Progress</span>
+                    <span className="text-sm font-bold text-scl-purple">{pct}% paid</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-3">
+                    <div className="bg-emerald-500 h-3 rounded-full transition-all duration-700" style={{ width: `${pct}%` }} />
+                </div>
+                <p className="text-xs text-gray-400 mt-1">{fmt(totalPaid)} of {fmt(totalFee)}</p>
             </div>
 
-            {/* Overview Tab */}
+            {/* Overdue alert */}
+            {fee.fee_status === 'overdue' && (
+                <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
+                    <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+                    <div>
+                        <p className="text-sm font-semibold text-red-800">Payment Overdue</p>
+                        <p className="text-sm text-red-700 mt-0.5">Your payment is overdue. Please contact the Finance team as soon as possible.</p>
+                    </div>
+                </div>
+            )}
+
+            {/* Next payment alert */}
+            {nextUnpaid && fee.fee_status !== 'overdue' && (
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
+                    <Clock className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                    <div>
+                        <p className="text-sm font-semibold text-amber-800">Next Payment Due</p>
+                        <p className="text-sm text-amber-700 mt-0.5">
+                            {nextUnpaid.label}: <strong>{fmt(nextUnpaid.amount)}</strong> due on <strong>{fmtDate(nextUnpaid.due)}</strong>
+                        </p>
+                    </div>
+                </div>
+            )}
+
+            {/* Tabs */}
+            <div className="flex gap-1 border-b border-gray-200">
+                {['overview', 'schedule', 'history'].map(t => (
+                    <button key={t} onClick={() => setSelectedTab(t)}
+                        className={`px-4 py-2.5 text-sm font-medium capitalize transition-colors
+                            ${selectedTab === t ? 'text-scl-purple border-b-2 border-scl-purple -mb-px' : 'text-gray-500 hover:text-gray-700'}`}>
+                        {t === 'overview' ? 'Overview' : t === 'schedule' ? 'Payment Schedule' : 'Payment History'}
+                    </button>
+                ))}
+            </div>
+
+            {/* Overview tab */}
             {selectedTab === 'overview' && (
-                <div className="space-y-6">
-                    {feeAccount.outstanding > 0 && (
-                        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
-                            <h3 className="font-semibold text-yellow-900 mb-2">Payment Due</h3>
-                            <p className="text-yellow-800 mb-4">
-                                Your next payment of GBP {feeAccount.nextPayment.toLocaleString()} is due on {new Date(feeAccount.nextPaymentDate).toLocaleDateString('en-GB')}
-                            </p>
-                            <button className="flex items-center gap-2 px-6 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700">
-                                <CreditCard className="w-4 h-4" />
-                                Make Payment
-                            </button>
-                        </div>
-                    )}
-
-                    <div className="bg-white rounded-lg shadow p-6">
-                        <h3 className="font-semibold text-gray-900 mb-4">Payment Methods</h3>
-                        <div className="space-y-3">
-                            <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg border cursor-pointer hover:border-blue-500">
-                                <CreditCard className="w-6 h-6 text-blue-600" />
-                                <div className="flex-1">
-                                    <p className="font-medium text-gray-900">Credit/Debit Card</p>
-                                    <p className="text-sm text-gray-600">Pay securely online with your card</p>
-                                </div>
+                <div className="space-y-4">
+                    <div className="bg-white rounded-xl border border-gray-200 p-5">
+                        <h3 className="text-sm font-semibold text-gray-700 mb-4">Fee Breakdown</h3>
+                        <div className="space-y-1 text-sm">
+                            <div className="flex justify-between py-2 border-b border-gray-100">
+                                <span className="text-gray-600">Course Tuition Fee</span>
+                                <span className="font-semibold">{fmt(totalFee)}</span>
                             </div>
-                            <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg border cursor-pointer hover:border-blue-500">
-                                <DollarSign className="w-6 h-6 text-green-600" />
-                                <div className="flex-1">
-                                    <p className="font-medium text-gray-900">Bank Transfer</p>
-                                    <p className="text-sm text-gray-600">Transfer directly from your bank account</p>
+                            {parseFloat(fee.partner_reg_fee) > 0 && (
+                                <div className="flex justify-between py-2 border-b border-gray-100">
+                                    <span className="text-gray-600">Partner Registration Fee</span>
+                                    <span className="font-semibold">{fmt(fee.partner_reg_fee)}</span>
                                 </div>
+                            )}
+                            {parseFloat(fee.exam_fee) > 0 && (
+                                <div className="flex justify-between py-2 border-b border-gray-100">
+                                    <span className="text-gray-600">Exam / Assessment Fee</span>
+                                    <span className="font-semibold">{fmt(fee.exam_fee)}</span>
+                                </div>
+                            )}
+                            {fee.funding_option && (
+                                <div className="flex justify-between py-2 border-b border-gray-100">
+                                    <span className="text-gray-600">Funding Type</span>
+                                    <span className="font-semibold capitalize">{fee.funding_option}</span>
+                                </div>
+                            )}
+                            <div className="flex justify-between py-2 text-emerald-700 font-medium">
+                                <span>Total Paid</span>
+                                <span className="font-bold">{fmt(totalPaid)}</span>
                             </div>
-                            <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg border cursor-pointer hover:border-blue-500">
-                                <FileText className="w-6 h-6 text-purple-600" />
-                                <div className="flex-1">
-                                    <p className="font-medium text-gray-900">Payment Plan</p>
-                                    <p className="text-sm text-gray-600">Arrange an installment plan</p>
-                                </div>
+                            <div className="flex justify-between py-2 text-amber-700 font-medium">
+                                <span>Balance Due</span>
+                                <span className="font-bold">{fmt(balance)}</span>
                             </div>
                         </div>
                     </div>
-
-                    <div className="bg-white rounded-lg shadow p-6">
-                        <h3 className="font-semibold text-gray-900 mb-4">Bank Details for Transfer</h3>
+                    <div className="bg-white rounded-xl border border-gray-200 p-5">
+                        <h3 className="text-sm font-semibold text-gray-700 mb-3">Bank Transfer Details</h3>
                         <div className="grid grid-cols-2 gap-4 text-sm">
-                            <div>
-                                <p className="text-gray-600">Account Name</p>
-                                <p className="font-medium">SCL Institute</p>
-                            </div>
-                            <div>
-                                <p className="text-gray-600">Sort Code</p>
-                                <p className="font-medium">12-34-56</p>
-                            </div>
-                            <div>
-                                <p className="text-gray-600">Account Number</p>
-                                <p className="font-medium">12345678</p>
-                            </div>
-                            <div>
-                                <p className="text-gray-600">Reference</p>
-                                <p className="font-medium">Your Student ID</p>
-                            </div>
+                            {[['Account Name','SCL Institute'],['Sort Code','20-00-00'],['Account Number','12345678'],['Reference', fee.application_reference || fee.student_email]].map(([label, value]) => (
+                                <div key={label}>
+                                    <p className="text-xs text-gray-500">{label}</p>
+                                    <p className="font-semibold text-gray-800">{value}</p>
+                                </div>
+                            ))}
                         </div>
+                        <p className="text-xs text-gray-400 mt-3">Please include your reference when making a bank transfer so we can allocate your payment correctly.</p>
                     </div>
+                    <a href={`/admin/student-fees/${fee.id}/invoice`} target="_blank" rel="noreferrer"
+                        className="inline-flex items-center gap-2 px-4 py-2.5 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50 font-medium">
+                        <FileText className="w-4 h-4" /> Download Invoice
+                    </a>
                 </div>
             )}
 
-            {/* Payment Schedule Tab */}
+            {/* Payment Schedule tab */}
             {selectedTab === 'schedule' && (
-                <div className="bg-white rounded-lg shadow">
-                    <div className="overflow-x-auto">
-                        <table className="w-full">
-                            <thead className="bg-gray-50 border-b">
-                                <tr>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Installment</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Due Date</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Action</th>
+                <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                    <table className="w-full text-sm">
+                        <thead className="bg-gray-50 border-b border-gray-200">
+                            <tr>
+                                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Instalment</th>
+                                <th className="px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Due Date</th>
+                                <th className="px-5 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Amount</th>
+                                <th className="px-5 py-3 text-center text-xs font-semibold text-gray-600 uppercase">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100">
+                            {instalments.map(ins => (
+                                <tr key={ins.num} className={ins.paid ? 'bg-emerald-50/40' : ''}>
+                                    <td className="px-5 py-4 font-medium text-gray-800">{ins.label}</td>
+                                    <td className="px-5 py-4 text-gray-600">{fmtDate(ins.due)}</td>
+                                    <td className="px-5 py-4 text-right font-semibold text-gray-900">{fmt(ins.amount)}</td>
+                                    <td className="px-5 py-4 text-center">
+                                        {ins.paid
+                                            ? <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700"><CheckCircle2 className="w-3.5 h-3.5" /> Paid</span>
+                                            : <span className="inline-flex items-center gap-1 text-xs font-semibold text-amber-600"><Clock className="w-3.5 h-3.5" /> Pending</span>}
+                                    </td>
                                 </tr>
-                            </thead>
-                            <tbody className="divide-y">
-                                {paymentSchedule.map((payment) => (
-                                    <tr key={payment.installment} className="hover:bg-gray-50">
-                                        <td className="px-6 py-4 text-sm font-medium text-gray-900">
-                                            Installment {payment.installment}
-                                        </td>
-                                        <td className="px-6 py-4 text-sm text-gray-700">
-                                            {new Date(payment.dueDate).toLocaleDateString('en-GB')}
-                                        </td>
-                                        <td className="px-6 py-4 text-sm font-semibold text-gray-900">
-                                            GBP {payment.amount.toLocaleString()}
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            {getStatusBadge(payment.status)}
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            {payment.status === 'pending' ? (
-                                                <button className="text-blue-600 hover:text-blue-700 text-sm font-medium">
-                                                    Pay Now
-                                                </button>
-                                            ) : (
-                                                <button className="text-gray-400 text-sm">
-                                                    View Receipt
-                                                </button>
-                                            )}
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
+                            ))}
+                        </tbody>
+                        <tfoot className="bg-gray-50 border-t border-gray-200">
+                            <tr>
+                                <td colSpan={2} className="px-5 py-3 font-semibold text-gray-700">Total</td>
+                                <td className="px-5 py-3 text-right font-bold text-gray-900">{fmt(totalFee)}</td>
+                                <td />
+                            </tr>
+                        </tfoot>
+                    </table>
                 </div>
             )}
 
-            {/* Payment History Tab */}
+            {/* Payment History tab */}
             {selectedTab === 'history' && (
-                <div className="bg-white rounded-lg shadow">
-                    <div className="p-6 border-b">
-                        <h3 className="font-semibold text-gray-900">Transaction History</h3>
-                    </div>
-                    <div className="divide-y">
-                        {paymentHistory.map((payment) => (
-                            <div key={payment.id} className="p-6 hover:bg-gray-50">
-                                <div className="flex items-center justify-between mb-2">
-                                    <div className="flex-1">
-                                        <div className="flex items-center gap-3 mb-1">
-                                            <CheckCircle className="w-5 h-5 text-green-600" />
-                                            <p className="font-semibold text-gray-900">Payment Received</p>
-                                        </div>
-                                        <p className="text-sm text-gray-600 ml-8">
-                                            {new Date(payment.date).toLocaleDateString('en-GB')} | {payment.method}
-                                        </p>
-                                        <p className="text-xs text-gray-500 ml-8">Receipt: {payment.receipt}</p>
-                                    </div>
-                                    <div className="text-right">
-                                        <p className="text-xl font-bold text-green-600">GBP {payment.amount.toLocaleString()}</p>
-                                        <button className="flex items-center gap-2 text-blue-600 hover:text-blue-700 text-sm mt-2">
-                                            <Download className="w-4 h-4" />
-                                            Download Receipt
-                                        </button>
-                                    </div>
+                <div className="space-y-3">
+                    {instalments.filter(i => i.paid).length === 0 ? (
+                        <div className="bg-gray-50 rounded-xl p-10 text-center">
+                            <Clock className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                            <p className="text-gray-500 font-medium">No payments recorded yet</p>
+                        </div>
+                    ) : instalments.filter(i => i.paid).map(ins => (
+                        <div key={ins.num} className="bg-white rounded-xl border border-gray-200 p-5 flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2.5 bg-emerald-100 rounded-xl">
+                                    <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                                </div>
+                                <div>
+                                    <p className="font-semibold text-gray-900">{ins.label}</p>
+                                    <p className="text-xs text-gray-500">Paid on {fmtDate(ins.paidAt) || '—'}</p>
                                 </div>
                             </div>
-                        ))}
-                    </div>
+                            <p className="text-lg font-bold text-emerald-600">{fmt(ins.amount)}</p>
+                        </div>
+                    ))}
                 </div>
             )}
         </div>
@@ -266,4 +274,3 @@ const StudentFees = () => {
 };
 
 export default StudentFees;
-

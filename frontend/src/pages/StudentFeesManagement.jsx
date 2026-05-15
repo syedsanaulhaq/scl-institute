@@ -8,7 +8,8 @@ import {
 import {
     PoundSterling, CheckCircle2, Clock, AlertCircle, RefreshCw,
     Search, ChevronDown, ChevronUp, Edit2, Save, X, Loader2,
-    TrendingUp, Users, BadgeCheck, AlertTriangle, FileText
+    TrendingUp, Users, BadgeCheck, AlertTriangle, FileText,
+    Download, Bell, AlertOctagon
 } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
@@ -63,7 +64,9 @@ const InstalmentRow = ({ label, amount, due, paid, onToggle, saving }) => (
 const FeeDetailModal = ({ fee, onClose, onSaved, onInvoice }) => {
     const [form, setForm] = useState({ ...fee });
     const [saving, setSaving] = useState(false);
+    const [reminding, setReminding] = useState(false);
     const [error, setError] = useState('');
+    const [reminderSent, setReminderSent] = useState(false);
 
     const toggleInstalment = async (num) => {
         const key = `instalment_${num}_paid`;
@@ -83,6 +86,20 @@ const FeeDetailModal = ({ fee, onClose, onSaved, onInvoice }) => {
             setError(e.response?.data?.message || e.message);
         } finally {
             setSaving(false);
+        }
+    };
+
+    const sendReminder = async () => {
+        setReminding(true);
+        try {
+            const res = await axios.post(`${API_URL}/induction-driven/student-fees/${fee.id}/remind`);
+            setForm(prev => ({ ...prev, reminder_sent_at: res.data.data.reminder_sent_at }));
+            setReminderSent(true);
+            setTimeout(() => setReminderSent(false), 3000);
+        } catch (e) {
+            setError(e.response?.data?.message || e.message);
+        } finally {
+            setReminding(false);
         }
     };
 
@@ -176,14 +193,25 @@ const FeeDetailModal = ({ fee, onClose, onSaved, onInvoice }) => {
                         {form.induction_id && ` (Induction #${form.induction_id})`}
                     </p>
 
+                    {/* Reminder note */}
+                    {form.reminder_sent_at && (
+                        <p className="text-xs text-gray-400">Last reminder: {new Date(form.reminder_sent_at).toLocaleString('en-GB')}</p>
+                    )}
+
                     {/* Actions */}
-                    <div className="flex gap-3 pt-2">
-                        <button onClick={onClose} className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50">
+                    <div className="flex gap-2 pt-2 flex-wrap">
+                        <button onClick={onClose} className="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50">
                             Close
                         </button>
+                        <button onClick={sendReminder} disabled={reminding || reminderSent}
+                            className={`px-3 py-2 rounded-lg text-sm font-semibold flex items-center gap-1.5 transition-colors
+                                ${reminderSent ? 'bg-emerald-100 text-emerald-700' : 'border border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100'} disabled:opacity-50`}>
+                            {reminding ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Bell className="w-3.5 h-3.5" />}
+                            {reminderSent ? 'Sent!' : 'Remind'}
+                        </button>
                         <button onClick={onInvoice}
-                            className="px-4 py-2 border border-scl-purple/40 bg-scl-purple/5 text-scl-purple rounded-lg text-sm font-semibold hover:bg-scl-purple/10 flex items-center gap-2">
-                            <FileText className="w-4 h-4" /> Invoice
+                            className="px-3 py-2 border border-scl-purple/40 bg-scl-purple/5 text-scl-purple rounded-lg text-sm font-semibold hover:bg-scl-purple/10 flex items-center gap-1.5">
+                            <FileText className="w-3.5 h-3.5" /> Invoice
                         </button>
                         <button onClick={() => save()} disabled={saving}
                             className="flex-1 px-4 py-2 bg-scl-purple text-white rounded-lg text-sm font-semibold hover:bg-purple-800 disabled:opacity-50 flex items-center justify-center gap-2">
@@ -197,6 +225,28 @@ const FeeDetailModal = ({ fee, onClose, onSaved, onInvoice }) => {
     );
 };
 
+// ── Export CSV helper ────────────────────────────────────────────────────────
+const exportCSV = (fees) => {
+    const headers = ['Student Name','Email','Course Code','Course Title','Total Fee','Paid','Balance','Status','Funding'];
+    const rows = fees.map(f => [
+        f.student_name || '',
+        f.student_email || '',
+        f.course_code || '',
+        f.course_title || '',
+        parseFloat(f.total_fee_gbp) || 0,
+        parseFloat(f.total_paid) || 0,
+        parseFloat(f.balance_due) || 0,
+        f.fee_status || '',
+        f.funding_option || ''
+    ]);
+    const csv = [headers, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `student-fees-${new Date().toISOString().slice(0,10)}.csv`;
+    a.click(); URL.revokeObjectURL(url);
+};
+
 // ── Main Page ─────────────────────────────────────────────────────────────────
 const StudentFeesManagement = () => {
     const navigate = useNavigate();
@@ -207,6 +257,27 @@ const StudentFeesManagement = () => {
     const [filterStatus, setFilterStatus] = useState('');
     const [selectedFee, setSelectedFee] = useState(null);
     const [expandedRows, setExpandedRows] = useState({});
+    const [bulkLoading, setBulkLoading] = useState(false);
+    const [toast, setToast] = useState(null);
+
+    const showToast = (msg, type = 'success') => {
+        setToast({ msg, type });
+        setTimeout(() => setToast(null), 3500);
+    };
+
+    const handleBulkOverdue = async () => {
+        if (!window.confirm('Mark all unpaid records with overdue instalments as Overdue?')) return;
+        setBulkLoading(true);
+        try {
+            const res = await axios.patch(`${API_URL}/induction-driven/student-fees/bulk-mark-overdue`);
+            showToast(`${res.data.affected} record(s) marked as Overdue`);
+            load();
+        } catch (e) {
+            showToast(e.response?.data?.message || 'Failed', 'error');
+        } finally {
+            setBulkLoading(false);
+        }
+    };
 
     const load = useCallback(async () => {
         setLoading(true);
@@ -259,9 +330,17 @@ const StudentFeesManagement = () => {
                         Fee schedules are auto-generated from Course Induction Section 5 when a student is accepted.
                     </p>
                 </div>
-                <button onClick={load} className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">
-                    <RefreshCw className="w-4 h-4" /> Refresh
-                </button>
+                <div className="flex items-center gap-2">
+                    <button onClick={() => exportCSV(fees)} className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">
+                        <Download className="w-4 h-4" /> Export CSV
+                    </button>
+                    <button onClick={handleBulkOverdue} disabled={bulkLoading} className="flex items-center gap-2 px-4 py-2 border border-red-200 text-red-700 bg-red-50 rounded-lg text-sm hover:bg-red-100 disabled:opacity-50">
+                        <AlertOctagon className="w-4 h-4" /> Mark Overdue
+                    </button>
+                    <button onClick={load} className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">
+                        <RefreshCw className="w-4 h-4" /> Refresh
+                    </button>
+                </div>
             </div>
 
             {/* Stats */}
@@ -497,6 +576,15 @@ const StudentFeesManagement = () => {
             {selectedFee && (
                 <FeeDetailModal fee={selectedFee} onClose={() => setSelectedFee(null)} onSaved={handleSaved}
                     onInvoice={() => openInvoice(selectedFee.id)} />
+            )}
+        </div>
+
+            {/* Toast */}
+            {toast && (
+                <div className={`fixed bottom-5 right-5 z-50 px-5 py-3 rounded-xl shadow-lg text-sm font-semibold text-white transition-all
+                    ${toast.type === 'error' ? 'bg-red-600' : 'bg-emerald-600'}`}>
+                    {toast.msg}
+                </div>
             )}
         </div>
     );

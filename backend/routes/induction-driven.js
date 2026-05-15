@@ -539,4 +539,38 @@ router.get('/student-fees/summary/by-course', async (req, res) => {
     }
 });
 
+// ══════════════════════════════════════════════════════════════════════════════
+// POST /api/induction-driven/student-fees/:id/remind
+// Record that a payment reminder was sent to the student
+// ══════════════════════════════════════════════════════════════════════════════
+router.post('/student-fees/:id/remind', async (req, res) => {
+    try {
+        const [check] = await pool.execute('SELECT id FROM student_fees WHERE id = ? LIMIT 1', [req.params.id]);
+        if (!check.length) return res.status(404).json({ success: false, message: 'Fee record not found' });
+        await pool.execute('UPDATE student_fees SET reminder_sent_at = NOW() WHERE id = ?', [req.params.id]);
+        const [updated] = await pool.execute('SELECT * FROM student_fees WHERE id = ?', [req.params.id]);
+        return res.json({ success: true, data: updated[0] });
+    } catch (err) {
+        return res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// PATCH /api/induction-driven/student-fees/bulk-mark-overdue
+// Mark all unpaid records where instalment_1_due is in the past as overdue
+// ══════════════════════════════════════════════════════════════════════════════
+router.patch('/student-fees/bulk-mark-overdue', async (req, res) => {
+    try {
+        const [result] = await pool.execute(`
+            UPDATE student_fees
+            SET fee_status = 'overdue'
+            WHERE fee_status = 'unpaid'
+              AND instalment_1_due < CURDATE()
+        `);
+        return res.json({ success: true, affected: result.affectedRows });
+    } catch (err) {
+        return res.status(500).json({ success: false, message: err.message });
+    }
+});
+
 module.exports = router;
