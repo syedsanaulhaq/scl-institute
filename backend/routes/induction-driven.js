@@ -390,6 +390,17 @@ router.get('/student-fees/:id', async (req, res) => {
     }
 });
 
+// Helper: normalise any date value to YYYY-MM-DD string for MySQL DATE columns
+function toMysqlDate(val) {
+    if (!val) return null;
+    if (val instanceof Date) return val.toISOString().slice(0, 10);
+    // Handle ISO string or datetime string
+    const s = String(val);
+    if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
+    const d = new Date(s);
+    return isNaN(d.getTime()) ? null : d.toISOString().slice(0, 10);
+}
+
 // ══════════════════════════════════════════════════════════════════════════════
 // PUT /api/induction-driven/student-fees/:id
 // Update fee record — mark instalment paid, override amounts, add notes
@@ -451,10 +462,10 @@ router.put('/student-fees/:id', async (req, res) => {
             WHERE id = ?
         `, [
             newTotalFee,
-            i1Amt, instalment_1_due || cur.instalment_1_due, i1Paid ? 1 : 0, i1Paid ? (instalment_1_paid_at || cur.instalment_1_paid_at || new Date()) : null,
-            i2Amt, instalment_2_due || cur.instalment_2_due, i2Paid ? 1 : 0, i2Paid ? (instalment_2_paid_at || cur.instalment_2_paid_at || new Date()) : null,
-            i3Amt, instalment_3_due || cur.instalment_3_due, i3Paid ? 1 : 0, i3Paid ? (instalment_3_paid_at || cur.instalment_3_paid_at || new Date()) : null,
-            i4Amt, instalment_4_due || cur.instalment_4_due, i4Paid ? 1 : 0, i4Paid ? (instalment_4_paid_at || cur.instalment_4_paid_at || new Date()) : null,
+            i1Amt, toMysqlDate(instalment_1_due || cur.instalment_1_due), i1Paid ? 1 : 0, i1Paid ? (instalment_1_paid_at || cur.instalment_1_paid_at || new Date()) : null,
+            i2Amt, toMysqlDate(instalment_2_due || cur.instalment_2_due), i2Paid ? 1 : 0, i2Paid ? (instalment_2_paid_at || cur.instalment_2_paid_at || new Date()) : null,
+            i3Amt, toMysqlDate(instalment_3_due || cur.instalment_3_due), i3Paid ? 1 : 0, i3Paid ? (instalment_3_paid_at || cur.instalment_3_paid_at || new Date()) : null,
+            i4Amt, toMysqlDate(instalment_4_due || cur.instalment_4_due), i4Paid ? 1 : 0, i4Paid ? (instalment_4_paid_at || cur.instalment_4_paid_at || new Date()) : null,
             additional_costs !== undefined ? additional_costs : cur.additional_costs,
             funding_option !== undefined ? funding_option : cur.funding_option,
             partner_reg_fee !== undefined ? parseFloat(partner_reg_fee) : parseFloat(cur.partner_reg_fee),
