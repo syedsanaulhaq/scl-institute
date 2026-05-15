@@ -67,14 +67,14 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
     const systemAdminMenuItems = isSystemAdmin
         ? [
             { name: 'Overview & Reports', icon: BarChart3, path: '/' },
-            { name: 'Admissions Hub', icon: BarChart3, path: '/admin/dashboard' },
             {
-                name: 'Student Admission',
-                icon: Users,
+                name: 'Admissions',
+                icon: UserPlus,
                 isParent: true,
-                key: 'student-admission',
+                key: 'admissions-group',
                 subItems: [
-                    { name: 'Applications', icon: BarChart3, path: '/applications' },
+                    { name: 'Admissions Hub', icon: BarChart3, path: '/admin/dashboard' },
+                    { name: 'Applications', icon: ClipboardList, path: '/applications' },
                     { name: 'New Admission', icon: UserPlus, path: '/student-application' },
                     { name: 'Applicants List', icon: UserCheck, path: '/applicants' },
                     { name: 'Course Changes', icon: ClipboardList, path: '/course-change-requests' },
@@ -82,24 +82,56 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
                 ]
             },
             {
-                name: 'Teacher Admission',
+                name: 'Staff',
                 icon: Users,
                 isParent: true,
-                key: 'teacher-admission',
+                key: 'staff-group',
                 subItems: [
                     { name: 'Teacher Registrations', icon: Users, path: '/teacher-registrations' },
                     { name: 'New Teacher Registration', icon: UserPlus, path: '/teacher-registration' }
                 ]
             },
-            { name: 'Course Lifecycle', icon: LayoutDashboard, path: '/course-lifecycle' },
-            { name: 'Course Intakes', icon: Users, path: '/programme-intakes' },
-            { name: 'Student Fees', icon: DollarSign, path: '/admin/student-fees' },
-            { name: 'Compliance Calendar', icon: Calendar, path: '/compliance-calendar' },
-            { name: 'LMS Enrolments', icon: GraduationCap, path: '/admin/lms-enrolments' },
-            { name: 'Student Programmes', icon: BookOpen, path: '/admin/student-programmes' },
-            { name: 'Users by Role', icon: Users, path: '/admin/users-by-role' },
-            { name: 'Role Management', icon: ShieldCheck, path: '/admin/role-management' },
-            { name: 'Access LMS', icon: GraduationCap, isSSO: true },
+            {
+                name: 'Academic',
+                icon: BookOpen,
+                isParent: true,
+                key: 'academic-group',
+                subItems: [
+                    { name: 'Course Lifecycle', icon: LayoutDashboard, path: '/course-lifecycle' },
+                    { name: 'Course Intakes', icon: Calendar, path: '/programme-intakes' },
+                    { name: 'Compliance Calendar', icon: Calendar, path: '/compliance-calendar' }
+                ]
+            },
+            {
+                name: 'Students',
+                icon: GraduationCap,
+                isParent: true,
+                key: 'students-group',
+                subItems: [
+                    { name: 'Student Programmes', icon: BookOpen, path: '/admin/student-programmes' },
+                    { name: 'Student Fees', icon: DollarSign, path: '/admin/student-fees' }
+                ]
+            },
+            {
+                name: 'LMS',
+                icon: GraduationCap,
+                isParent: true,
+                key: 'lms-group',
+                subItems: [
+                    { name: 'LMS Enrolments', icon: GraduationCap, path: '/admin/lms-enrolments' },
+                    { name: 'Access LMS', icon: GraduationCap, isSSO: true }
+                ]
+            },
+            {
+                name: 'Users & Access',
+                icon: ShieldCheck,
+                isParent: true,
+                key: 'users-access-group',
+                subItems: [
+                    { name: 'Users by Role', icon: Users, path: '/admin/users-by-role' },
+                    { name: 'Role Management', icon: ShieldCheck, path: '/admin/role-management' }
+                ]
+            },
             { name: 'Settings', icon: Settings, path: '/settings' }
         ]
         : [];
