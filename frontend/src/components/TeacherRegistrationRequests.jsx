@@ -142,6 +142,8 @@ const TeacherRegistrationRequests = ({ user }) => {
         const overall = failCount > 0 ? 'fail' : reviewCount > 0 ? 'review' : 'pass';
         return { checks, failCount, reviewCount, passCount, overall };
     }, [selectedRegistration]);
+
+    const handleDecision = async (decision) => {
         if (!selectedRegistration) return;
 
         // Block approval if teacher gate failed
