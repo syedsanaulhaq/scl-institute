@@ -685,9 +685,9 @@ const StudentAdmissionForm = ({ onSubmitSuccess, isEditMode = false }) => {
         return (
           <div className="border border-gray-200 rounded-lg divide-y divide-gray-200">
             {/* Header */}
-            <div className="px-4 py-2 flex items-center justify-between bg-gray-50 rounded-t-lg">
-              <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Courses in this Intake</span>
-              <span className="text-xs text-gray-500">{intake.courses.length} total</span>
+            <div className="px-4 py-2 flex items-center justify-between bg-gray-100 rounded-t-lg border-b border-gray-200">
+              <span className="text-xs font-semibold text-gray-800 uppercase tracking-wide">Courses in this Intake</span>
+              <span className="text-xs text-gray-600 font-medium">{intake.courses.length} total</span>
             </div>
 
             {Object.entries(grouped).map(([year, semesters]) => (
