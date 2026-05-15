@@ -667,22 +667,64 @@ const StudentAdmissionForm = ({ onSubmitSuccess, isEditMode = false }) => {
         </div>
       </div>
 
-      {/* Show selected intake courses */}
+      {/* Show selected intake courses grouped by Year → Semester */}
       {formData.intakeId && (() => {
         const intake = availableIntakes.find(i => String(i.id) === String(formData.intakeId));
-        return intake?.courses?.length > 0 ? (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <h4 className="text-sm font-medium text-blue-800 mb-2">Courses in this Intake ({intake.courses.length})</h4>
-            <div className="space-y-1">
-              {intake.courses.map(c => (
-                <div key={c.id} className="flex justify-between text-xs text-blue-700">
-                  <span>{c.course_title}</span>
-                  <span className="text-blue-500">{c.course_code} • {c.academic_year} • {c.semester_name}</span>
-                </div>
-              ))}
+        if (!intake?.courses?.length) return null;
+
+        // Build Year → Semester → courses map (preserving insertion order)
+        const grouped = {};
+        for (const c of intake.courses) {
+          const yr = c.academic_year || 'Other';
+          const sem = c.semester_name || 'Other';
+          if (!grouped[yr]) grouped[yr] = {};
+          if (!grouped[yr][sem]) grouped[yr][sem] = [];
+          grouped[yr][sem].push(c);
+        }
+
+        const yearColors = ['bg-blue-600', 'bg-indigo-600', 'bg-violet-600'];
+
+        return (
+          <div className="border border-blue-200 rounded-lg overflow-hidden">
+            {/* Header */}
+            <div className="bg-blue-600 px-4 py-2 flex items-center justify-between">
+              <span className="text-sm font-semibold text-white">Courses in this Intake</span>
+              <span className="text-xs bg-white text-blue-600 font-bold rounded-full px-2 py-0.5">{intake.courses.length}</span>
             </div>
+
+            {Object.entries(grouped).map(([year, semesters], yi) => (
+              <details key={year} open className="group">
+                {/* Year header — clickable to collapse */}
+                <summary className={`flex items-center justify-between px-4 py-2 cursor-pointer select-none ${yearColors[yi % yearColors.length]} text-white`}>
+                  <span className="text-xs font-bold uppercase tracking-wider">{year}</span>
+                  <span className="text-xs opacity-80">
+                    {Object.values(semesters).flat().length} courses
+                  </span>
+                </summary>
+
+                {/* Semesters inside this year */}
+                <div className="divide-y divide-blue-100">
+                  {Object.entries(semesters).map(([sem, courses]) => (
+                    <div key={sem} className="bg-white">
+                      {/* Semester sub-header */}
+                      <div className="px-4 py-1.5 bg-blue-50 flex items-center justify-between">
+                        <span className="text-xs font-semibold text-blue-700">{sem}</span>
+                        <span className="text-xs text-blue-400">{courses.length} unit{courses.length !== 1 ? 's' : ''}</span>
+                      </div>
+                      {/* Course rows */}
+                      {courses.map(c => (
+                        <div key={c.id} className="flex items-center justify-between px-4 py-2 hover:bg-blue-50 transition-colors">
+                          <span className="text-xs text-gray-800">{c.course_title}</span>
+                          <span className="text-xs text-blue-500 font-mono ml-4 shrink-0">{c.course_code}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              </details>
+            ))}
           </div>
-        ) : null;
+        );
       })()}
     </div>
   );
