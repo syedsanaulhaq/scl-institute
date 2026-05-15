@@ -34,8 +34,10 @@ const LoginPage = ({ onLoginSuccess }) => {
             
             const roleContext = getRoleContext(userData);
 
-            // Student-only users land on student portal; mixed and management users land on main dashboard.
-            if (roleContext.canAccessStudentPortal && !roleContext.canAccessManagementPortal) {
+            // Teachers get their own dashboard; students get student portal; management gets main dashboard.
+            if (roleContext.hasTeaching && !roleContext.canAccessManagementPortal) {
+                navigate('/teacher/dashboard');
+            } else if (roleContext.canAccessStudentPortal && !roleContext.canAccessManagementPortal) {
                 navigate('/student/portal');
             } else {
                 navigate('/');
