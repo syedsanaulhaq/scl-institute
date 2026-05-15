@@ -192,6 +192,11 @@ const StudentAdmissionForm = ({ onSubmitSuccess, isEditMode = false }) => {
             digitalSignature: app.digital_signature || '',
             declarationDate: formatDateForInput(app.declaration_date)
           }));
+
+          // Fetch intakes for the saved programme so the Intake dropdown pre-populates
+          if (app.programme_type_name && app.program_name) {
+            fetchIntakesForProgramme(app.programme_type_name, app.program_name);
+          }
         } else {
           setSubmitStatus({ type: 'error', message: 'Failed to load application data' });
         }
@@ -205,6 +210,14 @@ const StudentAdmissionForm = ({ onSubmitSuccess, isEditMode = false }) => {
 
     loadApplicationData();
   }, [isEditMode, applicationId]);
+
+  // In edit mode, once programmeTypes has been fetched, populate the programmes list
+  // for the already-saved programmeTypeName so the Course dropdown has its options
+  useEffect(() => {
+    if (isEditMode && formData.programmeTypeName && Object.keys(programmeTypes).length > 0) {
+      setAvailablePrograms(programmeTypes[formData.programmeTypeName] || []);
+    }
+  }, [isEditMode, programmeTypes, formData.programmeTypeName]);
 
   const documentTypes = [
     'Passport / ID',
