@@ -2,6 +2,10 @@ import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import {
+    PieChart, Pie, Cell, Tooltip as RTooltip, BarChart, Bar, XAxis, YAxis,
+    CartesianGrid, ResponsiveContainer, Legend
+} from 'recharts';
+import {
     PoundSterling, CheckCircle2, Clock, AlertCircle, RefreshCw,
     Search, ChevronDown, ChevronUp, Edit2, Save, X, Loader2,
     TrendingUp, Users, BadgeCheck, AlertTriangle, FileText
@@ -284,6 +288,82 @@ const StudentFeesManagement = () => {
                     })}
                 </div>
             )}
+
+            {/* Charts */}
+            {stats && fees.length > 0 && (() => {
+                // Donut data — status breakdown by student count
+                const STATUS_CHART = [
+                    { key: 'paid',    label: 'Paid',    color: '#16a34a' },
+                    { key: 'partial', label: 'Partial', color: '#d97706' },
+                    { key: 'unpaid',  label: 'Unpaid',  color: '#dc2626' },
+                    { key: 'overdue', label: 'Overdue', color: '#9f1239' },
+                    { key: 'waived',  label: 'Waived',  color: '#9ca3af' },
+                ];
+                const pieData = STATUS_CHART
+                    .map(s => ({ name: s.label, value: stats[s.key] || 0, color: s.color }))
+                    .filter(d => d.value > 0);
+
+                // Bar data — collected vs balance per course
+                const courseMap = {};
+                fees.forEach(f => {
+                    const key = f.course_code;
+                    if (!courseMap[key]) courseMap[key] = { course: f.course_code, Collected: 0, Outstanding: 0 };
+                    courseMap[key].Collected += parseFloat(f.total_paid) || 0;
+                    courseMap[key].Outstanding += parseFloat(f.balance_due) || 0;
+                });
+                const barData = Object.values(courseMap);
+
+                const fmtK = (v) => v >= 1000 ? `£${(v/1000).toFixed(0)}k` : `£${v}`;
+
+                return (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* Donut — status distribution */}
+                        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
+                            <h3 className="text-sm font-semibold text-gray-700 mb-4">Status Distribution</h3>
+                            <div className="flex items-center gap-4">
+                                <ResponsiveContainer width="55%" height={180}>
+                                    <PieChart>
+                                        <Pie data={pieData} cx="50%" cy="50%" innerRadius={48} outerRadius={75}
+                                            paddingAngle={2} dataKey="value" stroke="none">
+                                            {pieData.map((entry, i) => (
+                                                <Cell key={i} fill={entry.color} />
+                                            ))}
+                                        </Pie>
+                                        <RTooltip formatter={(v, n) => [`${v} student${v !== 1 ? 's' : ''}`, n]} />
+                                    </PieChart>
+                                </ResponsiveContainer>
+                                <div className="flex flex-col gap-2 flex-1">
+                                    {pieData.map(d => (
+                                        <div key={d.name} className="flex items-center justify-between text-xs">
+                                            <div className="flex items-center gap-1.5">
+                                                <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: d.color }} />
+                                                <span className="text-gray-600">{d.name}</span>
+                                            </div>
+                                            <span className="font-semibold text-gray-800">{d.value}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Bar — collected vs outstanding per course */}
+                        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
+                            <h3 className="text-sm font-semibold text-gray-700 mb-4">Collected vs Outstanding by Course</h3>
+                            <ResponsiveContainer width="100%" height={180}>
+                                <BarChart data={barData} barSize={28} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
+                                    <XAxis dataKey="course" tick={{ fontSize: 11, fill: '#6b7280' }} axisLine={false} tickLine={false} />
+                                    <YAxis tickFormatter={fmtK} tick={{ fontSize: 10, fill: '#9ca3af' }} axisLine={false} tickLine={false} width={38} />
+                                    <RTooltip formatter={(v, n) => [`£${v.toLocaleString('en-GB', { minimumFractionDigits: 0 })}`, n]} />
+                                    <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: '11px' }} />
+                                    <Bar dataKey="Collected" fill="#16a34a" radius={[4, 4, 0, 0]} />
+                                    <Bar dataKey="Outstanding" fill="#fbbf24" radius={[4, 4, 0, 0]} />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </div>
+                    </div>
+                );
+            })()}
 
             {/* Status Pills */}
             <div className="flex flex-wrap gap-2">
