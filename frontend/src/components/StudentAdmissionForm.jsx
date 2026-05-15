@@ -611,16 +611,6 @@ const StudentAdmissionForm = ({ onSubmitSuccess, isEditMode = false }) => {
             </p>
           )}
         </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Course Type</label>
-          <input
-            type="text"
-            value={formData.courseType}
-            readOnly
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-600"
-            placeholder="Auto-filled from programme type"
-          />
-        </div>
       </div>
 
       {/* Mode of Study & Entry Route */}
