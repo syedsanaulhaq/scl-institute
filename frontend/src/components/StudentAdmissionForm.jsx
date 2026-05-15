@@ -672,7 +672,7 @@ const StudentAdmissionForm = ({ onSubmitSuccess, isEditMode = false }) => {
         const intake = availableIntakes.find(i => String(i.id) === String(formData.intakeId));
         if (!intake?.courses?.length) return null;
 
-        // Build Year → Semester → courses map (preserving insertion order)
+        // Build Year → Semester → courses map
         const grouped = {};
         for (const c of intake.courses) {
           const yr = c.academic_year || 'Other';
@@ -682,40 +682,33 @@ const StudentAdmissionForm = ({ onSubmitSuccess, isEditMode = false }) => {
           grouped[yr][sem].push(c);
         }
 
-        const yearColors = ['bg-blue-600', 'bg-indigo-600', 'bg-violet-600'];
-
         return (
-          <div className="border border-blue-200 rounded-lg overflow-hidden">
+          <div className="border border-gray-200 rounded-lg divide-y divide-gray-200">
             {/* Header */}
-            <div className="bg-blue-600 px-4 py-2 flex items-center justify-between">
-              <span className="text-sm font-semibold text-white">Courses in this Intake</span>
-              <span className="text-xs bg-white text-blue-600 font-bold rounded-full px-2 py-0.5">{intake.courses.length}</span>
+            <div className="px-4 py-2 flex items-center justify-between bg-gray-50 rounded-t-lg">
+              <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Courses in this Intake</span>
+              <span className="text-xs text-gray-500">{intake.courses.length} total</span>
             </div>
 
-            {Object.entries(grouped).map(([year, semesters], yi) => (
-              <details key={year} open className="group">
-                {/* Year header — clickable to collapse */}
-                <summary className={`flex items-center justify-between px-4 py-2 cursor-pointer select-none ${yearColors[yi % yearColors.length]} text-white`}>
-                  <span className="text-xs font-bold uppercase tracking-wider">{year}</span>
-                  <span className="text-xs opacity-80">
-                    {Object.values(semesters).flat().length} courses
-                  </span>
+            {Object.entries(grouped).map(([year, semesters]) => (
+              <details key={year}>
+                <summary className="flex items-center gap-2 px-4 py-2 cursor-pointer select-none list-none hover:bg-gray-50">
+                  <span className="text-gray-400 text-sm font-bold w-4 text-center details-plus">+</span>
+                  <span className="text-xs font-semibold text-gray-700">{year}</span>
+                  <span className="text-xs text-gray-400 ml-auto">{Object.values(semesters).flat().length} courses</span>
                 </summary>
 
-                {/* Semesters inside this year */}
-                <div className="divide-y divide-blue-100">
+                <div className="divide-y divide-gray-100">
                   {Object.entries(semesters).map(([sem, courses]) => (
-                    <div key={sem} className="bg-white">
-                      {/* Semester sub-header */}
-                      <div className="px-4 py-1.5 bg-blue-50 flex items-center justify-between">
-                        <span className="text-xs font-semibold text-blue-700">{sem}</span>
-                        <span className="text-xs text-blue-400">{courses.length} unit{courses.length !== 1 ? 's' : ''}</span>
+                    <div key={sem}>
+                      <div className="px-8 py-1.5 flex items-center justify-between bg-gray-50">
+                        <span className="text-xs font-medium text-gray-500">{sem}</span>
+                        <span className="text-xs text-gray-400">{courses.length} units</span>
                       </div>
-                      {/* Course rows */}
                       {courses.map(c => (
-                        <div key={c.id} className="flex items-center justify-between px-4 py-2 hover:bg-blue-50 transition-colors">
-                          <span className="text-xs text-gray-800">{c.course_title}</span>
-                          <span className="text-xs text-blue-500 font-mono ml-4 shrink-0">{c.course_code}</span>
+                        <div key={c.id} className="flex items-center justify-between px-8 py-1.5 hover:bg-gray-50">
+                          <span className="text-xs text-gray-700">{c.course_title}</span>
+                          <span className="text-xs text-gray-400 font-mono ml-4 shrink-0">{c.course_code}</span>
                         </div>
                       ))}
                     </div>

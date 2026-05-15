@@ -22,3 +22,9 @@ body {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
 }
+
+/* Collapsible details: + becomes − when open */
+details[open] > summary .details-plus::before { content: '−'; }
+details:not([open]) > summary .details-plus::before { content: '+'; }
+.details-plus { font-size: 0; }
+.details-plus::before { font-size: 0.75rem; }
