@@ -1,0 +1,1 @@
+UPDATE induction_requirements SET description='Total tuition fee: 8500 GBP per year. Approved rates and instalment plan.' WHERE induction_id IN (24,25) AND requirement_area='Student Tuition Fee Structure';
