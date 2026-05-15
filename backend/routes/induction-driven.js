@@ -73,17 +73,36 @@ async function getInductionForCourse(courseCode) {
     if (!courseCode) return null;
     const code = String(courseCode).trim();
 
-    // Try exact match first, then partial (strip cohort suffix like -INFO, -SEP-2025)
+    // 1. Exact match
     let [rows] = await pool.execute(
         `SELECT ci.* FROM course_inductions ci WHERE ci.course_code = ? ORDER BY ci.id DESC LIMIT 1`,
         [code]
     );
 
+    // 2. Try matching via the courses table (course_code → course_title → induction title)
     if (!rows.length) {
-        // Try base programme code (e.g. HND-001 from HND-001-INFO or HND-001-SEP-2025)
+        const [courseRows] = await pool.execute(
+            `SELECT course_title FROM courses WHERE course_code = ? AND course_status = 'active' LIMIT 1`,
+            [code]
+        );
+        if (courseRows.length) {
+            [rows] = await pool.execute(
+                `SELECT ci.* FROM course_inductions ci
+                 WHERE ci.course_title = ? OR ci.course_code = ?
+                 ORDER BY ci.id DESC LIMIT 1`,
+                [courseRows[0].course_title, code]
+            );
+        }
+    }
+
+    // 3. Prefix match — but ONLY for programme-level codes (no module suffix -Yn-Sn-Cn)
+    if (!rows.length) {
         const baseParts = code.split('-').slice(0, 2).join('-');
         [rows] = await pool.execute(
-            `SELECT ci.* FROM course_inductions ci WHERE ci.course_code LIKE ? ORDER BY ci.id DESC LIMIT 1`,
+            `SELECT ci.* FROM course_inductions ci
+             WHERE ci.course_code LIKE ?
+               AND ci.course_code NOT REGEXP '-Y[0-9]+-S[0-9]+'
+             ORDER BY ci.id DESC LIMIT 1`,
             [`${baseParts}%`]
         );
     }
