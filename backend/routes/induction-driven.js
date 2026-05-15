@@ -402,6 +402,14 @@ function toMysqlDate(val) {
     return isNaN(d.getTime()) ? null : d.toISOString().slice(0, 10);
 }
 
+// Helper: normalise any date value to YYYY-MM-DD HH:MM:SS for MySQL DATETIME columns
+function toMysqlDatetime(val) {
+    if (!val) return null;
+    const d = val instanceof Date ? val : new Date(val);
+    if (isNaN(d.getTime())) return null;
+    return d.toISOString().slice(0, 19).replace('T', ' ');
+}
+
 // ══════════════════════════════════════════════════════════════════════════════
 // PUT /api/induction-driven/student-fees/:id
 // Update fee record — mark instalment paid, override amounts, add notes
@@ -480,10 +488,10 @@ router.put('/student-fees/:id', async (req, res) => {
             WHERE id = ?
         `, [
             newTotalFee,
-            i1Amt, toMysqlDate(instalment_1_due || cur.instalment_1_due), i1Paid && !i1Waived ? 1 : 0, i1Paid && !i1Waived ? (instalment_1_paid_at || cur.instalment_1_paid_at || new Date()) : null, i1Waived ? 1 : 0,
-            i2Amt, toMysqlDate(instalment_2_due || cur.instalment_2_due), i2Paid && !i2Waived ? 1 : 0, i2Paid && !i2Waived ? (instalment_2_paid_at || cur.instalment_2_paid_at || new Date()) : null, i2Waived ? 1 : 0,
-            i3Amt, toMysqlDate(instalment_3_due || cur.instalment_3_due), i3Paid && !i3Waived ? 1 : 0, i3Paid && !i3Waived ? (instalment_3_paid_at || cur.instalment_3_paid_at || new Date()) : null, i3Waived ? 1 : 0,
-            i4Amt, toMysqlDate(instalment_4_due || cur.instalment_4_due), i4Paid && !i4Waived ? 1 : 0, i4Paid && !i4Waived ? (instalment_4_paid_at || cur.instalment_4_paid_at || new Date()) : null, i4Waived ? 1 : 0,
+            i1Amt, toMysqlDate(instalment_1_due || cur.instalment_1_due), i1Paid && !i1Waived ? 1 : 0, i1Paid && !i1Waived ? toMysqlDatetime(instalment_1_paid_at || cur.instalment_1_paid_at || new Date()) : null, i1Waived ? 1 : 0,
+            i2Amt, toMysqlDate(instalment_2_due || cur.instalment_2_due), i2Paid && !i2Waived ? 1 : 0, i2Paid && !i2Waived ? toMysqlDatetime(instalment_2_paid_at || cur.instalment_2_paid_at || new Date()) : null, i2Waived ? 1 : 0,
+            i3Amt, toMysqlDate(instalment_3_due || cur.instalment_3_due), i3Paid && !i3Waived ? 1 : 0, i3Paid && !i3Waived ? toMysqlDatetime(instalment_3_paid_at || cur.instalment_3_paid_at || new Date()) : null, i3Waived ? 1 : 0,
+            i4Amt, toMysqlDate(instalment_4_due || cur.instalment_4_due), i4Paid && !i4Waived ? 1 : 0, i4Paid && !i4Waived ? toMysqlDatetime(instalment_4_paid_at || cur.instalment_4_paid_at || new Date()) : null, i4Waived ? 1 : 0,
             additional_costs !== undefined ? additional_costs : cur.additional_costs,
             funding_option !== undefined ? funding_option : cur.funding_option,
             partner_reg_fee !== undefined ? parseFloat(partner_reg_fee) : parseFloat(cur.partner_reg_fee),
