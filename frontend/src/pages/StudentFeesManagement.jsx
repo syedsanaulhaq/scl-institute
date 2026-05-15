@@ -114,16 +114,24 @@ const FeeDetailModal = ({ fee, onClose, onSaved }) => {
                         </div>
                     </div>
 
-                    {/* Instalments */}
+                    {/* Semester charges */}
                     <div>
-                        <h3 className="text-sm font-semibold text-gray-700 mb-2">Instalments</h3>
+                        <h3 className="text-sm font-semibold text-gray-700 mb-2">Semester Charges</h3>
                         <div className="bg-gray-50 rounded-xl p-3">
-                            <InstalmentRow label="Instalment 1" amount={form.instalment_1_amount} due={form.instalment_1_due}
+                            <InstalmentRow label="Year 1 — Semester 1" amount={form.instalment_1_amount} due={form.instalment_1_due}
                                 paid={Boolean(form.instalment_1_paid)} onToggle={() => toggleInstalment(1)} saving={saving} />
-                            <InstalmentRow label="Instalment 2" amount={form.instalment_2_amount} due={form.instalment_2_due}
+                            {parseFloat(form.instalment_2_amount) > 0 && (
+                            <InstalmentRow label="Year 1 — Semester 2" amount={form.instalment_2_amount} due={form.instalment_2_due}
                                 paid={Boolean(form.instalment_2_paid)} onToggle={() => toggleInstalment(2)} saving={saving} />
-                            <InstalmentRow label="Instalment 3" amount={form.instalment_3_amount} due={form.instalment_3_due}
+                            )}
+                            {parseFloat(form.instalment_3_amount) > 0 && (
+                            <InstalmentRow label="Year 2 — Semester 1" amount={form.instalment_3_amount} due={form.instalment_3_due}
                                 paid={Boolean(form.instalment_3_paid)} onToggle={() => toggleInstalment(3)} saving={saving} />
+                            )}
+                            {parseFloat(form.instalment_4_amount) > 0 && (
+                            <InstalmentRow label="Year 2 — Semester 2" amount={form.instalment_4_amount} due={form.instalment_4_due}
+                                paid={Boolean(form.instalment_4_paid)} onToggle={() => toggleInstalment(4)} saving={saving} />
+                            )}
                         </div>
                     </div>
 

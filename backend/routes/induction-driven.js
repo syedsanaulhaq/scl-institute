@@ -281,13 +281,36 @@ router.post('/student-fees/create-from-induction', async (req, res) => {
             }
         }
 
-        // Build instalment schedule (3 equal instalments, 1st on start date, then +3mo, +6mo)
+        // Look up course duration to calculate semester schedule
+        const [courseRows] = await pool.execute(
+            'SELECT duration_months FROM courses WHERE course_code = ? LIMIT 1',
+            [course_code]
+        );
+        const durationMonths  = courseRows.length > 0 ? (parseInt(courseRows[0].duration_months) || 24) : 24;
+        const numSemesters    = Math.ceil(durationMonths / 6); // 2 semesters per year
+
+        // totalFee IS the full course fee — divide equally across semesters
+        const totalCourseFee  = totalFee;
+        const perSem = numSemesters > 0 && totalCourseFee > 0
+            ? parseFloat((totalCourseFee / numSemesters).toFixed(2))
+            : 0;
+        // Last semester absorbs any rounding remainder
+        const lastSem = totalCourseFee > 0
+            ? parseFloat((totalCourseFee - perSem * (numSemesters - 1)).toFixed(2))
+            : 0;
+
+        // Due dates: semester 1 at intake start, then +6mo each
         const startDate = intake_start_date ? new Date(intake_start_date) : new Date();
-        const inst1Due = new Date(startDate);
-        const inst2Due = new Date(startDate); inst2Due.setMonth(inst2Due.getMonth() + 3);
-        const inst3Due = new Date(startDate); inst3Due.setMonth(inst3Due.getMonth() + 6);
-        const perInstalment = totalFee > 0 ? parseFloat((totalFee / 3).toFixed(2)) : 0;
-        const lastInstalment = totalFee > 0 ? parseFloat((totalFee - perInstalment * 2).toFixed(2)) : 0;
+        const addMonths = (d, m) => { const r = new Date(d); r.setMonth(r.getMonth() + m); return r; };
+        const fmt       = (d) => d.toISOString().split('T')[0];
+        const s1Due = fmt(startDate);
+        const s2Due = fmt(addMonths(startDate, 6));
+        const s3Due = fmt(addMonths(startDate, 12));
+        const s4Due = fmt(addMonths(startDate, 18));
+        const s1 = numSemesters >= 1 ? perSem : 0;
+        const s2 = numSemesters >= 2 ? perSem : 0;
+        const s3 = numSemesters >= 3 ? perSem : 0;
+        const s4 = numSemesters >= 4 ? lastSem : 0;
 
         const [result] = await pool.execute(`
             INSERT INTO student_fees 
@@ -295,18 +318,17 @@ router.post('/student-fees/create-from-induction', async (req, res) => {
                  total_fee_gbp, instalment_1_amount, instalment_1_due,
                  instalment_2_amount, instalment_2_due,
                  instalment_3_amount, instalment_3_due,
+                 instalment_4_amount, instalment_4_due,
                  additional_costs, funding_option, partner_reg_fee, exam_fee,
                  fee_status, source, induction_id)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         `, [
             application_id, course_code,
             induction?.course_title || course_code,
             student_name || '', student_email || '',
-            totalFee, perInstalment, inst1Due.toISOString().split('T')[0],
-            perInstalment, inst2Due.toISOString().split('T')[0],
-            lastInstalment, inst3Due.toISOString().split('T')[0],
+            totalCourseFee, s1, s1Due, s2, s2Due, s3, s3Due, s4, s4Due,
             additionalCosts, fundingOption, partnerRegFee, examFee,
-            totalFee > 0 ? 'unpaid' : 'waived',
+            totalCourseFee > 0 ? 'unpaid' : 'waived',
             'induction', inductionId
         ]);
 
@@ -378,10 +400,12 @@ router.put('/student-fees/:id', async (req, res) => {
             instalment_1_paid, instalment_1_paid_at,
             instalment_2_paid, instalment_2_paid_at,
             instalment_3_paid, instalment_3_paid_at,
+            instalment_4_paid, instalment_4_paid_at,
             total_fee_gbp,
             instalment_1_amount, instalment_1_due,
             instalment_2_amount, instalment_2_due,
             instalment_3_amount, instalment_3_due,
+            instalment_4_amount, instalment_4_due,
             additional_costs, funding_option,
             partner_reg_fee, exam_fee,
             fee_status, notes
@@ -395,12 +419,14 @@ router.put('/student-fees/:id', async (req, res) => {
         const i1Paid = instalment_1_paid !== undefined ? Boolean(instalment_1_paid) : Boolean(cur.instalment_1_paid);
         const i2Paid = instalment_2_paid !== undefined ? Boolean(instalment_2_paid) : Boolean(cur.instalment_2_paid);
         const i3Paid = instalment_3_paid !== undefined ? Boolean(instalment_3_paid) : Boolean(cur.instalment_3_paid);
+        const i4Paid = instalment_4_paid !== undefined ? Boolean(instalment_4_paid) : Boolean(cur.instalment_4_paid);
 
         const i1Amt = instalment_1_amount !== undefined ? parseFloat(instalment_1_amount) : parseFloat(cur.instalment_1_amount);
         const i2Amt = instalment_2_amount !== undefined ? parseFloat(instalment_2_amount) : parseFloat(cur.instalment_2_amount);
         const i3Amt = instalment_3_amount !== undefined ? parseFloat(instalment_3_amount) : parseFloat(cur.instalment_3_amount);
+        const i4Amt = instalment_4_amount !== undefined ? parseFloat(instalment_4_amount) : parseFloat(cur.instalment_4_amount || 0);
 
-        const calcTotalPaid = (i1Paid ? i1Amt : 0) + (i2Paid ? i2Amt : 0) + (i3Paid ? i3Amt : 0);
+        const calcTotalPaid = (i1Paid ? i1Amt : 0) + (i2Paid ? i2Amt : 0) + (i3Paid ? i3Amt : 0) + (i4Paid ? i4Amt : 0);
         const newTotalFee = total_fee_gbp !== undefined ? parseFloat(total_fee_gbp) : parseFloat(cur.total_fee_gbp);
 
         // Auto-derive fee_status
@@ -418,6 +444,7 @@ router.put('/student-fees/:id', async (req, res) => {
                 instalment_1_amount = ?, instalment_1_due = ?, instalment_1_paid = ?, instalment_1_paid_at = ?,
                 instalment_2_amount = ?, instalment_2_due = ?, instalment_2_paid = ?, instalment_2_paid_at = ?,
                 instalment_3_amount = ?, instalment_3_due = ?, instalment_3_paid = ?, instalment_3_paid_at = ?,
+                instalment_4_amount = ?, instalment_4_due = ?, instalment_4_paid = ?, instalment_4_paid_at = ?,
                 additional_costs = ?, funding_option = ?,
                 partner_reg_fee = ?, exam_fee = ?,
                 total_paid = ?, fee_status = ?, notes = ?
@@ -427,6 +454,7 @@ router.put('/student-fees/:id', async (req, res) => {
             i1Amt, instalment_1_due || cur.instalment_1_due, i1Paid ? 1 : 0, i1Paid ? (instalment_1_paid_at || cur.instalment_1_paid_at || new Date()) : null,
             i2Amt, instalment_2_due || cur.instalment_2_due, i2Paid ? 1 : 0, i2Paid ? (instalment_2_paid_at || cur.instalment_2_paid_at || new Date()) : null,
             i3Amt, instalment_3_due || cur.instalment_3_due, i3Paid ? 1 : 0, i3Paid ? (instalment_3_paid_at || cur.instalment_3_paid_at || new Date()) : null,
+            i4Amt, instalment_4_due || cur.instalment_4_due, i4Paid ? 1 : 0, i4Paid ? (instalment_4_paid_at || cur.instalment_4_paid_at || new Date()) : null,
             additional_costs !== undefined ? additional_costs : cur.additional_costs,
             funding_option !== undefined ? funding_option : cur.funding_option,
             partner_reg_fee !== undefined ? parseFloat(partner_reg_fee) : parseFloat(cur.partner_reg_fee),
