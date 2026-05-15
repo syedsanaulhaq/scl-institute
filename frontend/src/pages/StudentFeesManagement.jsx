@@ -577,7 +577,6 @@ const StudentFeesManagement = () => {
                 <FeeDetailModal fee={selectedFee} onClose={() => setSelectedFee(null)} onSaved={handleSaved}
                     onInvoice={() => openInvoice(selectedFee.id)} />
             )}
-        </div>
 
             {/* Toast */}
             {toast && (
