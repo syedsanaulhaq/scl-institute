@@ -46,10 +46,18 @@ const ApplicationRequests = () => {
     const [reviewStatus, setReviewStatus] = useState({});
     const [highlightedRef, setHighlightedRef] = useState(searchParams.get('highlight'));
     const [showSuccessMsg, setShowSuccessMsg] = useState(!!highlightedRef);
+    const [validCourseCodes, setValidCourseCodes] = useState(null); // Set of valid codes from courses table
 
     useEffect(() => {
         fetchApplications();
     }, [statusFilter]);
+
+    // Load valid course codes once
+    useEffect(() => {
+        axios.get(`${API_URL}/students/courses?scope=admissions&activeOnly=true`)
+            .then(r => setValidCourseCodes(new Set((r.data?.data || []).map(c => c.course_code))))
+            .catch(() => setValidCourseCodes(new Set()));
+    }, []);
 
     // Auto-dismiss success message after 5 seconds
     useEffect(() => {
@@ -335,7 +343,19 @@ const ApplicationRequests = () => {
                                         </td>
                                         <td className="px-6 py-4">
                                             <p className="text-sm text-gray-900">{app.course_title || 'N/A'}</p>
-                                            <p className="text-xs text-gray-500">{app.course_code || ''}</p>
+                                            <div className="flex items-center gap-1.5 mt-0.5">
+                                                <p className="text-xs text-gray-500">{app.course_code || <span className="italic text-yellow-600">No code</span>}</p>
+                                                {validCourseCodes && app.course_code && !validCourseCodes.has(app.course_code) && (
+                                                    <span title="Course not in system" className="inline-flex items-center gap-0.5 text-xs text-red-600 font-medium">
+                                                        <AlertCircle className="w-3 h-3" /> Invalid
+                                                    </span>
+                                                )}
+                                                {validCourseCodes && !app.course_code && (
+                                                    <span title="No course assigned" className="inline-flex items-center gap-0.5 text-xs text-yellow-600 font-medium">
+                                                        <AlertCircle className="w-3 h-3" /> Unassigned
+                                                    </span>
+                                                )}
+                                            </div>
                                         </td>
                                         <td className="px-6 py-4">
                                             <p className="text-sm text-gray-600">

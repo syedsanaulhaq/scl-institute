@@ -119,6 +119,7 @@ const ApplicationDetail = () => {
     const [error, setError] = useState('');
     const [inductionContext, setInductionContext] = useState(null);
     const [inductionLoading, setInductionLoading] = useState(false);
+    const [validCourse, setValidCourse] = useState(null); // null=unknown, true=valid, false=not in system
 
     useEffect(() => {
         const fetch = async () => {
@@ -138,6 +139,16 @@ const ApplicationDetail = () => {
         };
         fetch();
     }, [id]);
+
+    useEffect(() => {
+        if (!app?.course_code) { setValidCourse(null); return; }
+        axios.get(`${API_URL}/students/courses?scope=admissions&activeOnly=true`)
+            .then(r => {
+                const list = r.data?.data || [];
+                setValidCourse(list.some(c => c.course_code === app.course_code));
+            })
+            .catch(() => setValidCourse(null));
+    }, [app?.course_code]);
 
     useEffect(() => {
         if (!app?.course_code) return;
@@ -245,7 +256,17 @@ const ApplicationDetail = () => {
                         <div className="hidden md:block text-right">
                             <p className="text-blue-300 text-xs uppercase tracking-wide mb-1">Course</p>
                             <p className="text-white font-semibold">{app.course_title || '—'}</p>
-                            <p className="text-blue-200 text-sm font-mono">{app.course_code}</p>
+                            <p className="text-blue-200 text-sm font-mono">{app.course_code || '—'}</p>
+                            {validCourse === false && (
+                                <span className="inline-flex items-center gap-1 mt-1.5 bg-red-500/80 text-white text-xs px-2 py-0.5 rounded-full">
+                                    <AlertCircle className="w-3 h-3" /> Not in system
+                                </span>
+                            )}
+                            {!app.course_code && (
+                                <span className="inline-flex items-center gap-1 mt-1.5 bg-yellow-500/80 text-white text-xs px-2 py-0.5 rounded-full">
+                                    <AlertCircle className="w-3 h-3" /> No course assigned
+                                </span>
+                            )}
                         </div>
                     </div>
                 </div>

@@ -494,6 +494,40 @@ router.get('/programme-intakes', async (req, res) => {
 });
 
 // ===============================================
+// ROUTE: GET /api/students/course-intakes/:courseCode
+// Returns active intakes for a given course code (used by application form)
+// ===============================================
+router.get('/course-intakes/:courseCode', async (req, res) => {
+    try {
+        const { courseCode } = req.params;
+        // Map course code to programme name
+        const [courseRows] = await db.execute(
+            'SELECT course_code, course_title, course_type FROM courses WHERE course_code = ? AND course_status = ? LIMIT 1',
+            [courseCode, 'active']
+        );
+        if (!courseRows.length) {
+            return res.json({ success: true, data: [], message: 'Course not found' });
+        }
+        const course = courseRows[0];
+
+        // Find intakes whose program_name roughly matches the course title
+        const [intakes] = await db.execute(
+            `SELECT id, programme_type_name, program_name, intake_label, intake_start_date, intake_end_date, status
+             FROM programme_intakes
+             WHERE status = 'active'
+               AND (program_name = ? OR program_name LIKE ?)
+             ORDER BY intake_start_date ASC`,
+            [course.course_title, `%${course.course_title.substring(0, 20)}%`]
+        );
+
+        res.json({ success: true, data: intakes });
+    } catch (error) {
+        console.error('[course-intakes GET] Error:', error.message);
+        res.status(500).json({ success: false, message: 'Failed to fetch course intakes', error: error.message });
+    }
+});
+
+// ===============================================
 // ROUTE: POST /api/students/programme-intakes
 // Create a programme intake: creates Moodle cohort + registration rows for all courses in that programme
 // ===============================================
@@ -1370,8 +1404,44 @@ router.get('/courses', async (req, res) => {
             // Fall through to SCL database fallback
         }
 
+        // Primary: use the courses table (official programme registry)
+        console.log('Fetching courses from official courses table');
+        const [officialCourses] = await db.execute(`
+            SELECT
+                id,
+                course_code,
+                course_title,
+                course_type,
+                department,
+                duration_months,
+                credit_points,
+                awarding_body,
+                entry_requirements,
+                full_time_available,
+                part_time_available,
+                online_available,
+                blended_available,
+                course_status,
+                'courses' as source
+            FROM courses
+            WHERE course_status = 'active'
+              AND course_code IS NOT NULL
+            ORDER BY course_title ASC
+        `);
+
+        if (officialCourses.length > 0) {
+            const result = officialCourses.map(c => ({ ...c, is_active: true }));
+            console.log(`✔ Fetched ${result.length} courses from official courses table`);
+            return res.json({
+                success: true,
+                message: `Fetched ${result.length} courses`,
+                data: result,
+                source: 'courses-table'
+            });
+        }
+
         // Fallback to SCL Institute database courses from course_lifecycle_master
-        console.log('Using SCL Institute database courses (course_lifecycle_master) as fallback');
+        console.log('courses table empty — falling back to course_lifecycle_master');
         const fallbackQuery = `
             SELECT
                 id,

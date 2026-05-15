@@ -24,6 +24,8 @@ const StudentApplication = () => {
     const [error, setError] = useState('');
     const [courses, setCourses] = useState([]);
     const [coursesLoading, setCoursesLoading] = useState(true);
+    const [intakes, setIntakes] = useState([]);
+    const [intakesLoading, setIntakesLoading] = useState(false);
     
     const [formData, setFormData] = useState({
         // Personal Information
@@ -94,13 +96,27 @@ const StudentApplication = () => {
         }));
     };
 
-    const handleCourseSelect = (course) => {
+    const handleCourseSelect = async (course) => {
         setFormData(prev => ({
             ...prev,
             course_code: course.course_code,
             course_title: course.course_title,
-            course_type: course.course_type
+            course_type: course.course_type,
+            intake_start_date: '',
+            mode_of_study: course.full_time_available ? 'Full-time' : course.part_time_available ? 'Part-time' : ''
         }));
+        // Fetch intakes for this course
+        try {
+            setIntakesLoading(true);
+            setIntakes([]);
+            const res = await axios.get(`${API_URL}/students/course-intakes/${encodeURIComponent(course.course_code)}`);
+            setIntakes(res.data?.data || []);
+        } catch (err) {
+            console.error('Error fetching intakes:', err);
+            setIntakes([]);
+        } finally {
+            setIntakesLoading(false);
+        }
     };
 
     const handleSubmit = async (e) => {
@@ -447,7 +463,7 @@ const StudentApplication = () => {
                             {coursesLoading ? (
                                 <div className="flex items-center justify-center py-8">
                                     <Loader className="h-6 w-6 animate-spin text-blue-600 mr-2" />
-                                    <span className="text-gray-600">Loading courses from Moodle...</span>
+                                    <span className="text-gray-600">Loading available courses...</span>
                                 </div>
                             ) : courses.length === 0 ? (
                                 <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
@@ -482,7 +498,7 @@ const StudentApplication = () => {
                                     {formData.course_code && (
                                         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
                                             <p className="text-sm font-semibold text-gray-900">Selected Course:</p>
-                                            <p className="text-gray-700 mt-1">{formData.course_title} ({formData.course_code})</p>
+                                            <p className="text-gray-700 mt-1">{formData.course_title} <span className="text-xs text-blue-600">({formData.course_code})</span></p>
                                         </div>
                                     )}
                                 </>
@@ -509,16 +525,38 @@ const StudentApplication = () => {
                                 </div>
                                 <div>
                                     <label className="block text-sm font-semibold text-gray-700 mb-2">
-                                        Intake Start Date *
+                                        Intake / Start Date *
                                     </label>
-                                    <input
-                                        type="date"
-                                        name="intake_start_date"
-                                        value={formData.intake_start_date}
-                                        onChange={handleInputChange}
-                                        required
-                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
-                                    />
+                                    {intakesLoading ? (
+                                        <div className="flex items-center gap-2 py-3 text-sm text-gray-500">
+                                            <Loader className="h-4 w-4 animate-spin" /> Loading intakes...
+                                        </div>
+                                    ) : intakes.length > 0 ? (
+                                        <select
+                                            name="intake_start_date"
+                                            value={formData.intake_start_date}
+                                            onChange={handleInputChange}
+                                            required
+                                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
+                                        >
+                                            <option value="">Select an intake</option>
+                                            {intakes.map(intake => (
+                                                <option key={intake.id} value={intake.intake_start_date || intake.intake_label}>
+                                                    {intake.intake_label}{intake.intake_start_date ? ` — ${new Date(intake.intake_start_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}` : ''}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    ) : (
+                                        <input
+                                            type="date"
+                                            name="intake_start_date"
+                                            value={formData.intake_start_date}
+                                            onChange={handleInputChange}
+                                            required
+                                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
+                                            placeholder={formData.course_code ? 'No scheduled intakes — enter date manually' : 'Please select a course first'}
+                                        />
+                                    )}
                                 </div>
                                 <div>
                                     <label className="block text-sm font-semibold text-gray-700 mb-2">
