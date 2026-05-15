@@ -611,10 +611,6 @@ const StudentAdmissionForm = ({ onSubmitSuccess, isEditMode = false }) => {
             </p>
           )}
         </div>
-      </div>
-
-      {/* Mode of Study & Entry Route */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">Mode of Study *</label>
           <select
@@ -629,6 +625,10 @@ const StudentAdmissionForm = ({ onSubmitSuccess, isEditMode = false }) => {
             <option value="Blended">Blended</option>
           </select>
         </div>
+      </div>
+
+      {/* Entry Route & Start Date */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">Entry Route *</label>
           <select
@@ -642,10 +642,6 @@ const StudentAdmissionForm = ({ onSubmitSuccess, isEditMode = false }) => {
             <option value="Mature Student">Mature Student</option>
           </select>
         </div>
-      </div>
-
-      {/* Intake Start Date */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">Intake / Start Date *</label>
           <input
