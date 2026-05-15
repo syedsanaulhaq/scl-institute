@@ -440,13 +440,18 @@ router.put('/student-fees/:id', async (req, res) => {
         const calcTotalPaid = (i1Paid ? i1Amt : 0) + (i2Paid ? i2Amt : 0) + (i3Paid ? i3Amt : 0) + (i4Paid ? i4Amt : 0);
         const newTotalFee = total_fee_gbp !== undefined ? parseFloat(total_fee_gbp) : parseFloat(cur.total_fee_gbp);
 
-        // Auto-derive fee_status
-        let derivedStatus = fee_status || cur.fee_status;
-        if (!fee_status) {
-            if (newTotalFee === 0) derivedStatus = 'waived';
-            else if (calcTotalPaid >= newTotalFee) derivedStatus = 'paid';
-            else if (calcTotalPaid > 0) derivedStatus = 'partial';
-            else derivedStatus = 'unpaid';
+        // Auto-derive fee_status; only honour an explicit 'waived' override from the admin
+        let derivedStatus;
+        if (fee_status === 'waived') {
+            derivedStatus = 'waived';
+        } else if (newTotalFee === 0) {
+            derivedStatus = 'waived';
+        } else if (calcTotalPaid >= newTotalFee) {
+            derivedStatus = 'paid';
+        } else if (calcTotalPaid > 0) {
+            derivedStatus = 'partial';
+        } else {
+            derivedStatus = 'unpaid';
         }
 
         await pool.execute(`
