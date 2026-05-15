@@ -67,7 +67,6 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
     const systemAdminMenuItems = isSystemAdmin
         ? [
             { name: 'Overview & Reports', icon: BarChart3, path: '/' },
-            { name: 'Module Launcher', icon: LayoutDashboard, path: '/modules' },
             { name: 'Admissions Hub', icon: BarChart3, path: '/admin/dashboard' },
             {
                 name: 'Student Admission',
