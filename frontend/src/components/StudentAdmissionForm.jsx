@@ -168,8 +168,8 @@ const StudentAdmissionForm = ({ onSubmitSuccess, isEditMode = false }) => {
             townCity: app.town_city || '',
             postcode: app.postcode || '',
             countryOfResidence: app.country_of_residence || '',
-            programmeTypeName: app.programme_type_name || '',
-            programName: app.program_name || '',
+            programmeTypeName: app.programme_type_name || app.course_type || '',
+            programName: app.program_name || app.course_title || '',
             intakeId: app.intake_id || '',
             courseTitle: app.course_title || '',
             courseCode: app.course_code || '',
@@ -194,8 +194,10 @@ const StudentAdmissionForm = ({ onSubmitSuccess, isEditMode = false }) => {
           }));
 
           // Fetch intakes for the saved programme so the Intake dropdown pre-populates
-          if (app.programme_type_name && app.program_name) {
-            fetchIntakesForProgramme(app.programme_type_name, app.program_name);
+          const resolvedType = app.programme_type_name || app.course_type;
+          const resolvedName = app.program_name || app.course_title;
+          if (resolvedType && resolvedName) {
+            fetchIntakesForProgramme(resolvedType, resolvedName);
           }
         } else {
           setSubmitStatus({ type: 'error', message: 'Failed to load application data' });
