@@ -1471,13 +1471,19 @@ router.post('/admin/teacher-enroll', async (req, res) => {
         }
         enrolId = enrolRows[0].id;
 
-        // Insert role assignment (ignore if already exists)
-        await safeMoodleSelectRows(
-            `INSERT IGNORE INTO mdl_role_assignments
-             (roleid, contextid, userid, timemodified, modifierid, component, itemid, sortorder)
-             VALUES (?, ?, ?, ?, 2, '', 0, 0)`,
-            [roleId, contextId, moodleUserId, now]
-        ).catch(() => null);
+        // Insert role assignment only if not already present
+        const existingRa = await safeMoodleSelectRows(
+            'SELECT id FROM mdl_role_assignments WHERE roleid=? AND contextid=? AND userid=? AND component="" AND itemid=0 LIMIT 1',
+            [roleId, contextId, moodleUserId]
+        ).catch(() => []);
+        if (!existingRa || existingRa.length === 0) {
+            await safeMoodleSelectRows(
+                `INSERT INTO mdl_role_assignments
+                 (roleid, contextid, userid, timemodified, modifierid, component, itemid, sortorder)
+                 VALUES (?, ?, ?, ?, 2, '', 0, 0)`,
+                [roleId, contextId, moodleUserId, now]
+            ).catch(() => null);
+        }
 
         // Insert user enrolment (ignore if already exists)
         await safeMoodleSelectRows(
