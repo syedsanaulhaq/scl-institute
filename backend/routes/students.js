@@ -1328,7 +1328,7 @@ router.get('/teacher-notifications', async (req, res) => {
 router.get('/admin/teachers', async (req, res) => {
     try {
         // Get all users from SCL DB that have a teaching role
-        const [sclTeachers] = await pool.execute(
+        const [sclTeachers] = await db.execute(
             `SELECT id, first_name, last_name, email, role, created_at
              FROM users
              WHERE role LIKE '%teacher%' OR role LIKE '%editingteacher%' OR role LIKE '%Teacher%'
