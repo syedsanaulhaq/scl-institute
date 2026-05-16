@@ -1,4 +1,5 @@
 ﻿import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { 
     Users, 
     TrendingUp, 
@@ -252,9 +253,9 @@ const StudentReport = () => {
                                 <tr key={student.id} className="hover:bg-gray-50">
                                     <td className="px-6 py-4">
                                         <div>
-                                            <div className="text-sm font-medium text-gray-900">
+                                            <Link to={`/student-detail/${student.id}`} className="text-sm font-medium text-scl-purple hover:underline">
                                                 {student.first_name} {student.last_name}
-                                            </div>
+                                            </Link>
                                             <div className="text-sm text-gray-500">{student.email}</div>
                                         </div>
                                     </td>
