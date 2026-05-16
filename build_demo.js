@@ -383,9 +383,9 @@ footer a{color:#3b82f6;text-decoration:none}
   <div class="nav-links">
     <a href="#login">🔐 Login</a>
     <a href="#student" class="student">👤 Student</a>
+    <a href="#cadmin" class="cadmin">🏛️ College Admin</a>
     <a href="#teacher" class="teacher">🎓 Teacher</a>
     <a href="#manager" class="manager">⚙️ Manager</a>
-    <a href="#cadmin" class="cadmin">🏛️ College Admin</a>
     <a href="https://system.sclsandbox.xyz" target="_blank" class="nav-live">Open Live Site →</a>
   </div>
 </nav>
@@ -436,6 +436,29 @@ ${roleSection(
 )}
 
 ${roleSection(
+  'cadmin','#d97706','rgba(217,119,6,0.1)','🏛️','College Admin',
+  'College Admins handle day-to-day admissions, student records, course intake management, and LMS enrolment coordination.',
+  'COLLEGE ADMIN ROLE',
+  cadminFlow(),
+  [
+    step(1,'Login','College Admin logs in with their credentials. The system detects the COLLEGEADMIN role and loads the College Admin portal with access to admissions and student management.','s00-login-screen.jpg','Login Screen','URL: /login','https://system.sclsandbox.xyz/login'),
+    step(2,'College Admin Dashboard','Overview of admissions pipeline, student counts, application statistics, and quick-action buttons for common tasks.','s31-cadmin-dashboard.jpg','College Admin Dashboard','URL: /','https://system.sclsandbox.xyz/'),
+    step(3,'Student Applications','Review and process incoming student applications — view applicant details, uploaded documents, and update application status (accept/reject/pending).','s32-cadmin-applications.jpg','College Admin Applications','URL: /applications','https://system.sclsandbox.xyz/applications'),
+    step(4,'Student Management','Full student records list — search by name, ID, or programme. View individual student profiles, academic records, and contact information.','s33-cadmin-students.jpg','Student Management','URL: /students','https://system.sclsandbox.xyz/students'),
+    step(5,'Course Intakes','Manage programme intake schedules — create new cohorts, set intake dates, assign students to intakes, and monitor capacity across all programmes.','s34-cadmin-intakes.jpg','Course Intakes','URL: /programme-intakes','https://system.sclsandbox.xyz/programme-intakes'),
+  ].join(''),
+  `<div class="video-embed-block">
+    <h3>🎬 College Admin Overview</h3>
+    <div class="video-player-wrap">
+      <video controls preload="metadata" poster="">
+        <source src="/demo/videos/cadmin-walkthrough.mp4" type="video/mp4">
+        Your browser does not support the video tag.
+      </video>
+    </div>
+  </div>`
+)}
+
+${roleSection(
   'teacher','#059669','rgba(5,150,105,0.1)','🎓','Teacher Portal',
   'Teachers manage their courses, set assessments, track student progress, and view course reports via Moodle LMS integration.',
   'TEACHER ROLE',
@@ -466,29 +489,6 @@ ${roleSection(
   ].join('')
 )}
 
-${roleSection(
-  'cadmin','#d97706','rgba(217,119,6,0.1)','🏛️','College Admin',
-  'College Admins handle day-to-day admissions, student records, course intake management, and LMS enrolment coordination.',
-  'COLLEGE ADMIN ROLE',
-  cadminFlow(),
-  [
-    step(1,'Login','College Admin logs in with their credentials. The system detects the COLLEGEADMIN role and loads the College Admin portal with access to admissions and student management.','s00-login-screen.jpg','Login Screen','URL: /login','https://system.sclsandbox.xyz/login'),
-    step(2,'College Admin Dashboard','Overview of admissions pipeline, student counts, application statistics, and quick-action buttons for common tasks.','s31-cadmin-dashboard.jpg','College Admin Dashboard','URL: /','https://system.sclsandbox.xyz/'),
-    step(3,'Student Applications','Review and process incoming student applications — view applicant details, uploaded documents, and update application status (accept/reject/pending).','s32-cadmin-applications.jpg','College Admin Applications','URL: /applications','https://system.sclsandbox.xyz/applications'),
-    step(4,'Student Management','Full student records list — search by name, ID, or programme. View individual student profiles, academic records, and contact information.','s33-cadmin-students.jpg','Student Management','URL: /students','https://system.sclsandbox.xyz/students'),
-    step(5,'Course Intakes','Manage programme intake schedules — create new cohorts, set intake dates, assign students to intakes, and monitor capacity across all programmes.','s34-cadmin-intakes.jpg','Course Intakes','URL: /programme-intakes','https://system.sclsandbox.xyz/programme-intakes'),
-  ].join(''),
-  `<div class="video-embed-block">
-    <h3>🎬 College Admin Overview</h3>
-    <div class="video-player-wrap">
-      <video controls preload="metadata" poster="">
-        <source src="/demo/videos/cadmin-walkthrough.mp4" type="video/mp4">
-        Your browser does not support the video tag.
-      </video>
-    </div>
-  </div>`
-)}
-
 <footer>
   <p>SCL Institute Management Portal &nbsp;|&nbsp; <a href="https://system.sclsandbox.xyz" target="_blank">system.sclsandbox.xyz</a> &nbsp;|&nbsp; Demo generated May 2026</p>
   <p style="margin-top:0.5rem">Screenshots captured live from production system &nbsp;•&nbsp; All 4 roles: Student · Teacher · Manager · College Admin</p>
@@ -508,7 +508,7 @@ function closeLightbox(){
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeLightbox()});
 
 // Active nav highlight on scroll
-const sections=['login','student','teacher','manager','cadmin'];
+const sections=['login','student','cadmin','teacher','manager'];
 const links=document.querySelectorAll('.nav-links a');
 const obs=new IntersectionObserver(entries=>{
   entries.forEach(e=>{
