@@ -19,127 +19,95 @@ import {
     Building2
 } from 'lucide-react';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
+
 const StudentDetail = () => {
     const { id } = useParams();
     const navigate = useNavigate();
     const [student, setStudent] = useState(null);
     const [loading, setLoading] = useState(true);
 
-    // Mock detailed student data - replace with API call
-    const mockStudentDetails = {
-        1: {
-            id: 1,
-            // Personal Information
-            fullName: 'Ahmed Hassan',
-            firstName: 'Ahmed',
-            lastName: 'Hassan',
-            email: 'ahmed.hassan@email.com',
-            phone: '+971-50-123-4567',
-            dateOfBirth: '1998-05-12',
-            nationality: 'UAE',
-            gender: 'Male',
-            maritalStatus: 'Single',
-            
-            // Address Information
-            currentAddress: '123 Al Wasl Road, Dubai, UAE',
-            permanentAddress: '456 Sheikh Zayed Road, Dubai, UAE',
-            city: 'Dubai',
-            state: 'Dubai',
-            postalCode: '12345',
-            country: 'UAE',
-            
-            // Emergency Contact
-            emergencyContactName: 'Sarah Hassan',
-            emergencyContactRelation: 'Mother',
-            emergencyContactPhone: '+971-50-987-6543',
-            emergencyContactEmail: 'sarah.hassan@email.com',
-            
-            // Academic Information
-            course: 'Computer Science',
-            courseType: 'Bachelor',
-            studyMode: 'Full-time',
-            intakeYear: '2026',
-            intakeSemester: 'Fall',
-            previousEducation: 'High School Diploma',
-            previousInstitution: 'Dubai International School',
-            previousGPA: '3.8/4.0',
-            
-            // Application Details
-            applicationDate: '2026-01-15',
-            applicationId: 'SCL-2026-001',
-            status: 'approved',
-            reviewedBy: 'Dr. Mohammed Al-Rashid',
-            reviewDate: '2026-01-18',
-            reviewNotes: 'Excellent academic background and strong motivation. Approved for admission.',
-            
-            // Documents
-            documents: [
-                { name: 'Academic Transcripts', status: 'verified', uploadDate: '2026-01-15' },
-                { name: 'Passport Copy', status: 'verified', uploadDate: '2026-01-15' },
-                { name: 'Personal Statement', status: 'verified', uploadDate: '2026-01-15' },
-                { name: 'Recommendation Letters', status: 'pending', uploadDate: '2026-01-16' }
-            ],
-            
-            // Additional Information
-            englishProficiency: 'IELTS 7.5',
-            computerSkills: 'Advanced',
-            workExperience: 'Internship at Tech Solutions Dubai (6 months)',
-            hobbies: 'Programming, Reading, Football',
-            careerGoals: 'Software Engineer specializing in AI and Machine Learning',
-            
-            // Financial Information
-            tuitionFeeStatus: 'Paid',
-            scholarshipApplied: true,
-            scholarshipStatus: 'Under Review',
-            financialAidRequired: false
-        }
-    };
-
     useEffect(() => {
-        // Simulate API call
-        setTimeout(() => {
-            const studentData = mockStudentDetails[parseInt(id)];
-            if (studentData) {
-                setStudent(studentData);
+        const fetchStudent = async () => {
+            try {
+                const res = await fetch(`${API_URL}/students/applications/${id}`);
+                if (res.ok) {
+                    const result = await res.json();
+                    const app = result.data?.application || result.data || result;
+                    const docs = result.data?.documents || [];
+                    setStudent({
+                        id: app.id,
+                        applicationId: app.application_reference || `APP-${app.id}`,
+                        firstName: app.first_name || '',
+                        lastName: app.last_name || '',
+                        fullName: `${app.first_name || ''} ${app.last_name || ''}`.trim(),
+                        email: app.email || '',
+                        phone: app.contact_number || 'N/A',
+                        dateOfBirth: app.date_of_birth || null,
+                        nationality: app.nationality || 'N/A',
+                        gender: app.gender || 'N/A',
+                        maritalStatus: 'N/A',
+                        currentAddress: [app.address_line1, app.address_line2].filter(Boolean).join(', ') || 'N/A',
+                        city: app.town_city || 'N/A',
+                        country: app.country_of_residence || 'N/A',
+                        course: app.course_title || 'N/A',
+                        courseType: app.course_type || 'N/A',
+                        studyMode: app.mode_of_study || 'N/A',
+                        intakeYear: app.intake_start_date ? new Date(app.intake_start_date).getFullYear() : 'N/A',
+                        intakeSemester: 'N/A',
+                        previousEducation: app.highest_qualification || 'N/A',
+                        previousInstitution: app.institution_name || 'N/A',
+                        previousGPA: 'N/A',
+                        status: app.application_status || 'unknown',
+                        applicationDate: app.submitted_at || app.created_at,
+                        reviewedBy: 'N/A',
+                        reviewDate: app.updated_at,
+                        reviewNotes: 'No review notes available.',
+                        englishProficiency: app.english_proficiency
+                            ? `${app.english_proficiency}${app.english_score ? ' ' + app.english_score : ''}`
+                            : 'N/A',
+                        workExperience: app.relevant_work_experience || 'N/A',
+                        emergencyContactName: 'N/A',
+                        emergencyContactRelation: 'N/A',
+                        emergencyContactPhone: 'N/A',
+                        emergencyContactEmail: 'N/A',
+                        documents: docs.map(d => ({
+                            name: d.document_type ? d.document_type.replace(/_/g, ' ') : (d.original_filename || 'Document'),
+                            status: 'uploaded',
+                            uploadDate: d.upload_date || app.created_at
+                        }))
+                    });
+                }
+            } catch (_e) {
+                // student stays null → shows "Not Found"
+            } finally {
+                setLoading(false);
             }
-            setLoading(false);
-        }, 500);
+        };
+        fetchStudent();
     }, [id]);
 
     const getStatusIcon = (status) => {
-        switch (status) {
-            case 'approved':
-                return <CheckCircle className="w-5 h-5 text-green-600" />;
-            case 'pending':
-                return <Clock className="w-5 h-5 text-yellow-600" />;
-            case 'under_review':
-                return <AlertCircle className="w-5 h-5 text-blue-600" />;
-            case 'rejected':
-                return <XCircle className="w-5 h-5 text-red-600" />;
-            default:
-                return <Clock className="w-5 h-5 text-gray-600" />;
-        }
+        if (['accepted', 'conditional_accept'].includes(status))
+            return <CheckCircle className="w-5 h-5 text-green-600" />;
+        if (status === 'rejected')
+            return <XCircle className="w-5 h-5 text-red-600" />;
+        if (['submitted', 'under_review', 'interview_scheduled'].includes(status))
+            return <AlertCircle className="w-5 h-5 text-blue-600" />;
+        return <Clock className="w-5 h-5 text-gray-600" />;
     };
 
     const getStatusBadge = (status) => {
-        const statusStyles = {
-            approved: 'bg-green-100 text-green-800 border-green-200',
-            pending: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-            under_review: 'bg-blue-100 text-blue-800 border-blue-200',
-            rejected: 'bg-red-100 text-red-800 border-red-200'
-        };
-        
-        const statusLabels = {
-            approved: 'Approved',
-            pending: 'Pending',
-            under_review: 'Under Review',
-            rejected: 'Rejected'
-        };
-
+        let style = 'bg-gray-100 text-gray-800 border-gray-200';
+        if (['accepted', 'conditional_accept'].includes(status)) style = 'bg-green-100 text-green-800 border-green-200';
+        else if (status === 'rejected') style = 'bg-red-100 text-red-800 border-red-200';
+        else if (['submitted', 'under_review', 'interview_scheduled'].includes(status)) style = 'bg-blue-100 text-blue-800 border-blue-200';
+        else if (status === 'deferred') style = 'bg-purple-100 text-purple-800 border-purple-200';
+        const label = status ? status.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : 'Unknown';
         return (
-            <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border ${statusStyles[status]}`}>
+            <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border ${style}`}>
                 {getStatusIcon(status)}
-                <span className="ml-2">{statusLabels[status]}</span>
+                <span className="ml-2">{label}</span>
             </span>
         );
     };
@@ -243,7 +211,7 @@ const StudentDetail = () => {
                             </div>
                             <div className="flex items-center text-gray-600">
                                 <Calendar className="w-4 h-4 mr-2" />
-                                Applied on {new Date(student.applicationDate).toLocaleDateString('en-GB')}
+                                Applied on {student.applicationDate ? new Date(student.applicationDate).toLocaleDateString('en-GB') : 'N/A'}
                             </div>
                         </div>
                     </div>
@@ -265,7 +233,7 @@ const StudentDetail = () => {
                         </div>
                         <div className="flex justify-between">
                             <span className="text-gray-600">Date of Birth:</span>
-                            <span className="font-medium">{new Date(student.dateOfBirth).toLocaleDateString('en-GB')}</span>
+                            <span className="font-medium">{student.dateOfBirth ? new Date(student.dateOfBirth).toLocaleDateString('en-GB') : 'N/A'}</span>
                         </div>
                         <div className="flex justify-between">
                             <span className="text-gray-600">Nationality:</span>
@@ -380,21 +348,23 @@ const StudentDetail = () => {
                     Submitted Documents
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {student.documents.map((doc, index) => (
+                    {student.documents && student.documents.length > 0 ? student.documents.map((doc, index) => (
                         <div key={index} className="border border-gray-200 rounded-lg p-4">
                             <div className="flex items-center justify-between mb-2">
                                 <span className="font-medium text-gray-900">{doc.name}</span>
                                 <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                    doc.status === 'verified' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                                    doc.status === 'verified' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
                                 }`}>
-                                    {doc.status === 'verified' ? 'Verified' : 'Pending'}
+                                    {doc.status === 'verified' ? 'Verified' : 'Uploaded'}
                                 </span>
                             </div>
                             <p className="text-sm text-gray-600">
-                                Uploaded: {new Date(doc.uploadDate).toLocaleDateString('en-GB')}
+                                Uploaded: {doc.uploadDate ? new Date(doc.uploadDate).toLocaleDateString('en-GB') : 'N/A'}
                             </p>
                         </div>
-                    ))}
+                    )) : (
+                        <p className="text-gray-500 text-sm col-span-2">No documents uploaded.</p>
+                    )}
                 </div>
             </div>
 
@@ -411,7 +381,7 @@ const StudentDetail = () => {
                     </div>
                     <div className="flex justify-between">
                         <span className="text-gray-600">Review Date:</span>
-                        <span className="font-medium">{new Date(student.reviewDate).toLocaleDateString('en-GB')}</span>
+                        <span className="font-medium">{student.reviewDate ? new Date(student.reviewDate).toLocaleDateString('en-GB') : 'N/A'}</span>
                     </div>
                     <div>
                         <span className="text-gray-600 block mb-2">Review Notes:</span>
