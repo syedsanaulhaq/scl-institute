@@ -3,7 +3,7 @@ import axios from 'axios';
 import {
     HelpCircle, MessageSquare, FileText, Scale, Accessibility,
     Shield, RefreshCw, ChevronDown, ChevronUp, CheckCircle,
-    Clock, AlertCircle, XCircle, User, Mail, Calendar
+    Clock, AlertCircle, XCircle, User, Mail, Calendar, Send
 } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
@@ -48,6 +48,8 @@ function ExpandRow({ label, children }) {
     );
 }
 
+const fmtTime = (d) => d ? new Date(d).toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
+
 // ── Support Requests Tab ─────────────────────────────────────────────────────
 function SupportRequestsTab() {
     const [items, setItems] = useState([]);
@@ -55,10 +57,11 @@ function SupportRequestsTab() {
     const [expanded, setExpanded] = useState(null);
     const [statusFilter, setStatusFilter] = useState('all');
     const [updating, setUpdating] = useState(null);
-    const [replyDraft, setReplyDraft] = useState({});
-    const [savingReply, setSavingReply] = useState(null);
 
-    const fetch = async () => {
+    // per-request reply threads: { [requestId]: { replies: [], loading, draft, sending } }
+    const [threads, setThreads] = useState({});
+
+    const fetchList = async () => {
         setLoading(true);
         try {
             const p = statusFilter !== 'all' ? { status: statusFilter } : {};
@@ -68,34 +71,49 @@ function SupportRequestsTab() {
         setLoading(false);
     };
 
-    useEffect(() => { fetch(); }, [statusFilter]);
+    useEffect(() => { fetchList(); }, [statusFilter]);
+
+    const toggleExpand = async (id) => {
+        if (expanded === id) { setExpanded(null); return; }
+        setExpanded(id);
+        // Load replies if not yet loaded
+        if (!threads[id]) {
+            setThreads(t => ({ ...t, [id]: { replies: [], loading: true, draft: '', sending: false } }));
+            try {
+                const r = await axios.get(`${API_URL}/support/admin/requests/${id}/replies`);
+                setThreads(t => ({ ...t, [id]: { ...t[id], replies: r.data.replies || [], loading: false } }));
+            } catch {
+                setThreads(t => ({ ...t, [id]: { ...t[id], loading: false } }));
+            }
+        }
+    };
+
+    const setDraft = (id, val) =>
+        setThreads(t => ({ ...t, [id]: { ...t[id], draft: val } }));
+
+    const postReply = async (id) => {
+        const draft = (threads[id]?.draft || '').trim();
+        if (!draft) return;
+        setThreads(t => ({ ...t, [id]: { ...t[id], sending: true } }));
+        try {
+            const r = await axios.post(`${API_URL}/support/admin/requests/${id}/replies`, { message: draft, sender_name: 'Admin' });
+            setThreads(t => ({
+                ...t,
+                [id]: { ...t[id], replies: [...(t[id]?.replies || []), r.data.reply], draft: '', sending: false }
+            }));
+        } catch {
+            setThreads(t => ({ ...t, [id]: { ...t[id], sending: false } }));
+            alert('Failed to send reply. Please try again.');
+        }
+    };
 
     const updateStatus = async (id, status) => {
         setUpdating(id);
         try {
-            const admin_reply = (replyDraft[id] ?? '').trim();
-            await axios.put(`${API_URL}/support/admin/requests/${id}`, { status, admin_reply });
-            setItems(prev => prev.map(i => i.id === id ? { ...i, status, admin_reply } : i));
+            await axios.put(`${API_URL}/support/admin/requests/${id}`, { status });
+            setItems(prev => prev.map(i => i.id === id ? { ...i, status } : i));
         } catch (e) { console.error(e); }
         setUpdating(null);
-    };
-
-    const saveReply = async (id) => {
-        const admin_reply = (replyDraft[id] ?? '').trim();
-        if (!admin_reply) return;
-        setSavingReply(id);
-        try {
-            const current = items.find((i) => i.id === id);
-            const status = current?.status || 'open';
-            await axios.put(`${API_URL}/support/admin/requests/${id}`, { status, admin_reply });
-            setItems(prev => prev.map(i => i.id === id ? { ...i, admin_reply } : i));
-            // Clear the textarea after successful save
-            setReplyDraft(p => { const n = { ...p }; delete n[id]; return n; });
-        } catch (e) {
-            console.error(e);
-            alert('Failed to save reply. Please try again.');
-        }
-        setSavingReply(null);
     };
 
     return (
@@ -109,7 +127,7 @@ function SupportRequestsTab() {
                     <option value="resolved">Resolved</option>
                     <option value="closed">Closed</option>
                 </select>
-                <button onClick={fetch} className="p-2 rounded-lg border border-slate-200 hover:bg-slate-50">
+                <button onClick={fetchList} className="p-2 rounded-lg border border-slate-200 hover:bg-slate-50">
                     <RefreshCw className="w-4 h-4 text-slate-500" />
                 </button>
                 <span className="text-sm text-slate-500 ml-auto">{items.length} request(s)</span>
@@ -118,80 +136,113 @@ function SupportRequestsTab() {
             {loading ? <p className="text-center py-10 text-slate-400">Loading…</p> :
              items.length === 0 ? <p className="text-center py-10 text-slate-400">No support requests found.</p> : (
                 <div className="space-y-2">
-                    {items.map(item => (
-                        <div key={item.id} className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
-                            <button className="w-full flex items-center gap-4 px-5 py-3 text-left hover:bg-slate-50 transition"
-                                onClick={() => setExpanded(expanded === item.id ? null : item.id)}>
-                                <HelpCircle className="w-4 h-4 text-indigo-400 flex-shrink-0" />
-                                <div className="flex-1 min-w-0">
-                                    <p className="font-medium text-sm text-slate-800 truncate">{item.subject}</p>
-                                    <p className="text-xs text-slate-500">{item.student_name || item.student_email} · {fmt(item.created_at)}</p>
-                                </div>
-                                <Badge value={item.type} />
-                                <Badge value={item.status} />
-                                {expanded === item.id ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
-                            </button>
-                            {expanded === item.id && (
-                                <div className="border-t border-slate-100 px-5 py-4 bg-slate-50">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                                        <ExpandRow label="Student"><span className="flex items-center gap-1"><User className="w-3 h-3" />{item.student_name}</span></ExpandRow>
-                                        <ExpandRow label="Email"><span className="flex items-center gap-1"><Mail className="w-3 h-3" />{item.student_email}</span></ExpandRow>
-                                        <ExpandRow label="Type"><Badge value={item.type} /></ExpandRow>
-                                        <ExpandRow label="Submitted"><span className="flex items-center gap-1"><Calendar className="w-3 h-3" />{fmt(item.created_at)}</span></ExpandRow>
-                                        <ExpandRow label="Description"><p className="whitespace-pre-wrap">{item.description}</p></ExpandRow>
+                    {items.map(item => {
+                        const thread = threads[item.id];
+                        const isOpen = expanded === item.id;
+                        return (
+                            <div key={item.id} className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
+                                {/* Row header */}
+                                <button className="w-full flex items-center gap-4 px-5 py-3 text-left hover:bg-slate-50 transition"
+                                    onClick={() => toggleExpand(item.id)}>
+                                    <HelpCircle className="w-4 h-4 text-indigo-400 flex-shrink-0" />
+                                    <div className="flex-1 min-w-0">
+                                        <p className="font-medium text-sm text-slate-800 truncate">{item.subject}</p>
+                                        <p className="text-xs text-slate-500">{item.student_name || item.student_email} · {fmt(item.created_at)}</p>
                                     </div>
+                                    <Badge value={item.type} />
+                                    <Badge value={item.status} />
+                                    {isOpen ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+                                </button>
 
-                                    {/* Reply card — shown if a reply exists */}
-                                    {item.admin_reply ? (
-                                        <div className="mb-4 rounded-xl border border-indigo-100 bg-indigo-50 px-4 py-3">
-                                            <div className="flex items-center gap-2 mb-1.5">
-                                                <div className="w-6 h-6 rounded-full bg-indigo-600 flex items-center justify-center flex-shrink-0">
-                                                    <span className="text-white text-xs font-bold">A</span>
+                                {isOpen && (
+                                    <div className="border-t border-slate-100 px-5 py-4 bg-slate-50">
+                                        {/* Meta */}
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
+                                            <ExpandRow label="Student"><span className="flex items-center gap-1"><User className="w-3 h-3" />{item.student_name}</span></ExpandRow>
+                                            <ExpandRow label="Email"><span className="flex items-center gap-1"><Mail className="w-3 h-3" />{item.student_email}</span></ExpandRow>
+                                            <ExpandRow label="Type"><Badge value={item.type} /></ExpandRow>
+                                            <ExpandRow label="Submitted"><span className="flex items-center gap-1"><Calendar className="w-3 h-3" />{fmt(item.created_at)}</span></ExpandRow>
+                                        </div>
+
+                                        {/* Thread — student message + replies */}
+                                        <div className="space-y-3 mb-4">
+                                            {/* Original student message */}
+                                            <div className="flex gap-3">
+                                                <div className="w-7 h-7 rounded-full bg-slate-300 flex items-center justify-center flex-shrink-0">
+                                                    <User className="w-3.5 h-3.5 text-slate-600" />
                                                 </div>
-                                                <span className="text-xs font-semibold text-indigo-700">Admin Reply</span>
-                                                <span className="text-xs text-slate-400 ml-auto">{fmt(item.updated_at)}</span>
+                                                <div className="flex-1 bg-white rounded-xl border border-slate-200 px-4 py-3">
+                                                    <div className="flex items-center gap-2 mb-1">
+                                                        <span className="text-xs font-semibold text-slate-700">{item.student_name}</span>
+                                                        <span className="text-xs text-slate-400">{fmtTime(item.created_at)}</span>
+                                                    </div>
+                                                    <p className="text-sm text-slate-800 whitespace-pre-wrap leading-relaxed">{item.description}</p>
+                                                </div>
                                             </div>
-                                            <p className="text-sm text-slate-800 whitespace-pre-wrap leading-relaxed">{item.admin_reply}</p>
-                                        </div>
-                                    ) : (
-                                        <div className="mb-4 rounded-xl border border-dashed border-slate-200 bg-white px-4 py-3 text-center">
-                                            <p className="text-xs text-slate-400">No reply sent yet.</p>
-                                        </div>
-                                    )}
 
-                                    <div className="mb-3">
-                                        <label className="text-xs text-slate-500 mb-1 block">{item.admin_reply ? 'Update Reply' : 'Reply to Student'}</label>
-                                        <textarea
-                                            rows={3}
-                                            value={replyDraft[item.id] ?? ''}
-                                            onChange={(e) => setReplyDraft((p) => ({ ...p, [item.id]: e.target.value }))}
-                                            className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 resize-none focus:ring-2 focus:ring-indigo-300 outline-none"
-                                            placeholder={item.admin_reply ? 'Write an updated reply...' : 'Write a reply that the student can see...'}
-                                        />
-                                        <div className="mt-2 flex justify-end">
-                                            <button
-                                                disabled={savingReply === item.id || !(replyDraft[item.id] ?? '').trim()}
-                                                onClick={() => saveReply(item.id)}
-                                                className="text-xs px-4 py-1.5 rounded-md bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-40 transition"
-                                            >
-                                                {savingReply === item.id ? 'Saving…' : item.admin_reply ? 'Update Reply' : 'Send Reply'}
-                                            </button>
+                                            {/* Replies thread */}
+                                            {thread?.loading ? (
+                                                <p className="text-xs text-slate-400 text-center py-2">Loading replies…</p>
+                                            ) : (thread?.replies || []).map((reply) => (
+                                                <div key={reply.id} className={`flex gap-3 ${reply.sender_type === 'admin' ? 'flex-row-reverse' : ''}`}>
+                                                    <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0
+                                                        ${reply.sender_type === 'admin' ? 'bg-indigo-600' : 'bg-slate-300'}`}>
+                                                        {reply.sender_type === 'admin'
+                                                            ? <span className="text-white text-xs font-bold">A</span>
+                                                            : <User className="w-3.5 h-3.5 text-slate-600" />}
+                                                    </div>
+                                                    <div className={`flex-1 rounded-xl border px-4 py-3
+                                                        ${reply.sender_type === 'admin'
+                                                            ? 'bg-indigo-50 border-indigo-100'
+                                                            : 'bg-white border-slate-200'}`}>
+                                                        <div className="flex items-center gap-2 mb-1">
+                                                            <span className="text-xs font-semibold text-slate-700">{reply.sender_name}</span>
+                                                            <span className="text-xs text-slate-400">{fmtTime(reply.created_at)}</span>
+                                                        </div>
+                                                        <p className="text-sm text-slate-800 whitespace-pre-wrap leading-relaxed">{reply.message}</p>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+
+                                        {/* Reply composer */}
+                                        <div className="bg-white border border-slate-200 rounded-xl p-3 mb-4">
+                                            <textarea
+                                                rows={3}
+                                                value={thread?.draft ?? ''}
+                                                onChange={(e) => setDraft(item.id, e.target.value)}
+                                                onKeyDown={(e) => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) postReply(item.id); }}
+                                                className="w-full text-sm border-0 outline-none resize-none placeholder:text-slate-400"
+                                                placeholder="Write a reply… (Ctrl+Enter to send)"
+                                            />
+                                            <div className="flex justify-end mt-2">
+                                                <button
+                                                    disabled={thread?.sending || !(thread?.draft || '').trim()}
+                                                    onClick={() => postReply(item.id)}
+                                                    className="flex items-center gap-1.5 text-xs px-4 py-1.5 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-40 transition"
+                                                >
+                                                    <Send className="w-3 h-3" />
+                                                    {thread?.sending ? 'Sending…' : 'Post Reply'}
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        {/* Status buttons */}
+                                        <div className="flex items-center gap-3">
+                                            <span className="text-xs text-slate-500">Update Status:</span>
+                                            {['open','in_progress','resolved','closed'].map(s => (
+                                                <button key={s} disabled={updating === item.id}
+                                                    onClick={() => updateStatus(item.id, s)}
+                                                    className={`text-xs px-3 py-1 rounded-full border transition ${item.status === s ? 'bg-indigo-600 text-white border-indigo-600' : 'border-slate-300 hover:border-indigo-400 hover:text-indigo-600'}`}>
+                                                    {s.replace('_', ' ')}
+                                                </button>
+                                            ))}
                                         </div>
                                     </div>
-                                    <div className="flex items-center gap-3">
-                                        <span className="text-xs text-slate-500">Update Status:</span>
-                                        {['open','in_progress','resolved','closed'].map(s => (
-                                            <button key={s} disabled={updating === item.id}
-                                                onClick={() => updateStatus(item.id, s)}
-                                                className={`text-xs px-3 py-1 rounded-full border transition ${item.status === s ? 'bg-indigo-600 text-white border-indigo-600' : 'border-slate-300 hover:border-indigo-400 hover:text-indigo-600'}`}>
-                                                {s.replace('_', ' ')}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    ))}
+                                )}
+                            </div>
+                        );
+                    })}
                 </div>
             )}
         </div>

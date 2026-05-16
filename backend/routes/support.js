@@ -351,6 +351,60 @@ router.put('/requests/:request_id', async (req, res) => {
 });
 
 // ============================================
+// SUPPORT REPLIES (threaded conversation)
+// ============================================
+
+// GET /support/admin/requests/:id/replies — fetch thread for a request
+router.get('/admin/requests/:request_id/replies', async (req, res) => {
+    try {
+        const { request_id } = req.params;
+        const connection = await pool.getConnection();
+        const [rows] = await connection.query(
+            `SELECT id, request_id, sender_type, sender_name, message, created_at
+             FROM support_replies
+             WHERE request_id = ?
+             ORDER BY created_at ASC`,
+            [request_id]
+        );
+        connection.release();
+        res.json({ success: true, replies: rows });
+    } catch (error) {
+        console.error('[SUPPORT] Get replies failed:', error.message);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// POST /support/admin/requests/:id/replies — add a new reply (admin)
+router.post('/admin/requests/:request_id/replies', async (req, res) => {
+    try {
+        const { request_id } = req.params;
+        const { message, sender_name } = req.body;
+        if (!message || !message.trim()) {
+            return res.status(400).json({ success: false, message: 'Message is required.' });
+        }
+        const connection = await pool.getConnection();
+        const [result] = await connection.query(
+            `INSERT INTO support_replies (request_id, sender_type, sender_name, message) VALUES (?, 'admin', ?, ?)`,
+            [request_id, sender_name || 'Admin', message.trim()]
+        );
+        // Also update request updated_at
+        await connection.query(
+            `UPDATE support_requests SET updated_at = NOW() WHERE id = ?`,
+            [request_id]
+        );
+        const [[inserted]] = await connection.query(
+            `SELECT id, request_id, sender_type, sender_name, message, created_at FROM support_replies WHERE id = ?`,
+            [result.insertId]
+        );
+        connection.release();
+        res.json({ success: true, reply: inserted });
+    } catch (error) {
+        console.error('[SUPPORT] Post reply failed:', error.message);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// ============================================
 // FEEDBACK & EVALUATIONS ENDPOINTS
 // ============================================
 
