@@ -215,6 +215,7 @@ function roleSection(id, color, lightColor, icon, roleName, subtitle, badge, flo
           <a href="https://system.sclsandbox.xyz" target="_blank" class="live-btn-sm">🔗 Open Live System</a>
         </div>
       </div>
+      ${extraHtml}
 
       <div class="flowchart-block">
         <h3 class="flow-title">📊 ${roleName} Workflow</h3>
@@ -228,7 +229,6 @@ function roleSection(id, color, lightColor, icon, roleName, subtitle, badge, flo
       <div class="steps-grid">
         ${steps}
       </div>
-      ${extraHtml}
     </div>
   </section>`;
 }
