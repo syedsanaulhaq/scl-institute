@@ -14,6 +14,7 @@ import {
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart as RechartsPieChart, Pie, Cell } from 'recharts';
 
 const StudentReport = () => {
+    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
     const [students, setStudents] = useState([]);
     const [filteredData, setFilteredData] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -26,7 +27,7 @@ const StudentReport = () => {
 
     const fetchStudents = async () => {
         try {
-            const response = await fetch('http://localhost:4000/api/students/applications');
+            const response = await fetch(`${API_URL}/students/applications`);
             if (response.ok) {
                 const result = await response.json();
                 // Handle the response structure from the API
@@ -55,9 +56,11 @@ const StudentReport = () => {
     ];
 
     const statusDistribution = [
-        { name: 'Approved', value: Array.isArray(students) ? students.filter(s => s.application_status === 'approved').length : 0, color: '#10B981' },
-        { name: 'Pending', value: Array.isArray(students) ? students.filter(s => s.application_status === 'pending').length : 0, color: '#F59E0B' },
+        { name: 'Accepted', value: Array.isArray(students) ? students.filter(s => ['accepted','conditional_accept'].includes(s.application_status)).length : 0, color: '#10B981' },
+        { name: 'Under Review', value: Array.isArray(students) ? students.filter(s => ['submitted','under_review','interview_scheduled'].includes(s.application_status)).length : 0, color: '#F59E0B' },
         { name: 'Rejected', value: Array.isArray(students) ? students.filter(s => s.application_status === 'rejected').length : 0, color: '#EF4444' },
+        { name: 'Deferred', value: Array.isArray(students) ? students.filter(s => s.application_status === 'deferred').length : 0, color: '#8B5CF6' },
+        { name: 'Draft', value: Array.isArray(students) ? students.filter(s => s.application_status === 'draft').length : 0, color: '#6B7280' },
     ];
 
     const programDistribution = [
@@ -76,8 +79,8 @@ const StudentReport = () => {
             change: '+12%'
         },
         {
-            title: 'Approved',
-            value: Array.isArray(students) ? students.filter(s => s.application_status === 'approved').length : 0,
+            title: 'Accepted',
+            value: Array.isArray(students) ? students.filter(s => ['accepted','conditional_accept'].includes(s.application_status)).length : 0,
             icon: TrendingUp,
             color: 'from-green-400 to-green-500',
             change: '+8%'
@@ -258,9 +261,11 @@ const StudentReport = () => {
                                     <td className="px-6 py-4 text-sm text-gray-900">{student.course_title}</td>
                                     <td className="px-6 py-4">
                                         <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                                            student.application_status === 'approved' ? 'bg-green-100 text-green-800' :
-                                            student.application_status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                                            'bg-red-100 text-red-800'
+                                            ['accepted','conditional_accept'].includes(student.application_status) ? 'bg-green-100 text-green-800' :
+                                            ['submitted','under_review','interview_scheduled'].includes(student.application_status) ? 'bg-yellow-100 text-yellow-800' :
+                                            student.application_status === 'rejected' ? 'bg-red-100 text-red-800' :
+                                            student.application_status === 'deferred' ? 'bg-purple-100 text-purple-800' :
+                                            'bg-gray-100 text-gray-800'
                                         }`}>
                                             {student.application_status}
                                         </span>
