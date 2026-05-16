@@ -10,7 +10,8 @@ import {
     Filter,
     Search,
     BarChart3,
-    PieChart
+    PieChart,
+    Eye
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart as RechartsPieChart, Pie, Cell } from 'recharts';
 
@@ -246,6 +247,7 @@ const StudentReport = () => {
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Course</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Submission Date</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                             </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
@@ -253,9 +255,7 @@ const StudentReport = () => {
                                 <tr key={student.id} className="hover:bg-gray-50">
                                     <td className="px-6 py-4">
                                         <div>
-                                            <Link to={`/student-detail/${student.id}`} className="text-sm font-medium text-scl-purple hover:underline">
-                                                {student.first_name} {student.last_name}
-                                            </Link>
+                                            <div className="text-sm font-medium text-gray-900">{student.first_name} {student.last_name}</div>
                                             <div className="text-sm text-gray-500">{student.email}</div>
                                         </div>
                                     </td>
@@ -273,6 +273,11 @@ const StudentReport = () => {
                                     </td>
                                     <td className="px-6 py-4 text-sm text-gray-500">
                                         {student.submitted_at ? new Date(student.submitted_at).toLocaleDateString('en-GB') : 'N/A'}
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        <Link to={`/student-detail/${student.id}`} title="View student detail" className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-scl-purple/10 text-scl-purple hover:bg-scl-purple hover:text-white transition-colors">
+                                            <Eye className="w-4 h-4" />
+                                        </Link>
                                     </td>
                                 </tr>
                             )) : (
