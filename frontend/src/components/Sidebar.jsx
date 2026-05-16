@@ -159,6 +159,7 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
                 key: 'student-management',
                 subItems: [
                     { name: 'Student List', icon: Users, path: '/student-list' },
+                    { name: 'Student Fees', icon: DollarSign, path: '/admin/student-fees' },
                     { name: 'Course Change Requests', icon: ClipboardList, path: '/course-change-requests' },
                     { name: 'Student Report', icon: BarChart3, path: '/students/report' }
                 ]
