@@ -48,7 +48,98 @@ function ExpandRow({ label, children }) {
     );
 }
 
+// ── Shared threaded reply component used by all tabs ─────────────────────────
 const fmtTime = (d) => d ? new Date(d).toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
+
+function ReplyThread({ recordType, recordId, studentName, studentMessage, studentDate }) {
+    const [replies, setReplies] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [draft, setDraft] = useState('');
+    const [sending, setSending] = useState(false);
+
+    useEffect(() => {
+        axios.get(`${API_URL}/support/admin/${recordType}/${recordId}/replies`)
+            .then(r => setReplies(r.data.replies || []))
+            .catch(console.error)
+            .finally(() => setLoading(false));
+    }, [recordType, recordId]);
+
+    const postReply = async () => {
+        const msg = draft.trim();
+        if (!msg) return;
+        setSending(true);
+        try {
+            const r = await axios.post(`${API_URL}/support/admin/${recordType}/${recordId}/replies`, { message: msg, sender_name: 'Admin' });
+            setReplies(prev => [...prev, r.data.reply]);
+            setDraft('');
+        } catch {
+            alert('Failed to send reply. Please try again.');
+        }
+        setSending(false);
+    };
+
+    return (
+        <div className="space-y-3 mb-4">
+            {/* Student's original message */}
+            <div className="flex gap-3">
+                <div className="w-7 h-7 rounded-full bg-slate-300 flex items-center justify-center flex-shrink-0">
+                    <User className="w-3.5 h-3.5 text-slate-600" />
+                </div>
+                <div className="flex-1 bg-white rounded-xl border border-slate-200 px-4 py-3">
+                    <div className="flex items-center gap-2 mb-1">
+                        <span className="text-xs font-semibold text-slate-700">{studentName}</span>
+                        <span className="text-xs text-slate-400">{fmtTime(studentDate)}</span>
+                    </div>
+                    <p className="text-sm text-slate-800 whitespace-pre-wrap leading-relaxed">{studentMessage}</p>
+                </div>
+            </div>
+
+            {/* Thread replies */}
+            {loading ? (
+                <p className="text-xs text-slate-400 text-center py-2">Loading replies…</p>
+            ) : replies.map(reply => (
+                <div key={reply.id} className={`flex gap-3 ${reply.sender_type === 'admin' ? 'flex-row-reverse' : ''}`}>
+                    <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0
+                        ${reply.sender_type === 'admin' ? 'bg-indigo-600' : 'bg-slate-300'}`}>
+                        {reply.sender_type === 'admin'
+                            ? <span className="text-white text-xs font-bold">A</span>
+                            : <User className="w-3.5 h-3.5 text-slate-600" />}
+                    </div>
+                    <div className={`flex-1 rounded-xl border px-4 py-3
+                        ${reply.sender_type === 'admin' ? 'bg-indigo-50 border-indigo-100' : 'bg-white border-slate-200'}`}>
+                        <div className="flex items-center gap-2 mb-1">
+                            <span className="text-xs font-semibold text-slate-700">{reply.sender_name}</span>
+                            <span className="text-xs text-slate-400">{fmtTime(reply.created_at)}</span>
+                        </div>
+                        <p className="text-sm text-slate-800 whitespace-pre-wrap leading-relaxed">{reply.message}</p>
+                    </div>
+                </div>
+            ))}
+
+            {/* Reply composer */}
+            <div className="bg-white border border-slate-200 rounded-xl p-3">
+                <textarea
+                    rows={3}
+                    value={draft}
+                    onChange={e => setDraft(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) postReply(); }}
+                    className="w-full text-sm border-0 outline-none resize-none placeholder:text-slate-400"
+                    placeholder="Write a reply… (Ctrl+Enter to send)"
+                />
+                <div className="flex justify-end mt-2">
+                    <button
+                        disabled={sending || !draft.trim()}
+                        onClick={postReply}
+                        className="flex items-center gap-1.5 text-xs px-4 py-1.5 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-40 transition"
+                    >
+                        <Send className="w-3 h-3" />
+                        {sending ? 'Sending…' : 'Post Reply'}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
 
 // ── Support Requests Tab ─────────────────────────────────────────────────────
 function SupportRequestsTab() {
@@ -57,9 +148,6 @@ function SupportRequestsTab() {
     const [expanded, setExpanded] = useState(null);
     const [statusFilter, setStatusFilter] = useState('all');
     const [updating, setUpdating] = useState(null);
-
-    // per-request reply threads: { [requestId]: { replies: [], loading, draft, sending } }
-    const [threads, setThreads] = useState({});
 
     const fetchList = async () => {
         setLoading(true);
@@ -72,40 +160,6 @@ function SupportRequestsTab() {
     };
 
     useEffect(() => { fetchList(); }, [statusFilter]);
-
-    const toggleExpand = async (id) => {
-        if (expanded === id) { setExpanded(null); return; }
-        setExpanded(id);
-        // Load replies if not yet loaded
-        if (!threads[id]) {
-            setThreads(t => ({ ...t, [id]: { replies: [], loading: true, draft: '', sending: false } }));
-            try {
-                const r = await axios.get(`${API_URL}/support/admin/requests/${id}/replies`);
-                setThreads(t => ({ ...t, [id]: { ...t[id], replies: r.data.replies || [], loading: false } }));
-            } catch {
-                setThreads(t => ({ ...t, [id]: { ...t[id], loading: false } }));
-            }
-        }
-    };
-
-    const setDraft = (id, val) =>
-        setThreads(t => ({ ...t, [id]: { ...t[id], draft: val } }));
-
-    const postReply = async (id) => {
-        const draft = (threads[id]?.draft || '').trim();
-        if (!draft) return;
-        setThreads(t => ({ ...t, [id]: { ...t[id], sending: true } }));
-        try {
-            const r = await axios.post(`${API_URL}/support/admin/requests/${id}/replies`, { message: draft, sender_name: 'Admin' });
-            setThreads(t => ({
-                ...t,
-                [id]: { ...t[id], replies: [...(t[id]?.replies || []), r.data.reply], draft: '', sending: false }
-            }));
-        } catch {
-            setThreads(t => ({ ...t, [id]: { ...t[id], sending: false } }));
-            alert('Failed to send reply. Please try again.');
-        }
-    };
 
     const updateStatus = async (id, status) => {
         setUpdating(id);
@@ -136,113 +190,48 @@ function SupportRequestsTab() {
             {loading ? <p className="text-center py-10 text-slate-400">Loading…</p> :
              items.length === 0 ? <p className="text-center py-10 text-slate-400">No support requests found.</p> : (
                 <div className="space-y-2">
-                    {items.map(item => {
-                        const thread = threads[item.id];
-                        const isOpen = expanded === item.id;
-                        return (
-                            <div key={item.id} className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
-                                {/* Row header */}
-                                <button className="w-full flex items-center gap-4 px-5 py-3 text-left hover:bg-slate-50 transition"
-                                    onClick={() => toggleExpand(item.id)}>
-                                    <HelpCircle className="w-4 h-4 text-indigo-400 flex-shrink-0" />
-                                    <div className="flex-1 min-w-0">
-                                        <p className="font-medium text-sm text-slate-800 truncate">{item.subject}</p>
-                                        <p className="text-xs text-slate-500">{item.student_name || item.student_email} · {fmt(item.created_at)}</p>
+                    {items.map(item => (
+                        <div key={item.id} className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
+                            <button className="w-full flex items-center gap-4 px-5 py-3 text-left hover:bg-slate-50 transition"
+                                onClick={() => setExpanded(expanded === item.id ? null : item.id)}>
+                                <HelpCircle className="w-4 h-4 text-indigo-400 flex-shrink-0" />
+                                <div className="flex-1 min-w-0">
+                                    <p className="font-medium text-sm text-slate-800 truncate">{item.subject}</p>
+                                    <p className="text-xs text-slate-500">{item.student_name || item.student_email} · {fmt(item.created_at)}</p>
+                                </div>
+                                <Badge value={item.type} />
+                                <Badge value={item.status} />
+                                {expanded === item.id ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+                            </button>
+                            {expanded === item.id && (
+                                <div className="border-t border-slate-100 px-5 py-4 bg-slate-50">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
+                                        <ExpandRow label="Student"><span className="flex items-center gap-1"><User className="w-3 h-3" />{item.student_name}</span></ExpandRow>
+                                        <ExpandRow label="Email"><span className="flex items-center gap-1"><Mail className="w-3 h-3" />{item.student_email}</span></ExpandRow>
+                                        <ExpandRow label="Type"><Badge value={item.type} /></ExpandRow>
+                                        <ExpandRow label="Submitted"><span className="flex items-center gap-1"><Calendar className="w-3 h-3" />{fmt(item.created_at)}</span></ExpandRow>
                                     </div>
-                                    <Badge value={item.type} />
-                                    <Badge value={item.status} />
-                                    {isOpen ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
-                                </button>
-
-                                {isOpen && (
-                                    <div className="border-t border-slate-100 px-5 py-4 bg-slate-50">
-                                        {/* Meta */}
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
-                                            <ExpandRow label="Student"><span className="flex items-center gap-1"><User className="w-3 h-3" />{item.student_name}</span></ExpandRow>
-                                            <ExpandRow label="Email"><span className="flex items-center gap-1"><Mail className="w-3 h-3" />{item.student_email}</span></ExpandRow>
-                                            <ExpandRow label="Type"><Badge value={item.type} /></ExpandRow>
-                                            <ExpandRow label="Submitted"><span className="flex items-center gap-1"><Calendar className="w-3 h-3" />{fmt(item.created_at)}</span></ExpandRow>
-                                        </div>
-
-                                        {/* Thread — student message + replies */}
-                                        <div className="space-y-3 mb-4">
-                                            {/* Original student message */}
-                                            <div className="flex gap-3">
-                                                <div className="w-7 h-7 rounded-full bg-slate-300 flex items-center justify-center flex-shrink-0">
-                                                    <User className="w-3.5 h-3.5 text-slate-600" />
-                                                </div>
-                                                <div className="flex-1 bg-white rounded-xl border border-slate-200 px-4 py-3">
-                                                    <div className="flex items-center gap-2 mb-1">
-                                                        <span className="text-xs font-semibold text-slate-700">{item.student_name}</span>
-                                                        <span className="text-xs text-slate-400">{fmtTime(item.created_at)}</span>
-                                                    </div>
-                                                    <p className="text-sm text-slate-800 whitespace-pre-wrap leading-relaxed">{item.description}</p>
-                                                </div>
-                                            </div>
-
-                                            {/* Replies thread */}
-                                            {thread?.loading ? (
-                                                <p className="text-xs text-slate-400 text-center py-2">Loading replies…</p>
-                                            ) : (thread?.replies || []).map((reply) => (
-                                                <div key={reply.id} className={`flex gap-3 ${reply.sender_type === 'admin' ? 'flex-row-reverse' : ''}`}>
-                                                    <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0
-                                                        ${reply.sender_type === 'admin' ? 'bg-indigo-600' : 'bg-slate-300'}`}>
-                                                        {reply.sender_type === 'admin'
-                                                            ? <span className="text-white text-xs font-bold">A</span>
-                                                            : <User className="w-3.5 h-3.5 text-slate-600" />}
-                                                    </div>
-                                                    <div className={`flex-1 rounded-xl border px-4 py-3
-                                                        ${reply.sender_type === 'admin'
-                                                            ? 'bg-indigo-50 border-indigo-100'
-                                                            : 'bg-white border-slate-200'}`}>
-                                                        <div className="flex items-center gap-2 mb-1">
-                                                            <span className="text-xs font-semibold text-slate-700">{reply.sender_name}</span>
-                                                            <span className="text-xs text-slate-400">{fmtTime(reply.created_at)}</span>
-                                                        </div>
-                                                        <p className="text-sm text-slate-800 whitespace-pre-wrap leading-relaxed">{reply.message}</p>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-
-                                        {/* Reply composer */}
-                                        <div className="bg-white border border-slate-200 rounded-xl p-3 mb-4">
-                                            <textarea
-                                                rows={3}
-                                                value={thread?.draft ?? ''}
-                                                onChange={(e) => setDraft(item.id, e.target.value)}
-                                                onKeyDown={(e) => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) postReply(item.id); }}
-                                                className="w-full text-sm border-0 outline-none resize-none placeholder:text-slate-400"
-                                                placeholder="Write a reply… (Ctrl+Enter to send)"
-                                            />
-                                            <div className="flex justify-end mt-2">
-                                                <button
-                                                    disabled={thread?.sending || !(thread?.draft || '').trim()}
-                                                    onClick={() => postReply(item.id)}
-                                                    className="flex items-center gap-1.5 text-xs px-4 py-1.5 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-40 transition"
-                                                >
-                                                    <Send className="w-3 h-3" />
-                                                    {thread?.sending ? 'Sending…' : 'Post Reply'}
-                                                </button>
-                                            </div>
-                                        </div>
-
-                                        {/* Status buttons */}
-                                        <div className="flex items-center gap-3">
-                                            <span className="text-xs text-slate-500">Update Status:</span>
-                                            {['open','in_progress','resolved','closed'].map(s => (
-                                                <button key={s} disabled={updating === item.id}
-                                                    onClick={() => updateStatus(item.id, s)}
-                                                    className={`text-xs px-3 py-1 rounded-full border transition ${item.status === s ? 'bg-indigo-600 text-white border-indigo-600' : 'border-slate-300 hover:border-indigo-400 hover:text-indigo-600'}`}>
-                                                    {s.replace('_', ' ')}
-                                                </button>
-                                            ))}
-                                        </div>
+                                    <ReplyThread
+                                        recordType="requests"
+                                        recordId={item.id}
+                                        studentName={item.student_name}
+                                        studentMessage={item.description}
+                                        studentDate={item.created_at}
+                                    />
+                                    <div className="flex items-center gap-3">
+                                        <span className="text-xs text-slate-500">Update Status:</span>
+                                        {['open','in_progress','resolved','closed'].map(s => (
+                                            <button key={s} disabled={updating === item.id}
+                                                onClick={() => updateStatus(item.id, s)}
+                                                className={`text-xs px-3 py-1 rounded-full border transition ${item.status === s ? 'bg-indigo-600 text-white border-indigo-600' : 'border-slate-300 hover:border-indigo-400 hover:text-indigo-600'}`}>
+                                                {s.replace('_', ' ')}
+                                            </button>
+                                        ))}
                                     </div>
-                                )}
-                            </div>
-                        );
-                    })}
+                                </div>
+                            )}
+                        </div>
+                    ))}
                 </div>
             )}
         </div>
@@ -281,12 +270,20 @@ function FeedbackTab() {
                         {expanded === item.id ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
                     </button>
                     {expanded === item.id && (
-                        <div className="border-t border-slate-100 px-5 py-4 bg-slate-50 grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <ExpandRow label="Student">{item.student_name} ({item.student_email})</ExpandRow>
-                            <ExpandRow label="Rating"><span className="text-yellow-500">{stars(item.rating || 0)} ({item.rating}/5)</span></ExpandRow>
-                            <ExpandRow label="Module">{item.module_code || '—'}</ExpandRow>
-                            <ExpandRow label="Submitted">{fmt(item.submitted_at)}</ExpandRow>
-                            <ExpandRow label="Comments"><p className="whitespace-pre-wrap col-span-2">{item.comments || '—'}</p></ExpandRow>
+                        <div className="border-t border-slate-100 px-5 py-4 bg-slate-50">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
+                                <ExpandRow label="Student">{item.student_name} ({item.student_email})</ExpandRow>
+                                <ExpandRow label="Rating"><span className="text-yellow-500">{stars(item.rating || 0)} ({item.rating}/5)</span></ExpandRow>
+                                <ExpandRow label="Module">{item.module_code || '—'}</ExpandRow>
+                                <ExpandRow label="Submitted">{fmt(item.submitted_at)}</ExpandRow>
+                            </div>
+                            <ReplyThread
+                                recordType="feedback"
+                                recordId={item.id}
+                                studentName={item.student_name}
+                                studentMessage={item.comments || '(No comment provided)'}
+                                studentDate={item.submitted_at}
+                            />
                         </div>
                     )}
                 </div>
@@ -365,14 +362,20 @@ function ComplaintsTab() {
                             </button>
                             {expanded === item.id && (
                                 <div className="border-t border-slate-100 px-5 py-4 bg-slate-50">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
                                         <ExpandRow label="Student">{item.student_name} ({item.student_email})</ExpandRow>
                                         <ExpandRow label="Case Number">{item.case_number}</ExpandRow>
                                         <ExpandRow label="Type"><Badge value={item.type} /></ExpandRow>
                                         <ExpandRow label="Priority"><Badge value={item.priority} /></ExpandRow>
-                                        <ExpandRow label="Description"><p className="whitespace-pre-wrap">{item.description}</p></ExpandRow>
                                         {item.decision_notes && <ExpandRow label="Admin Notes">{item.decision_notes}</ExpandRow>}
                                     </div>
+                                    <ReplyThread
+                                        recordType="complaints"
+                                        recordId={item.id}
+                                        studentName={item.student_name}
+                                        studentMessage={item.description}
+                                        studentDate={item.created_at}
+                                    />
                                     <div className="mb-3">
                                         <label className="text-xs text-slate-500 mb-1 block">Decision Notes (optional)</label>
                                         <textarea rows={2} value={decisionNote[item.id] || ''} onChange={e => setDecisionNote(p => ({...p, [item.id]: e.target.value}))}
@@ -438,12 +441,18 @@ function DisabilityTab() {
                     </button>
                     {expanded === item.id && (
                         <div className="border-t border-slate-100 px-5 py-4 bg-slate-50">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
                                 <ExpandRow label="Student">{item.student_name} ({item.student_email})</ExpandRow>
                                 <ExpandRow label="Request Type">{item.request_type}</ExpandRow>
                                 <ExpandRow label="Submitted">{fmt(item.created_at)}</ExpandRow>
-                                <ExpandRow label="Description"><p className="whitespace-pre-wrap">{item.description}</p></ExpandRow>
                             </div>
+                            <ReplyThread
+                                recordType="disability"
+                                recordId={item.id}
+                                studentName={item.student_name}
+                                studentMessage={item.description}
+                                studentDate={item.created_at}
+                            />
                             <div className="flex items-center gap-3 flex-wrap">
                                 <span className="text-xs text-slate-500">Update Status:</span>
                                 {['pending','under_review','approved','rejected'].map(s => (
@@ -493,17 +502,23 @@ function SafeguardingTab() {
                     </button>
                     {expanded === item.id && (
                         <div className="border-t border-red-100 px-5 py-4 bg-red-50">
-                            <div className="flex items-start gap-2 mb-3 p-3 bg-red-100 rounded-lg">
+                            <div className="flex items-start gap-2 mb-4 p-3 bg-red-100 rounded-lg">
                                 <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
                                 <p className="text-xs text-red-700 font-medium">Safeguarding reports are confidential. Handle in line with SCL safeguarding policy.</p>
                             </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
                                 <ExpandRow label="Student">{item.student_name} ({item.student_email})</ExpandRow>
                                 <ExpandRow label="Report Type">{item.report_type}</ExpandRow>
                                 <ExpandRow label="Severity"><Badge value={item.severity} /></ExpandRow>
                                 <ExpandRow label="Reported">{fmt(item.created_at)}</ExpandRow>
-                                <ExpandRow label="Description"><p className="whitespace-pre-wrap">{item.description}</p></ExpandRow>
                             </div>
+                            <ReplyThread
+                                recordType="safeguarding"
+                                recordId={item.id}
+                                studentName={item.student_name}
+                                studentMessage={item.description}
+                                studentDate={item.created_at}
+                            />
                         </div>
                     )}
                 </div>

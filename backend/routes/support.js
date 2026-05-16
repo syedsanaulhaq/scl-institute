@@ -353,18 +353,25 @@ router.put('/requests/:request_id', async (req, res) => {
 // ============================================
 // SUPPORT REPLIES (threaded conversation)
 // ============================================
+// SUPPORT REPLIES — generic threaded conversations
+// Works for: requests, feedback, complaints, disability, safeguarding
+// ============================================
+const VALID_REPLY_TYPES = ['requests', 'feedback', 'complaints', 'disability', 'safeguarding'];
 
-// GET /support/admin/requests/:id/replies — fetch thread for a request
-router.get('/admin/requests/:request_id/replies', async (req, res) => {
+// GET /support/admin/:record_type/:record_id/replies
+router.get('/admin/:record_type/:record_id/replies', async (req, res) => {
     try {
-        const { request_id } = req.params;
+        const { record_type, record_id } = req.params;
+        if (!VALID_REPLY_TYPES.includes(record_type)) {
+            return res.status(400).json({ success: false, message: 'Invalid record type.' });
+        }
         const connection = await pool.getConnection();
         const [rows] = await connection.query(
-            `SELECT id, request_id, sender_type, sender_name, message, created_at
+            `SELECT id, record_type, request_id AS record_id, sender_type, sender_name, message, created_at
              FROM support_replies
-             WHERE request_id = ?
+             WHERE request_id = ? AND record_type = ?
              ORDER BY created_at ASC`,
-            [request_id]
+            [record_id, record_type]
         );
         connection.release();
         res.json({ success: true, replies: rows });
@@ -374,26 +381,24 @@ router.get('/admin/requests/:request_id/replies', async (req, res) => {
     }
 });
 
-// POST /support/admin/requests/:id/replies — add a new reply (admin)
-router.post('/admin/requests/:request_id/replies', async (req, res) => {
+// POST /support/admin/:record_type/:record_id/replies
+router.post('/admin/:record_type/:record_id/replies', async (req, res) => {
     try {
-        const { request_id } = req.params;
+        const { record_type, record_id } = req.params;
+        if (!VALID_REPLY_TYPES.includes(record_type)) {
+            return res.status(400).json({ success: false, message: 'Invalid record type.' });
+        }
         const { message, sender_name } = req.body;
         if (!message || !message.trim()) {
             return res.status(400).json({ success: false, message: 'Message is required.' });
         }
         const connection = await pool.getConnection();
         const [result] = await connection.query(
-            `INSERT INTO support_replies (request_id, sender_type, sender_name, message) VALUES (?, 'admin', ?, ?)`,
-            [request_id, sender_name || 'Admin', message.trim()]
-        );
-        // Also update request updated_at
-        await connection.query(
-            `UPDATE support_requests SET updated_at = NOW() WHERE id = ?`,
-            [request_id]
+            `INSERT INTO support_replies (record_type, request_id, sender_type, sender_name, message) VALUES (?, ?, 'admin', ?, ?)`,
+            [record_type, record_id, sender_name || 'Admin', message.trim()]
         );
         const [[inserted]] = await connection.query(
-            `SELECT id, request_id, sender_type, sender_name, message, created_at FROM support_replies WHERE id = ?`,
+            `SELECT id, record_type, request_id AS record_id, sender_type, sender_name, message, created_at FROM support_replies WHERE id = ?`,
             [result.insertId]
         );
         connection.release();
@@ -407,6 +412,7 @@ router.post('/admin/requests/:request_id/replies', async (req, res) => {
 // ============================================
 // FEEDBACK & EVALUATIONS ENDPOINTS
 // ============================================
+
 
 // Submit feedback
 router.post('/feedback', async (req, res) => {
