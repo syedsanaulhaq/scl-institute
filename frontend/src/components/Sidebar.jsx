@@ -87,6 +87,7 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
                 isParent: true,
                 key: 'staff-group',
                 subItems: [
+                    { name: 'Teacher Management', icon: Users, path: '/admin/teacher-management' },
                     { name: 'Teacher Registrations', icon: Users, path: '/teacher-registrations' },
                     { name: 'New Teacher Registration', icon: UserPlus, path: '/teacher-registration' }
                 ]
@@ -166,6 +167,17 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
             },
             { name: 'Course Intakes', icon: Users, path: '/programme-intakes' },
             { name: 'LMS Enrolments', icon: GraduationCap, path: '/admin/lms-enrolments' },
+            {
+                name: 'Teacher Management',
+                icon: Users,
+                isParent: true,
+                key: 'teacher-management',
+                subItems: [
+                    { name: 'All Teachers & Courses', icon: Users, path: '/admin/teacher-management' },
+                    { name: 'Teacher Registrations', icon: UserCheck, path: '/teacher-registrations' },
+                    { name: 'New Teacher Registration', icon: UserPlus, path: '/teacher-registration' }
+                ]
+            },
             { name: 'Support Inbox', icon: HelpCircle, path: '/admin/support-requests' },
             { name: 'Settings', icon: Settings, path: '/settings' }
         ]

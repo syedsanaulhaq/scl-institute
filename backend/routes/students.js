@@ -1322,6 +1322,220 @@ router.get('/teacher-notifications', async (req, res) => {
 });
 
 // ===============================================
+// ROUTE: GET /api/students/admin/teachers
+// Returns all teachers from SCL DB with their Moodle course enrollments
+// ===============================================
+router.get('/admin/teachers', async (req, res) => {
+    try {
+        // Get all users from SCL DB that have a teaching role
+        const [sclTeachers] = await pool.execute(
+            `SELECT id, first_name, last_name, email, role, created_at
+             FROM users
+             WHERE role LIKE '%teacher%' OR role LIKE '%editingteacher%' OR role LIKE '%Teacher%'
+             ORDER BY first_name, last_name`
+        );
+
+        // For each teacher, look up their Moodle courses
+        const teachersWithCourses = await Promise.all(sclTeachers.map(async (t) => {
+            const moodleCourses = await safeMoodleSelectRows(
+                `SELECT c.id as courseId, c.fullname as courseName, c.shortname as courseCode,
+                        r.shortname as role, ue.status as enrollStatus,
+                        ue.id as enrolmentId
+                 FROM mdl_user u
+                 JOIN mdl_role_assignments ra ON ra.userid = u.id
+                 JOIN mdl_role r ON r.id = ra.roleid AND r.roleid IN (3,4)
+                 JOIN mdl_context ctx ON ctx.id = ra.contextid AND ctx.contextlevel = 50
+                 JOIN mdl_course c ON c.id = ctx.instanceid
+                 LEFT JOIN mdl_enrol e ON e.courseid = c.id AND e.enrol = 'manual'
+                 LEFT JOIN mdl_user_enrolments ue ON ue.enrolid = e.id AND ue.userid = u.id
+                 WHERE u.email = ? AND u.deleted = 0
+                 ORDER BY c.fullname`,
+                [t.email]
+            ).catch(() => []);
+
+            // Fix: roleid column is on mdl_role not ra — use r.id in list
+            const fixedCourses = moodleCourses.length === 0
+                ? await safeMoodleSelectRows(
+                    `SELECT c.id as courseId, c.fullname as courseName, c.shortname as courseCode,
+                            r.shortname as role, ue.status as enrollStatus,
+                            ue.id as enrolmentId
+                     FROM mdl_user u
+                     JOIN mdl_role_assignments ra ON ra.userid = u.id
+                     JOIN mdl_role r ON r.id = ra.roleid
+                     JOIN mdl_context ctx ON ctx.id = ra.contextid AND ctx.contextlevel = 50
+                     JOIN mdl_course c ON c.id = ctx.instanceid
+                     LEFT JOIN mdl_enrol e ON e.courseid = c.id AND e.enrol = 'manual'
+                     LEFT JOIN mdl_user_enrolments ue ON ue.enrolid = e.id AND ue.userid = u.id
+                     WHERE u.email = ? AND u.deleted = 0
+                     AND r.shortname IN ('editingteacher','teacher','non-editing teacher')
+                     ORDER BY c.fullname`,
+                    [t.email]
+                ).catch(() => [])
+                : moodleCourses;
+
+            return {
+                id: t.id,
+                firstName: t.first_name,
+                lastName: t.last_name,
+                email: t.email,
+                role: t.role,
+                courses: fixedCourses
+            };
+        }));
+
+        return res.json({ success: true, data: teachersWithCourses });
+    } catch (error) {
+        console.error('Error fetching admin teachers:', error.message);
+        return res.status(500).json({ success: false, message: 'Failed to fetch teachers', error: error.message });
+    }
+});
+
+// ===============================================
+// ROUTE: GET /api/students/admin/moodle-courses
+// Returns all visible Moodle courses for teacher assignment
+// ===============================================
+router.get('/admin/moodle-courses', async (req, res) => {
+    try {
+        const courses = await safeMoodleSelectRows(
+            `SELECT c.id, c.fullname as name, c.shortname as code, c.visible,
+                    cat.name as categoryName
+             FROM mdl_course c
+             LEFT JOIN mdl_course_categories cat ON cat.id = c.category
+             WHERE c.id > 1 AND c.visible = 1
+             ORDER BY cat.name, c.fullname`
+        );
+        return res.json({ success: true, data: courses });
+    } catch (error) {
+        console.error('Error fetching Moodle courses:', error.message);
+        return res.status(500).json({ success: false, message: 'Failed to fetch courses', error: error.message });
+    }
+});
+
+// ===============================================
+// ROUTE: POST /api/students/admin/teacher-enroll
+// Enroll a teacher in a Moodle course (role assignment + user enrolment)
+// Body: { teacherEmail, courseId }
+// ===============================================
+router.post('/admin/teacher-enroll', async (req, res) => {
+    const { teacherEmail, courseId } = req.body;
+    if (!teacherEmail || !courseId) {
+        return res.status(400).json({ success: false, message: 'teacherEmail and courseId are required' });
+    }
+    try {
+        // Get teacher's Moodle user id
+        const userRows = await safeMoodleSelectRows(
+            'SELECT id FROM mdl_user WHERE email = ? AND deleted = 0 LIMIT 1',
+            [teacherEmail]
+        );
+        if (!userRows || userRows.length === 0) {
+            return res.status(404).json({ success: false, message: `No Moodle account found for ${teacherEmail}` });
+        }
+        const moodleUserId = userRows[0].id;
+        const now = Math.floor(Date.now() / 1000);
+
+        // Get context id for this course
+        const ctxRows = await safeMoodleSelectRows(
+            'SELECT id FROM mdl_context WHERE contextlevel = 50 AND instanceid = ? LIMIT 1',
+            [courseId]
+        );
+        if (!ctxRows || ctxRows.length === 0) {
+            return res.status(404).json({ success: false, message: `No Moodle context found for course ${courseId}` });
+        }
+        const contextId = ctxRows[0].id;
+
+        // Get editingteacher role id
+        const roleRows = await safeMoodleSelectRows(
+            "SELECT id FROM mdl_role WHERE shortname = 'editingteacher' LIMIT 1"
+        );
+        const roleId = roleRows && roleRows.length > 0 ? roleRows[0].id : 3;
+
+        // Ensure manual enrol method exists for this course
+        let enrolRows = await safeMoodleSelectRows(
+            "SELECT id FROM mdl_enrol WHERE courseid = ? AND enrol = 'manual' LIMIT 1",
+            [courseId]
+        );
+        let enrolId;
+        if (!enrolRows || enrolRows.length === 0) {
+            return res.status(500).json({ success: false, message: 'No manual enrol method found for this course. Please enable manual enrolment in Moodle first.' });
+        }
+        enrolId = enrolRows[0].id;
+
+        // Insert role assignment (ignore if already exists)
+        await safeMoodleSelectRows(
+            `INSERT IGNORE INTO mdl_role_assignments
+             (roleid, contextid, userid, timemodified, modifierid, component, itemid, sortorder)
+             VALUES (?, ?, ?, ?, 2, '', 0, 0)`,
+            [roleId, contextId, moodleUserId, now]
+        ).catch(() => null);
+
+        // Insert user enrolment (ignore if already exists)
+        await safeMoodleSelectRows(
+            `INSERT IGNORE INTO mdl_user_enrolments
+             (enrolid, userid, status, timestart, timeend, modifierid, timecreated, timemodified)
+             VALUES (?, ?, 0, 0, 0, 2, ?, ?)`,
+            [enrolId, moodleUserId, now, now]
+        ).catch(() => null);
+
+        return res.json({ success: true, message: `Teacher enrolled in course successfully` });
+    } catch (error) {
+        console.error('Error enrolling teacher:', error.message);
+        return res.status(500).json({ success: false, message: 'Failed to enroll teacher', error: error.message });
+    }
+});
+
+// ===============================================
+// ROUTE: DELETE /api/students/admin/teacher-unenroll
+// Remove a teacher from a Moodle course
+// Body: { teacherEmail, courseId }
+// ===============================================
+router.delete('/admin/teacher-unenroll', async (req, res) => {
+    const { teacherEmail, courseId } = req.body;
+    if (!teacherEmail || !courseId) {
+        return res.status(400).json({ success: false, message: 'teacherEmail and courseId are required' });
+    }
+    try {
+        const userRows = await safeMoodleSelectRows(
+            'SELECT id FROM mdl_user WHERE email = ? AND deleted = 0 LIMIT 1',
+            [teacherEmail]
+        );
+        if (!userRows || userRows.length === 0) {
+            return res.status(404).json({ success: false, message: `No Moodle account found for ${teacherEmail}` });
+        }
+        const moodleUserId = userRows[0].id;
+
+        // Get context id for this course
+        const ctxRows = await safeMoodleSelectRows(
+            'SELECT id FROM mdl_context WHERE contextlevel = 50 AND instanceid = ? LIMIT 1',
+            [courseId]
+        );
+        if (ctxRows && ctxRows.length > 0) {
+            const contextId = ctxRows[0].id;
+            await safeMoodleSelectRows(
+                'DELETE FROM mdl_role_assignments WHERE contextid = ? AND userid = ?',
+                [contextId, moodleUserId]
+            ).catch(() => null);
+        }
+
+        // Remove user enrolment
+        const enrolRows = await safeMoodleSelectRows(
+            "SELECT id FROM mdl_enrol WHERE courseid = ? AND enrol = 'manual' LIMIT 1",
+            [courseId]
+        );
+        if (enrolRows && enrolRows.length > 0) {
+            await safeMoodleSelectRows(
+                'DELETE FROM mdl_user_enrolments WHERE enrolid = ? AND userid = ?',
+                [enrolRows[0].id, moodleUserId]
+            ).catch(() => null);
+        }
+
+        return res.json({ success: true, message: 'Teacher removed from course successfully' });
+    } catch (error) {
+        console.error('Error unenrolling teacher:', error.message);
+        return res.status(500).json({ success: false, message: 'Failed to remove teacher from course', error: error.message });
+    }
+});
+
+// ===============================================
 // ROUTE: GET /api/students/programmes
 // Returns programme types and programmes from Moodle category hierarchy
 // Used by admissions form for programme-based selection
