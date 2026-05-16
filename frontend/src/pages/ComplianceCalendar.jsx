@@ -1,8 +1,9 @@
 import { useEffect, useState, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import {
     CalendarCheck, RefreshCw, AlertTriangle, Clock, CheckCircle2,
-    ChevronDown, ChevronRight, Loader2, Shield, FileText, BookOpen
+    ChevronDown, ChevronRight, Loader2, Shield, FileText, BookOpen, ExternalLink
 } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
@@ -98,6 +99,7 @@ const Section = ({ title, icon: Icon, items = [], columns, emptyMessage, default
 };
 
 const ComplianceCalendar = () => {
+    const navigate = useNavigate();
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [filterUrgency, setFilterUrgency] = useState('all');
@@ -222,6 +224,12 @@ const ComplianceCalendar = () => {
                                 <span className="capitalize text-xs font-medium text-gray-600">{i.overall_status || '—'}</span>
                             )},
                             { key: 'responsible_person', label: 'Owner', render: (i) => <span className="text-xs text-gray-500">{i.responsible_person || '—'}</span> },
+                            { key: 'open', label: '', align: 'center', render: (i) => (
+                                <button onClick={() => navigate(`/course-inductions/${i.id}`)} title="Open induction record"
+                                    className="p-1.5 rounded-lg hover:bg-scl-purple/10 text-scl-purple transition-colors">
+                                    <ExternalLink className="w-3.5 h-3.5" />
+                                </button>
+                            )},
                         ]}
                     />
 
@@ -239,6 +247,12 @@ const ComplianceCalendar = () => {
                             { key: 'review_date',  label: 'Review Date', render: (i) => fmtDate(i.review_date) },
                             { key: 'urgency',      label: 'Status', align: 'center', render: (i) => <UrgencyBadge date={i.review_date} /> },
                             { key: 'responsible_person', label: 'Programme Director', render: (i) => <span className="text-xs text-gray-500">{i.responsible_person || '—'}</span> },
+                            { key: 'open', label: '', align: 'center', render: () => (
+                                <button onClick={() => navigate('/course-registrations')} title="Open course registrations"
+                                    className="p-1.5 rounded-lg hover:bg-scl-purple/10 text-scl-purple transition-colors">
+                                    <ExternalLink className="w-3.5 h-3.5" />
+                                </button>
+                            )},
                         ]}
                     />
 
@@ -264,6 +278,12 @@ const ComplianceCalendar = () => {
                                 </span>
                             )},
                             { key: 'responsible_person', label: 'Responsible', render: (i) => <span className="text-xs text-gray-500">{i.responsible_person || '—'}</span> },
+                            { key: 'open', label: '', align: 'center', render: (i) => (
+                                <button onClick={() => navigate(`/course-inductions/${i.induction_id}`)} title="Open induction record"
+                                    className="p-1.5 rounded-lg hover:bg-scl-purple/10 text-scl-purple transition-colors">
+                                    <ExternalLink className="w-3.5 h-3.5" />
+                                </button>
+                            )},
                         ]}
                     />
 
@@ -292,6 +312,12 @@ const ComplianceCalendar = () => {
                                 </span>
                             )},
                             { key: 'responsible_person', label: 'Responsible', render: (i) => <span className="text-xs text-gray-500">{i.responsible_person || '—'}</span> },
+                            { key: 'open', label: '', align: 'center', render: (i) => (
+                                <button onClick={() => navigate(`/course-inductions/${i.induction_id}`)} title="Open induction record"
+                                    className="p-1.5 rounded-lg hover:bg-scl-purple/10 text-scl-purple transition-colors">
+                                    <ExternalLink className="w-3.5 h-3.5" />
+                                </button>
+                            )},
                         ]}
                     />
                 </div>
