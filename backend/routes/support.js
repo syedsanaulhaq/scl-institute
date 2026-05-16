@@ -409,6 +409,34 @@ router.post('/admin/:record_type/:record_id/replies', async (req, res) => {
     }
 });
 
+// POST /support/student/:record_type/:record_id/replies  — student-side reply (sender_type = 'student')
+router.post('/student/:record_type/:record_id/replies', async (req, res) => {
+    try {
+        const { record_type, record_id } = req.params;
+        if (!VALID_REPLY_TYPES.includes(record_type)) {
+            return res.status(400).json({ success: false, message: 'Invalid record type.' });
+        }
+        const { message, sender_name } = req.body;
+        if (!message || !message.trim()) {
+            return res.status(400).json({ success: false, message: 'Message is required.' });
+        }
+        const connection = await pool.getConnection();
+        const [result] = await connection.query(
+            `INSERT INTO support_replies (record_type, request_id, sender_type, sender_name, message) VALUES (?, ?, 'student', ?, ?)`,
+            [record_type, record_id, sender_name || 'Student', message.trim()]
+        );
+        const [[inserted]] = await connection.query(
+            `SELECT id, record_type, request_id AS record_id, sender_type, sender_name, message, created_at FROM support_replies WHERE id = ?`,
+            [result.insertId]
+        );
+        connection.release();
+        res.json({ success: true, reply: inserted });
+    } catch (error) {
+        console.error('[SUPPORT] Student post reply failed:', error.message);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
 // ============================================
 // FEEDBACK & EVALUATIONS ENDPOINTS
 // ============================================

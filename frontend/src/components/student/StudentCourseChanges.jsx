@@ -1,8 +1,121 @@
-import { useState, useEffect } from 'react';
-import { FileText, CheckCircle, Clock, Upload, AlertCircle, Send } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { FileText, CheckCircle, Clock, Upload, AlertCircle, Send, MessageSquare } from 'lucide-react';
 import axios from 'axios';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
+
+const fmtTime = (d) => d ? new Date(d).toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
+
+// ---------- Student-facing threaded conversation ----------
+const StudentReplyThread = ({ recordId, studentName, studentMessage, studentDate }) => {
+    const [replies, setReplies] = useState([]);
+    const [loadingReplies, setLoadingReplies] = useState(true);
+    const [draft, setDraft] = useState('');
+    const [sending, setSending] = useState(false);
+    const bottomRef = useRef(null);
+
+    useEffect(() => {
+        let cancelled = false;
+        axios.get(`${API_URL}/support/admin/course-changes/${recordId}/replies`)
+            .then(r => { if (!cancelled) setReplies(r.data.replies || []); })
+            .catch(() => {})
+            .finally(() => { if (!cancelled) setLoadingReplies(false); });
+        return () => { cancelled = true; };
+    }, [recordId]);
+
+    useEffect(() => {
+        bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, [replies]);
+
+    const postReply = async () => {
+        if (!draft.trim() || sending) return;
+        setSending(true);
+        try {
+            const r = await axios.post(`${API_URL}/support/student/course-changes/${recordId}/replies`, {
+                message: draft.trim(),
+                sender_name: studentName || 'Student'
+            });
+            setReplies(prev => [...prev, r.data.reply]);
+            setDraft('');
+        } catch { /* ignore */ } finally { setSending(false); }
+    };
+
+    return (
+        <div className="border border-gray-200 rounded-xl bg-white overflow-hidden mt-4">
+            <div className="px-4 py-3 bg-gray-50 border-b border-gray-200 flex items-center gap-2">
+                <MessageSquare className="w-4 h-4 text-blue-500" />
+                <span className="text-sm font-semibold text-gray-700">Conversation with Admin</span>
+            </div>
+            <div className="p-4 space-y-3 max-h-80 overflow-y-auto">
+                {/* Student's opening message */}
+                {studentMessage && (
+                    <div className="flex gap-3 flex-row-reverse">
+                        <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-xs font-bold text-white flex-shrink-0">
+                            {studentName?.charAt(0) || 'S'}
+                        </div>
+                        <div className="flex-1 flex flex-col items-end">
+                            <div className="flex items-center gap-2 mb-1 flex-row-reverse">
+                                <span className="text-xs font-semibold text-gray-700">You</span>
+                                <span className="text-xs text-gray-400">{fmtTime(studentDate)}</span>
+                            </div>
+                            <div className="bg-blue-600 text-white rounded-xl rounded-tr-none px-3 py-2 text-sm max-w-md">
+                                {studentMessage}
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Thread replies */}
+                {loadingReplies ? (
+                    <p className="text-xs text-gray-400 text-center py-2">Loading…</p>
+                ) : replies.length === 0 && !studentMessage ? (
+                    <p className="text-xs text-gray-400 text-center py-4">No messages yet.</p>
+                ) : (
+                    replies.map(r => (
+                        <div key={r.id} className={`flex gap-3 ${r.sender_type === 'student' ? 'flex-row-reverse' : ''}`}>
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0 ${r.sender_type === 'student' ? 'bg-blue-500' : 'bg-indigo-500'}`}>
+                                {r.sender_name?.charAt(0) || '?'}
+                            </div>
+                            <div className={`flex-1 flex flex-col ${r.sender_type === 'student' ? 'items-end' : ''}`}>
+                                <div className={`flex items-center gap-2 mb-1 ${r.sender_type === 'student' ? 'flex-row-reverse' : ''}`}>
+                                    <span className="text-xs font-semibold text-gray-700">
+                                        {r.sender_type === 'student' ? 'You' : r.sender_name}
+                                    </span>
+                                    <span className="text-xs text-gray-400">{fmtTime(r.created_at)}</span>
+                                </div>
+                                <div className={`px-3 py-2 rounded-xl text-sm max-w-md ${r.sender_type === 'student' ? 'bg-blue-600 text-white rounded-tr-none' : 'bg-gray-100 text-gray-800 rounded-tl-none'}`}>
+                                    {r.message}
+                                </div>
+                            </div>
+                        </div>
+                    ))
+                )}
+                <div ref={bottomRef} />
+            </div>
+            {/* Reply composer */}
+            <div className="px-4 py-3 border-t border-gray-200 flex gap-2">
+                <textarea
+                    value={draft}
+                    onChange={e => setDraft(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter' && e.ctrlKey) { e.preventDefault(); postReply(); } }}
+                    placeholder="Reply to admin… (Ctrl+Enter to send)"
+                    rows={2}
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 resize-none"
+                />
+                <button
+                    onClick={postReply}
+                    disabled={!draft.trim() || sending}
+                    className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 disabled:opacity-40 flex items-center gap-1 self-end"
+                >
+                    <Send className="w-4 h-4" />
+                    {sending ? 'Sending…' : 'Reply'}
+                </button>
+            </div>
+        </div>
+    );
+};
+// ----------------------------------------------------------
+
 
 const formatDate = (dateString) => {
     if (!dateString) return '';
@@ -447,6 +560,13 @@ export default function StudentCourseChanges({ user }) {
                                         </div>
                                     </div>
                                 )}
+
+                                <StudentReplyThread
+                                    recordId={request.id}
+                                    studentName={`${applicationData?.first_name || ''} ${applicationData?.last_name || ''}`.trim()}
+                                    studentMessage={request.justification}
+                                    studentDate={request.created_at}
+                                />
                             </div>
                         ))
                     )}
