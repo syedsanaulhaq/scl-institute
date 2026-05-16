@@ -1219,6 +1219,109 @@ router.get('/moodle-course/:courseId/sections', async (req, res) => {
 });
 
 // ===============================================
+// ROUTE: GET /api/students/teacher-announcements
+// Fetch news forum announcements from Moodle for a teacher's courses
+// ===============================================
+router.get('/teacher-announcements', async (req, res) => {
+    const { email } = req.query;
+    if (!email) {
+        return res.status(400).json({ success: false, message: 'email is required' });
+    }
+    try {
+        // Find teacher's Moodle user id
+        const userRows = await safeMoodleSelectRows(
+            'SELECT id FROM mdl_user WHERE email = ? AND deleted = 0 LIMIT 1',
+            [email]
+        );
+        if (!userRows || userRows.length === 0) {
+            return res.json({ success: true, data: [] });
+        }
+        const moodleUserId = userRows[0].id;
+
+        // Get announcements from news forums in courses the teacher is assigned to
+        const rows = await safeMoodleSelectRows(
+            `SELECT fd.id, fd.name AS subject, fd.timemodified,
+                    SUBSTRING(fp.message, 1, 800) AS message,
+                    CONCAT(u.firstname, ' ', u.lastname) AS userfullname,
+                    c.fullname AS coursename, c.id AS courseid
+             FROM mdl_forum_discussions fd
+             JOIN mdl_forum_posts fp ON fp.discussion = fd.id AND fp.parent = 0
+             JOIN mdl_user u ON u.id = fp.userid
+             JOIN mdl_course c ON c.id = fd.course
+             JOIN mdl_forum f ON f.id = fd.forum AND f.type = 'news'
+             JOIN mdl_context ctx ON ctx.contextlevel = 50 AND ctx.instanceid = c.id
+             JOIN mdl_role_assignments ra ON ra.contextid = ctx.id AND ra.userid = ?
+             WHERE c.visible = 1
+             ORDER BY fd.timemodified DESC
+             LIMIT 15`,
+            [moodleUserId]
+        );
+
+        // Strip HTML tags from message for clean display
+        const announcements = rows.map((row) => ({
+            id: row.id,
+            subject: row.subject,
+            message: String(row.message || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().substring(0, 300),
+            userfullname: row.userfullname,
+            coursename: row.coursename,
+            courseid: row.courseid,
+            timemodified: new Date(Number(row.timemodified) * 1000).toISOString()
+        }));
+
+        return res.json({ success: true, data: announcements });
+    } catch (error) {
+        console.error('Error fetching teacher announcements:', error.message);
+        return res.status(500).json({ success: false, message: 'Failed to fetch announcements', error: error.message });
+    }
+});
+
+// ===============================================
+// ROUTE: GET /api/students/teacher-notifications
+// Fetch Moodle notifications for a teacher
+// ===============================================
+router.get('/teacher-notifications', async (req, res) => {
+    const { email } = req.query;
+    if (!email) {
+        return res.status(400).json({ success: false, message: 'email is required' });
+    }
+    try {
+        const userRows = await safeMoodleSelectRows(
+            'SELECT id FROM mdl_user WHERE email = ? AND deleted = 0 LIMIT 1',
+            [email]
+        );
+        if (!userRows || userRows.length === 0) {
+            return res.json({ success: true, data: [] });
+        }
+        const moodleUserId = userRows[0].id;
+
+        const rows = await safeMoodleSelectRows(
+            `SELECT n.id, n.subject, n.smallmessage, n.timecreated, n.timeread,
+                    CONCAT(u.firstname, ' ', u.lastname) AS senderfullname
+             FROM mdl_notifications n
+             LEFT JOIN mdl_user u ON u.id = n.useridfrom
+             WHERE n.useridto = ?
+             ORDER BY n.timecreated DESC
+             LIMIT 15`,
+            [moodleUserId]
+        );
+
+        const notifications = rows.map((row) => ({
+            id: row.id,
+            subject: row.subject || 'Notification',
+            text: String(row.smallmessage || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().substring(0, 200),
+            read: row.timeread !== null,
+            timecreated: new Date(Number(row.timecreated) * 1000).toISOString(),
+            sender: row.senderfullname
+        }));
+
+        return res.json({ success: true, data: notifications });
+    } catch (error) {
+        console.error('Error fetching teacher notifications:', error.message);
+        return res.status(500).json({ success: false, message: 'Failed to fetch notifications', error: error.message });
+    }
+});
+
+// ===============================================
 // ROUTE: GET /api/students/programmes
 // Returns programme types and programmes from Moodle category hierarchy
 // Used by admissions form for programme-based selection

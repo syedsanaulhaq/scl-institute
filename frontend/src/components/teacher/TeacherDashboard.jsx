@@ -11,7 +11,7 @@ const TeacherDashboard = ({ user }) => {
     const navigate = useNavigate();
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
-    const [data, setData] = useState({ courseRows: [], summary: null, activities: [] });
+    const [data, setData] = useState({ courseRows: [], summary: null, activities: [], announcements: [], notifications: [] });
     const [calendarDate, setCalendarDate] = useState(new Date());
     const [ssoLoading, setSsoLoading] = useState(false);
 
@@ -89,13 +89,9 @@ const TeacherDashboard = ({ user }) => {
     }
 
     const summary = data.summary || { totalCourses: 0, assessmentCount: 0, moduleCount: 0, forumCount: 0 };
-    const firstName = user?.name?.split(' ')[0] || user?.full_name?.split(' ')[0] || 'Teacher';
-
-    const defaultAnnouncements = [
-        { id: 1, subject: 'Welcome to Your Teaching Dashboard', message: 'This is your teaching hub. View your courses, assessments, and student activity from here.', coursename: 'System', userfullname: 'Admin', timemodified: new Date().toISOString() },
-        { id: 2, subject: 'Assignment Grading Reminder', message: 'Please review and grade pending student submissions before the end of the semester.', coursename: 'Academics', userfullname: 'Registrar', timemodified: new Date(Date.now() - 86400000).toISOString() },
-        { id: 3, subject: 'New Course Resources Available', message: 'Updated teaching materials and resources are now available on the LMS for your courses.', coursename: 'Library', userfullname: 'Librarian', timemodified: new Date(Date.now() - 172800000).toISOString() },
-    ];
+    const firstName = user?.first_name || user?.name?.split(' ')[0] || user?.full_name?.split(' ')[0] || 'Teacher';
+    const announcements = data.announcements || [];
+    const notifications = data.notifications || [];
 
     return (
         <div className="px-5 pt-2 pb-5 min-h-screen" style={{ background: '#FFFFFF' }}>
@@ -154,7 +150,7 @@ const TeacherDashboard = ({ user }) => {
                         </h2>
                     </div>
                     <div className="p-4">
-                        <AnnouncementsTab announcements={defaultAnnouncements} formatTime={formatTime} />
+                        <AnnouncementsTab announcements={announcements} formatTime={formatTime} />
                     </div>
                 </div>
             </div>
@@ -182,7 +178,7 @@ const TeacherDashboard = ({ user }) => {
                         </h2>
                     </div>
                     <div className="p-4">
-                        <TeacherNotificationsTab formatTime={formatTime} />
+                        <TeacherNotificationsTab notifications={notifications} formatTime={formatTime} />
                     </div>
                 </div>
             </div>
@@ -305,12 +301,16 @@ const AssessmentsTab = ({ assessments }) => {
     );
 };
 
-const TeacherNotificationsTab = ({ formatTime }) => {
-    const notifications = [
-        { id: 1, subject: 'Student submission received', text: 'A student has submitted their assignment for grading.', read: false, timecreated: new Date(Date.now() - 3600000).toISOString() },
-        { id: 2, subject: 'Forum activity', text: 'A student posted a new question in the discussion forum.', read: false, timecreated: new Date(Date.now() - 7200000).toISOString() },
-        { id: 3, subject: 'Course material updated', text: 'Your course materials have been synced from Moodle.', read: true, timecreated: new Date(Date.now() - 86400000).toISOString() },
-    ];
+const TeacherNotificationsTab = ({ notifications, formatTime }) => {
+    if (!notifications || notifications.length === 0) {
+        return (
+            <div className="text-center py-8" style={{ color: '#6B7280' }}>
+                <Bell className="w-8 h-8 mx-auto mb-2" style={{ color: '#9CA3AF' }} />
+                <p className="text-sm font-medium">No notifications</p>
+                <p className="text-xs mt-1">Moodle notifications will appear here</p>
+            </div>
+        );
+    }
     return (
         <div className="divide-y" style={{ borderColor: '#F9FAFB' }}>
             {notifications.map((notif) => (
@@ -327,7 +327,17 @@ const TeacherNotificationsTab = ({ formatTime }) => {
     );
 };
 
-const AnnouncementsTab = ({ announcements, formatTime }) => (
+const AnnouncementsTab = ({ announcements, formatTime }) => {
+    if (!announcements || announcements.length === 0) {
+        return (
+            <div className="text-center py-8" style={{ color: '#6B7280' }}>
+                <Megaphone className="w-8 h-8 mx-auto mb-2" style={{ color: '#9CA3AF' }} />
+                <p className="text-sm font-medium">No announcements</p>
+                <p className="text-xs mt-1">Course announcements from Moodle will appear here</p>
+            </div>
+        );
+    }
+    return (
     <div className="divide-y" style={{ borderColor: '#F9FAFB' }}>
         {announcements.map((ann) => (
             <div key={ann.id} className="py-3 px-1 hover:bg-gray-50 transition-colors rounded">
@@ -344,7 +354,8 @@ const AnnouncementsTab = ({ announcements, formatTime }) => (
             </div>
         ))}
     </div>
-);
+    );
+};
 
 const MiniCalendar = ({ date, onDateChange }) => {
     const today = new Date();

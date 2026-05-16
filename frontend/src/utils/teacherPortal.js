@@ -76,7 +76,20 @@ export async function fetchTeacherPortalData(email) {
         resourceCount: activities.filter((a) => a.type === 'resource' || a.type === 'url' || a.type === 'page').length
     };
 
-    return { courses: teachingCourses, courseRows, activities, summary };
+    // Fetch announcements and notifications in parallel
+    const [announcementsRes, notificationsRes] = await Promise.allSettled([
+        axios.get(`${API_URL}/students/teacher-announcements`, { params: { email } }),
+        axios.get(`${API_URL}/students/teacher-notifications`, { params: { email } })
+    ]);
+
+    const announcements = announcementsRes.status === 'fulfilled'
+        ? (announcementsRes.value.data?.data || [])
+        : [];
+    const notifications = notificationsRes.status === 'fulfilled'
+        ? (notificationsRes.value.data?.data || [])
+        : [];
+
+    return { courses: teachingCourses, courseRows, activities, summary, announcements, notifications };
 }
 
 function countModuleTypes(modules) {
