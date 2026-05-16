@@ -1768,6 +1768,19 @@ router.post('/applications', upload.fields([
         const formattedYearCompleted = formatDateForDB(year_completed);
         const formattedDeclarationDate = formatDateForDB(declaration_date) || new Date().toISOString().split('T')[0];
 
+        // Auto-resolve course_code if not sent from frontend
+        let resolvedCourseCode = toNullIfEmpty(course_code);
+        if (!resolvedCourseCode) {
+            const titleToSearch = toNullIfEmpty(course_title) || toNullIfEmpty(program_name);
+            if (titleToSearch) {
+                const [codeRows] = await connection.execute(
+                    'SELECT course_code FROM courses WHERE course_title = ? OR ? LIKE CONCAT(course_title, \'%\') ORDER BY LENGTH(course_title) DESC LIMIT 1',
+                    [titleToSearch, titleToSearch]
+                );
+                if (codeRows.length > 0) resolvedCourseCode = codeRows[0].course_code;
+            }
+        }
+
         // Generate application reference to avoid duplicate trigger values
         const [refRows] = await connection.execute(
             'SELECT LPAD(IFNULL(MAX(id), 0) + 1, 6, "0") as nextId FROM student_applications'
@@ -1804,7 +1817,7 @@ router.post('/applications', upload.fields([
             postcode, 
             country_of_residence,
             toNullIfEmpty(course_title), 
-            toNullIfEmpty(course_code), 
+            resolvedCourseCode, 
             toNullIfEmpty(course_type),
             toNullIfEmpty(programme_type_name),
             toNullIfEmpty(program_name),
@@ -2039,6 +2052,19 @@ router.put('/applications/:id', upload.fields([
         const formattedYearCompleted = formatDateForDB(year_completed);
         const formattedDeclarationDate = formatDateForDB(declaration_date) || new Date().toISOString().split('T')[0];
 
+        // Auto-resolve course_code if not sent from frontend
+        let resolvedCourseCode = toNullIfEmpty(course_code);
+        if (!resolvedCourseCode) {
+            const titleToSearch = toNullIfEmpty(course_title) || toNullIfEmpty(program_name);
+            if (titleToSearch) {
+                const [codeRows] = await connection.execute(
+                    'SELECT course_code FROM courses WHERE course_title = ? OR ? LIKE CONCAT(course_title, \'%\') ORDER BY LENGTH(course_title) DESC LIMIT 1',
+                    [titleToSearch, titleToSearch]
+                );
+                if (codeRows.length > 0) resolvedCourseCode = codeRows[0].course_code;
+            }
+        }
+
         // Update main application
         await connection.execute(`
             UPDATE student_applications SET
@@ -2067,7 +2093,7 @@ router.put('/applications/:id', upload.fields([
             postcode, 
             country_of_residence,
             course_title, 
-            course_code, 
+            resolvedCourseCode, 
             course_type, 
             toNullIfEmpty(programme_type_name),
             toNullIfEmpty(program_name),
