@@ -1,7 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
     Search,
-    Filter,
     CheckCircle2,
     XCircle,
     Clock,
@@ -13,13 +12,120 @@ import {
     ChevronDown,
     ChevronUp,
     Send,
-    Eye
+    Eye,
+    MessageSquare
 } from 'lucide-react';
 import axios from 'axios';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
 
-const formatDate = (dateValue) => {
+const fmtTime = (d) => d ? new Date(d).toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
+
+// ---------- Threaded conversation component ----------
+const ReplyThread = ({ recordId, studentName, studentMessage, studentDate }) => {
+    const [replies, setReplies] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [draft, setDraft] = useState('');
+    const [sending, setSending] = useState(false);
+    const bottomRef = useRef(null);
+
+    useEffect(() => {
+        let cancelled = false;
+        axios.get(`${API_URL}/support/admin/course-changes/${recordId}/replies`)
+            .then(r => { if (!cancelled) setReplies(r.data.replies || []); })
+            .catch(() => {})
+            .finally(() => { if (!cancelled) setLoading(false); });
+        return () => { cancelled = true; };
+    }, [recordId]);
+
+    useEffect(() => {
+        bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, [replies]);
+
+    const postReply = async () => {
+        if (!draft.trim() || sending) return;
+        setSending(true);
+        try {
+            const r = await axios.post(`${API_URL}/support/admin/course-changes/${recordId}/replies`, {
+                message: draft.trim(), sender_name: 'Admin'
+            });
+            setReplies(prev => [...prev, r.data.reply]);
+            setDraft('');
+        } catch { /* ignore */ } finally { setSending(false); }
+    };
+
+    return (
+        <div className="border border-gray-200 rounded-xl bg-white overflow-hidden">
+            <div className="px-4 py-3 bg-gray-50 border-b border-gray-200 flex items-center gap-2">
+                <MessageSquare className="w-4 h-4 text-indigo-500" />
+                <span className="text-sm font-semibold text-gray-700">Conversation</span>
+            </div>
+            <div className="p-4 space-y-3 max-h-80 overflow-y-auto">
+                {/* Student's opening message */}
+                {studentMessage && (
+                    <div className="flex gap-3">
+                        <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center text-xs font-bold text-white flex-shrink-0">
+                            {studentName?.charAt(0) || 'S'}
+                        </div>
+                        <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                                <span className="text-xs font-semibold text-gray-700">{studentName}</span>
+                                <span className="text-xs text-gray-400">{fmtTime(studentDate)}</span>
+                            </div>
+                            <div className="bg-gray-100 rounded-xl rounded-tl-none px-3 py-2 text-sm text-gray-800 max-w-md">
+                                {studentMessage}
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Thread replies */}
+                {loading ? (
+                    <p className="text-xs text-gray-400 text-center py-2">Loading…</p>
+                ) : (
+                    replies.map(r => (
+                        <div key={r.id} className={`flex gap-3 ${r.sender_type === 'admin' ? 'flex-row-reverse' : ''}`}>
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0 ${r.sender_type === 'admin' ? 'bg-indigo-500' : 'bg-gray-400'}`}>
+                                {r.sender_name?.charAt(0) || '?'}
+                            </div>
+                            <div className={`flex-1 flex flex-col ${r.sender_type === 'admin' ? 'items-end' : ''}`}>
+                                <div className={`flex items-center gap-2 mb-1 ${r.sender_type === 'admin' ? 'flex-row-reverse' : ''}`}>
+                                    <span className="text-xs font-semibold text-gray-700">{r.sender_name}</span>
+                                    <span className="text-xs text-gray-400">{fmtTime(r.created_at)}</span>
+                                </div>
+                                <div className={`px-3 py-2 rounded-xl text-sm max-w-md ${r.sender_type === 'admin' ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-white border border-gray-200 text-gray-800 rounded-tl-none'}`}>
+                                    {r.message}
+                                </div>
+                            </div>
+                        </div>
+                    ))
+                )}
+                <div ref={bottomRef} />
+            </div>
+            {/* Reply composer */}
+            <div className="px-4 py-3 border-t border-gray-200 flex gap-2">
+                <textarea
+                    value={draft}
+                    onChange={e => setDraft(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter' && e.ctrlKey) { e.preventDefault(); postReply(); } }}
+                    placeholder="Write a reply… (Ctrl+Enter to send)"
+                    rows={2}
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 resize-none"
+                />
+                <button
+                    onClick={postReply}
+                    disabled={!draft.trim() || sending}
+                    className="px-4 py-2 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700 disabled:opacity-40 flex items-center gap-1 self-end"
+                >
+                    <Send className="w-4 h-4" />
+                    Post Reply
+                </button>
+            </div>
+        </div>
+    );
+};
+// -------------------------------------------------------
+
     if (!dateValue) return 'N/A';
     try {
         const date = new Date(dateValue);
@@ -417,83 +523,83 @@ const ManagerCourseChangeRequests = () => {
 
                                                 {/* Expanded Detail Panel */}
                                                 {isExpanded && (
-                                                    <div className="px-6 pb-4 bg-gray-50 border-t border-gray-200">
-                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
-                                                            {/* Left: Request Details */}
-                                                            <div className="space-y-3">
-                                                                <h3 className="text-sm font-semibold text-gray-900 border-b pb-1">Request Details</h3>
-                                                                <div className="grid grid-cols-2 gap-2 text-sm">
-                                                                    <span className="text-gray-500">Type:</span>
-                                                                    <span className="font-medium">{req.type_of_request}</span>
-                                                                    <span className="text-gray-500">Current Course:</span>
-                                                                    <span className="font-medium">{req.current_course_code}</span>
-                                                                    <span className="text-gray-500">Current Title:</span>
-                                                                    <span className="font-medium">{req.current_course_title || 'N/A'}</span>
-                                                                    <span className="text-gray-500">Study Mode:</span>
-                                                                    <span className="font-medium">{req.current_study_mode || 'N/A'}</span>
-                                                                    <span className="text-gray-500">Effective Date:</span>
-                                                                    <span className="font-medium">{formatDate(req.effective_date)}</span>
-                                                                    <span className="text-gray-500">Submitted:</span>
-                                                                    <span className="font-medium">{formatDate(req.created_at)}</span>
+                                                    <div className="px-6 pb-6 bg-gray-50 border-t border-gray-200">
+                                                        <div className="mt-4 space-y-4">
+
+                                                            {/* ── Request Details Info Grid ── */}
+                                                            <div className="bg-white rounded-xl border border-gray-200 p-4">
+                                                                <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                                                                    <FileText className="w-4 h-4 text-gray-500" /> Request Details
+                                                                </h3>
+                                                                <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-2 text-sm">
+                                                                    <div><p className="text-xs text-gray-500">Student</p><p className="font-medium">{req.first_name} {req.last_name}</p></div>
+                                                                    <div><p className="text-xs text-gray-500">Email</p><p className="font-medium break-all">{req.email}</p></div>
+                                                                    <div><p className="text-xs text-gray-500">Request Type</p><p className="font-medium">{req.type_of_request}</p></div>
+                                                                    <div><p className="text-xs text-gray-500">Submitted</p><p className="font-medium">{formatDate(req.created_at)}</p></div>
+                                                                    <div><p className="text-xs text-gray-500">Current Course</p><p className="font-medium">{req.current_course_code || 'N/A'}</p></div>
+                                                                    <div><p className="text-xs text-gray-500">Current Title</p><p className="font-medium">{req.current_course_title || 'N/A'}</p></div>
+                                                                    <div><p className="text-xs text-gray-500">Study Mode</p><p className="font-medium">{req.current_study_mode || 'N/A'}</p></div>
+                                                                    <div><p className="text-xs text-gray-500">Effective Date</p><p className="font-medium">{formatDate(req.effective_date)}</p></div>
+                                                                    {req.digital_signature && (
+                                                                        <div className="col-span-2"><p className="text-xs text-gray-500">Digital Signature</p><p className="font-medium italic">{req.digital_signature}</p></div>
+                                                                    )}
                                                                 </div>
-                                                                {req.justification && (
-                                                                    <div>
-                                                                        <p className="text-gray-500 text-sm">Justification:</p>
-                                                                        <p className="text-sm text-gray-800 bg-white p-2 rounded border mt-1">{req.justification}</p>
-                                                                    </div>
-                                                                )}
-                                                                {req.digital_signature && (
-                                                                    <div>
-                                                                        <p className="text-gray-500 text-sm">Digital Signature:</p>
-                                                                        <p className="text-sm text-gray-800 italic">{req.digital_signature}</p>
-                                                                    </div>
-                                                                )}
                                                             </div>
 
-                                                            {/* Right: Review / Decision */}
-                                                            <div className="space-y-3">
+                                                            {/* ── Threaded Conversation ── */}
+                                                            <ReplyThread
+                                                                recordId={req.id}
+                                                                studentName={`${req.first_name} ${req.last_name}`}
+                                                                studentMessage={req.justification}
+                                                                studentDate={req.created_at}
+                                                            />
+
+                                                            {/* ── Decision / Review Section ── */}
+                                                            <div className="bg-white rounded-xl border border-gray-200 p-4">
                                                                 {req.decision && req.decision !== '' && reviewingId !== req.id ? (
                                                                     <>
-                                                                        <h3 className="text-sm font-semibold text-gray-900 border-b pb-1">Decision</h3>
-                                                                        <div className="grid grid-cols-2 gap-2 text-sm">
-                                                                            <span className="text-gray-500">Decision:</span>
-                                                                            <span className="font-medium">{req.decision}</span>
-                                                                            <span className="text-gray-500">Reviewed By:</span>
-                                                                            <span className="font-medium">{req.reviewed_by || 'N/A'}</span>
-                                                                            <span className="text-gray-500">Review Date:</span>
-                                                                            <span className="font-medium">{formatDate(req.review_date)}</span>
+                                                                        <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                                                                            <CheckCircle2 className="w-4 h-4 text-green-500" /> Decision Recorded
+                                                                        </h3>
+                                                                        <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-2 text-sm">
+                                                                            <div><p className="text-xs text-gray-500">Decision</p><p className="font-medium">{req.decision}</p></div>
+                                                                            <div><p className="text-xs text-gray-500">Reviewed By</p><p className="font-medium">{req.reviewed_by || 'N/A'}</p></div>
+                                                                            <div><p className="text-xs text-gray-500">Review Date</p><p className="font-medium">{formatDate(req.review_date)}</p></div>
                                                                             {req.new_course_code && (
-                                                                                <>
-                                                                                    <span className="text-gray-500">New Course:</span>
-                                                                                    <span className="font-medium">{req.new_course_code}{req.new_course_title ? ` — ${req.new_course_title}` : ''}</span>
-                                                                                </>
+                                                                                <div className="col-span-2"><p className="text-xs text-gray-500">New Course</p><p className="font-medium">{req.new_course_code}{req.new_course_title ? ` — ${req.new_course_title}` : ''}</p></div>
                                                                             )}
                                                                         </div>
                                                                         {req.committee_comments && (
-                                                                            <div>
-                                                                                <p className="text-gray-500 text-sm">Committee Comments:</p>
-                                                                                <p className="text-sm text-gray-800 bg-white p-2 rounded border mt-1">{req.committee_comments}</p>
+                                                                            <div className="mt-3">
+                                                                                <p className="text-xs text-gray-500 mb-1">Committee Comments</p>
+                                                                                <p className="text-sm text-gray-800 bg-gray-50 p-2 rounded border">{req.committee_comments}</p>
                                                                             </div>
                                                                         )}
                                                                         {req.rejection_reason && (
-                                                                            <div>
-                                                                                <p className="text-gray-500 text-sm">Rejection Reason:</p>
-                                                                                <p className="text-sm text-red-700 bg-red-50 p-2 rounded border mt-1">{req.rejection_reason}</p>
+                                                                            <div className="mt-3">
+                                                                                <p className="text-xs text-gray-500 mb-1">Rejection Reason</p>
+                                                                                <p className="text-sm text-red-700 bg-red-50 p-2 rounded border">{req.rejection_reason}</p>
                                                                             </div>
                                                                         )}
+                                                                        <button
+                                                                            onClick={() => handleStartReview(req)}
+                                                                            className="mt-3 px-3 py-1.5 text-xs bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
+                                                                        >
+                                                                            Amend Decision
+                                                                        </button>
                                                                     </>
                                                                 ) : reviewingId === req.id ? (
                                                                     <>
-                                                                        <h3 className="text-sm font-semibold text-gray-900 border-b pb-1">Submit Review</h3>
+                                                                        <h3 className="text-sm font-semibold text-gray-900 mb-3">Submit Decision</h3>
                                                                         <div className="space-y-3">
                                                                             <div>
-                                                                                <label className="block text-sm font-medium text-gray-700 mb-1">Decision *</label>
+                                                                                <label className="block text-xs font-medium text-gray-700 mb-1">Decision *</label>
                                                                                 <select
                                                                                     value={reviewForm.decision}
                                                                                     onChange={(e) => setReviewForm(f => ({ ...f, decision: e.target.value }))}
                                                                                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
                                                                                 >
-                                                                                    <option value="">Select decision...</option>
+                                                                                    <option value="">Select decision…</option>
                                                                                     <option value="Approved">Approve</option>
                                                                                     <option value="Approved with Conditions">Approve with Conditions</option>
                                                                                     <option value="Rejected">Reject</option>
@@ -505,7 +611,7 @@ const ManagerCourseChangeRequests = () => {
                                                                             {(reviewForm.decision === 'Approved' || reviewForm.decision === 'Approved with Conditions') && req.type_of_request === 'Transfer' && (
                                                                                 <div className="space-y-2">
                                                                                     <div>
-                                                                                        <label className="block text-sm font-medium text-gray-700 mb-1">Transfer To Programme *</label>
+                                                                                        <label className="block text-xs font-medium text-gray-700 mb-1">Transfer To Programme *</label>
                                                                                         <div className="relative">
                                                                                             <input
                                                                                                 type="text"
@@ -513,33 +619,27 @@ const ManagerCourseChangeRequests = () => {
                                                                                                 onChange={(e) => {
                                                                                                     setCourseSearch(e.target.value);
                                                                                                     setShowCourseDropdown(true);
-                                                                                                    if (!e.target.value) {
-                                                                                                        setReviewForm(f => ({ ...f, new_course_code: '', new_course_title: '' }));
-                                                                                                    }
+                                                                                                    if (!e.target.value) setReviewForm(f => ({ ...f, new_course_code: '', new_course_title: '' }));
                                                                                                 }}
                                                                                                 onFocus={() => setShowCourseDropdown(true)}
-                                                                                                placeholder="Search by course code or name..."
+                                                                                                placeholder="Search by course code or name…"
                                                                                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
                                                                                             />
                                                                                             {showCourseDropdown && (
                                                                                                 <div className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
                                                                                                     {filteredCourses.length === 0 ? (
                                                                                                         <div className="px-3 py-2 text-sm text-gray-500">No courses found</div>
-                                                                                                    ) : (
-                                                                                                        filteredCourses.map((c) => (
-                                                                                                            <button
-                                                                                                                key={c.id}
-                                                                                                                type="button"
-                                                                                                                onClick={() => handleSelectCourse(c)}
-                                                                                                                className={`w-full text-left px-3 py-2 hover:bg-blue-50 text-sm border-b border-gray-100 last:border-0 ${
-                                                                                                                    reviewForm.new_course_code === c.course_code ? 'bg-blue-50 font-medium' : ''
-                                                                                                                }`}
-                                                                                                            >
-                                                                                                                <span className="font-medium text-gray-900">{c.course_code}</span>
-                                                                                                                <span className="text-gray-500 ml-2">— {c.course_title}</span>
-                                                                                                            </button>
-                                                                                                        ))
-                                                                                                    )}
+                                                                                                    ) : filteredCourses.map((c) => (
+                                                                                                        <button
+                                                                                                            key={c.id}
+                                                                                                            type="button"
+                                                                                                            onClick={() => handleSelectCourse(c)}
+                                                                                                            className={`w-full text-left px-3 py-2 hover:bg-blue-50 text-sm border-b border-gray-100 last:border-0 ${reviewForm.new_course_code === c.course_code ? 'bg-blue-50 font-medium' : ''}`}
+                                                                                                        >
+                                                                                                            <span className="font-medium text-gray-900">{c.course_code}</span>
+                                                                                                            <span className="text-gray-500 ml-2">— {c.course_title}</span>
+                                                                                                        </button>
+                                                                                                    ))}
                                                                                                 </div>
                                                                                             )}
                                                                                         </div>
@@ -550,39 +650,33 @@ const ManagerCourseChangeRequests = () => {
                                                                                         )}
                                                                                     </div>
                                                                                     <div className="flex items-center gap-2">
-                                                                                        <input
-                                                                                            type="checkbox"
-                                                                                            checked={reviewForm.apply_moodle_changes}
-                                                                                            onChange={(e) => setReviewForm(f => ({ ...f, apply_moodle_changes: e.target.checked }))}
-                                                                                            className="rounded"
-                                                                                        />
+                                                                                        <input type="checkbox" checked={reviewForm.apply_moodle_changes} onChange={(e) => setReviewForm(f => ({ ...f, apply_moodle_changes: e.target.checked }))} className="rounded" />
                                                                                         <label className="text-sm text-gray-600">Apply changes to Moodle LMS automatically</label>
                                                                                     </div>
                                                                                 </div>
                                                                             )}
 
-                                                                            {/* Rejection reason */}
                                                                             {reviewForm.decision === 'Rejected' && (
                                                                                 <div>
-                                                                                    <label className="block text-sm font-medium text-gray-700 mb-1">Rejection Reason</label>
+                                                                                    <label className="block text-xs font-medium text-gray-700 mb-1">Rejection Reason</label>
                                                                                     <textarea
                                                                                         value={reviewForm.rejection_reason}
                                                                                         onChange={(e) => setReviewForm(f => ({ ...f, rejection_reason: e.target.value }))}
                                                                                         rows={2}
                                                                                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
-                                                                                        placeholder="Reason for rejection..."
+                                                                                        placeholder="Reason for rejection…"
                                                                                     />
                                                                                 </div>
                                                                             )}
 
                                                                             <div>
-                                                                                <label className="block text-sm font-medium text-gray-700 mb-1">Comments</label>
+                                                                                <label className="block text-xs font-medium text-gray-700 mb-1">Committee Comments</label>
                                                                                 <textarea
                                                                                     value={reviewForm.committee_comments}
                                                                                     onChange={(e) => setReviewForm(f => ({ ...f, committee_comments: e.target.value }))}
                                                                                     rows={2}
                                                                                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
-                                                                                    placeholder="Committee comments..."
+                                                                                    placeholder="Committee comments…"
                                                                                 />
                                                                             </div>
 
@@ -593,7 +687,7 @@ const ManagerCourseChangeRequests = () => {
                                                                                     className="flex items-center gap-1 px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 disabled:opacity-50"
                                                                                 >
                                                                                     <Send className="w-4 h-4" />
-                                                                                    {submitting ? 'Submitting...' : 'Submit Decision'}
+                                                                                    {submitting ? 'Submitting…' : 'Submit Decision'}
                                                                                 </button>
                                                                                 <button
                                                                                     onClick={() => setReviewingId(null)}
@@ -605,11 +699,18 @@ const ManagerCourseChangeRequests = () => {
                                                                         </div>
                                                                     </>
                                                                 ) : (
-                                                                    <div className="flex items-center justify-center h-full">
-                                                                        <p className="text-gray-400 text-sm italic">No review submitted yet</p>
+                                                                    <div className="flex items-center justify-between">
+                                                                        <p className="text-sm text-gray-500 italic">No decision yet</p>
+                                                                        <button
+                                                                            onClick={() => handleStartReview(req)}
+                                                                            className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700"
+                                                                        >
+                                                                            Review &amp; Decide
+                                                                        </button>
                                                                     </div>
                                                                 )}
                                                             </div>
+
                                                         </div>
                                                     </div>
                                                 )}

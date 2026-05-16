@@ -356,7 +356,7 @@ router.put('/requests/:request_id', async (req, res) => {
 // SUPPORT REPLIES — generic threaded conversations
 // Works for: requests, feedback, complaints, disability, safeguarding
 // ============================================
-const VALID_REPLY_TYPES = ['requests', 'feedback', 'complaints', 'disability', 'safeguarding'];
+const VALID_REPLY_TYPES = ['requests', 'feedback', 'complaints', 'disability', 'safeguarding', 'course-changes'];
 
 // GET /support/admin/:record_type/:record_id/replies
 router.get('/admin/:record_type/:record_id/replies', async (req, res) => {
