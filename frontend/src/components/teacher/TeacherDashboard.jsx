@@ -150,7 +150,7 @@ const TeacherDashboard = ({ user }) => {
                         </h2>
                     </div>
                     <div className="p-4">
-                        <AnnouncementsTab announcements={announcements} formatTime={formatTime} />
+                        <AnnouncementsTab announcements={announcements} formatTime={formatTime} onOpenMoodle={(path) => handleOpenMoodle(path)} />
                     </div>
                 </div>
             </div>
@@ -166,7 +166,7 @@ const TeacherDashboard = ({ user }) => {
                         <button onClick={() => navigate('/teacher/assessments')} className="text-xs font-medium" style={{ color: '#2563EB' }}>View all →</button>
                     </div>
                     <div className="p-4">
-                        <AssessmentsTab assessments={recentAssessments} />
+                        <AssessmentsTab assessments={recentAssessments} onOpenMoodle={(path) => handleOpenMoodle(path)} />
                     </div>
                 </div>
 
@@ -178,7 +178,7 @@ const TeacherDashboard = ({ user }) => {
                         </h2>
                     </div>
                     <div className="p-4">
-                        <TeacherNotificationsTab notifications={notifications} formatTime={formatTime} />
+                        <TeacherNotificationsTab notifications={notifications} formatTime={formatTime} onOpenMoodle={(path) => handleOpenMoodle(path)} />
                     </div>
                 </div>
             </div>
@@ -272,7 +272,7 @@ const TeacherCoursesTab = ({ courses, onCourseClick }) => {
     );
 };
 
-const AssessmentsTab = ({ assessments }) => {
+const AssessmentsTab = ({ assessments, onOpenMoodle }) => {
     if (!assessments || assessments.length === 0) {
         return (
             <div className="text-center py-8" style={{ color: '#6B7280' }}>
@@ -285,7 +285,7 @@ const AssessmentsTab = ({ assessments }) => {
     return (
         <div className="divide-y" style={{ borderColor: '#F9FAFB' }}>
             {assessments.map((item) => (
-                <div key={item.id} className="py-2.5 flex gap-2.5 px-1">
+                <div key={item.id} className="py-2.5 flex gap-2.5 px-1 rounded hover:bg-gray-50 cursor-pointer transition-colors" onClick={() => onOpenMoodle?.(`/mod/${item.type}/view.php?id=${item.id}`)}>  
                     <div className="w-1.5 h-1.5 rounded-full mt-2 flex-shrink-0" style={{ background: item.type === 'assign' ? '#2563EB' : '#10B981' }} />
                     <div className="flex-1 min-w-0">
                         <p className="text-xs font-medium" style={{ color: '#1F2937' }}>{item.title}</p>
@@ -301,7 +301,7 @@ const AssessmentsTab = ({ assessments }) => {
     );
 };
 
-const TeacherNotificationsTab = ({ notifications, formatTime }) => {
+const TeacherNotificationsTab = ({ notifications, formatTime, onOpenMoodle }) => {
     if (!notifications || notifications.length === 0) {
         return (
             <div className="text-center py-8" style={{ color: '#6B7280' }}>
@@ -314,7 +314,7 @@ const TeacherNotificationsTab = ({ notifications, formatTime }) => {
     return (
         <div className="divide-y" style={{ borderColor: '#F9FAFB' }}>
             {notifications.map((notif) => (
-                <div key={notif.id} className="py-2.5 flex gap-2.5 rounded px-1" style={{ background: !notif.read ? '#F0F9FF' : undefined }}>
+                <div key={notif.id} className="py-2.5 flex gap-2.5 rounded px-1 cursor-pointer hover:bg-blue-50 transition-colors" style={{ background: !notif.read ? '#F0F9FF' : undefined }} onClick={() => onOpenMoodle?.(notif.url || '/message/output/popup/view.php')}>
                     <div className="w-1.5 h-1.5 rounded-full mt-2 flex-shrink-0" style={{ background: !notif.read ? '#2563EB' : '#D0D5E8' }} />
                     <div className="flex-1 min-w-0">
                         <p className="text-xs font-medium" style={{ color: !notif.read ? '#1F2937' : '#6B7280' }}>{notif.subject}</p>
@@ -327,7 +327,7 @@ const TeacherNotificationsTab = ({ notifications, formatTime }) => {
     );
 };
 
-const AnnouncementsTab = ({ announcements, formatTime }) => {
+const AnnouncementsTab = ({ announcements, formatTime, onOpenMoodle }) => {
     if (!announcements || announcements.length === 0) {
         return (
             <div className="text-center py-8" style={{ color: '#6B7280' }}>
@@ -340,7 +340,7 @@ const AnnouncementsTab = ({ announcements, formatTime }) => {
     return (
     <div className="divide-y" style={{ borderColor: '#F9FAFB' }}>
         {announcements.map((ann) => (
-            <div key={ann.id} className="py-3 px-1 hover:bg-gray-50 transition-colors rounded">
+            <div key={ann.id} className="py-3 px-1 hover:bg-gray-50 transition-colors rounded cursor-pointer" onClick={() => onOpenMoodle?.(`/mod/forum/discuss.php?d=${ann.id}`)}>
                 <div className="flex items-center gap-2 mb-1">
                     <Megaphone className="w-3 h-3" style={{ color: '#D07020' }} />
                     <p className="text-xs font-semibold" style={{ color: '#1F2937' }}>{ann.subject}</p>
