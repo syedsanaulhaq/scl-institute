@@ -134,7 +134,7 @@ const ReplyThread = ({ recordId, studentName, studentMessage, studentDate }) => 
         const month = String(date.getMonth() + 1).padStart(2, '0');
         const year = date.getFullYear();
         return `${day}/${month}/${year}`;
-    } catch {
+    } catch (_e) {
         return 'N/A';
     }
 };
