@@ -1325,6 +1325,17 @@ router.get('/teacher-notifications', async (req, res) => {
 // ROUTE: GET /api/students/admin/teachers
 // Returns all teachers from SCL DB with their Moodle course enrollments
 // ===============================================
+// Helper: deduplicate courses keeping the row with best enrollment status
+function dedupeByBestEnrollment(courses) {
+    const seen = new Map();
+    for (const c of (courses || [])) {
+        const existing = seen.get(c.courseId);
+        if (!existing || (c.enrollStatus !== null && c.enrollStatus !== undefined && (existing.enrollStatus === null || existing.enrollStatus === undefined))) {
+            seen.set(c.courseId, c);
+        }
+    }
+    return Array.from(seen.values());
+}
 router.get('/admin/teachers', async (req, res) => {
     try {
         // Get all users from SCL DB that have a teaching role
@@ -1379,7 +1390,7 @@ router.get('/admin/teachers', async (req, res) => {
                 lastName: t.last_name,
                 email: t.email,
                 role: t.role,
-                courses: fixedCourses
+                courses: dedupeByBestEnrollment(fixedCourses)
             };
         }));
 
