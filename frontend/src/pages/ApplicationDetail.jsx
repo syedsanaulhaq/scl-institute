@@ -120,6 +120,7 @@ const ApplicationDetail = () => {
     const [inductionContext, setInductionContext] = useState(null);
     const [inductionLoading, setInductionLoading] = useState(false);
     const [validCourse, setValidCourse] = useState(null); // null=unknown, true=valid, false=not in system
+    const [studentFees, setStudentFees] = useState(null);
 
     useEffect(() => {
         const fetch = async () => {
@@ -138,6 +139,13 @@ const ApplicationDetail = () => {
             }
         };
         fetch();
+    }, [id]);
+
+    useEffect(() => {
+        if (!id) return;
+        axios.get(`${API_URL}/induction-driven/student-fees`, { params: { application_id: id } })
+            .then(r => setStudentFees(r.data?.data?.[0] || null))
+            .catch(() => setStudentFees(null));
     }, [id]);
 
     useEffect(() => {
@@ -346,19 +354,81 @@ const ApplicationDetail = () => {
                                     </div>
                                 </div>
 
-                                {gateResult.section5.length > 0 && (
-                                    <div>
-                                        <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Section 5 — Fee Structure (Informational)</p>
-                                        <div className="grid sm:grid-cols-2 gap-2">
-                                            {gateResult.section5.map((r, i) => (
-                                                <div key={i} className="bg-white rounded-lg border border-gray-200 px-3 py-2.5 flex justify-between items-start gap-2">
-                                                    <span className="text-sm font-medium text-gray-700">{r.area}</span>
-                                                    <span className="text-xs text-gray-400 text-right">{r.description}</span>
-                                                </div>
-                                            ))}
+                                {/* Section 5 — Fee Structure (Student-Specific) */}
+                                <div>
+                                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Section 5 — Fee Structure</p>
+                                    {studentFees ? (() => {
+                                        const today = new Date();
+                                        const inst1Due = studentFees.instalment_1_due ? new Date(studentFees.instalment_1_due) : null;
+                                        const inst1Overdue = inst1Due && !studentFees.instalment_1_paid && !studentFees.instalment_1_waived && inst1Due < today;
+                                        const feeStatus = studentFees.fee_status || 'unpaid';
+                                        const totalFee = parseFloat(studentFees.total_fee_gbp) || 0;
+                                        const totalPaid = parseFloat(studentFees.total_paid) || 0;
+                                        const balance = parseFloat(studentFees.balance_due) || (totalFee - totalPaid);
+                                        const instalmentCount = [1,2,3,4].filter(n => parseFloat(studentFees[`instalment_${n}_amount`]) > 0).length;
+
+                                        const feeRows = [
+                                            {
+                                                area: 'Fee Record',
+                                                value: `£${totalFee.toLocaleString('en-GB', { minimumFractionDigits: 2 })}`,
+                                                verdict: 'Fee record created from induction',
+                                                status: 'pass',
+                                            },
+                                            {
+                                                area: 'Payment Status',
+                                                value: feeStatus.charAt(0).toUpperCase() + feeStatus.slice(1),
+                                                verdict: feeStatus === 'paid' ? 'Fully paid' : feeStatus === 'partial' ? `£${totalPaid.toLocaleString('en-GB', { minimumFractionDigits: 2 })} received, £${balance.toLocaleString('en-GB', { minimumFractionDigits: 2 })} outstanding` : `Unpaid — £${balance.toLocaleString('en-GB', { minimumFractionDigits: 2 })} outstanding`,
+                                                status: feeStatus === 'paid' ? 'pass' : 'review',
+                                            },
+                                            {
+                                                area: 'Next / First Instalment',
+                                                value: inst1Due ? `£${parseFloat(studentFees.instalment_1_amount).toLocaleString('en-GB', { minimumFractionDigits: 2 })} — due ${inst1Due.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}` : '—',
+                                                verdict: studentFees.instalment_1_paid || studentFees.instalment_1_waived ? 'First instalment cleared' : inst1Overdue ? 'Overdue — payment not received' : 'Pending — not yet due',
+                                                status: studentFees.instalment_1_paid || studentFees.instalment_1_waived ? 'pass' : inst1Overdue ? 'fail' : 'review',
+                                            },
+                                            {
+                                                area: 'Instalment Plan',
+                                                value: instalmentCount > 0 ? `${instalmentCount} instalment${instalmentCount > 1 ? 's' : ''}` : 'Not set',
+                                                verdict: instalmentCount > 0 ? `${instalmentCount}-part payment schedule configured` : 'No instalment plan set up',
+                                                status: instalmentCount > 0 ? 'pass' : 'review',
+                                            },
+                                            {
+                                                area: 'Funding Method',
+                                                value: studentFees.funding_option || 'Not specified',
+                                                verdict: studentFees.funding_option ? `Funding: ${studentFees.funding_option}` : 'Funding method not recorded — verify with student',
+                                                status: studentFees.funding_option ? 'pass' : 'review',
+                                            },
+                                        ];
+
+                                        return (
+                                            <div className="space-y-2">
+                                                {feeRows.map((r, i) => {
+                                                    const c = gateColors[r.status];
+                                                    return (
+                                                        <div key={i} className={`rounded-lg border ${c.rowBorder} ${c.rowBg} p-3.5 flex gap-3 items-start`}>
+                                                            <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${c.iconCls}`}>{c.icon}</span>
+                                                            <div className="flex-1 min-w-0">
+                                                                <div className="flex items-start justify-between gap-2">
+                                                                    <p className="text-sm font-semibold text-gray-800">{r.area}</p>
+                                                                    <span className={`text-xs px-2 py-0.5 rounded-full border ${c.rowBorder} bg-white/70 font-medium ${c.textCls} flex-shrink-0`}>{r.value}</span>
+                                                                </div>
+                                                                <p className={`text-xs mt-1 font-medium ${c.textCls}`}>{r.verdict}</p>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        );
+                                    })() : (
+                                        <div className="rounded-lg border border-amber-200 bg-amber-50 p-3.5 flex gap-3 items-start">
+                                            <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 text-amber-600 bg-amber-100">⚠</span>
+                                            <div>
+                                                <p className="text-sm font-semibold text-gray-800">No Fee Record</p>
+                                                <p className="text-xs mt-1 font-medium text-amber-700">Fee record has not been generated yet — accept application to auto-create</p>
+                                            </div>
                                         </div>
-                                    </div>
-                                )}
+                                    )}
+                                </div>
 
                                 {overall === 'fail' && (
                                     <div className="rounded-lg border border-red-300 bg-red-50 px-4 py-3 flex items-start gap-2">
