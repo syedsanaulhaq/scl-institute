@@ -302,6 +302,21 @@ const ManagerCourseChangeRequests = () => {
         }
     };
 
+    const handleQuickDecision = async (requestId, decision) => {
+        try {
+            const response = await axios.post(
+                `${API_URL}/students/course-change-requests/${requestId}/review`,
+                { decision, reviewed_by: 'Manager', final_decision_confirmation: true, apply_moodle_changes: true }
+            );
+            if (response.data?.success) {
+                setSuccessMsg(`Request #${requestId} updated to: ${decision}`);
+                fetchRequests();
+            }
+        } catch (err) {
+            console.error('Quick decision error:', err);
+        }
+    };
+
     const getStatusBadge = (decision) => {
         if (!decision || decision === '') {
             return { label: 'Pending Review', style: 'bg-yellow-100 text-yellow-800', icon: Clock };
@@ -582,12 +597,29 @@ const ManagerCourseChangeRequests = () => {
                                                                                 <p className="text-sm text-red-700 bg-red-50 p-2 rounded border">{req.rejection_reason}</p>
                                                                             </div>
                                                                         )}
-                                                                        <button
-                                                                            onClick={() => handleStartReview(req)}
-                                                                            className="mt-3 px-3 py-1.5 text-xs bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
-                                                                        >
-                                                                            Amend Decision
-                                                                        </button>
+                                                                        <div className="mt-4 flex flex-wrap items-center gap-2">
+                                                                            <span className="text-xs text-gray-500 font-medium">Change Status:</span>
+                                                                            {['Approved', 'Approved with Conditions', 'Rejected', 'Request More Information'].map(d => (
+                                                                                <button
+                                                                                    key={d}
+                                                                                    onClick={() => handleQuickDecision(req.id, d)}
+                                                                                    disabled={req.decision === d}
+                                                                                    className={`px-3 py-1 text-xs rounded-full border font-medium transition-colors ${
+                                                                                        req.decision === d
+                                                                                            ? 'bg-indigo-100 text-indigo-700 border-indigo-300 cursor-default'
+                                                                                            : 'bg-white text-gray-600 border-gray-300 hover:border-indigo-400 hover:text-indigo-600'
+                                                                                    }`}
+                                                                                >
+                                                                                    {d}
+                                                                                </button>
+                                                                            ))}
+                                                                            <button
+                                                                                onClick={() => handleStartReview(req)}
+                                                                                className="ml-auto px-3 py-1.5 text-xs bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
+                                                                            >
+                                                                                Full Review Form
+                                                                            </button>
+                                                                        </div>
                                                                     </>
                                                                 ) : reviewingId === req.id ? (
                                                                     <>
@@ -700,13 +732,29 @@ const ManagerCourseChangeRequests = () => {
                                                                         </div>
                                                                     </>
                                                                 ) : (
-                                                                    <div className="flex items-center justify-between">
-                                                                        <p className="text-sm text-gray-500 italic">No decision yet</p>
+                                                                    <div className="space-y-3">
+                                                                        <p className="text-sm text-gray-500 italic">No decision yet — use quick buttons or open the full form.</p>
+                                                                        <div className="flex flex-wrap items-center gap-2">
+                                                                            <span className="text-xs text-gray-500 font-medium">Quick Decision:</span>
+                                                                            {['Approved', 'Approved with Conditions', 'Rejected', 'Request More Information'].map(d => (
+                                                                                <button
+                                                                                    key={d}
+                                                                                    onClick={() => handleQuickDecision(req.id, d)}
+                                                                                    className={`px-3 py-1 text-xs rounded-full border font-medium transition-colors ${
+                                                                                        d === 'Approved' ? 'bg-green-50 text-green-700 border-green-300 hover:bg-green-100' :
+                                                                                        d === 'Rejected' ? 'bg-red-50 text-red-700 border-red-300 hover:bg-red-100' :
+                                                                                        'bg-gray-50 text-gray-600 border-gray-300 hover:border-indigo-400 hover:text-indigo-600'
+                                                                                    }`}
+                                                                                >
+                                                                                    {d}
+                                                                                </button>
+                                                                            ))}
+                                                                        </div>
                                                                         <button
                                                                             onClick={() => handleStartReview(req)}
                                                                             className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700"
                                                                         >
-                                                                            Review &amp; Decide
+                                                                            Full Review Form
                                                                         </button>
                                                                     </div>
                                                                 )}
