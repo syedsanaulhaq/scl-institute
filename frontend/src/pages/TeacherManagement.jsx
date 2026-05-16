@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import {
     Users, BookOpen, Plus, Trash2, Search, ChevronRight,
-    GraduationCap, CheckCircle2, AlertCircle, RefreshCw, X
+    GraduationCap, CheckCircle2, AlertCircle, RefreshCw, X, Wrench
 } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
@@ -91,13 +91,14 @@ const TeacherManagement = () => {
         fetchCourses();
     };
 
-    const handleEnroll = async () => {
-        if (!selected || !selectedCourseId) return;
+    const handleEnroll = async (courseIdOverride = null) => {
+        const cId = courseIdOverride || selectedCourseId;
+        if (!selected || !cId) return;
         setActionLoading(true);
         try {
             const res = await axios.post(`${API_URL}/students/admin/teacher-enroll`, {
                 teacherEmail: selected.email,
-                courseId: parseInt(selectedCourseId, 10)
+                courseId: parseInt(cId, 10)
             });
             if (res.data?.success) {
                 showToast('Teacher enrolled in course successfully');
@@ -310,14 +311,26 @@ const TeacherManagement = () => {
                                                         )}
                                                     </div>
                                                 </div>
-                                                <button
-                                                    onClick={() => handleUnenroll(course.courseId, course.courseName)}
-                                                    disabled={actionLoading}
-                                                    className="flex-shrink-0 p-1.5 rounded-lg hover:bg-red-50 transition-colors disabled:opacity-40"
-                                                    title="Remove from course"
-                                                >
-                                                    <Trash2 className="w-4 h-4 text-red-400 hover:text-red-600" />
-                                                </button>
+                                                <div className="flex items-center gap-1 flex-shrink-0">
+                                                    {(course.enrollStatus === null || course.enrollStatus === undefined) && (
+                                                        <button
+                                                            onClick={() => handleEnroll(course.courseId)}
+                                                            disabled={actionLoading}
+                                                            className="flex items-center gap-1 px-2 py-1 rounded text-[11px] font-medium bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200 transition disabled:opacity-40"
+                                                            title="Teacher has role assignment but missing enrollment — click to fix"
+                                                        >
+                                                            <Wrench className="w-3 h-3" /> Fix Enrollment
+                                                        </button>
+                                                    )}
+                                                    <button
+                                                        onClick={() => handleUnenroll(course.courseId, course.courseName)}
+                                                        disabled={actionLoading}
+                                                        className="flex-shrink-0 p-1.5 rounded-lg hover:bg-red-50 transition-colors disabled:opacity-40"
+                                                        title="Remove from course"
+                                                    >
+                                                        <Trash2 className="w-4 h-4 text-red-400 hover:text-red-600" />
+                                                    </button>
+                                                </div>
                                             </div>
                                         ))}
                                     </div>
