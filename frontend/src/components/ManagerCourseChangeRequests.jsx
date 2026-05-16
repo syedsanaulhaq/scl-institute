@@ -126,6 +126,7 @@ const ReplyThread = ({ recordId, studentName, studentMessage, studentDate }) => 
 };
 // -------------------------------------------------------
 
+const formatDate = (dateValue) => {
     if (!dateValue) return 'N/A';
     try {
         const date = new Date(dateValue);
