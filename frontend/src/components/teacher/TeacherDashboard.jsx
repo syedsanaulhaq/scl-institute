@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     BookOpen, Bell, Calendar, ExternalLink, Loader2, AlertCircle,
-    Megaphone, ClipboardCheck, BarChart3, ChevronLeft, ChevronRight,
+    Megaphone, ClipboardCheck, ChevronLeft, ChevronRight,
 } from 'lucide-react';
 import { openMoodleSSO } from '../../utils/ssoService';
 import { fetchTeacherPortalData } from '../../utils/teacherPortal';
@@ -13,6 +13,7 @@ const TeacherDashboard = ({ user }) => {
     const [error, setError] = useState('');
     const [data, setData] = useState({ courseRows: [], summary: null, activities: [], announcements: [], notifications: [] });
     const [calendarDate, setCalendarDate] = useState(new Date());
+    const [selectedCalendarDay, setSelectedCalendarDay] = useState(null);
     const [ssoLoading, setSsoLoading] = useState(false);
 
     useEffect(() => {
@@ -39,6 +40,26 @@ const TeacherDashboard = ({ user }) => {
     const recentAssessments = useMemo(() => {
         return (data.activities || []).filter((a) => a.type === 'assign' || a.type === 'quiz').slice(0, 8);
     }, [data.activities]);
+
+    const calendarEvents = useMemo(() => {
+        const dk = (d) => {
+            if (!d) return '';
+            const dt = typeof d === 'number' ? new Date(d * 1000) : new Date(d);
+            return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+        };
+        const map = {};
+        (data.notifications || []).forEach(n => {
+            const k = dk(n.created_at);
+            if (!map[k]) map[k] = { notifications: [], announcements: [] };
+            map[k].notifications.push(n);
+        });
+        (data.announcements || []).forEach(a => {
+            const k = dk(a.timemodified);
+            if (!map[k]) map[k] = { notifications: [], announcements: [] };
+            map[k].announcements.push(a);
+        });
+        return map;
+    }, [data.notifications, data.announcements]);
 
     const handleOpenMoodle = async (redirectTo = null) => {
         try {
@@ -92,6 +113,9 @@ const TeacherDashboard = ({ user }) => {
     const firstName = user?.first_name || user?.name?.split(' ')[0] || user?.full_name?.split(' ')[0] || 'Teacher';
     const announcements = data.announcements || [];
     const notifications = data.notifications || [];
+    const fmtKey = (d) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    const panelDate = selectedCalendarDay || new Date();
+    const panelEvents = calendarEvents[fmtKey(panelDate)] || { notifications: [], announcements: [] };
 
     return (
         <div className="px-5 pt-2 pb-5 min-h-screen" style={{ background: '#FFFFFF' }}>
@@ -184,14 +208,29 @@ const TeacherDashboard = ({ user }) => {
                 </div>
             </div>
 
-            {/* Row 3: Calendar + Course Activity Chart */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-5">
-                <div className="lg:col-span-1">
-                    <MiniCalendar date={calendarDate} onDateChange={setCalendarDate} />
-                </div>
-                <div className="lg:col-span-2 bg-white rounded-xl border shadow-sm p-5" style={{ borderColor: '#E5E7EB' }}>
-                    <h3 className="text-sm font-semibold mb-4" style={{ color: '#1F2937' }}>Subject Activity Overview</h3>
-                    <CourseActivityChart courses={topCourses.slice(0, 5)} />
+            {/* Row 3: Calendar + Events Panel */}
+            <div className="bg-white rounded-xl border shadow-sm overflow-hidden mb-5" style={{ borderColor: '#E5E7EB' }}>
+                <div className="flex flex-col lg:flex-row">
+                    <div className="lg:w-96 flex-shrink-0 p-5" style={{ borderRight: '1px solid #E5E7EB' }}>
+                        <MiniCalendar
+                            date={calendarDate}
+                            onDateChange={setCalendarDate}
+                            events={calendarEvents}
+                            selectedDay={selectedCalendarDay}
+                            onDayClick={(d) => setSelectedCalendarDay(prev => prev?.toDateString() === d.toDateString() ? null : d)}
+                        />
+                    </div>
+                    <div className="flex-1 p-5 overflow-y-auto" style={{ maxHeight: '420px' }}>
+                        <CalendarEventsPanel
+                            date={panelDate}
+                            events={panelEvents}
+                            assessments={recentAssessments}
+                            formatTime={formatTime}
+                            onNotificationClick={(id) => navigate(`/student/notifications?id=${id}`)}
+                            onAnnouncementClick={(id) => handleOpenMoodle(`/mod/forum/discuss.php?d=${id}`)}
+                            onAssessmentClick={(type, moduleId) => handleOpenMoodle(`/mod/${type}/view.php?id=${moduleId}`)}
+                        />
+                    </div>
                 </div>
             </div>
 
@@ -400,7 +439,7 @@ const AnnouncementsTab = ({ announcements, formatTime, onOpenMoodle }) => {
     );
 };
 
-const MiniCalendar = ({ date, onDateChange }) => {
+const MiniCalendar = ({ date, onDateChange, events = {}, selectedDay, onDayClick }) => {
     const today = new Date();
     const year = date.getFullYear();
     const month = date.getMonth();
@@ -412,10 +451,15 @@ const MiniCalendar = ({ date, onDateChange }) => {
     for (let i = 0; i < startOffset; i++) cells.push(null);
     for (let d = 1; d <= daysInMonth; d++) cells.push(d);
     const isToday = (d) => d === today.getDate() && month === today.getMonth() && year === today.getFullYear();
+    const isSelected = (d) => selectedDay && d === selectedDay.getDate() && month === selectedDay.getMonth() && year === selectedDay.getFullYear();
+    const getDayKey = (d) => `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
     return (
-        <div className="bg-white rounded-xl border shadow-sm p-4" style={{ borderColor: '#E5E7EB' }}>
-            <div className="flex items-center justify-between mb-3">
-                <h2 className="text-sm font-semibold" style={{ color: '#1F2937' }}>Calendar</h2>
+        <div>
+            <div className="flex items-center justify-between mb-4">
+                <h2 className="text-sm font-semibold flex items-center gap-2" style={{ color: '#1F2937' }}>
+                    <Calendar className="w-4 h-4" style={{ color: '#2563EB' }} />
+                    Calendar
+                </h2>
                 <div className="flex items-center gap-1">
                     <button onClick={() => onDateChange(new Date(year, month - 1, 1))} className="p-1 rounded hover:bg-gray-100 transition">
                         <ChevronLeft className="w-3.5 h-3.5" style={{ color: '#6B7280' }} />
@@ -431,48 +475,119 @@ const MiniCalendar = ({ date, onDateChange }) => {
                     <div key={d} className="text-center text-[10px] font-semibold pb-1" style={{ color: '#9CA3AF' }}>{d}</div>
                 ))}
             </div>
-            <div className="grid grid-cols-7 gap-y-0.5">
-                {cells.map((day, i) => (
-                    <div key={i} className="flex flex-col items-center justify-center py-0.5">
-                        {day ? (
-                            <div className="w-7 h-7 rounded-full flex items-center justify-center"
-                                style={{ background: isToday(day) ? '#2563EB' : 'transparent' }}>
-                                <span className="text-[11px] font-medium" style={{ color: isToday(day) ? '#fff' : '#1F2937' }}>{day}</span>
+            <div className="grid grid-cols-7 gap-y-1">
+                {cells.map((day, i) => {
+                    if (!day) return <div key={i} className="w-full aspect-square" />;
+                    const dayKey = getDayKey(day);
+                    const dayEvt = events[dayKey] || { notifications: [], announcements: [] };
+                    const hasNotif = dayEvt.notifications.length > 0;
+                    const hasAnn = dayEvt.announcements.length > 0;
+                    const hasAny = hasNotif || hasAnn;
+                    const todayDay = isToday(day);
+                    const selDay = isSelected(day);
+                    return (
+                        <div key={i} className="flex flex-col items-center py-0.5" onClick={() => hasAny && onDayClick(new Date(year, month, day))} style={{ cursor: hasAny ? 'pointer' : 'default' }}>
+                            <div className="w-8 h-8 rounded-full flex items-center justify-center transition"
+                                style={{
+                                    background: selDay ? '#2563EB' : todayDay ? '#DBEAFE' : 'transparent',
+                                    border: !selDay && todayDay ? '1.5px solid #2563EB' : 'none',
+                                }}>
+                                <span className="text-[11px] font-medium" style={{ color: selDay ? '#fff' : todayDay ? '#2563EB' : '#1F2937' }}>{day}</span>
                             </div>
-                        ) : <div className="w-7 h-7" />}
-                    </div>
-                ))}
+                            <div className="flex gap-0.5 mt-0.5" style={{ minHeight: '6px' }}>
+                                {hasNotif && <div className="w-1.5 h-1.5 rounded-full" style={{ background: '#2563EB' }} />}
+                                {hasAnn && <div className="w-1.5 h-1.5 rounded-full" style={{ background: '#F59E0B' }} />}
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+            <div className="mt-4 flex items-center gap-4" style={{ color: '#9CA3AF' }}>
+                <span className="flex items-center gap-1 text-[10px]"><span className="w-2 h-2 rounded-full inline-block" style={{ background: '#2563EB' }} /> Notifications</span>
+                <span className="flex items-center gap-1 text-[10px]"><span className="w-2 h-2 rounded-full inline-block" style={{ background: '#F59E0B' }} /> Announcements</span>
             </div>
         </div>
     );
 };
 
-const CourseActivityChart = ({ courses }) => {
-    if (!courses || courses.length === 0) {
-        return (
-            <div className="text-center py-8" style={{ color: '#6B7280' }}>
-                <BarChart3 className="w-8 h-8 mx-auto mb-2" style={{ color: '#9CA3AF' }} />
-                <p className="text-sm">No course activity data yet</p>
-            </div>
-        );
-    }
-    const maxModules = Math.max(...courses.map((c) => c.moduleCount || 1), 1);
+const CalendarEventsPanel = ({ date, events, assessments, formatTime, onNotificationClick, onAnnouncementClick, onAssessmentClick }) => {
+    const today = new Date();
+    const isToday = date.toDateString() === today.toDateString();
+    const dateLabel = isToday ? 'Today' : date.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
+    const hasEvents = (events.notifications?.length > 0) || (events.announcements?.length > 0);
     return (
-        <div className="space-y-3">
-            {courses.map((course) => {
-                const pct = Math.round(((course.moduleCount || 0) / maxModules) * 100);
-                return (
-                    <div key={course.id}>
-                        <div className="flex justify-between text-xs mb-1">
-                            <span className="truncate max-w-[65%] font-medium" style={{ color: '#1F2937' }}>{course.code || course.name}</span>
-                            <span style={{ color: '#6B7280' }}>{course.moduleCount} modules</span>
-                        </div>
-                        <div style={{ width: '100%', height: '8px', background: '#E5E7EB', borderRadius: '4px', overflow: 'hidden' }}>
-                            <div style={{ height: '100%', width: `${pct}%`, background: '#2563EB', borderRadius: '4px', transition: 'width 0.3s ease' }} />
-                        </div>
+        <div>
+            <div className="mb-4">
+                <h3 className="text-sm font-semibold" style={{ color: '#1F2937' }}>{dateLabel}</h3>
+                <p className="text-xs" style={{ color: '#9CA3AF' }}>{date.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+            </div>
+            {events.notifications?.length > 0 && (
+                <div className="mb-4">
+                    <p className="text-[10px] font-semibold uppercase tracking-wide mb-2" style={{ color: '#2563EB' }}>Notifications</p>
+                    <div className="space-y-1.5">
+                        {events.notifications.map(n => (
+                            <div key={n.id} onClick={() => onNotificationClick(n.id)}
+                                className="flex gap-2.5 p-2.5 rounded-lg cursor-pointer hover:bg-blue-50 transition-colors border"
+                                style={{ borderColor: !n.is_read ? '#BFDBFE' : '#F3F4F6', background: !n.is_read ? '#F0F9FF' : '#FAFAFA' }}>
+                                <div className="w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0" style={{ background: !n.is_read ? '#2563EB' : '#D1D5DB' }} />
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-xs font-medium" style={{ color: '#1F2937' }}>{n.subject}</p>
+                                    <p className="text-[11px] mt-0.5 line-clamp-1" style={{ color: '#6B7280' }}>{n.message}</p>
+                                </div>
+                                <span className="text-[10px] flex-shrink-0 whitespace-nowrap" style={{ color: '#9CA3AF' }}>{formatTime(n.created_at)}</span>
+                            </div>
+                        ))}
                     </div>
-                );
-            })}
+                </div>
+            )}
+            {events.announcements?.length > 0 && (
+                <div className="mb-4">
+                    <p className="text-[10px] font-semibold uppercase tracking-wide mb-2" style={{ color: '#D97706' }}>Announcements</p>
+                    <div className="space-y-1.5">
+                        {events.announcements.map(a => (
+                            <div key={a.id} onClick={() => onAnnouncementClick(a.id)}
+                                className="flex gap-2.5 p-2.5 rounded-lg cursor-pointer hover:bg-amber-50 transition-colors border"
+                                style={{ borderColor: '#FDE68A', background: '#FFFBEB' }}>
+                                <Megaphone className="w-3 h-3 mt-1 flex-shrink-0" style={{ color: '#D97706' }} />
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-xs font-medium" style={{ color: '#1F2937' }}>{a.subject}</p>
+                                    {a.coursename && <p className="text-[11px] mt-0.5" style={{ color: '#6B7280' }}>{a.coursename}</p>}
+                                </div>
+                                <span className="text-[10px] flex-shrink-0 whitespace-nowrap" style={{ color: '#9CA3AF' }}>{formatTime(a.timemodified)}</span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+            {!hasEvents && (
+                <div className="text-center py-6 mb-3">
+                    <Calendar className="w-8 h-8 mx-auto mb-2" style={{ color: '#E5E7EB' }} />
+                    <p className="text-xs" style={{ color: '#9CA3AF' }}>{isToday ? 'No events today' : 'No events on this day'}</p>
+                    <p className="text-[11px] mt-0.5" style={{ color: '#C4C8D4' }}>Click a highlighted date to see events</p>
+                </div>
+            )}
+            {assessments.length > 0 && (
+                <div>
+                    <p className="text-[10px] font-semibold uppercase tracking-wide mb-2" style={{ color: '#10B981' }}>Assessments</p>
+                    <div className="space-y-1.5">
+                        {assessments.slice(0, 6).map(item => (
+                            <div key={item.id} onClick={() => onAssessmentClick(item.type, item.moduleId)}
+                                className="flex gap-2.5 p-2.5 rounded-lg cursor-pointer hover:bg-green-50 transition-colors border"
+                                style={{ borderColor: '#D1FAE5', background: '#F0FDF4' }}>
+                                <div className="w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0" style={{ background: item.type === 'assign' ? '#2563EB' : '#10B981' }} />
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-xs font-medium" style={{ color: '#1F2937' }}>{item.title}</p>
+                                    <p className="text-[11px] mt-0.5" style={{ color: '#6B7280' }}>{item.courseCode} · {item.courseName}</p>
+                                </div>
+                                <span className="text-[10px] flex-shrink-0 px-1.5 py-0.5 rounded font-medium uppercase"
+                                    style={{ background: item.type === 'assign' ? '#DBEAFE' : '#D1FAE5', color: item.type === 'assign' ? '#2563EB' : '#10B981' }}>
+                                    {item.type}
+                                </span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
