@@ -13455,7 +13455,9 @@ router.get('/faculty-onboarding', async (req, res) => {
                     COALESCE(tob.handbook_received, 0) as handbook_received,
                     COALESCE(tob.id_card_issued, 0) as id_card_issued,
                     COALESCE(tob.onboarding_status, 'Pending') as onboarding_status,
-                    tob.remarks, tob.started_at, tob.completed_at
+                    tob.remarks, tob.started_at, tob.completed_at,
+                    (tr.created_user_id IS NOT NULL) as moodle_activated,
+                    tr.selected_course_code
              FROM teacher_registrations tr
              LEFT JOIN teacher_onboarding tob ON tob.registration_id = tr.id
              ${where}
@@ -13521,6 +13523,79 @@ router.put('/faculty-onboarding/:registrationId', async (req, res) => {
         res.json({ success: true, message: 'Onboarding updated', onboarding_status });
     } catch (error) {
         console.error('Error updating faculty onboarding:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// POST /api/students/faculty-onboarding/:registrationId/activate
+// Activate a fully-onboarded faculty member into Moodle + create portal user account
+router.post('/faculty-onboarding/:registrationId/activate', async (req, res) => {
+    try {
+        const { registrationId } = req.params;
+        const [rows] = await db.execute('SELECT * FROM teacher_registrations WHERE id = ? LIMIT 1', [registrationId]);
+        if (rows.length === 0) return res.status(404).json({ success: false, message: 'Faculty registration not found' });
+
+        const reg = rows[0];
+        if (reg.application_status !== 'accepted') {
+            return res.status(400).json({ success: false, message: 'Faculty application must be accepted before activation' });
+        }
+
+        // Assign to Moodle course (creates Moodle user if needed)
+        const moodleResult = await assignTeacherToMoodleCourse(
+            reg.email, reg.first_name, reg.last_name,
+            reg.selected_course_code,
+            reg.teaching_role || 'editingteacher'
+        );
+        if (!moodleResult?.success) {
+            return res.status(502).json({ success: false, message: moodleResult?.message || 'Failed to assign faculty to Moodle course' });
+        }
+
+        // Create or update portal user account
+        const [userRows] = await db.execute('SELECT id, password, role FROM users WHERE email = ? LIMIT 1', [reg.email]);
+        let userId, tempPassword = null, userStatus;
+        if (userRows.length === 0) {
+            tempPassword = generateTempPassword();
+            const passwordHash = crypto.createHash('sha256').update(tempPassword).digest('hex');
+            const mergedRole = mergeRoleValue('', reg.teaching_role || 'editingteacher');
+            const [ins] = await db.execute(
+                'INSERT INTO users (email, password, password_hash, first_name, last_name, role, phone, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, 1)',
+                [reg.email, tempPassword, passwordHash, reg.first_name, reg.last_name, mergedRole, reg.contact_number || null]
+            );
+            userId = Number(ins.insertId);
+            userStatus = 'created';
+        } else {
+            userId = Number(userRows[0].id);
+            tempPassword = userRows[0].password || null;
+            const mergedRole = mergeRoleValue(userRows[0].role, reg.teaching_role || 'editingteacher');
+            await db.execute(
+                'UPDATE users SET role = ?, first_name = ?, last_name = ?, phone = COALESCE(?, phone), is_active = 1 WHERE id = ?',
+                [mergedRole, reg.first_name, reg.last_name, reg.contact_number || null, userId]
+            );
+            userStatus = 'updated';
+        }
+
+        // Mark registration as having a portal user
+        await db.execute(
+            'UPDATE teacher_registrations SET created_user_id = ? WHERE id = ?',
+            [userId, registrationId]
+        );
+
+        return res.json({
+            success: true,
+            message: `${reg.first_name} ${reg.last_name} has been activated as Active Faculty`,
+            data: {
+                email: reg.email,
+                full_name: `${reg.first_name} ${reg.last_name}`,
+                password: tempPassword,
+                user_status: userStatus,
+                moodle_course: reg.selected_course_title,
+                moodle_course_code: reg.selected_course_code,
+                portal_role: reg.teaching_role || 'editingteacher',
+                moodle_result: moodleResult
+            }
+        });
+    } catch (error) {
+        console.error('Error activating faculty member:', error);
         res.status(500).json({ success: false, message: error.message });
     }
 });

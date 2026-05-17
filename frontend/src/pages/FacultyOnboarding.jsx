@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 import {
     Users, CheckCircle2, Clock, AlertCircle, Search, X, ChevronRight,
-    Mail, Phone, BookOpen, Calendar, Save, Loader2, RefreshCw, Award
+    Mail, Phone, BookOpen, Calendar, Save, Loader2, RefreshCw, Award, Zap, Copy, Eye, EyeOff
 } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
@@ -36,6 +36,9 @@ export default function FacultyOnboarding() {
     const [selected, setSelected] = useState(null);
     const [form, setForm] = useState({});
     const [toast, setToast] = useState(null);
+    const [activating, setActivating] = useState(false);
+    const [activateModal, setActivateModal] = useState(null); // holds login details after activation
+    const [showPassword, setShowPassword] = useState(false);
 
     const fetchFaculty = async () => {
         try {
@@ -89,6 +92,28 @@ export default function FacultyOnboarding() {
         setTimeout(() => setToast(null), 3500);
     };
 
+    const activate = async () => {
+        if (!selected) return;
+        try {
+            setActivating(true);
+            const res = await axios.post(`${API_URL}/students/faculty-onboarding/${selected.id}/activate`);
+            if (res.data?.success) {
+                setActivateModal(res.data.data);
+                showToast(`${res.data.data.full_name} activated as Active Faculty!`, 'success');
+                fetchFaculty();
+                setSelected(prev => ({ ...prev, moodle_activated: true }));
+            }
+        } catch (e) {
+            showToast(e.response?.data?.message || 'Activation failed. Please try again.', 'error');
+        } finally {
+            setActivating(false);
+        }
+    };
+
+    const copyToClipboard = (text) => {
+        navigator.clipboard.writeText(text).then(() => showToast('Copied to clipboard', 'success'));
+    };
+
     const stats = useMemo(() => {
         const total = faculty.length;
         const pending = faculty.filter(f => f.onboarding_status === 'Pending').length;
@@ -109,6 +134,61 @@ export default function FacultyOnboarding() {
                 <div className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg text-white text-sm flex items-center gap-2 ${toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'}`}>
                     {toast.type === 'success' ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
                     {toast.msg}
+                </div>
+            )}
+
+            {/* Activation Success Modal */}
+            {activateModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+                        <div className="p-5 border-b border-gray-100 flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
+                                    <Zap size={20} className="text-green-600" />
+                                </div>
+                                <div>
+                                    <p className="font-bold text-gray-900">Faculty Activated!</p>
+                                    <p className="text-xs text-gray-500">Portal account &amp; Moodle enrolment created</p>
+                                </div>
+                            </div>
+                            <button onClick={() => setActivateModal(null)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500"><X size={18} /></button>
+                        </div>
+                        <div className="p-5 space-y-4">
+                            <div className="bg-green-50 border border-green-200 rounded-xl p-4">
+                                <p className="text-sm font-semibold text-green-800 mb-3">Login Credentials</p>
+                                <div className="space-y-2">
+                                    <div className="flex items-center justify-between bg-white rounded-lg border border-green-200 px-3 py-2">
+                                        <div>
+                                            <p className="text-xs text-gray-500">Email</p>
+                                            <p className="text-sm font-medium text-gray-900">{activateModal.email}</p>
+                                        </div>
+                                        <button onClick={() => copyToClipboard(activateModal.email)} className="p-1.5 hover:bg-green-50 rounded text-green-600"><Copy size={14} /></button>
+                                    </div>
+                                    {activateModal.password && (
+                                        <div className="flex items-center justify-between bg-white rounded-lg border border-green-200 px-3 py-2">
+                                            <div className="flex-1">
+                                                <p className="text-xs text-gray-500">Temporary Password</p>
+                                                <p className="text-sm font-mono font-medium text-gray-900">{showPassword ? activateModal.password : '••••••••••••'}</p>
+                                            </div>
+                                            <div className="flex items-center gap-1">
+                                                <button onClick={() => setShowPassword(p => !p)} className="p-1.5 hover:bg-green-50 rounded text-gray-500">{showPassword ? <EyeOff size={14} /> : <Eye size={14} />}</button>
+                                                <button onClick={() => copyToClipboard(activateModal.password)} className="p-1.5 hover:bg-green-50 rounded text-green-600"><Copy size={14} /></button>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                            <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-xs text-blue-700 space-y-1">
+                                <p><span className="font-semibold">Course:</span> {activateModal.moodle_course}</p>
+                                <p><span className="font-semibold">Role:</span> {activateModal.portal_role}</p>
+                                <p><span className="font-semibold">Status:</span> Account {activateModal.user_status} — now visible in Active Faculty</p>
+                            </div>
+                            <p className="text-xs text-gray-400 text-center">Share these credentials securely with the faculty member. They can reset their password after first login.</p>
+                        </div>
+                        <div className="p-4 border-t border-gray-100">
+                            <button onClick={() => setActivateModal(null)} className="w-full py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium">Done</button>
+                        </div>
+                    </div>
                 </div>
             )}
 
@@ -303,8 +383,8 @@ export default function FacultyOnboarding() {
                             </div>
                         </div>
 
-                        {/* Save button */}
-                        <div className="p-4 border-t border-gray-100">
+                        {/* Save + Activate buttons */}
+                        <div className="p-4 border-t border-gray-100 space-y-2">
                             <button
                                 onClick={save}
                                 disabled={saving}
@@ -313,6 +393,24 @@ export default function FacultyOnboarding() {
                                 {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
                                 {saving ? 'Saving…' : 'Save Onboarding Record'}
                             </button>
+                            {selected.onboarding_status === 'Completed' && (
+                                selected.moodle_activated
+                                    ? (
+                                        <div className="w-full flex items-center justify-center gap-2 py-2.5 bg-green-50 border border-green-300 text-green-700 rounded-lg text-sm font-medium">
+                                            <CheckCircle2 size={16} />
+                                            Active Faculty — Moodle Activated
+                                        </div>
+                                    ) : (
+                                        <button
+                                            onClick={activate}
+                                            disabled={activating}
+                                            className="w-full flex items-center justify-center gap-2 py-2.5 bg-green-600 hover:bg-green-700 disabled:opacity-60 text-white rounded-lg text-sm font-medium transition-colors"
+                                        >
+                                            {activating ? <Loader2 size={16} className="animate-spin" /> : <Zap size={16} />}
+                                            {activating ? 'Activating in Moodle…' : 'Activate in Moodle → Active Faculty'}
+                                        </button>
+                                    )
+                            )}
                         </div>
                     </div>
                 )}
