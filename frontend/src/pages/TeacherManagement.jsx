@@ -86,7 +86,7 @@ const TeacherManagement = () => {
             const res = await axios.get(`${API_URL}/students/admin/cohort-intakes`);
             if (res.data?.success) setIntakes(res.data.data);
         } catch {
-            showToast('Failed to load programme intakes', 'error');
+            showToast('Failed to load course intakes', 'error');
         } finally {
             setIntakesLoading(false);
         }
@@ -183,7 +183,7 @@ const TeacherManagement = () => {
             <div className="bg-white border-b px-6 py-4 flex items-center justify-between" style={{ borderColor: '#E5E7EB' }}>
                 <div>
                     <h1 className="text-lg font-bold" style={{ color: '#1F2937' }}>Teacher Management</h1>
-                    <p className="text-sm mt-0.5" style={{ color: '#6B7280' }}>Assign teachers to cohort course units and manage their Moodle enrolments</p>
+                    <p className="text-sm mt-0.5" style={{ color: '#6B7280' }}>Assign teachers to cohort subject units and manage their Moodle enrolments</p>
                 </div>
                 <button onClick={() => fetchTeachers()} className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium border hover:bg-gray-50 transition" style={{ borderColor: '#E5E7EB', color: '#374151' }}>
                     <RefreshCw className="w-4 h-4" /> Refresh
@@ -245,7 +245,7 @@ const TeacherManagement = () => {
                                         <div className="flex items-center gap-2 mt-1 ml-9">
                                             <RoleBadge role={t.role} />
                                             <span className="text-[10px]" style={{ color: '#9CA3AF' }}>
-                                                {t.courses?.length || 0} course{t.courses?.length !== 1 ? 's' : ''}
+                                                {t.courses?.length || 0} subject{t.courses?.length !== 1 ? 's' : ''}
                                             </span>
                                         </div>
                                     </div>
@@ -263,7 +263,7 @@ const TeacherManagement = () => {
                             <div className="text-center" style={{ color: '#9CA3AF' }}>
                                 <Users className="w-12 h-12 mx-auto mb-3 opacity-30" />
                                 <p className="font-medium">Select a teacher</p>
-                                <p className="text-sm mt-1">Choose a teacher from the list to manage their course assignments</p>
+                                <p className="text-sm mt-1">Choose a teacher from the list to manage their subject assignments</p>
                             </div>
                         </div>
                     ) : (
@@ -284,7 +284,7 @@ const TeacherManagement = () => {
                                         <div className="flex items-center gap-2 mt-1">
                                             <RoleBadge role={selected.role} />
                                             <span className="text-xs" style={{ color: '#9CA3AF' }}>
-                                                {selected.courses?.length || 0} course unit{selected.courses?.length !== 1 ? 's' : ''} assigned
+                                                {selected.courses?.length || 0} subject unit{selected.courses?.length !== 1 ? 's' : ''} assigned
                                             </span>
                                         </div>
                                     </div>
@@ -295,7 +295,7 @@ const TeacherManagement = () => {
                             <div className="bg-white rounded-xl border shadow-sm mb-5" style={{ borderColor: '#E5E7EB' }}>
                                 <div className="px-5 py-4 border-b flex items-center gap-2" style={{ borderColor: '#E5E7EB' }}>
                                     <BookOpen className="w-4 h-4 text-blue-600" />
-                                    <h3 className="text-sm font-semibold" style={{ color: '#1F2937' }}>Current Course Assignments</h3>
+                                    <h3 className="text-sm font-semibold" style={{ color: '#1F2937' }}>Current Subject Assignments</h3>
                                     <span className="ml-auto text-xs px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 font-medium">
                                         {selected.courses?.length || 0}
                                     </span>
@@ -303,8 +303,8 @@ const TeacherManagement = () => {
                                 {!selected.courses || selected.courses.length === 0 ? (
                                     <div className="p-8 text-center" style={{ color: '#9CA3AF' }}>
                                         <GraduationCap className="w-8 h-8 mx-auto mb-2 opacity-40" />
-                                        <p className="text-sm font-medium">No courses assigned</p>
-                                        <p className="text-xs mt-1">Use the form below to assign this teacher to a cohort course unit</p>
+                                        <p className="text-sm font-medium">No subjects assigned</p>
+                                        <p className="text-xs mt-1">Use the form below to assign this teacher to a cohort subject unit</p>
                                     </div>
                                 ) : (
                                     <div className="divide-y" style={{ borderColor: '#F9FAFB' }}>
@@ -354,7 +354,7 @@ const TeacherManagement = () => {
                                                             onClick={() => handleUnenroll(course.courseId, course.courseName)}
                                                             disabled={actionLoading}
                                                             className="flex-shrink-0 p-1.5 rounded-lg hover:bg-red-50 transition-colors disabled:opacity-40"
-                                                            title="Remove from course"
+                                                            title="Remove from subject"
                                                         >
                                                             <Trash2 className="w-4 h-4 text-red-400 hover:text-red-600" />
                                                         </button>
@@ -370,7 +370,7 @@ const TeacherManagement = () => {
                             <div className="bg-white rounded-xl border shadow-sm" style={{ borderColor: '#E5E7EB' }}>
                                 <div className="px-5 py-4 border-b flex items-center gap-2" style={{ borderColor: '#E5E7EB' }}>
                                     <Plus className="w-4 h-4 text-blue-600" />
-                                    <h3 className="text-sm font-semibold" style={{ color: '#1F2937' }}>Assign to Cohort Course</h3>
+                                    <h3 className="text-sm font-semibold" style={{ color: '#1F2937' }}>Assign to Course Subject</h3>
                                 </div>
                                 <div className="p-5 space-y-4">
                                     {intakesLoading ? (
@@ -378,13 +378,13 @@ const TeacherManagement = () => {
                                             <RefreshCw className="w-4 h-4 animate-spin" /> Loading intakes...
                                         </div>
                                     ) : intakes.length === 0 ? (
-                                        <p className="text-sm" style={{ color: '#9CA3AF' }}>No active programme intakes found with Moodle courses configured.</p>
+                                        <p className="text-sm" style={{ color: '#9CA3AF' }}>No active course intakes found with Moodle subjects configured.</p>
                                     ) : (
                                         <>
                                             {/* Step 1: Intake */}
                                             <div>
                                                 <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wide" style={{ color: '#6B7280' }}>
-                                                    Step 1  -  Select Programme Cohort
+                                                    Step 1 - Select Course Cohort
                                                 </label>
                                                 <div className="relative">
                                                     <select
@@ -406,7 +406,7 @@ const TeacherManagement = () => {
                                                 {selectedIntake && (
                                                     <div className="mt-2 flex items-center gap-3 text-xs" style={{ color: '#6B7280' }}>
                                                         <span className="flex items-center gap-1">
-                                                            <Layers className="w-3 h-3" /> {selectedIntake.courses.length} course unit{selectedIntake.courses.length !== 1 ? 's' : ''} in this cohort
+                                                            <Layers className="w-3 h-3" /> {selectedIntake.courses.length} subject unit{selectedIntake.courses.length !== 1 ? 's' : ''} in this cohort
                                                         </span>
                                                         {selectedIntake.startDate && (
                                                             <span className="flex items-center gap-1">
@@ -422,10 +422,10 @@ const TeacherManagement = () => {
                                             {selectedIntakeId && (
                                                 <div>
                                                     <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wide" style={{ color: '#6B7280' }}>
-                                                        Step 2  -  Select Course Unit
+                                                        Step 2 - Select Subject Unit
                                                     </label>
                                                     {availableCoursesInIntake.length === 0 ? (
-                                                        <p className="text-sm py-2" style={{ color: '#9CA3AF' }}>All course units in this cohort are already assigned to this teacher.</p>
+                                                        <p className="text-sm py-2" style={{ color: '#9CA3AF' }}>All subject units in this cohort are already assigned to this teacher.</p>
                                                     ) : (
                                                         <div className="border rounded-lg overflow-hidden" style={{ borderColor: '#E5E7EB' }}>
                                                             {availableCoursesInIntake.map((c, idx) => (
@@ -473,7 +473,7 @@ const TeacherManagement = () => {
                                                     style={{ background: selectedMoodleCourseId ? '#2563EB' : '#93C5FD' }}
                                                 >
                                                     {actionLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-                                                    {actionLoading ? 'Assigning...' : 'Assign to Course Unit'}
+                                                    {actionLoading ? 'Assigning...' : 'Assign to Subject Unit'}
                                                 </button>
                                             )}
                                         </>
