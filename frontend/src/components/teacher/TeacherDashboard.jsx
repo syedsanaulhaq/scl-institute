@@ -280,9 +280,9 @@ const TeacherCoursesTab = ({ courses, onSubjectClick, ssoLoading }) => {
                         <h3 className="text-sm font-semibold line-clamp-2" style={{ color: '#1F2937' }}>{course.name}</h3>
                         <p className="text-xs mt-0.5 font-mono" style={{ color: '#6B7280' }}>{course.code}</p>
                         {(() => {
-                            const label = getProgrammeLabel(course.code, course.category);
+                            const label = course.cohortLabel || getProgrammeLabel(course.code, course.category);
                             return label ? (
-                                <p className="text-[11px] mt-1.5 line-clamp-1 px-2 py-0.5 rounded font-medium" style={{ background: '#EFF6FF', color: '#2563EB' }}>
+                                <p className="text-[11px] mt-1.5 line-clamp-2 px-2 py-0.5 rounded font-medium" style={{ background: '#EFF6FF', color: '#2563EB' }}>
                                     {label}
                                 </p>
                             ) : null;

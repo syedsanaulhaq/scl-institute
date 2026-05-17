@@ -867,6 +867,60 @@ router.get('/teacher-courses', async (req, res) => {
 });
 
 // ===============================================
+// ROUTE: GET /api/students/teacher-cohort-info
+// Returns { moodleCourseId: cohortLabel } map for a teacher's courses
+// ===============================================
+router.get('/teacher-cohort-info', async (req, res) => {
+    const { email } = req.query;
+    if (!email) return res.status(400).json({ success: false, message: 'email required' });
+
+    try {
+        const [courseIdRows] = await moodleDbPool.execute(
+            `SELECT DISTINCT c.id
+             FROM mdl_user u
+             JOIN mdl_role_assignments ra ON ra.userid = u.id
+             JOIN mdl_role r ON r.id = ra.roleid
+             JOIN mdl_context ctx ON ctx.id = ra.contextid
+             JOIN mdl_course c ON c.id = ctx.instanceid
+             WHERE u.email = ?
+               AND ctx.contextlevel = 50
+               AND r.shortname IN ('teacher','editingteacher','noneditingteacher')
+               AND c.id > 1`,
+            [email]
+        );
+
+        if (courseIdRows.length === 0) return res.json({ success: true, data: {} });
+
+        const ids = courseIdRows.map(r => r.id);
+        const placeholders = ids.map(() => '?').join(',');
+        const [rows] = await db.execute(
+            `SELECT cr.moodle_course_id,
+                    pi.intake_label    AS intakeLabel,
+                    pi.programme_type_name AS programmeType,
+                    pi.program_name    AS programName
+             FROM course_registrations cr
+             JOIN programme_intakes pi ON pi.id = cr.intake_id
+             WHERE cr.moodle_course_id IN (${placeholders})
+             ORDER BY pi.intake_start_date DESC`,
+            ids
+        );
+
+        const data = {};
+        for (const row of rows) {
+            if (!data[row.moodle_course_id]) {
+                const label = [row.intakeLabel, row.programName || row.programmeType].filter(Boolean).join(' ');
+                data[row.moodle_course_id] = label ? `${label} Cohort` : null;
+            }
+        }
+
+        return res.json({ success: true, data });
+    } catch (err) {
+        console.error('teacher-cohort-info error:', err.message);
+        return res.status(500).json({ success: false, message: 'Failed to fetch cohort info' });
+    }
+});
+
+// ===============================================
 // ROUTE: GET /api/students/my-moodle-courses
 // Get Moodle courses for a user with role flags (teaching/student)
 // ===============================================

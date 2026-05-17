@@ -43,6 +43,7 @@ export async function fetchTeacherPortalData(email) {
             name: course.name || course.course_title || `Course ${course.id}`,
             code: course.code || course.course_code || course.course_shortname || '-',
             category: course.course_type || course.category_name || '',
+            cohortLabel: null, // will be enriched below
             hasTeachingRole: Boolean(course.hasTeachingRole || ['teacher', 'editingteacher', 'noneditingteacher'].includes(String(course.role || '').toLowerCase())),
             isStudentEnrolled: Boolean(course.isStudentEnrolled),
             modules,
@@ -50,6 +51,13 @@ export async function fetchTeacherPortalData(email) {
             counts
         };
     });
+
+    // Enrich with SCL cohort labels
+    try {
+        const cohortRes = await axios.get(`${API_URL}/students/teacher-cohort-info`, { params: { email } });
+        const cohortMap = cohortRes.data?.data || {};
+        courseRows.forEach((row) => { row.cohortLabel = cohortMap[row.id] || null; });
+    } catch { /* non-critical */ }
 
     const activities = [];
     courseRows.forEach((course) => {
