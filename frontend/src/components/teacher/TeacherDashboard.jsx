@@ -208,10 +208,10 @@ const TeacherDashboard = ({ user }) => {
                 </div>
             </div>
 
-            {/* Row 3: Calendar + Events Panel */}
+            {/* Row 3: Calendar full-width, Events Panel below */}
             <div className="bg-white rounded-xl border shadow-sm overflow-hidden mb-5" style={{ borderColor: '#E5E7EB' }}>
-                <div className="flex flex-col lg:flex-row" style={{ minHeight: '480px' }}>
-                    <div className="flex-shrink-0 p-5 overflow-y-auto" style={{ borderRight: '1px solid #E5E7EB', width: '460px' }}>
+                <div className="flex flex-col">
+                    <div className="w-full p-6" style={{ borderBottom: '1px solid #E5E7EB' }}>
                         <MiniCalendar
                             date={calendarDate}
                             onDateChange={setCalendarDate}
@@ -220,7 +220,7 @@ const TeacherDashboard = ({ user }) => {
                             onDayClick={(d) => setSelectedCalendarDay(prev => prev?.toDateString() === d.toDateString() ? null : d)}
                         />
                     </div>
-                    <div className="flex-1 p-5 overflow-y-auto">
+                    <div className="w-full p-6">
                         <CalendarEventsPanel
                             date={panelDate}
                             events={panelEvents}
@@ -487,12 +487,12 @@ const MiniCalendar = ({ date, onDateChange, events = {}, selectedDay, onDayClick
                     const selDay = isSelected(day);
                     return (
                         <div key={i} className="flex flex-col items-center py-1" onClick={() => hasAny && onDayClick(new Date(year, month, day))} style={{ cursor: hasAny ? 'pointer' : 'default' }}>
-                            <div className="w-10 h-10 rounded-full flex items-center justify-center transition"
+                            <div className="w-12 h-12 rounded-full flex items-center justify-center transition"
                                 style={{
                                     background: selDay ? '#2563EB' : todayDay ? '#DBEAFE' : 'transparent',
                                     border: !selDay && todayDay ? '2px solid #2563EB' : 'none',
                                 }}>
-                                <span className="text-sm font-medium" style={{ color: selDay ? '#fff' : todayDay ? '#2563EB' : '#1F2937' }}>{day}</span>
+                                <span className="text-base font-medium" style={{ color: selDay ? '#fff' : todayDay ? '#2563EB' : '#1F2937' }}>{day}</span>
                             </div>
                             <div className="flex gap-0.5 mt-0.5" style={{ minHeight: '7px' }}>
                                 {hasNotif && <div className="w-1.5 h-1.5 rounded-full" style={{ background: '#2563EB' }} />}
@@ -514,80 +514,93 @@ const CalendarEventsPanel = ({ date, events, assessments, formatTime, onNotifica
     const today = new Date();
     const isToday = date.toDateString() === today.toDateString();
     const dateLabel = isToday ? 'Today' : date.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
-    const hasEvents = (events.notifications?.length > 0) || (events.announcements?.length > 0);
     return (
         <div>
-            <div className="mb-4">
-                <h3 className="text-sm font-semibold" style={{ color: '#1F2937' }}>{dateLabel}</h3>
-                <p className="text-xs" style={{ color: '#9CA3AF' }}>{date.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
-            </div>
-            {events.notifications?.length > 0 && (
-                <div className="mb-4">
-                    <p className="text-[10px] font-semibold uppercase tracking-wide mb-2" style={{ color: '#2563EB' }}>Notifications</p>
-                    <div className="space-y-1.5">
-                        {events.notifications.map(n => (
-                            <div key={n.id} onClick={() => onNotificationClick(n.id)}
-                                className="flex gap-2.5 p-2.5 rounded-lg cursor-pointer hover:bg-blue-50 transition-colors border"
-                                style={{ borderColor: !n.is_read ? '#BFDBFE' : '#F3F4F6', background: !n.is_read ? '#F0F9FF' : '#FAFAFA' }}>
-                                <div className="w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0" style={{ background: !n.is_read ? '#2563EB' : '#D1D5DB' }} />
-                                <div className="flex-1 min-w-0">
-                                    <p className="text-xs font-medium" style={{ color: '#1F2937' }}>{n.subject}</p>
-                                    <p className="text-[11px] mt-0.5 line-clamp-1" style={{ color: '#6B7280' }}>{n.message}</p>
-                                </div>
-                                <span className="text-[10px] flex-shrink-0 whitespace-nowrap" style={{ color: '#9CA3AF' }}>{formatTime(n.created_at)}</span>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            )}
-            {events.announcements?.length > 0 && (
-                <div className="mb-4">
-                    <p className="text-[10px] font-semibold uppercase tracking-wide mb-2" style={{ color: '#D97706' }}>Announcements</p>
-                    <div className="space-y-1.5">
-                        {events.announcements.map(a => (
-                            <div key={a.id} onClick={() => onAnnouncementClick(a.id)}
-                                className="flex gap-2.5 p-2.5 rounded-lg cursor-pointer hover:bg-amber-50 transition-colors border"
-                                style={{ borderColor: '#FDE68A', background: '#FFFBEB' }}>
-                                <Megaphone className="w-3 h-3 mt-1 flex-shrink-0" style={{ color: '#D97706' }} />
-                                <div className="flex-1 min-w-0">
-                                    <p className="text-xs font-medium" style={{ color: '#1F2937' }}>{a.subject}</p>
-                                    {a.coursename && <p className="text-[11px] mt-0.5" style={{ color: '#6B7280' }}>{a.coursename}</p>}
-                                </div>
-                                <span className="text-[10px] flex-shrink-0 whitespace-nowrap" style={{ color: '#9CA3AF' }}>{formatTime(a.timemodified)}</span>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            )}
-            {!hasEvents && (
-                <div className="text-center py-6 mb-3">
-                    <Calendar className="w-8 h-8 mx-auto mb-2" style={{ color: '#E5E7EB' }} />
-                    <p className="text-xs" style={{ color: '#9CA3AF' }}>{isToday ? 'No events today' : 'No events on this day'}</p>
-                    <p className="text-[11px] mt-0.5" style={{ color: '#C4C8D4' }}>Click a highlighted date to see events</p>
-                </div>
-            )}
-            {assessments.length > 0 && (
+            <div className="flex items-center justify-between mb-5">
                 <div>
-                    <p className="text-[10px] font-semibold uppercase tracking-wide mb-2" style={{ color: '#10B981' }}>Assessments</p>
-                    <div className="space-y-1.5">
-                        {assessments.slice(0, 6).map(item => (
-                            <div key={item.id} onClick={() => onAssessmentClick(item.type, item.moduleId)}
-                                className="flex gap-2.5 p-2.5 rounded-lg cursor-pointer hover:bg-green-50 transition-colors border"
-                                style={{ borderColor: '#D1FAE5', background: '#F0FDF4' }}>
-                                <div className="w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0" style={{ background: item.type === 'assign' ? '#2563EB' : '#10B981' }} />
-                                <div className="flex-1 min-w-0">
-                                    <p className="text-xs font-medium" style={{ color: '#1F2937' }}>{item.title}</p>
-                                    <p className="text-[11px] mt-0.5" style={{ color: '#6B7280' }}>{item.courseCode} · {item.courseName}</p>
-                                </div>
-                                <span className="text-[10px] flex-shrink-0 px-1.5 py-0.5 rounded font-medium uppercase"
-                                    style={{ background: item.type === 'assign' ? '#DBEAFE' : '#D1FAE5', color: item.type === 'assign' ? '#2563EB' : '#10B981' }}>
-                                    {item.type}
-                                </span>
-                            </div>
-                        ))}
-                    </div>
+                    <h3 className="text-sm font-semibold" style={{ color: '#1F2937' }}>{dateLabel}</h3>
+                    <p className="text-xs" style={{ color: '#9CA3AF' }}>{date.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
                 </div>
-            )}
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                {/* Notifications column */}
+                <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide mb-3 pb-1.5 border-b flex items-center gap-1.5" style={{ color: '#2563EB', borderColor: '#DBEAFE' }}>
+                        <Bell className="w-3.5 h-3.5" /> Notifications
+                    </p>
+                    {events.notifications?.length > 0 ? (
+                        <div className="space-y-2">
+                            {events.notifications.map(n => (
+                                <div key={n.id} onClick={() => onNotificationClick(n.id)}
+                                    className="flex gap-2.5 p-2.5 rounded-lg cursor-pointer hover:bg-blue-50 transition-colors border"
+                                    style={{ borderColor: !n.is_read ? '#BFDBFE' : '#F3F4F6', background: !n.is_read ? '#F0F9FF' : '#FAFAFA' }}>
+                                    <div className="w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0" style={{ background: !n.is_read ? '#2563EB' : '#D1D5DB' }} />
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-xs font-medium" style={{ color: '#1F2937' }}>{n.subject}</p>
+                                        <p className="text-[11px] mt-0.5 line-clamp-2" style={{ color: '#6B7280' }}>{n.message}</p>
+                                        <p className="text-[10px] mt-1" style={{ color: '#9CA3AF' }}>{formatTime(n.created_at)}</p>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <p className="text-xs py-3 text-center" style={{ color: '#C4C8D4' }}>{isToday ? 'No notifications today' : 'None on this day'}</p>
+                    )}
+                </div>
+                {/* Announcements column */}
+                <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide mb-3 pb-1.5 border-b flex items-center gap-1.5" style={{ color: '#D97706', borderColor: '#FDE68A' }}>
+                        <Megaphone className="w-3.5 h-3.5" /> Announcements
+                    </p>
+                    {events.announcements?.length > 0 ? (
+                        <div className="space-y-2">
+                            {events.announcements.map(a => (
+                                <div key={a.id} onClick={() => onAnnouncementClick(a.id)}
+                                    className="flex gap-2.5 p-2.5 rounded-lg cursor-pointer hover:bg-amber-50 transition-colors border"
+                                    style={{ borderColor: '#FDE68A', background: '#FFFBEB' }}>
+                                    <Megaphone className="w-3 h-3 mt-1 flex-shrink-0" style={{ color: '#D97706' }} />
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-xs font-medium" style={{ color: '#1F2937' }}>{a.subject}</p>
+                                        {a.coursename && <p className="text-[11px] mt-0.5" style={{ color: '#6B7280' }}>{a.coursename}</p>}
+                                        <p className="text-[10px] mt-1" style={{ color: '#9CA3AF' }}>{formatTime(a.timemodified)}</p>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <p className="text-xs py-3 text-center" style={{ color: '#C4C8D4' }}>{isToday ? 'No announcements today' : 'None on this day'}</p>
+                    )}
+                </div>
+                {/* Assessments column */}
+                <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide mb-3 pb-1.5 border-b flex items-center gap-1.5" style={{ color: '#10B981', borderColor: '#D1FAE5' }}>
+                        <ClipboardCheck className="w-3.5 h-3.5" /> Assessments
+                    </p>
+                    {assessments.length > 0 ? (
+                        <div className="space-y-2">
+                            {assessments.slice(0, 6).map(item => (
+                                <div key={item.id} onClick={() => onAssessmentClick(item.type, item.moduleId)}
+                                    className="flex gap-2.5 p-2.5 rounded-lg cursor-pointer hover:bg-green-50 transition-colors border"
+                                    style={{ borderColor: '#D1FAE5', background: '#F0FDF4' }}>
+                                    <div className="w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0" style={{ background: item.type === 'assign' ? '#2563EB' : '#10B981' }} />
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-xs font-medium" style={{ color: '#1F2937' }}>{item.title}</p>
+                                        <p className="text-[11px] mt-0.5" style={{ color: '#6B7280' }}>{item.courseCode} · {item.courseName}</p>
+                                    </div>
+                                    <span className="text-[10px] flex-shrink-0 px-1.5 py-0.5 rounded font-medium uppercase self-start"
+                                        style={{ background: item.type === 'assign' ? '#DBEAFE' : '#D1FAE5', color: item.type === 'assign' ? '#2563EB' : '#10B981' }}>
+                                        {item.type}
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <p className="text-xs py-3 text-center" style={{ color: '#C4C8D4' }}>No assessments found</p>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
         </div>
     );
 };
