@@ -102,8 +102,8 @@ const TeacherRegistrationForm = () => {
     return (
         <div className="p-6 bg-gray-50 min-h-screen">
             <div className="mb-8">
-                <h1 className="text-3xl font-bold text-gray-900">Faculty Registration</h1>
-                <p className="text-gray-600 mt-2">Create a dedicated faculty registration and assign the faculty member to a specific Moodle course after approval.</p>
+                <h1 className="text-3xl font-bold text-gray-900">New Faculty Application</h1>
+                <p className="text-gray-600 mt-2">Submit a faculty application and assign the faculty member to a specific Moodle course after approval.</p>
             </div>
 
             {status.message && (
@@ -185,7 +185,7 @@ const TeacherRegistrationForm = () => {
                     </button>
                     <button type="submit" disabled={submitting} className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:bg-gray-400 inline-flex items-center gap-2">
                         {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
-                        {submitting ? 'Submitting...' : 'Submit Faculty Registration'}
+                        {submitting ? 'Submitting...' : 'Submit Faculty Application'}
                     </button>
                 </div>
             </form>

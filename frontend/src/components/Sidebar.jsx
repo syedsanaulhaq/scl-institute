@@ -87,9 +87,9 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
                 isParent: true,
                 key: 'staff-group',
                 subItems: [
-                    { name: 'Faculty Management', icon: Users, path: '/admin/teacher-management' },
-                    { name: 'Faculty Registrations', icon: Users, path: '/teacher-registrations' },
-                    { name: 'New Faculty Registration', icon: UserPlus, path: '/teacher-registration' },
+                    { name: 'Active Faculty', icon: Users, path: '/admin/teacher-management' },
+                    { name: 'Faculty Applications', icon: Users, path: '/teacher-registrations' },
+                    { name: 'New Faculty Application', icon: UserPlus, path: '/teacher-registration' },
                     { name: 'Faculty Onboarding', icon: UserCheck, path: '/admin/faculty-onboarding' }
                 ]
             },
@@ -176,9 +176,9 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
                 isParent: true,
                 key: 'teacher-management',
                 subItems: [
-                    { name: 'All Faculty & Courses', icon: Users, path: '/admin/teacher-management' },
-                    { name: 'Faculty Registrations', icon: UserCheck, path: '/teacher-registrations' },
-                    { name: 'New Faculty Registration', icon: UserPlus, path: '/teacher-registration' },
+                    { name: 'Active Faculty', icon: Users, path: '/admin/teacher-management' },
+                    { name: 'Faculty Applications', icon: UserCheck, path: '/teacher-registrations' },
+                    { name: 'New Faculty Application', icon: UserPlus, path: '/teacher-registration' },
                     { name: 'Faculty Onboarding', icon: UserCheck, path: '/admin/faculty-onboarding' }
                 ]
             },

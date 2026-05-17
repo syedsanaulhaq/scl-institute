@@ -182,8 +182,8 @@ const TeacherManagement = () => {
             {/* Header */}
             <div className="bg-white border-b px-6 py-4 flex items-center justify-between" style={{ borderColor: '#E5E7EB' }}>
                 <div>
-                    <h1 className="text-lg font-bold" style={{ color: '#1F2937' }}>Faculty Management</h1>
-                    <p className="text-sm mt-0.5" style={{ color: '#6B7280' }}>Assign faculty to cohort subject units and manage their Moodle enrolments</p>
+                    <h1 className="text-lg font-bold" style={{ color: '#1F2937' }}>Active Faculty</h1>
+                    <p className="text-sm mt-0.5" style={{ color: '#6B7280' }}>Manage faculty Moodle enrolments and course assignments</p>
                 </div>
                 <button onClick={() => fetchTeachers()} className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium border hover:bg-gray-50 transition" style={{ borderColor: '#E5E7EB', color: '#374151' }}>
                     <RefreshCw className="w-4 h-4" /> Refresh

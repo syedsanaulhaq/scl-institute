@@ -210,8 +210,8 @@ const TeacherRegistrationRequests = ({ user }) => {
         <div className="p-6 bg-gray-50 min-h-screen">
             <div className="mb-8 flex items-start justify-between gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold text-gray-900">Faculty Registrations</h1>
-                    <p className="text-gray-600 mt-2">Review faculty registrations and approve them onto their assigned Moodle course.</p>
+                    <h1 className="text-3xl font-bold text-gray-900">Faculty Applications</h1>
+                    <p className="text-gray-600 mt-2">Review faculty applications and approve them onto their assigned Moodle course.</p>
                 </div>
                 <button onClick={() => navigate('/teacher-registration')} className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 inline-flex items-center gap-2">
                     <UserPlus className="w-4 h-4" />
@@ -251,9 +251,9 @@ const TeacherRegistrationRequests = ({ user }) => {
 
                     <div className="divide-y divide-gray-100 max-h-[70vh] overflow-y-auto">
                         {loading ? (
-                            <div className="p-6 text-gray-500">Loading faculty registrations...</div>
+                            <div className="p-6 text-gray-500">Loading faculty applications...</div>
                         ) : filteredRegistrations.length === 0 ? (
-                            <div className="p-6 text-gray-500">No faculty registrations found.</div>
+                            <div className="p-6 text-gray-500">No faculty applications found.</div>
                         ) : filteredRegistrations.map((registration) => (
                             <button
                                 key={registration.id}
@@ -276,7 +276,7 @@ const TeacherRegistrationRequests = ({ user }) => {
 
                 <div className="lg:col-span-3 bg-white rounded-lg shadow p-6">
                     {!selectedRegistration ? (
-                        <div className="text-gray-500">Select a faculty registration to review.</div>
+                        <div className="text-gray-500">Select a faculty application to review.</div>
                     ) : (
                         <div className="space-y-6">
                             <div className="flex items-start justify-between gap-4">
