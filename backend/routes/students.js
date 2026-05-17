@@ -13429,20 +13429,23 @@ router.get('/faculty-onboarding', async (req, res) => {
     try {
         await ensureTeacherOnboardingTable();
         const { status, search } = req.query;
-        let conditions = [`tr.status = 'accepted'`];
+        let conditions = [`tr.application_status = 'accepted'`];
         const params = [];
         if (status && status !== 'all') {
             conditions.push('COALESCE(tob.onboarding_status, "Pending") = ?');
             params.push(status);
         }
         if (search) {
-            conditions.push('(tr.full_name LIKE ? OR tr.email LIKE ? OR tr.registration_reference LIKE ?)');
-            params.push(`%${search}%`, `%${search}%`, `%${search}%`);
+            conditions.push('(tr.first_name LIKE ? OR tr.last_name LIKE ? OR tr.email LIKE ? OR tr.registration_reference LIKE ?)');
+            params.push(`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`);
         }
         const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
         const [rows] = await db.execute(
-            `SELECT tr.id, tr.registration_reference, tr.full_name, tr.email,
-                    tr.phone_number, tr.subject_specialisation, tr.created_at as applied_at,
+            `SELECT tr.id, tr.registration_reference,
+                    CONCAT(tr.first_name, ' ', tr.last_name) as full_name,
+                    tr.email, tr.contact_number as phone_number,
+                    tr.selected_course_title as subject_specialisation,
+                    tr.created_at as applied_at,
                     tob.id as onboarding_id,
                     COALESCE(tob.contract_signed, 0) as contract_signed,
                     COALESCE(tob.it_setup_completed, 0) as it_setup_completed,
