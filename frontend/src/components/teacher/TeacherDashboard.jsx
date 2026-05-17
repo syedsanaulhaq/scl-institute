@@ -266,32 +266,46 @@ const TeacherCoursesTab = ({ courses, onSubjectClick, ssoLoading }) => {
             </div>
         );
     }
+
+    // Group subjects by cohort label
+    const groups = [];
+    const groupIndex = new Map();
+    courses.forEach((course, idx) => {
+        const key = course.cohortLabel || getProgrammeLabel(course.code, course.category) || 'Other';
+        if (!groupIndex.has(key)) {
+            groupIndex.set(key, groups.length);
+            groups.push({ label: key, items: [] });
+        }
+        groups[groupIndex.get(key)].items.push({ course, origIdx: idx });
+    });
+
     return (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {courses.map((course, idx) => (
-                <div key={course.id}
-                    onClick={() => !ssoLoading && onSubjectClick?.(course.id)}
-                    className="rounded-lg border overflow-hidden transition-all hover:shadow-md cursor-pointer"
-                    style={{ borderColor: '#E5E7EB', background: '#fff', opacity: ssoLoading ? 0.7 : 1 }}>
-                    <div style={{ background: bgColors[idx % bgColors.length], padding: '16px', minHeight: '70px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <span className="text-3xl">📚</span>
-                    </div>
-                    <div style={{ padding: '14px' }}>
-                        <h3 className="text-sm font-semibold line-clamp-2" style={{ color: '#1F2937' }}>{course.name}</h3>
-                        <p className="text-xs mt-0.5 font-mono" style={{ color: '#6B7280' }}>{course.code}</p>
-                        {(() => {
-                            const label = course.cohortLabel || getProgrammeLabel(course.code, course.category);
-                            return label ? (
-                                <p className="text-[11px] mt-1.5 line-clamp-2 px-2 py-0.5 rounded font-medium" style={{ background: '#EFF6FF', color: '#2563EB' }}>
-                                    {label}
-                                </p>
-                            ) : null;
-                        })()}
-                        <div className="mt-2 flex gap-3 text-xs" style={{ color: '#6B7280' }}>
-                            <span>📝 {course.counts?.assign || 0}</span>
-                            <span>💬 {course.counts?.forum || 0}</span>
-                            <span>📋 {course.counts?.quiz || 0}</span>
-                        </div>
+        <div className="space-y-6">
+            {groups.map((group) => (
+                <div key={group.label}>
+                    <p className="text-xs font-semibold uppercase tracking-wide mb-3 pb-1 border-b" style={{ color: '#6B7280', borderColor: '#E5E7EB' }}>
+                        {group.label}
+                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {group.items.map(({ course, origIdx }) => (
+                            <div key={course.id}
+                                onClick={() => !ssoLoading && onSubjectClick?.(course.id)}
+                                className="rounded-lg border overflow-hidden transition-all hover:shadow-md cursor-pointer"
+                                style={{ borderColor: '#E5E7EB', background: '#fff', opacity: ssoLoading ? 0.7 : 1 }}>
+                                <div style={{ background: bgColors[origIdx % bgColors.length], padding: '16px', minHeight: '70px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                    <span className="text-3xl">📚</span>
+                                </div>
+                                <div style={{ padding: '14px' }}>
+                                    <h3 className="text-sm font-semibold line-clamp-2" style={{ color: '#1F2937' }}>{course.name}</h3>
+                                    <p className="text-xs mt-0.5 font-mono" style={{ color: '#6B7280' }}>{course.code}</p>
+                                    <div className="mt-2 flex gap-3 text-xs" style={{ color: '#6B7280' }}>
+                                        <span>📝 {course.counts?.assign || 0}</span>
+                                        <span>💬 {course.counts?.forum || 0}</span>
+                                        <span>📋 {course.counts?.quiz || 0}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
                     </div>
                 </div>
             ))}
