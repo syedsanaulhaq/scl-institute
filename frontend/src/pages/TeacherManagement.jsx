@@ -467,7 +467,7 @@ const TeacherManagement = () => {
                                             {/* Assign button */}
                                             {selectedIntakeId && availableCoursesInIntake.length > 0 && (
                                                 <button
-                                                    onClick={handleEnroll}
+                                                    onClick={() => handleEnroll()}
                                                     disabled={!selectedMoodleCourseId || actionLoading}
                                                     className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium text-white transition disabled:opacity-50 disabled:cursor-not-allowed"
                                                     style={{ background: selectedMoodleCourseId ? '#2563EB' : '#93C5FD' }}

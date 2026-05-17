@@ -1535,7 +1535,6 @@ router.get('/admin/cohort-intakes', async (req, res) => {
 // Body: { teacherEmail, courseId }
 // ===============================================
 router.post('/admin/teacher-enroll', async (req, res) => {
-    console.log('[teacher-enroll] body:', JSON.stringify(req.body), '| headers content-type:', req.headers['content-type']);
     const { teacherEmail, courseId } = req.body;
     if (!teacherEmail || !courseId) {
         return res.status(400).json({ success: false, message: 'teacherEmail and courseId are required' });
