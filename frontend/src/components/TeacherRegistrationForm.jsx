@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { AlertCircle, Briefcase, CheckCircle2, FileText, GraduationCap, Loader2, Upload, User } from 'lucide-react';
+import { AlertCircle, Briefcase, CheckCircle2, FileText, GraduationCap, Loader2, Upload, User, Wand2 } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
 
@@ -45,6 +45,24 @@ const TeacherRegistrationForm = () => {
 
         fetchCourses();
     }, []);
+
+    const fillDummyData = () => {
+        const dummyPeople = [
+            { first_name: 'Dr. Michael', last_name: 'Carter', email: `michael.carter.${Date.now()}@example.com`, contact_number: '07700900123', nationality: 'British', current_employer: 'University of Westminster', highest_qualification: 'PhD in Business Management', years_of_experience: '12', teaching_statement: 'I am an experienced educator specialising in business strategy and management. I have taught at undergraduate and postgraduate level for over 12 years, with a focus on real-world application of business theory. My approach combines case study analysis with industry guest lectures.' },
+            { first_name: 'Prof. Amelia', last_name: 'Hassan', email: `amelia.hassan.${Date.now()}@example.com`, contact_number: '07800900456', nationality: 'Pakistani', current_employer: 'London Metropolitan University', highest_qualification: 'PhD in Engineering', years_of_experience: '9', teaching_statement: 'With nearly a decade of teaching experience in engineering disciplines, I bring both academic rigour and industry experience to the classroom. I am passionate about project-based learning and have supervised over 50 final-year projects.' },
+            { first_name: 'Dr. James', last_name: 'Okafor', email: `james.okafor.${Date.now()}@example.com`, contact_number: '07900100789', nationality: 'Nigerian', current_employer: 'Middlesex University', highest_qualification: 'MSc in Computer Science', years_of_experience: '7', teaching_statement: 'I specialise in software engineering and data analytics. I have a strong track record of preparing students for careers in tech through hands-on coding workshops and live project work with industry partners.' },
+        ];
+        const person = dummyPeople[Math.floor(Math.random() * dummyPeople.length)];
+        const firstCourse = courses[0];
+        setFormData(prev => ({
+            ...prev,
+            ...person,
+            selected_course_code: firstCourse?.course_code || '',
+            selected_course_title: firstCourse?.course_title || '',
+            selected_course_type: firstCourse?.course_type || '',
+            teaching_role: 'editingteacher'
+        }));
+    };
 
     const handleChange = (field, value) => {
         if (field === 'selected_course_code') {
@@ -101,9 +119,19 @@ const TeacherRegistrationForm = () => {
 
     return (
         <div className="p-6 bg-gray-50 min-h-screen">
-            <div className="mb-8">
-                <h1 className="text-3xl font-bold text-gray-900">New Faculty Application</h1>
-                <p className="text-gray-600 mt-2">Submit a faculty application and assign the faculty member to a specific Moodle course after approval.</p>
+            <div className="mb-8 flex items-start justify-between gap-4">
+                <div>
+                    <h1 className="text-3xl font-bold text-gray-900">New Faculty Application</h1>
+                    <p className="text-gray-600 mt-2">Submit a faculty application and assign the faculty member to a specific Moodle course after approval.</p>
+                </div>
+                <button
+                    type="button"
+                    onClick={fillDummyData}
+                    className="flex-shrink-0 inline-flex items-center gap-2 px-4 py-2 bg-amber-50 border border-amber-300 text-amber-700 rounded-lg hover:bg-amber-100 transition-colors text-sm font-medium"
+                >
+                    <Wand2 className="w-4 h-4" />
+                    Fill Demo Data
+                </button>
             </div>
 
             {status.message && (
