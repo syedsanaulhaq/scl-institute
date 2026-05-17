@@ -1394,15 +1394,61 @@ router.get('/admin/teachers', async (req, res) => {
             };
         }));
 
-        return res.json({ success: true, data: teachersWithCourses });
+        // Bulk-enrich each teacher's courses with SCL intake/cohort info
+        // Collect all unique moodle_course_ids across all teachers
+        const allMoodleIds = [...new Set(
+            teachersWithCourses.flatMap(t => (t.courses || []).map(c => c.courseId).filter(Boolean))
+        )];
+
+        let intakeByMoodleId = {};
+        if (allMoodleIds.length > 0) {
+            try {
+                const placeholders = allMoodleIds.map(() => '?').join(',');
+                const [intakeRows] = await db.execute(
+                    `SELECT cr.moodle_course_id, cr.semester_name, cr.start_date as courseStartDate,
+                            pi.id as intakeId, pi.intake_label as intakeLabel,
+                            pi.programme_type_name as programmeType,
+                            pi.intake_start_date as intakeStartDate
+                     FROM course_registrations cr
+                     JOIN programme_intakes pi ON pi.id = cr.intake_id
+                     WHERE cr.moodle_course_id IN (${placeholders})
+                       AND cr.moodle_course_id IS NOT NULL
+                     ORDER BY pi.intake_start_date DESC`,
+                    allMoodleIds
+                );
+                // If multiple intakes have the same moodle course, keep most recent
+                for (const row of intakeRows) {
+                    if (!intakeByMoodleId[row.moodle_course_id]) {
+                        intakeByMoodleId[row.moodle_course_id] = {
+                            intakeId: row.intakeId,
+                            intakeLabel: row.intakeLabel,
+                            programmeType: row.programmeType,
+                            semesterName: row.semester_name,
+                            intakeStartDate: row.intakeStartDate,
+                            courseStartDate: row.courseStartDate
+                        };
+                    }
+                }
+            } catch (e) {
+                console.error('Could not enrich with intake info:', e.message);
+            }
+        }
+
+        // Attach intake info to each course
+        const enrichedTeachers = teachersWithCourses.map(t => ({
+            ...t,
+            courses: (t.courses || []).map(c => ({
+                ...c,
+                ...(intakeByMoodleId[c.courseId] || {})
+            }))
+        }));
+
+        return res.json({ success: true, data: enrichedTeachers });
     } catch (error) {
         console.error('Error fetching admin teachers:', error.message);
         return res.status(500).json({ success: false, message: 'Failed to fetch teachers', error: error.message });
     }
 });
-
-// ===============================================
-// ROUTE: GET /api/students/admin/moodle-courses
 // Returns all visible Moodle courses for teacher assignment
 // ===============================================
 router.get('/admin/moodle-courses', async (req, res) => {
@@ -1419,6 +1465,65 @@ router.get('/admin/moodle-courses', async (req, res) => {
     } catch (error) {
         console.error('Error fetching Moodle courses:', error.message);
         return res.status(500).json({ success: false, message: 'Failed to fetch courses', error: error.message });
+    }
+});
+
+// ===============================================
+// ROUTE: GET /api/students/admin/cohort-intakes
+// Returns active programme intakes with their course_registrations
+// (only those that have a moodle_course_id assigned)
+// ===============================================
+router.get('/admin/cohort-intakes', async (req, res) => {
+    try {
+        const [rows] = await db.execute(
+            `SELECT
+                pi.id as intakeId,
+                pi.intake_label as intakeLabel,
+                pi.programme_type_name as programmeType,
+                pi.program_name as programName,
+                pi.intake_start_date as startDate,
+                pi.intake_end_date as endDate,
+                cr.id as registrationId,
+                cr.course_code as courseCode,
+                cr.course_title as courseTitle,
+                cr.semester_name as semesterName,
+                cr.start_date as courseStartDate,
+                cr.moodle_course_id as moodleCourseId
+             FROM programme_intakes pi
+             JOIN course_registrations cr ON cr.intake_id = pi.id
+             WHERE pi.status = 'active'
+               AND cr.moodle_course_id IS NOT NULL
+             ORDER BY pi.intake_start_date DESC, cr.semester_name, cr.course_code`
+        );
+
+        // Group by intake
+        const intakeMap = new Map();
+        for (const row of rows) {
+            if (!intakeMap.has(row.intakeId)) {
+                intakeMap.set(row.intakeId, {
+                    id: row.intakeId,
+                    label: row.intakeLabel,
+                    programmeType: row.programmeType,
+                    programName: row.programName,
+                    startDate: row.startDate,
+                    endDate: row.endDate,
+                    courses: []
+                });
+            }
+            intakeMap.get(row.intakeId).courses.push({
+                registrationId: row.registrationId,
+                moodleCourseId: row.moodleCourseId,
+                courseCode: row.courseCode,
+                courseTitle: row.courseTitle,
+                semesterName: row.semesterName,
+                courseStartDate: row.courseStartDate
+            });
+        }
+
+        return res.json({ success: true, data: Array.from(intakeMap.values()) });
+    } catch (error) {
+        console.error('Error fetching cohort intakes:', error.message);
+        return res.status(500).json({ success: false, message: 'Failed to fetch cohort intakes', error: error.message });
     }
 });
 
