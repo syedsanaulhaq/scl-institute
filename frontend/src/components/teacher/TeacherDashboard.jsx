@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     BookOpen, Bell, Calendar, ExternalLink, Loader2, AlertCircle,
-    Megaphone, ClipboardCheck, ChevronLeft, ChevronRight,
+    Megaphone, ClipboardCheck, ChevronLeft, ChevronRight, X,
 } from 'lucide-react';
 import { openMoodleSSO } from '../../utils/ssoService';
 import { fetchTeacherPortalData } from '../../utils/teacherPortal';
@@ -208,31 +208,50 @@ const TeacherDashboard = ({ user }) => {
                 </div>
             </div>
 
-            {/* Row 3: Calendar full-width, Events Panel below */}
-            <div className="bg-white rounded-xl border shadow-sm overflow-hidden mb-5" style={{ borderColor: '#E5E7EB' }}>
-                <div className="flex flex-col">
-                    <div className="w-full p-6" style={{ borderBottom: '1px solid #E5E7EB' }}>
-                        <MiniCalendar
-                            date={calendarDate}
-                            onDateChange={setCalendarDate}
-                            events={calendarEvents}
-                            selectedDay={selectedCalendarDay}
-                            onDayClick={(d) => setSelectedCalendarDay(prev => prev?.toDateString() === d.toDateString() ? null : d)}
-                        />
-                    </div>
-                    <div className="w-full p-6">
-                        <CalendarEventsPanel
-                            date={panelDate}
-                            events={panelEvents}
-                            assessments={recentAssessments}
-                            formatTime={formatTime}
-                            onNotificationClick={(id) => navigate(`/student/notifications?id=${id}`)}
-                            onAnnouncementClick={(id) => handleOpenMoodle(`/mod/forum/discuss.php?d=${id}`)}
-                            onAssessmentClick={(type, moduleId) => handleOpenMoodle(`/mod/${type}/view.php?id=${moduleId}`)}
-                        />
-                    </div>
+            {/* Row 3: Calendar full-width */}
+            <div className="bg-white rounded-xl border shadow-sm mb-5" style={{ borderColor: '#E5E7EB' }}>
+                <div className="p-6">
+                    <MiniCalendar
+                        date={calendarDate}
+                        onDateChange={setCalendarDate}
+                        events={calendarEvents}
+                        selectedDay={selectedCalendarDay}
+                        onDayClick={(d) => setSelectedCalendarDay(prev => prev?.toDateString() === d.toDateString() ? null : d)}
+                    />
                 </div>
             </div>
+
+            {/* Calendar Day Popup Modal */}
+            {selectedCalendarDay && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(15,23,42,0.5)' }} onClick={() => setSelectedCalendarDay(null)}>
+                    <div className="bg-white rounded-2xl shadow-2xl w-full mx-4 overflow-hidden" style={{ maxWidth: '740px', maxHeight: '85vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
+                        <div className="flex items-center justify-between px-6 py-5" style={{ borderBottom: '1px solid #F3F4F6' }}>
+                            <div>
+                                <p style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#9CA3AF' }}>
+                                    {selectedCalendarDay.toDateString() === new Date().toDateString() ? 'Today' : selectedCalendarDay.toLocaleDateString('en-GB', { weekday: 'long' })}
+                                </p>
+                                <h2 className="text-xl font-bold mt-0.5" style={{ color: '#1F2937' }}>
+                                    {selectedCalendarDay.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
+                                </h2>
+                            </div>
+                            <button onClick={() => setSelectedCalendarDay(null)} className="w-9 h-9 rounded-lg flex items-center justify-center transition hover:bg-gray-100" style={{ border: '1px solid #E5E7EB' }}>
+                                <X className="w-4 h-4" style={{ color: '#6B7280' }} />
+                            </button>
+                        </div>
+                        <div className="p-6">
+                            <CalendarEventsPanel
+                                date={panelDate}
+                                events={panelEvents}
+                                assessments={recentAssessments}
+                                formatTime={formatTime}
+                                onNotificationClick={(id) => { setSelectedCalendarDay(null); navigate(`/student/notifications?id=${id}`); }}
+                                onAnnouncementClick={(id) => { setSelectedCalendarDay(null); handleOpenMoodle(`/mod/forum/discuss.php?d=${id}`); }}
+                                onAssessmentClick={(type, moduleId) => { setSelectedCalendarDay(null); handleOpenMoodle(`/mod/${type}/view.php?id=${moduleId}`); }}
+                            />
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Quick Links */}
             <div className="bg-white rounded-xl border shadow-sm p-4 mb-5" style={{ borderColor: '#E5E7EB' }}>
@@ -507,14 +526,14 @@ const MiniCalendar = ({ date, onDateChange, events = {}, selectedDay, onDayClick
                         <div key={i} className="flex items-center justify-center py-1"
                             onClick={() => hasAny && onDayClick(new Date(year, month, day))}
                             style={{ cursor: hasAny ? 'pointer' : 'default' }}>
-                            <div className="w-11 h-11 rounded-xl flex flex-col items-center justify-center transition-all select-none"
+                            <div className="w-14 h-14 rounded-xl flex flex-col items-center justify-center transition-all select-none"
                                 style={{
                                     background: bg,
                                     boxShadow,
                                     outline: todayDay && !selDay ? '2px solid #2563EB' : 'none',
                                     outlineOffset: '-2px',
                                 }}>
-                                <span className="text-sm font-semibold leading-none" style={{ color: textColor }}>{day}</span>
+                                <span className="text-base font-semibold leading-none" style={{ color: textColor }}>{day}</span>
                                 {(hasNotif || hasAnn) && (
                                     <div className="flex gap-0.5 mt-1">
                                         {hasNotif && <span className="block w-1 h-1 rounded-full" style={{ background: selDay ? 'rgba(255,255,255,0.75)' : '#3B82F6' }} />}
