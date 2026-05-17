@@ -1392,12 +1392,14 @@ function dedupeByBestEnrollment(courses) {
 }
 router.get('/admin/teachers', async (req, res) => {
     try {
-        // Get all users from SCL DB that have a teaching role
+        // Only return faculty who went through the proper pipeline:
+        // accepted application + activated (created_user_id set by "Activate Faculty Account")
         const [sclTeachers] = await db.execute(
-            `SELECT id, first_name, last_name, email, role, created_at
-             FROM users
-             WHERE role LIKE '%teacher%' OR role LIKE '%editingteacher%' OR role LIKE '%Teacher%'
-             ORDER BY first_name, last_name`
+            `SELECT u.id, u.first_name, u.last_name, u.email, u.role, u.created_at
+             FROM users u
+             INNER JOIN teacher_registrations tr ON tr.created_user_id = u.id
+             WHERE tr.application_status = 'accepted'
+             ORDER BY u.first_name, u.last_name`
         );
 
         // For each teacher, look up their Moodle courses
