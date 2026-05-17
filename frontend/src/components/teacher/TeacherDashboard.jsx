@@ -121,7 +121,7 @@ const TeacherDashboard = ({ user }) => {
 
             {/* KPI Cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                <KpiCard icon="📚" iconBg="#DBEAFE" value={summary.totalCourses || 0} label="My Courses" sub={`${summary.totalCourses || 0} assigned`} subColor="#6B7280" />
+                <KpiCard icon="📚" iconBg="#DBEAFE" value={summary.totalCourses || 0} label="My Subjects" sub={`${summary.totalCourses || 0} assigned`} subColor="#6B7280" />
                 <KpiCard icon="📊" iconBg="#DBEAFE" value={summary.assessmentCount || 0} label="Assessments" sub="assignments & quizzes" subColor="#6B7280" />
                 <KpiCard icon="✅" iconBg="#DBEAFE" value={summary.moduleCount || 0} label="Activities" sub="total course modules" subColor="#10B981" />
                 <KpiCard icon="💬" iconBg="#DBEAFE" value={summary.forumCount || 0} label="Forums" sub="discussion boards" subColor="#6B7280" />
@@ -133,12 +133,12 @@ const TeacherDashboard = ({ user }) => {
                     <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: '1px solid #E5E7EB' }}>
                         <h2 className="text-sm font-semibold flex items-center gap-2" style={{ color: '#1F2937' }}>
                             <BookOpen className="w-4 h-4" style={{ color: '#2563EB' }} />
-                            My Teaching Courses
+                            My Teaching Subjects
                         </h2>
                         <button onClick={() => navigate('/teacher/programme')} className="text-xs font-medium" style={{ color: '#2563EB' }}>View all →</button>
                     </div>
                     <div className="p-4">
-                        <TeacherCoursesTab courses={topCourses} onCourseClick={() => navigate('/teacher/programme')} />
+                        <TeacherCoursesTab courses={topCourses} onSubjectClick={(courseId) => handleOpenMoodle(`/course/view.php?id=${courseId}`)} ssoLoading={ssoLoading} />
                     </div>
                 </div>
 
@@ -189,7 +189,7 @@ const TeacherDashboard = ({ user }) => {
                     <MiniCalendar date={calendarDate} onDateChange={setCalendarDate} />
                 </div>
                 <div className="lg:col-span-2 bg-white rounded-xl border shadow-sm p-5" style={{ borderColor: '#E5E7EB' }}>
-                    <h3 className="text-sm font-semibold mb-4" style={{ color: '#1F2937' }}>Course Activity Overview</h3>
+                    <h3 className="text-sm font-semibold mb-4" style={{ color: '#1F2937' }}>Subject Activity Overview</h3>
                     <CourseActivityChart courses={topCourses.slice(0, 5)} />
                 </div>
             </div>
@@ -200,7 +200,7 @@ const TeacherDashboard = ({ user }) => {
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
                     {[
                         { icon: '📝', label: 'Assessments', path: '/teacher/assessments' },
-                        { icon: '📄', label: 'My Programme', path: '/teacher/programme' },
+                        { icon: '📄', label: 'My Subjects', path: '/teacher/programme' },
                         { icon: '📊', label: 'Reports', path: '/teacher/reports' },
                         { icon: '📅', label: 'Timetable', path: '/teacher/timetable' },
                         { icon: '🎓', label: 'Teaching (LMS)', action: () => handleOpenMoodle('/my/') },
@@ -237,33 +237,39 @@ const KpiCard = ({ icon, iconBg, value, label, sub, subColor }) => (
     </div>
 );
 
-const TeacherCoursesTab = ({ courses, onCourseClick }) => {
+const TeacherCoursesTab = ({ courses, onSubjectClick, ssoLoading }) => {
     const bgColors = ['#FEF3C7', '#DBEAFE', '#F3E8FF', '#FDE2E4', '#D1FAE5', '#E0E7FF'];
     if (!courses || courses.length === 0) {
         return (
             <div className="text-center py-10 text-gray-500">
                 <BookOpen className="w-10 h-10 mx-auto mb-2 text-gray-300" />
-                <p className="font-medium">No courses assigned yet</p>
-                <p className="text-sm mt-1">Your teaching courses will appear here</p>
+                <p className="font-medium">No subjects assigned yet</p>
+                <p className="text-sm mt-1">Your teaching subjects will appear here</p>
             </div>
         );
     }
     return (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {courses.map((course, idx) => (
-                <div key={course.id} onClick={() => onCourseClick?.(course.id)}
+                <div key={course.id}
+                    onClick={() => !ssoLoading && onSubjectClick?.(course.id)}
                     className="rounded-lg border overflow-hidden transition-all hover:shadow-md cursor-pointer"
-                    style={{ borderColor: '#E5E7EB', background: '#fff' }}>
-                    <div style={{ background: bgColors[idx % bgColors.length], padding: '24px 16px', minHeight: '90px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <span className="text-4xl">📚</span>
+                    style={{ borderColor: '#E5E7EB', background: '#fff', opacity: ssoLoading ? 0.7 : 1 }}>
+                    <div style={{ background: bgColors[idx % bgColors.length], padding: '16px', minHeight: '70px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <span className="text-3xl">📚</span>
                     </div>
-                    <div style={{ padding: '16px' }}>
+                    <div style={{ padding: '14px' }}>
                         <h3 className="text-sm font-semibold line-clamp-2" style={{ color: '#1F2937' }}>{course.name}</h3>
-                        <p className="text-xs mt-1" style={{ color: '#6B7280' }}>{course.code}</p>
-                        <div className="mt-3 flex gap-3 text-xs" style={{ color: '#6B7280' }}>
-                            <span>📝 {course.counts?.assign || 0} assign</span>
-                            <span>💬 {course.counts?.forum || 0} forums</span>
-                            <span>📋 {course.counts?.quiz || 0} quizzes</span>
+                        <p className="text-xs mt-0.5 font-mono" style={{ color: '#6B7280' }}>{course.code}</p>
+                        {course.category && (
+                            <p className="text-[11px] mt-1.5 line-clamp-1 px-2 py-0.5 rounded" style={{ background: '#EFF6FF', color: '#2563EB' }}>
+                                {course.category}
+                            </p>
+                        )}
+                        <div className="mt-2 flex gap-3 text-xs" style={{ color: '#6B7280' }}>
+                            <span>📝 {course.counts?.assign || 0}</span>
+                            <span>💬 {course.counts?.forum || 0}</span>
+                            <span>📋 {course.counts?.quiz || 0}</span>
                         </div>
                     </div>
                 </div>

@@ -42,6 +42,7 @@ export async function fetchTeacherPortalData(email) {
             id: course.moodle_course_id || course.id,
             name: course.name || course.course_title || `Course ${course.id}`,
             code: course.code || course.course_code || course.course_shortname || '-',
+            category: course.course_type || course.category_name || '',
             hasTeachingRole: Boolean(course.hasTeachingRole || ['teacher', 'editingteacher', 'noneditingteacher'].includes(String(course.role || '').toLowerCase())),
             isStudentEnrolled: Boolean(course.isStudentEnrolled),
             modules,
