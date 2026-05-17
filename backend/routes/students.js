@@ -13482,44 +13482,55 @@ router.put('/faculty-onboarding/:registrationId', async (req, res) => {
             id_card_issued, remarks
         } = req.body;
 
-        const fields = { contract_signed, it_setup_completed, lms_access_granted,
-            course_assigned, office_orientation, handbook_received, id_card_issued };
-        const completedCount = Object.values(fields).filter(v => v == 1 || v === true).length;
+        const boolFields = [contract_signed, it_setup_completed, lms_access_granted,
+            course_assigned, office_orientation, handbook_received, id_card_issued];
+        const completedCount = boolFields.filter(v => v == 1 || v === true).length;
         const total = 7;
         let onboarding_status = 'Pending';
         if (completedCount === total) onboarding_status = 'Completed';
         else if (completedCount > 0) onboarding_status = 'In Progress';
 
-        const started_at = completedCount > 0 ? db.execute(`SELECT started_at FROM teacher_onboarding WHERE registration_id = ?`, [registrationId]).then(([r]) => r[0]?.started_at || new Date()) : null;
-
-        await db.execute(
-            `INSERT INTO teacher_onboarding
-                (registration_id, contract_signed, it_setup_completed, lms_access_granted,
-                 course_assigned, office_orientation, handbook_received, id_card_issued,
-                 onboarding_status, remarks, started_at, completed_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, IF(? > 0, COALESCE((SELECT started_at FROM teacher_onboarding WHERE registration_id = ?), NOW()), NULL), IF(? = ?, NOW(), NULL))
-             ON DUPLICATE KEY UPDATE
-                contract_signed = VALUES(contract_signed),
-                it_setup_completed = VALUES(it_setup_completed),
-                lms_access_granted = VALUES(lms_access_granted),
-                course_assigned = VALUES(course_assigned),
-                office_orientation = VALUES(office_orientation),
-                handbook_received = VALUES(handbook_received),
-                id_card_issued = VALUES(id_card_issued),
-                onboarding_status = VALUES(onboarding_status),
-                remarks = VALUES(remarks),
-                started_at = IF(VALUES(contract_signed) OR VALUES(it_setup_completed) OR VALUES(lms_access_granted) OR VALUES(course_assigned) OR VALUES(office_orientation) OR VALUES(handbook_received) OR VALUES(id_card_issued), COALESCE(started_at, NOW()), started_at),
-                completed_at = IF(VALUES(onboarding_status) = 'Completed', COALESCE(completed_at, NOW()), NULL)`,
-            [
-                registrationId,
-                contract_signed ? 1 : 0, it_setup_completed ? 1 : 0, lms_access_granted ? 1 : 0,
-                course_assigned ? 1 : 0, office_orientation ? 1 : 0, handbook_received ? 1 : 0,
-                id_card_issued ? 1 : 0,
-                onboarding_status, remarks || null,
-                completedCount, registrationId,
-                completedCount, total
-            ]
+        // Fetch existing row to preserve started_at / completed_at
+        const [existing] = await db.execute(
+            'SELECT id, started_at, completed_at FROM teacher_onboarding WHERE registration_id = ? LIMIT 1',
+            [registrationId]
         );
+
+        const now = new Date();
+        const started_at = completedCount > 0
+            ? (existing[0]?.started_at || now)
+            : null;
+        const completed_at = onboarding_status === 'Completed'
+            ? (existing[0]?.completed_at || now)
+            : null;
+
+        const vals = [
+            contract_signed ? 1 : 0, it_setup_completed ? 1 : 0, lms_access_granted ? 1 : 0,
+            course_assigned ? 1 : 0, office_orientation ? 1 : 0, handbook_received ? 1 : 0,
+            id_card_issued ? 1 : 0, onboarding_status, remarks || null, started_at, completed_at
+        ];
+
+        if (existing.length > 0) {
+            await db.execute(
+                `UPDATE teacher_onboarding SET
+                    contract_signed = ?, it_setup_completed = ?, lms_access_granted = ?,
+                    course_assigned = ?, office_orientation = ?, handbook_received = ?,
+                    id_card_issued = ?, onboarding_status = ?, remarks = ?,
+                    started_at = ?, completed_at = ?
+                 WHERE registration_id = ?`,
+                [...vals, registrationId]
+            );
+        } else {
+            await db.execute(
+                `INSERT INTO teacher_onboarding
+                    (registration_id, contract_signed, it_setup_completed, lms_access_granted,
+                     course_assigned, office_orientation, handbook_received, id_card_issued,
+                     onboarding_status, remarks, started_at, completed_at)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                [registrationId, ...vals]
+            );
+        }
+
         res.json({ success: true, message: 'Onboarding updated', onboarding_status });
     } catch (error) {
         console.error('Error updating faculty onboarding:', error);
