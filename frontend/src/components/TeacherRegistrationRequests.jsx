@@ -215,7 +215,7 @@ const TeacherRegistrationRequests = ({ user }) => {
                 </div>
                 <button onClick={() => navigate('/teacher-registration')} className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 inline-flex items-center gap-2">
                     <UserPlus className="w-4 h-4" />
-                    New Teacher Registration
+                    New Faculty Application
                 </button>
             </div>
 
@@ -296,7 +296,7 @@ const TeacherRegistrationRequests = ({ user }) => {
                                 <div><p className="text-gray-500">Highest Qualification</p><p className="font-medium text-gray-900">{selectedRegistration.highest_qualification || 'N/A'}</p></div>
                                 <div><p className="text-gray-500">Years of Experience</p><p className="font-medium text-gray-900">{selectedRegistration.years_of_experience ?? 'N/A'}</p></div>
                                 <div><p className="text-gray-500">Current Employer</p><p className="font-medium text-gray-900">{selectedRegistration.current_employer || 'N/A'}</p></div>
-                                <div><p className="text-gray-500">Teaching Role</p><p className="font-medium text-gray-900">{selectedRegistration.teaching_role || 'editingteacher'}</p></div>
+                                <div><p className="text-gray-500">Faculty Role</p><p className="font-medium text-gray-900">{selectedRegistration.teaching_role || 'editingteacher'}</p></div>
                                 <div><p className="text-gray-500">Course</p><p className="font-medium text-gray-900">{selectedRegistration.selected_course_title}</p></div>
                                 <div><p className="text-gray-500">Course Code</p><p className="font-medium text-gray-900">{selectedRegistration.selected_course_code}</p></div>
                                 <div><p className="text-gray-500">Submitted</p><p className="font-medium text-gray-900">{formatDate(selectedRegistration.created_at)}</p></div>
