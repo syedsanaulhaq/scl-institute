@@ -89,7 +89,8 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
                 subItems: [
                     { name: 'Teacher Management', icon: Users, path: '/admin/teacher-management' },
                     { name: 'Teacher Registrations', icon: Users, path: '/teacher-registrations' },
-                    { name: 'New Teacher Registration', icon: UserPlus, path: '/teacher-registration' }
+                    { name: 'New Teacher Registration', icon: UserPlus, path: '/teacher-registration' },
+                    { name: 'Faculty Onboarding', icon: UserCheck, path: '/admin/faculty-onboarding' }
                 ]
             },
             {
@@ -110,7 +111,8 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
                 key: 'students-group',
                 subItems: [
                     { name: 'Student Programmes', icon: BookOpen, path: '/admin/student-programmes' },
-                    { name: 'Student Fees', icon: DollarSign, path: '/admin/student-fees' }
+                    { name: 'Student Fees', icon: DollarSign, path: '/admin/student-fees' },
+                    { name: 'Student Onboarding', icon: UserCheck, path: '/admin/student-onboarding' }
                 ]
             },
             {
@@ -161,6 +163,7 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
                 subItems: [
                     { name: 'Student List', icon: Users, path: '/student-list' },
                     { name: 'Student Fees', icon: DollarSign, path: '/admin/student-fees' },
+                    { name: 'Student Onboarding', icon: UserCheck, path: '/admin/student-onboarding' },
                     { name: 'Course Change Requests', icon: ClipboardList, path: '/course-change-requests' },
                     { name: 'Student Report', icon: BarChart3, path: '/students/report' }
                 ]
@@ -175,7 +178,8 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
                 subItems: [
                     { name: 'All Teachers & Courses', icon: Users, path: '/admin/teacher-management' },
                     { name: 'Teacher Registrations', icon: UserCheck, path: '/teacher-registrations' },
-                    { name: 'New Teacher Registration', icon: UserPlus, path: '/teacher-registration' }
+                    { name: 'New Teacher Registration', icon: UserPlus, path: '/teacher-registration' },
+                    { name: 'Faculty Onboarding', icon: UserCheck, path: '/admin/faculty-onboarding' }
                 ]
             },
             { name: 'Support Inbox', icon: HelpCircle, path: '/admin/support-requests' },

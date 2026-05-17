@@ -13394,5 +13394,264 @@ router.delete('/applications/:id/interview-recordings/:recordingId', async (req,
     }
 });
 
+// ===============================================
+// FACULTY ONBOARDING
+// Table: teacher_onboarding (auto-created, linked to teacher_registrations.id)
+// ===============================================
+
+const ensureTeacherOnboardingTable = async () => {
+    await db.execute(`
+        CREATE TABLE IF NOT EXISTS teacher_onboarding (
+            id INT PRIMARY KEY AUTO_INCREMENT,
+            registration_id INT NOT NULL UNIQUE,
+            contract_signed TINYINT(1) DEFAULT 0,
+            it_setup_completed TINYINT(1) DEFAULT 0,
+            lms_access_granted TINYINT(1) DEFAULT 0,
+            course_assigned TINYINT(1) DEFAULT 0,
+            office_orientation TINYINT(1) DEFAULT 0,
+            handbook_received TINYINT(1) DEFAULT 0,
+            id_card_issued TINYINT(1) DEFAULT 0,
+            onboarding_status ENUM('Pending','In Progress','Completed') DEFAULT 'Pending',
+            remarks TEXT,
+            started_at DATETIME,
+            completed_at DATETIME,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            FOREIGN KEY (registration_id) REFERENCES teacher_registrations(id) ON DELETE CASCADE,
+            INDEX idx_reg_id (registration_id),
+            INDEX idx_status (onboarding_status)
+        )
+    `);
+};
+
+// GET /api/students/faculty-onboarding
+router.get('/faculty-onboarding', async (req, res) => {
+    try {
+        await ensureTeacherOnboardingTable();
+        const { status, search } = req.query;
+        let conditions = [`tr.status = 'accepted'`];
+        const params = [];
+        if (status && status !== 'all') {
+            conditions.push('COALESCE(tob.onboarding_status, "Pending") = ?');
+            params.push(status);
+        }
+        if (search) {
+            conditions.push('(tr.full_name LIKE ? OR tr.email LIKE ? OR tr.registration_reference LIKE ?)');
+            params.push(`%${search}%`, `%${search}%`, `%${search}%`);
+        }
+        const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+        const [rows] = await db.execute(
+            `SELECT tr.id, tr.registration_reference, tr.full_name, tr.email,
+                    tr.phone_number, tr.subject_specialisation, tr.created_at as applied_at,
+                    tob.id as onboarding_id,
+                    COALESCE(tob.contract_signed, 0) as contract_signed,
+                    COALESCE(tob.it_setup_completed, 0) as it_setup_completed,
+                    COALESCE(tob.lms_access_granted, 0) as lms_access_granted,
+                    COALESCE(tob.course_assigned, 0) as course_assigned,
+                    COALESCE(tob.office_orientation, 0) as office_orientation,
+                    COALESCE(tob.handbook_received, 0) as handbook_received,
+                    COALESCE(tob.id_card_issued, 0) as id_card_issued,
+                    COALESCE(tob.onboarding_status, 'Pending') as onboarding_status,
+                    tob.remarks, tob.started_at, tob.completed_at
+             FROM teacher_registrations tr
+             LEFT JOIN teacher_onboarding tob ON tob.registration_id = tr.id
+             ${where}
+             ORDER BY tr.created_at DESC`,
+            params
+        );
+        res.json({ success: true, data: rows });
+    } catch (error) {
+        console.error('Error fetching faculty onboarding:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// PUT /api/students/faculty-onboarding/:registrationId
+router.put('/faculty-onboarding/:registrationId', async (req, res) => {
+    try {
+        await ensureTeacherOnboardingTable();
+        const { registrationId } = req.params;
+        const {
+            contract_signed, it_setup_completed, lms_access_granted,
+            course_assigned, office_orientation, handbook_received,
+            id_card_issued, remarks
+        } = req.body;
+
+        const fields = { contract_signed, it_setup_completed, lms_access_granted,
+            course_assigned, office_orientation, handbook_received, id_card_issued };
+        const completedCount = Object.values(fields).filter(v => v == 1 || v === true).length;
+        const total = 7;
+        let onboarding_status = 'Pending';
+        if (completedCount === total) onboarding_status = 'Completed';
+        else if (completedCount > 0) onboarding_status = 'In Progress';
+
+        const started_at = completedCount > 0 ? db.execute(`SELECT started_at FROM teacher_onboarding WHERE registration_id = ?`, [registrationId]).then(([r]) => r[0]?.started_at || new Date()) : null;
+
+        await db.execute(
+            `INSERT INTO teacher_onboarding
+                (registration_id, contract_signed, it_setup_completed, lms_access_granted,
+                 course_assigned, office_orientation, handbook_received, id_card_issued,
+                 onboarding_status, remarks, started_at, completed_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, IF(? > 0, COALESCE((SELECT started_at FROM teacher_onboarding WHERE registration_id = ?), NOW()), NULL), IF(? = ?, NOW(), NULL))
+             ON DUPLICATE KEY UPDATE
+                contract_signed = VALUES(contract_signed),
+                it_setup_completed = VALUES(it_setup_completed),
+                lms_access_granted = VALUES(lms_access_granted),
+                course_assigned = VALUES(course_assigned),
+                office_orientation = VALUES(office_orientation),
+                handbook_received = VALUES(handbook_received),
+                id_card_issued = VALUES(id_card_issued),
+                onboarding_status = VALUES(onboarding_status),
+                remarks = VALUES(remarks),
+                started_at = IF(VALUES(contract_signed) OR VALUES(it_setup_completed) OR VALUES(lms_access_granted) OR VALUES(course_assigned) OR VALUES(office_orientation) OR VALUES(handbook_received) OR VALUES(id_card_issued), COALESCE(started_at, NOW()), started_at),
+                completed_at = IF(VALUES(onboarding_status) = 'Completed', COALESCE(completed_at, NOW()), NULL)`,
+            [
+                registrationId,
+                contract_signed ? 1 : 0, it_setup_completed ? 1 : 0, lms_access_granted ? 1 : 0,
+                course_assigned ? 1 : 0, office_orientation ? 1 : 0, handbook_received ? 1 : 0,
+                id_card_issued ? 1 : 0,
+                onboarding_status, remarks || null,
+                completedCount, registrationId,
+                completedCount, total
+            ]
+        );
+        res.json({ success: true, message: 'Onboarding updated', onboarding_status });
+    } catch (error) {
+        console.error('Error updating faculty onboarding:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// ===============================================
+// STUDENT ONBOARDING TRACKER
+// Table: student_onboarding_tracker (auto-created, linked to student_applications.id)
+// ===============================================
+
+const ensureStudentOnboardingTable = async () => {
+    await db.execute(`
+        CREATE TABLE IF NOT EXISTS student_onboarding_tracker (
+            id INT PRIMARY KEY AUTO_INCREMENT,
+            application_id INT NOT NULL UNIQUE,
+            welcome_email_sent TINYINT(1) DEFAULT 0,
+            portal_access_granted TINYINT(1) DEFAULT 0,
+            moodle_enrolled TINYINT(1) DEFAULT 0,
+            handbook_signed TINYINT(1) DEFAULT 0,
+            orientation_attended TINYINT(1) DEFAULT 0,
+            it_setup_completed TINYINT(1) DEFAULT 0,
+            student_id_issued TINYINT(1) DEFAULT 0,
+            onboarding_status ENUM('Pending','In Progress','Completed') DEFAULT 'Pending',
+            remarks TEXT,
+            started_at DATETIME,
+            completed_at DATETIME,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            FOREIGN KEY (application_id) REFERENCES student_applications(id) ON DELETE CASCADE,
+            INDEX idx_app_id (application_id),
+            INDEX idx_status (onboarding_status)
+        )
+    `);
+};
+
+// GET /api/students/student-onboarding
+router.get('/student-onboarding', async (req, res) => {
+    try {
+        await ensureStudentOnboardingTable();
+        const { status, search, course_code } = req.query;
+        let conditions = [`sa.application_status = 'accepted'`];
+        const params = [];
+        if (status && status !== 'all') {
+            conditions.push('COALESCE(sot.onboarding_status, "Pending") = ?');
+            params.push(status);
+        }
+        if (search) {
+            conditions.push('(sa.first_name LIKE ? OR sa.last_name LIKE ? OR sa.email LIKE ?)');
+            params.push(`%${search}%`, `%${search}%`, `%${search}%`);
+        }
+        if (course_code) {
+            conditions.push('sa.course_code = ?');
+            params.push(course_code);
+        }
+        const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+        const [rows] = await db.execute(
+            `SELECT sa.id, sa.application_reference, sa.first_name, sa.last_name,
+                    sa.email, sa.course_title, sa.course_code, sa.intake_start_date,
+                    sa.created_at as applied_at,
+                    sot.id as onboarding_id,
+                    COALESCE(sot.welcome_email_sent, 0) as welcome_email_sent,
+                    COALESCE(sot.portal_access_granted, 0) as portal_access_granted,
+                    COALESCE(sot.moodle_enrolled, 0) as moodle_enrolled,
+                    COALESCE(sot.handbook_signed, 0) as handbook_signed,
+                    COALESCE(sot.orientation_attended, 0) as orientation_attended,
+                    COALESCE(sot.it_setup_completed, 0) as it_setup_completed,
+                    COALESCE(sot.student_id_issued, 0) as student_id_issued,
+                    COALESCE(sot.onboarding_status, 'Pending') as onboarding_status,
+                    sot.remarks, sot.started_at, sot.completed_at
+             FROM student_applications sa
+             LEFT JOIN student_onboarding_tracker sot ON sot.application_id = sa.id
+             ${where}
+             ORDER BY sa.created_at DESC`,
+            params
+        );
+        res.json({ success: true, data: rows });
+    } catch (error) {
+        console.error('Error fetching student onboarding:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// PUT /api/students/student-onboarding/:applicationId
+router.put('/student-onboarding/:applicationId', async (req, res) => {
+    try {
+        await ensureStudentOnboardingTable();
+        const { applicationId } = req.params;
+        const {
+            welcome_email_sent, portal_access_granted, moodle_enrolled,
+            handbook_signed, orientation_attended, it_setup_completed,
+            student_id_issued, remarks
+        } = req.body;
+
+        const fields = { welcome_email_sent, portal_access_granted, moodle_enrolled,
+            handbook_signed, orientation_attended, it_setup_completed, student_id_issued };
+        const completedCount = Object.values(fields).filter(v => v == 1 || v === true).length;
+        const total = 7;
+        let onboarding_status = 'Pending';
+        if (completedCount === total) onboarding_status = 'Completed';
+        else if (completedCount > 0) onboarding_status = 'In Progress';
+
+        await db.execute(
+            `INSERT INTO student_onboarding_tracker
+                (application_id, welcome_email_sent, portal_access_granted, moodle_enrolled,
+                 handbook_signed, orientation_attended, it_setup_completed, student_id_issued,
+                 onboarding_status, remarks, started_at, completed_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, IF(? > 0, NOW(), NULL), IF(? = ?, NOW(), NULL))
+             ON DUPLICATE KEY UPDATE
+                welcome_email_sent = VALUES(welcome_email_sent),
+                portal_access_granted = VALUES(portal_access_granted),
+                moodle_enrolled = VALUES(moodle_enrolled),
+                handbook_signed = VALUES(handbook_signed),
+                orientation_attended = VALUES(orientation_attended),
+                it_setup_completed = VALUES(it_setup_completed),
+                student_id_issued = VALUES(student_id_issued),
+                onboarding_status = VALUES(onboarding_status),
+                remarks = VALUES(remarks),
+                started_at = IF(VALUES(welcome_email_sent) OR VALUES(portal_access_granted) OR VALUES(moodle_enrolled) OR VALUES(handbook_signed) OR VALUES(orientation_attended) OR VALUES(it_setup_completed) OR VALUES(student_id_issued), COALESCE(started_at, NOW()), started_at),
+                completed_at = IF(VALUES(onboarding_status) = 'Completed', COALESCE(completed_at, NOW()), NULL)`,
+            [
+                applicationId,
+                welcome_email_sent ? 1 : 0, portal_access_granted ? 1 : 0, moodle_enrolled ? 1 : 0,
+                handbook_signed ? 1 : 0, orientation_attended ? 1 : 0, it_setup_completed ? 1 : 0,
+                student_id_issued ? 1 : 0,
+                onboarding_status, remarks || null,
+                completedCount,
+                completedCount, total
+            ]
+        );
+        res.json({ success: true, message: 'Onboarding updated', onboarding_status });
+    } catch (error) {
+        console.error('Error updating student onboarding:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
 module.exports = router;
 
