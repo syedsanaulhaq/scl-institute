@@ -210,8 +210,8 @@ const TeacherDashboard = ({ user }) => {
 
             {/* Row 3: Calendar + Events Panel */}
             <div className="bg-white rounded-xl border shadow-sm overflow-hidden mb-5" style={{ borderColor: '#E5E7EB' }}>
-                <div className="flex flex-col lg:flex-row" style={{ minHeight: '400px' }}>
-                    <div className="lg:w-96 flex-shrink-0 p-5 overflow-y-auto" style={{ borderRight: '1px solid #E5E7EB' }}>
+                <div className="flex flex-col lg:flex-row" style={{ minHeight: '480px' }}>
+                    <div className="flex-shrink-0 p-5 overflow-y-auto" style={{ borderRight: '1px solid #E5E7EB', width: '460px' }}>
                         <MiniCalendar
                             date={calendarDate}
                             onDateChange={setCalendarDate}
@@ -455,24 +455,24 @@ const MiniCalendar = ({ date, onDateChange, events = {}, selectedDay, onDayClick
     const getDayKey = (d) => `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
     return (
         <div>
-            <div className="flex items-center justify-between mb-4">
-                <h2 className="text-sm font-semibold flex items-center gap-2" style={{ color: '#1F2937' }}>
-                    <Calendar className="w-4 h-4" style={{ color: '#2563EB' }} />
+            <div className="flex items-center justify-between mb-5">
+                <h2 className="text-base font-semibold flex items-center gap-2" style={{ color: '#1F2937' }}>
+                    <Calendar className="w-5 h-5" style={{ color: '#2563EB' }} />
                     Calendar
                 </h2>
                 <div className="flex items-center gap-1">
-                    <button onClick={() => onDateChange(new Date(year, month - 1, 1))} className="p-1 rounded hover:bg-gray-100 transition">
-                        <ChevronLeft className="w-3.5 h-3.5" style={{ color: '#6B7280' }} />
+                    <button onClick={() => onDateChange(new Date(year, month - 1, 1))} className="p-1.5 rounded hover:bg-gray-100 transition">
+                        <ChevronLeft className="w-4 h-4" style={{ color: '#6B7280' }} />
                     </button>
-                    <span className="text-xs font-medium px-1" style={{ color: '#6B7280' }}>{monthName}</span>
-                    <button onClick={() => onDateChange(new Date(year, month + 1, 1))} className="p-1 rounded hover:bg-gray-100 transition">
-                        <ChevronRight className="w-3.5 h-3.5" style={{ color: '#6B7280' }} />
+                    <span className="text-sm font-medium px-2" style={{ color: '#6B7280' }}>{monthName}</span>
+                    <button onClick={() => onDateChange(new Date(year, month + 1, 1))} className="p-1.5 rounded hover:bg-gray-100 transition">
+                        <ChevronRight className="w-4 h-4" style={{ color: '#6B7280' }} />
                     </button>
                 </div>
             </div>
-            <div className="grid grid-cols-7 mb-1">
+            <div className="grid grid-cols-7 mb-2">
                 {['Mo','Tu','We','Th','Fr','Sa','Su'].map((d) => (
-                    <div key={d} className="text-center text-[10px] font-semibold pb-1" style={{ color: '#9CA3AF' }}>{d}</div>
+                    <div key={d} className="text-center text-xs font-semibold pb-1" style={{ color: '#9CA3AF' }}>{d}</div>
                 ))}
             </div>
             <div className="grid grid-cols-7 gap-y-1">
@@ -486,15 +486,15 @@ const MiniCalendar = ({ date, onDateChange, events = {}, selectedDay, onDayClick
                     const todayDay = isToday(day);
                     const selDay = isSelected(day);
                     return (
-                        <div key={i} className="flex flex-col items-center py-0.5" onClick={() => hasAny && onDayClick(new Date(year, month, day))} style={{ cursor: hasAny ? 'pointer' : 'default' }}>
-                            <div className="w-8 h-8 rounded-full flex items-center justify-center transition"
+                        <div key={i} className="flex flex-col items-center py-1" onClick={() => hasAny && onDayClick(new Date(year, month, day))} style={{ cursor: hasAny ? 'pointer' : 'default' }}>
+                            <div className="w-10 h-10 rounded-full flex items-center justify-center transition"
                                 style={{
                                     background: selDay ? '#2563EB' : todayDay ? '#DBEAFE' : 'transparent',
-                                    border: !selDay && todayDay ? '1.5px solid #2563EB' : 'none',
+                                    border: !selDay && todayDay ? '2px solid #2563EB' : 'none',
                                 }}>
-                                <span className="text-[11px] font-medium" style={{ color: selDay ? '#fff' : todayDay ? '#2563EB' : '#1F2937' }}>{day}</span>
+                                <span className="text-sm font-medium" style={{ color: selDay ? '#fff' : todayDay ? '#2563EB' : '#1F2937' }}>{day}</span>
                             </div>
-                            <div className="flex gap-0.5 mt-0.5" style={{ minHeight: '6px' }}>
+                            <div className="flex gap-0.5 mt-0.5" style={{ minHeight: '7px' }}>
                                 {hasNotif && <div className="w-1.5 h-1.5 rounded-full" style={{ background: '#2563EB' }} />}
                                 {hasAnn && <div className="w-1.5 h-1.5 rounded-full" style={{ background: '#F59E0B' }} />}
                             </div>
@@ -502,9 +502,9 @@ const MiniCalendar = ({ date, onDateChange, events = {}, selectedDay, onDayClick
                     );
                 })}
             </div>
-            <div className="mt-4 flex items-center gap-4" style={{ color: '#9CA3AF' }}>
-                <span className="flex items-center gap-1 text-[10px]"><span className="w-2 h-2 rounded-full inline-block" style={{ background: '#2563EB' }} /> Notifications</span>
-                <span className="flex items-center gap-1 text-[10px]"><span className="w-2 h-2 rounded-full inline-block" style={{ background: '#F59E0B' }} /> Announcements</span>
+            <div className="mt-5 flex items-center gap-5" style={{ color: '#9CA3AF' }}>
+                <span className="flex items-center gap-1.5 text-xs"><span className="w-2.5 h-2.5 rounded-full inline-block" style={{ background: '#2563EB' }} /> Notifications</span>
+                <span className="flex items-center gap-1.5 text-xs"><span className="w-2.5 h-2.5 rounded-full inline-block" style={{ background: '#F59E0B' }} /> Announcements</span>
             </div>
         </div>
     );
