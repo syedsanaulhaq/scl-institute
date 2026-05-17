@@ -176,9 +176,10 @@ const TeacherDashboard = ({ user }) => {
                             <Bell className="w-4 h-4" style={{ color: '#2563EB' }} />
                             Notifications
                         </h2>
+                        <button onClick={() => navigate('/student/notifications')} className="text-xs font-medium" style={{ color: '#2563EB' }}>View all →</button>
                     </div>
                     <div className="p-4">
-                        <TeacherNotificationsTab notifications={notifications} formatTime={formatTime} onOpenMoodle={(path) => handleOpenMoodle(path)} />
+                        <TeacherNotificationsTab notifications={notifications} formatTime={formatTime} />
                     </div>
                 </div>
             </div>
@@ -342,26 +343,27 @@ const AssessmentsTab = ({ assessments, onOpenMoodle }) => {
     );
 };
 
-const TeacherNotificationsTab = ({ notifications, formatTime, onOpenMoodle }) => {
+const TeacherNotificationsTab = ({ notifications, formatTime }) => {
+    const navigate = useNavigate();
     if (!notifications || notifications.length === 0) {
         return (
             <div className="text-center py-8" style={{ color: '#6B7280' }}>
                 <Bell className="w-8 h-8 mx-auto mb-2" style={{ color: '#9CA3AF' }} />
                 <p className="text-sm font-medium">No notifications</p>
-                <p className="text-xs mt-1">Moodle notifications will appear here</p>
+                <p className="text-xs mt-1">Notifications will appear here</p>
             </div>
         );
     }
     return (
         <div className="divide-y" style={{ borderColor: '#F9FAFB' }}>
             {notifications.map((notif) => (
-                <div key={notif.id} className="py-2.5 flex gap-2.5 rounded px-1 cursor-pointer hover:bg-blue-50 transition-colors" style={{ background: !notif.read ? '#F0F9FF' : undefined }} onClick={() => onOpenMoodle?.(notif.url || '/message/output/popup/view.php')}>
-                    <div className="w-1.5 h-1.5 rounded-full mt-2 flex-shrink-0" style={{ background: !notif.read ? '#2563EB' : '#D0D5E8' }} />
+                <div key={notif.id} className="py-2.5 flex gap-2.5 rounded px-1 cursor-pointer hover:bg-blue-50 transition-colors" style={{ background: !notif.is_read ? '#F0F9FF' : undefined }} onClick={() => navigate(`/student/notifications?id=${notif.id}`)}>
+                    <div className="w-1.5 h-1.5 rounded-full mt-2 flex-shrink-0" style={{ background: !notif.is_read ? '#2563EB' : '#D0D5E8' }} />
                     <div className="flex-1 min-w-0">
-                        <p className="text-xs font-medium" style={{ color: !notif.read ? '#1F2937' : '#6B7280' }}>{notif.subject}</p>
-                        <p className="text-[11px] mt-0.5 line-clamp-1" style={{ color: '#6B7280' }}>{notif.text}</p>
+                        <p className="text-xs font-medium" style={{ color: !notif.is_read ? '#1F2937' : '#6B7280' }}>{notif.subject}</p>
+                        <p className="text-[11px] mt-0.5 line-clamp-1" style={{ color: '#6B7280' }}>{notif.message}</p>
                     </div>
-                    <span className="text-[10px] flex-shrink-0 whitespace-nowrap mt-0.5" style={{ color: '#9CA3AF' }}>{formatTime(notif.timecreated)}</span>
+                    <span className="text-[10px] flex-shrink-0 whitespace-nowrap mt-0.5" style={{ color: '#9CA3AF' }}>{formatTime(notif.created_at)}</span>
                 </div>
             ))}
         </div>

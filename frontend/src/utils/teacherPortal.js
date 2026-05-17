@@ -88,14 +88,14 @@ export async function fetchTeacherPortalData(email) {
     // Fetch announcements and notifications in parallel
     const [announcementsRes, notificationsRes] = await Promise.allSettled([
         axios.get(`${API_URL}/students/teacher-announcements`, { params: { email } }),
-        axios.get(`${API_URL}/students/teacher-notifications`, { params: { email } })
+        axios.get(`${API_URL}/notifications/user/${encodeURIComponent(email)}`)
     ]);
 
     const announcements = announcementsRes.status === 'fulfilled'
         ? (announcementsRes.value.data?.data || [])
         : [];
     const notifications = notificationsRes.status === 'fulfilled'
-        ? (notificationsRes.value.data?.data || [])
+        ? (notificationsRes.value.data?.notifications || [])
         : [];
 
     return { courses: teachingCourses, courseRows, activities, summary, announcements, notifications };
