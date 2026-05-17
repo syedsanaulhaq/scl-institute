@@ -326,7 +326,7 @@ const AssessmentsTab = ({ assessments, onOpenMoodle }) => {
     return (
         <div className="divide-y" style={{ borderColor: '#F9FAFB' }}>
             {assessments.map((item) => (
-                <div key={item.id} className="py-2.5 flex gap-2.5 px-1 rounded hover:bg-gray-50 cursor-pointer transition-colors" onClick={() => onOpenMoodle?.(`/mod/${item.type}/view.php?id=${item.id}`)}>  
+                <div key={item.id} className="py-2.5 flex gap-2.5 px-1 rounded hover:bg-gray-50 cursor-pointer transition-colors" onClick={() => onOpenMoodle?.(`/mod/${item.type}/view.php?id=${item.moduleId}`)}>  
                     <div className="w-1.5 h-1.5 rounded-full mt-2 flex-shrink-0" style={{ background: item.type === 'assign' ? '#2563EB' : '#10B981' }} />
                     <div className="flex-1 min-w-0">
                         <p className="text-xs font-medium" style={{ color: '#1F2937' }}>{item.title}</p>
