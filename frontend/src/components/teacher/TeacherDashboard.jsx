@@ -210,8 +210,8 @@ const TeacherDashboard = ({ user }) => {
 
             {/* Row 3: Calendar + Events Panel */}
             <div className="bg-white rounded-xl border shadow-sm overflow-hidden mb-5" style={{ borderColor: '#E5E7EB' }}>
-                <div className="flex flex-col lg:flex-row">
-                    <div className="lg:w-96 flex-shrink-0 p-5" style={{ borderRight: '1px solid #E5E7EB' }}>
+                <div className="flex flex-col lg:flex-row" style={{ minHeight: '400px' }}>
+                    <div className="lg:w-96 flex-shrink-0 p-5 overflow-y-auto" style={{ borderRight: '1px solid #E5E7EB' }}>
                         <MiniCalendar
                             date={calendarDate}
                             onDateChange={setCalendarDate}
@@ -220,7 +220,7 @@ const TeacherDashboard = ({ user }) => {
                             onDayClick={(d) => setSelectedCalendarDay(prev => prev?.toDateString() === d.toDateString() ? null : d)}
                         />
                     </div>
-                    <div className="flex-1 p-5 overflow-y-auto" style={{ maxHeight: '420px' }}>
+                    <div className="flex-1 p-5 overflow-y-auto">
                         <CalendarEventsPanel
                             date={panelDate}
                             events={panelEvents}
