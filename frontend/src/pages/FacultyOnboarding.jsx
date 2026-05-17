@@ -147,8 +147,8 @@ export default function FacultyOnboarding() {
                                     <Zap size={20} className="text-green-600" />
                                 </div>
                                 <div>
-                                    <p className="font-bold text-gray-900">Faculty Activated!</p>
-                                    <p className="text-xs text-gray-500">Portal account &amp; Moodle enrolment created</p>
+                                    <p className="font-bold text-gray-900">Faculty Account Created!</p>
+                                    <p className="text-xs text-gray-500">Portal &amp; Moodle accounts ready — go to Active Faculty to assign courses</p>
                                 </div>
                             </div>
                             <button onClick={() => setActivateModal(null)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500"><X size={18} /></button>
@@ -179,9 +179,12 @@ export default function FacultyOnboarding() {
                                 </div>
                             </div>
                             <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-xs text-blue-700 space-y-1">
-                                <p><span className="font-semibold">Course:</span> {activateModal.moodle_course}</p>
                                 <p><span className="font-semibold">Role:</span> {activateModal.portal_role}</p>
-                                <p><span className="font-semibold">Status:</span> Account {activateModal.user_status} — now visible in Active Faculty</p>
+                                <p><span className="font-semibold">Account:</span> {activateModal.user_status === 'created' ? 'New account created' : 'Existing account updated'}</p>
+                            </div>
+                            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-700">
+                                <p className="font-semibold mb-1">Next step</p>
+                                <p>Go to <strong>Active Faculty</strong> to assign this faculty member to their course(s). Course assignment will update their Moodle enrolment.</p>
                             </div>
                             <p className="text-xs text-gray-400 text-center">Share these credentials securely with the faculty member. They can reset their password after first login.</p>
                         </div>
@@ -407,7 +410,7 @@ export default function FacultyOnboarding() {
                                             className="w-full flex items-center justify-center gap-2 py-2.5 bg-green-600 hover:bg-green-700 disabled:opacity-60 text-white rounded-lg text-sm font-medium transition-colors"
                                         >
                                             {activating ? <Loader2 size={16} className="animate-spin" /> : <Zap size={16} />}
-                                            {activating ? 'Activating in Moodle…' : 'Activate in Moodle → Active Faculty'}
+                                            {activating ? 'Activating…' : 'Activate Faculty Account'}
                                         </button>
                                     )
                             )}

@@ -13539,7 +13539,8 @@ router.put('/faculty-onboarding/:registrationId', async (req, res) => {
 });
 
 // POST /api/students/faculty-onboarding/:registrationId/activate
-// Activate a fully-onboarded faculty member into Moodle + create portal user account
+// Creates Moodle user account + SCL portal account for a completed faculty member.
+// Course assignment is done separately via the Active Faculty page.
 router.post('/faculty-onboarding/:registrationId/activate', async (req, res) => {
     try {
         const { registrationId } = req.params;
@@ -13551,17 +13552,13 @@ router.post('/faculty-onboarding/:registrationId/activate', async (req, res) => 
             return res.status(400).json({ success: false, message: 'Faculty application must be accepted before activation' });
         }
 
-        // Assign to Moodle course (creates Moodle user if needed)
-        const moodleResult = await assignTeacherToMoodleCourse(
-            reg.email, reg.first_name, reg.last_name,
-            reg.selected_course_code,
-            reg.teaching_role || 'editingteacher'
-        );
+        // Create Moodle user account (no course enrollment — that is done in Active Faculty)
+        const moodleResult = await ensureMoodleUserAccount(reg.email, reg.first_name, reg.last_name);
         if (!moodleResult?.success) {
-            return res.status(502).json({ success: false, message: moodleResult?.message || 'Failed to assign faculty to Moodle course' });
+            return res.status(502).json({ success: false, message: 'Failed to create Moodle account for faculty member' });
         }
 
-        // Create or update portal user account
+        // Create or update SCL portal user account
         const [userRows] = await db.execute('SELECT id, password, role FROM users WHERE email = ? LIMIT 1', [reg.email]);
         let userId, tempPassword = null, userStatus;
         if (userRows.length === 0) {
@@ -13585,7 +13582,7 @@ router.post('/faculty-onboarding/:registrationId/activate', async (req, res) => 
             userStatus = 'updated';
         }
 
-        // Mark registration as having a portal user
+        // Mark registration as activated
         await db.execute(
             'UPDATE teacher_registrations SET created_user_id = ? WHERE id = ?',
             [userId, registrationId]
@@ -13593,16 +13590,15 @@ router.post('/faculty-onboarding/:registrationId/activate', async (req, res) => 
 
         return res.json({
             success: true,
-            message: `${reg.first_name} ${reg.last_name} has been activated as Active Faculty`,
+            message: `${reg.first_name} ${reg.last_name} is now active. Assign courses in the Active Faculty page.`,
             data: {
                 email: reg.email,
                 full_name: `${reg.first_name} ${reg.last_name}`,
                 password: tempPassword,
                 user_status: userStatus,
-                moodle_course: reg.selected_course_title,
-                moodle_course_code: reg.selected_course_code,
                 portal_role: reg.teaching_role || 'editingteacher',
-                moodle_result: moodleResult
+                moodle_user_created: moodleResult.created,
+                moodle_user_id: moodleResult.moodleUserId
             }
         });
     } catch (error) {
