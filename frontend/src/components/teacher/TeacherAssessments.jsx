@@ -66,7 +66,7 @@ const TeacherAssessments = ({ user }) => {
     return (
         <div className="p-6 bg-gray-50 min-h-screen">
             <div className="mb-8">
-                <h1 className="text-3xl font-bold text-gray-900 mb-2">Teacher Assessments</h1>
+                <h1 className="text-3xl font-bold text-gray-900 mb-2">Faculty Assessments</h1>
                 <p className="text-gray-600">Assignments, quizzes, and forums across your teaching courses.</p>
             </div>
 

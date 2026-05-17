@@ -14,7 +14,7 @@ const RoleBadge = ({ role }) => {
         <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wide ${
             isEditing ? 'bg-blue-100 text-blue-700' : 'bg-indigo-100 text-indigo-700'
         }`}>
-            {isEditing ? 'Editing Teacher' : role || 'Teacher'}
+            {isEditing ? 'Editing Faculty' : role || 'Faculty'}
         </span>
     );
 };
@@ -120,7 +120,7 @@ const TeacherManagement = () => {
                 courseId: parseInt(courseId, 10)
             });
             if (res.data?.success) {
-                showToast('Teacher assigned to course successfully');
+                showToast('Faculty assigned to course successfully');
                 setSelectedIntakeId('');
                 setSelectedMoodleCourseId('');
                 await fetchTeachers(true);
@@ -143,7 +143,7 @@ const TeacherManagement = () => {
                 data: { teacherEmail: selected.email, courseId }
             });
             if (res.data?.success) {
-                showToast('Teacher removed from course');
+                showToast('Faculty removed from course');
                 await fetchTeachers(true);
             } else {
                 showToast(res.data?.message || 'Failed to remove', 'error');
@@ -169,7 +169,7 @@ const TeacherManagement = () => {
             <div className="flex items-center justify-center h-64">
                 <div className="text-center">
                     <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-3 text-blue-500" />
-                    <p className="text-sm text-slate-500">Loading teachers...</p>
+                    <p className="text-sm text-slate-500">Loading faculty...</p>
                 </div>
             </div>
         );
@@ -182,8 +182,8 @@ const TeacherManagement = () => {
             {/* Header */}
             <div className="bg-white border-b px-6 py-4 flex items-center justify-between" style={{ borderColor: '#E5E7EB' }}>
                 <div>
-                    <h1 className="text-lg font-bold" style={{ color: '#1F2937' }}>Teacher Management</h1>
-                    <p className="text-sm mt-0.5" style={{ color: '#6B7280' }}>Assign teachers to cohort subject units and manage their Moodle enrolments</p>
+                    <h1 className="text-lg font-bold" style={{ color: '#1F2937' }}>Faculty Management</h1>
+                    <p className="text-sm mt-0.5" style={{ color: '#6B7280' }}>Assign faculty to cohort subject units and manage their Moodle enrolments</p>
                 </div>
                 <button onClick={() => fetchTeachers()} className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium border hover:bg-gray-50 transition" style={{ borderColor: '#E5E7EB', color: '#374151' }}>
                     <RefreshCw className="w-4 h-4" /> Refresh
@@ -204,21 +204,21 @@ const TeacherManagement = () => {
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: '#9CA3AF' }} />
                             <input
                                 type="text"
-                                placeholder="Search teachers..."
+                                placeholder="Search faculty..."
                                 value={search}
                                 onChange={e => setSearch(e.target.value)}
                                 className="w-full pl-9 pr-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 style={{ borderColor: '#E5E7EB' }}
                             />
                         </div>
-                        <p className="text-xs mt-2" style={{ color: '#9CA3AF' }}>{filteredTeachers.length} teacher{filteredTeachers.length !== 1 ? 's' : ''}</p>
+                        <p className="text-xs mt-2" style={{ color: '#9CA3AF' }}>{filteredTeachers.length} faculty member{filteredTeachers.length !== 1 ? 's' : ''}</p>
                     </div>
 
                     <div className="flex-1 overflow-y-auto">
                         {filteredTeachers.length === 0 ? (
                             <div className="p-6 text-center text-sm" style={{ color: '#9CA3AF' }}>
                                 <Users className="w-8 h-8 mx-auto mb-2 opacity-40" />
-                                No teachers found
+                                No faculty found
                             </div>
                         ) : (
                             filteredTeachers.map(t => (
@@ -262,8 +262,8 @@ const TeacherManagement = () => {
                         <div className="flex items-center justify-center h-full">
                             <div className="text-center" style={{ color: '#9CA3AF' }}>
                                 <Users className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                                <p className="font-medium">Select a teacher</p>
-                                <p className="text-sm mt-1">Choose a teacher from the list to manage their subject assignments</p>
+                                <p className="font-medium">Select a faculty member</p>
+                                <p className="text-sm mt-1">Choose a faculty member from the list to manage their subject assignments</p>
                             </div>
                         </div>
                     ) : (
@@ -304,7 +304,7 @@ const TeacherManagement = () => {
                                     <div className="p-8 text-center" style={{ color: '#9CA3AF' }}>
                                         <GraduationCap className="w-8 h-8 mx-auto mb-2 opacity-40" />
                                         <p className="text-sm font-medium">No subjects assigned</p>
-                                        <p className="text-xs mt-1">Use the form below to assign this teacher to a cohort subject unit</p>
+                                        <p className="text-xs mt-1">Use the form below to assign this faculty member to a cohort subject unit</p>
                                     </div>
                                 ) : (
                                     <div className="divide-y" style={{ borderColor: '#F9FAFB' }}>
@@ -425,7 +425,7 @@ const TeacherManagement = () => {
                                                         Step 2 - Select Subject Unit
                                                     </label>
                                                     {availableCoursesInIntake.length === 0 ? (
-                                                        <p className="text-sm py-2" style={{ color: '#9CA3AF' }}>All subject units in this cohort are already assigned to this teacher.</p>
+                                                        <p className="text-sm py-2" style={{ color: '#9CA3AF' }}>All subject units in this cohort are already assigned to this faculty member.</p>
                                                     ) : (
                                                         <div className="border rounded-lg overflow-hidden" style={{ borderColor: '#E5E7EB' }}>
                                                             {availableCoursesInIntake.map((c, idx) => (

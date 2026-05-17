@@ -44,9 +44,9 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
         if (isSystemAdmin) return 'System Admin Menu';
         if (isCollegeAdmin) return 'College Admin Menu';
         if (isManagerOnly) return 'Manager Menu';
-        if (hasTeaching && !hasStudent) return 'Teacher Menu';
+        if (hasTeaching && !hasStudent) return 'Faculty Menu';
         if (canAccessStudentPortal) return 'Student Menu';
-        if (hasTeaching) return 'Teacher Menu';
+        if (hasTeaching) return 'Faculty Menu';
         return 'General Menu';
     });
     const [activeSubMenuKey, setActiveSubMenuKey] = useState(null);
@@ -87,9 +87,9 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
                 isParent: true,
                 key: 'staff-group',
                 subItems: [
-                    { name: 'Teacher Management', icon: Users, path: '/admin/teacher-management' },
-                    { name: 'Teacher Registrations', icon: Users, path: '/teacher-registrations' },
-                    { name: 'New Teacher Registration', icon: UserPlus, path: '/teacher-registration' },
+                    { name: 'Faculty Management', icon: Users, path: '/admin/teacher-management' },
+                    { name: 'Faculty Registrations', icon: Users, path: '/teacher-registrations' },
+                    { name: 'New Faculty Registration', icon: UserPlus, path: '/teacher-registration' },
                     { name: 'Faculty Onboarding', icon: UserCheck, path: '/admin/faculty-onboarding' }
                 ]
             },
@@ -171,14 +171,14 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
             { name: 'Course Intakes', icon: Users, path: '/programme-intakes' },
             { name: 'LMS Enrolments', icon: GraduationCap, path: '/admin/lms-enrolments' },
             {
-                name: 'Teacher Management',
+                name: 'Faculty Management',
                 icon: Users,
                 isParent: true,
                 key: 'teacher-management',
                 subItems: [
-                    { name: 'All Teachers & Courses', icon: Users, path: '/admin/teacher-management' },
-                    { name: 'Teacher Registrations', icon: UserCheck, path: '/teacher-registrations' },
-                    { name: 'New Teacher Registration', icon: UserPlus, path: '/teacher-registration' },
+                    { name: 'All Faculty & Courses', icon: Users, path: '/admin/teacher-management' },
+                    { name: 'Faculty Registrations', icon: UserCheck, path: '/teacher-registrations' },
+                    { name: 'New Faculty Registration', icon: UserPlus, path: '/teacher-registration' },
                     { name: 'Faculty Onboarding', icon: UserCheck, path: '/admin/faculty-onboarding' }
                 ]
             },

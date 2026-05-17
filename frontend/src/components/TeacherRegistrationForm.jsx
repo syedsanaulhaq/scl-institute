@@ -102,8 +102,8 @@ const TeacherRegistrationForm = () => {
     return (
         <div className="p-6 bg-gray-50 min-h-screen">
             <div className="mb-8">
-                <h1 className="text-3xl font-bold text-gray-900">Teacher Registration</h1>
-                <p className="text-gray-600 mt-2">Create a dedicated teacher registration and assign the teacher to a specific Moodle course after approval.</p>
+                <h1 className="text-3xl font-bold text-gray-900">Faculty Registration</h1>
+                <p className="text-gray-600 mt-2">Create a dedicated faculty registration and assign the faculty member to a specific Moodle course after approval.</p>
             </div>
 
             {status.message && (
@@ -146,8 +146,8 @@ const TeacherRegistrationForm = () => {
                             ))}
                         </select>
                         <select value={formData.teaching_role} onChange={(e) => handleChange('teaching_role', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg">
-                            <option value="editingteacher">Editing Teacher</option>
-                            <option value="teacher">Teacher</option>
+                            <option value="editingteacher">Editing Faculty</option>
+                            <option value="teacher">Faculty</option>
                         </select>
                         <input value={formData.selected_course_title} readOnly placeholder="Course title" className="w-full px-3 py-2 border border-gray-200 bg-gray-50 rounded-lg" />
                         <input value={formData.selected_course_type} readOnly placeholder="Course type" className="w-full px-3 py-2 border border-gray-200 bg-gray-50 rounded-lg" />
@@ -185,7 +185,7 @@ const TeacherRegistrationForm = () => {
                     </button>
                     <button type="submit" disabled={submitting} className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:bg-gray-400 inline-flex items-center gap-2">
                         {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
-                        {submitting ? 'Submitting...' : 'Submit Teacher Registration'}
+                        {submitting ? 'Submitting...' : 'Submit Faculty Registration'}
                     </button>
                 </div>
             </form>

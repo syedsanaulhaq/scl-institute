@@ -64,7 +64,7 @@ const TeacherTimetable = ({ user }) => {
         <div className="p-6 bg-gray-50 min-h-screen">
             <div className="mb-8">
                 <h1 className="text-3xl font-bold text-gray-900 mb-2">My Timetable</h1>
-                <p className="text-gray-600">Teaching activities from courses where you are assigned as teacher.</p>
+                <p className="text-gray-600">Teaching activities from courses where you are assigned as faculty.</p>
             </div>
 
             <div className="bg-white rounded-lg border border-gray-200 p-6 mb-8 shadow-sm flex flex-col md:flex-row gap-3 md:items-center md:justify-between">

@@ -210,8 +210,8 @@ const TeacherRegistrationRequests = ({ user }) => {
         <div className="p-6 bg-gray-50 min-h-screen">
             <div className="mb-8 flex items-start justify-between gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold text-gray-900">Teacher Registrations</h1>
-                    <p className="text-gray-600 mt-2">Review teacher registrations and approve them onto their assigned Moodle course.</p>
+                    <h1 className="text-3xl font-bold text-gray-900">Faculty Registrations</h1>
+                    <p className="text-gray-600 mt-2">Review faculty registrations and approve them onto their assigned Moodle course.</p>
                 </div>
                 <button onClick={() => navigate('/teacher-registration')} className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 inline-flex items-center gap-2">
                     <UserPlus className="w-4 h-4" />
@@ -251,9 +251,9 @@ const TeacherRegistrationRequests = ({ user }) => {
 
                     <div className="divide-y divide-gray-100 max-h-[70vh] overflow-y-auto">
                         {loading ? (
-                            <div className="p-6 text-gray-500">Loading teacher registrations...</div>
+                            <div className="p-6 text-gray-500">Loading faculty registrations...</div>
                         ) : filteredRegistrations.length === 0 ? (
-                            <div className="p-6 text-gray-500">No teacher registrations found.</div>
+                            <div className="p-6 text-gray-500">No faculty registrations found.</div>
                         ) : filteredRegistrations.map((registration) => (
                             <button
                                 key={registration.id}
@@ -276,7 +276,7 @@ const TeacherRegistrationRequests = ({ user }) => {
 
                 <div className="lg:col-span-3 bg-white rounded-lg shadow p-6">
                     {!selectedRegistration ? (
-                        <div className="text-gray-500">Select a teacher registration to review.</div>
+                        <div className="text-gray-500">Select a faculty registration to review.</div>
                     ) : (
                         <div className="space-y-6">
                             <div className="flex items-start justify-between gap-4">
@@ -325,9 +325,9 @@ const TeacherRegistrationRequests = ({ user }) => {
                             {/* Teacher Qualification Gate */}
                             {teacherGate && (() => {
                                 const cfg = {
-                                    fail:   { bg: 'bg-red-50',    border: 'border-red-300',    Icon: ShieldAlert,  iconCls: 'text-red-600',    title: 'Teacher Gate: QUALIFICATION NOT MET',  titleCls: 'text-red-700 font-bold' },
-                                    review: { bg: 'bg-amber-50',  border: 'border-amber-300',  Icon: AlertCircle,  iconCls: 'text-amber-600',  title: 'Teacher Gate: REVIEW REQUIRED',         titleCls: 'text-amber-700 font-bold' },
-                                    pass:   { bg: 'bg-emerald-50',border: 'border-emerald-300',Icon: ShieldCheck,  iconCls: 'text-emerald-600',title: 'Teacher Gate: QUALIFICATION CONFIRMED',  titleCls: 'text-emerald-700 font-bold' },
+                                    fail:   { bg: 'bg-red-50',    border: 'border-red-300',    Icon: ShieldAlert,  iconCls: 'text-red-600',    title: 'Faculty Gate: QUALIFICATION NOT MET',  titleCls: 'text-red-700 font-bold' },
+                                    review: { bg: 'bg-amber-50',  border: 'border-amber-300',  Icon: AlertCircle,  iconCls: 'text-amber-600',  title: 'Faculty Gate: REVIEW REQUIRED',         titleCls: 'text-amber-700 font-bold' },
+                                    pass:   { bg: 'bg-emerald-50',border: 'border-emerald-300',Icon: ShieldCheck,  iconCls: 'text-emerald-600',title: 'Faculty Gate: QUALIFICATION CONFIRMED',  titleCls: 'text-emerald-700 font-bold' },
                                 }[teacherGate.overall];
                                 const { Icon } = cfg;
                                 return (
@@ -387,7 +387,7 @@ const TeacherRegistrationRequests = ({ user }) => {
                 <div className="w-full max-w-2xl rounded-xl bg-white shadow-2xl border border-gray-200">
                     <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
                         <h3 className="text-lg font-bold text-gray-900">
-                            {decisionModal.decision === 'accepted' ? 'Teacher Accepted' : decisionModal.decision === 'rejected' ? 'Teacher Rejected' : 'Decision Updated'}
+                            {decisionModal.decision === 'accepted' ? 'Faculty Accepted' : decisionModal.decision === 'rejected' ? 'Faculty Rejected' : 'Decision Updated'}
                         </h3>
                         <button
                             type="button"
