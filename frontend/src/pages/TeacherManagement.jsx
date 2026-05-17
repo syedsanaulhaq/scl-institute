@@ -320,7 +320,7 @@ const TeacherManagement = () => {
                                                             {course.enrollStatus === null || course.enrollStatus === undefined ? (
                                                                 <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 font-medium">Role only</span>
                                                             ) : (
-                                                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 font-medium">âœ“ Enrolled</span>
+                                                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 font-medium">&#10003; Enrolled</span>
                                                             )}
                                                         </div>
                                                         {/* Cohort/intake info */}
@@ -384,7 +384,7 @@ const TeacherManagement = () => {
                                             {/* Step 1: Intake */}
                                             <div>
                                                 <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wide" style={{ color: '#6B7280' }}>
-                                                    Step 1 â€” Select Programme Cohort
+                                                    Step 1  -  Select Programme Cohort
                                                 </label>
                                                 <div className="relative">
                                                     <select
@@ -393,10 +393,10 @@ const TeacherManagement = () => {
                                                         className="w-full pl-3 pr-8 py-2.5 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none"
                                                         style={{ borderColor: '#E5E7EB', color: selectedIntakeId ? '#1F2937' : '#9CA3AF' }}
                                                     >
-                                                        <option value="">â€” Select an intake / cohort â€”</option>
+                                                        <option value=""> -  Select an intake / cohort  - </option>
                                                         {intakes.map(intake => (
                                                             <option key={intake.id} value={intake.id}>
-                                                                {intake.label} â€” {intake.programmeType || intake.programName}
+                                                                {intake.label}  -  {intake.programmeType || intake.programName}
                                                                 {intake.startDate ? ` (starts ${new Date(intake.startDate).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })})` : ''}
                                                             </option>
                                                         ))}
@@ -422,7 +422,7 @@ const TeacherManagement = () => {
                                             {selectedIntakeId && (
                                                 <div>
                                                     <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wide" style={{ color: '#6B7280' }}>
-                                                        Step 2 â€” Select Course Unit
+                                                        Step 2  -  Select Course Unit
                                                     </label>
                                                     {availableCoursesInIntake.length === 0 ? (
                                                         <p className="text-sm py-2" style={{ color: '#9CA3AF' }}>All course units in this cohort are already assigned to this teacher.</p>
