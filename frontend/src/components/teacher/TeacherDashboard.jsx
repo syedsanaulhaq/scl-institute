@@ -224,6 +224,24 @@ const TeacherDashboard = ({ user }) => {
 
 /* ── Sub-components ── */
 
+// Derive programme code + year from Moodle shortname, e.g. "HND-001-Y1-S1-C1" → { prog: "HND-001", year: "Year 1" }
+const parseCourseCode = (code) => {
+    const s = String(code || '').toUpperCase();
+    const m = s.match(/^([A-Z]+-[A-Z0-9]+)-Y(\d+)/);
+    if (m) return { prog: m[1], year: `Year ${m[2]}` };
+    const parts = s.split('-');
+    return { prog: parts.length >= 2 ? parts.slice(0, 2).join('-') : s, year: '' };
+};
+
+const GENERIC_CATS = new Set(['semester-1', 'semester-2', 'semester-3', 'year-1', 'year-2', 'year-3', 'general', 'miscellaneous', '']);
+
+const getProgrammeLabel = (code, category) => {
+    // Prefer the Moodle category if it looks like a real programme name
+    if (category && !GENERIC_CATS.has(String(category).toLowerCase())) return category;
+    const { prog, year } = parseCourseCode(code);
+    return [prog, year].filter(Boolean).join(' · ');
+};
+
 const KpiCard = ({ icon, iconBg, value, label, sub, subColor }) => (
     <div className="bg-white rounded-lg border shadow-sm p-4 flex items-center gap-3" style={{ borderColor: '#E5E7EB' }}>
         <div className="flex-shrink-0 w-12 h-12 rounded-lg flex items-center justify-center text-2xl" style={{ background: iconBg }}>
@@ -261,11 +279,14 @@ const TeacherCoursesTab = ({ courses, onSubjectClick, ssoLoading }) => {
                     <div style={{ padding: '14px' }}>
                         <h3 className="text-sm font-semibold line-clamp-2" style={{ color: '#1F2937' }}>{course.name}</h3>
                         <p className="text-xs mt-0.5 font-mono" style={{ color: '#6B7280' }}>{course.code}</p>
-                        {course.category && (
-                            <p className="text-[11px] mt-1.5 line-clamp-1 px-2 py-0.5 rounded" style={{ background: '#EFF6FF', color: '#2563EB' }}>
-                                {course.category}
-                            </p>
-                        )}
+                        {(() => {
+                            const label = getProgrammeLabel(course.code, course.category);
+                            return label ? (
+                                <p className="text-[11px] mt-1.5 line-clamp-1 px-2 py-0.5 rounded font-medium" style={{ background: '#EFF6FF', color: '#2563EB' }}>
+                                    {label}
+                                </p>
+                            ) : null;
+                        })()}
                         <div className="mt-2 flex gap-3 text-xs" style={{ color: '#6B7280' }}>
                             <span>📝 {course.counts?.assign || 0}</span>
                             <span>💬 {course.counts?.forum || 0}</span>
