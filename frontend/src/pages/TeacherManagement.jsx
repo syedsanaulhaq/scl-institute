@@ -396,7 +396,7 @@ const TeacherManagement = () => {
                                                         <option value=""> -  Select an intake / cohort  - </option>
                                                         {intakes.map(intake => (
                                                             <option key={intake.id} value={intake.id}>
-                                                                {intake.label}  -  {intake.programmeType || intake.programName}
+                                                                {intake.label} - {intake.programName || intake.programmeType}
                                                                 {intake.startDate ? ` (starts ${new Date(intake.startDate).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })})` : ''}
                                                             </option>
                                                         ))}
