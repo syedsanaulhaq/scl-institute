@@ -328,7 +328,7 @@ const TeacherManagement = () => {
                                                             <div className="flex items-center gap-3 mt-1.5">
                                                                 <div className="flex items-center gap-1 text-[11px]" style={{ color: '#6B7280' }}>
                                                                     <Layers className="w-3 h-3" />
-                                                                    <span className="font-medium">{course.intakeLabel} {course.programmeType || ''} Cohort</span>
+                                                                    <span className="font-medium">{course.intakeLabel} {course.programName || course.programmeType || ''} Cohort</span>
                                                                 </div>
                                                                 {course.intakeStartDate && (
                                                                     <div className="flex items-center gap-1 text-[11px]" style={{ color: '#9CA3AF' }}>

@@ -1408,6 +1408,7 @@ router.get('/admin/teachers', async (req, res) => {
                     `SELECT cr.moodle_course_id, cr.semester_name, cr.start_date as courseStartDate,
                             pi.id as intakeId, pi.intake_label as intakeLabel,
                             pi.programme_type_name as programmeType,
+                            pi.program_name as programName,
                             pi.intake_start_date as intakeStartDate
                      FROM course_registrations cr
                      JOIN programme_intakes pi ON pi.id = cr.intake_id
@@ -1423,6 +1424,7 @@ router.get('/admin/teachers', async (req, res) => {
                             intakeId: row.intakeId,
                             intakeLabel: row.intakeLabel,
                             programmeType: row.programmeType,
+                            programName: row.programName,
                             semesterName: row.semester_name,
                             intakeStartDate: row.intakeStartDate,
                             courseStartDate: row.courseStartDate
