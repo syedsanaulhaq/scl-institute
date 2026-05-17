@@ -601,8 +601,6 @@ const CalendarEventsPanel = ({ date, events, assessments, formatTime, onNotifica
             </div>
         </div>
     );
-        </div>
-    );
 };
 
 export default TeacherDashboard;
