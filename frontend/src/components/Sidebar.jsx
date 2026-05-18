@@ -21,7 +21,8 @@ import {
     ClipboardList,
     Bell,
     HelpCircle,
-    DollarSign
+    DollarSign,
+    Building2
 } from 'lucide-react';
 import { getRoleContext } from '../utils/roleAccess';
 import { openMoodleSSO } from '../utils/ssoService';
@@ -102,6 +103,17 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
                     { name: 'Course Lifecycle', icon: LayoutDashboard, path: '/course-lifecycle' },
                     { name: 'Course Intakes', icon: Calendar, path: '/programme-intakes' },
                     { name: 'Compliance Calendar', icon: Calendar, path: '/compliance-calendar' }
+                ]
+            },
+            {
+                name: 'Partners & Associates',
+                icon: Building2,
+                isParent: true,
+                key: 'partners-group',
+                subItems: [
+                    { name: 'All Partners', icon: Building2, path: '/admin/partners' },
+                    { name: 'Awarding Bodies', icon: ClipboardList, path: '/admin/partners?type=awarding_body' },
+                    { name: 'Associates', icon: Users, path: '/admin/partners?type=associate' }
                 ]
             },
             {

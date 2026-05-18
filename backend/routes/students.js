@@ -13715,5 +13715,293 @@ router.put('/student-onboarding/:applicationId', async (req, res) => {
     }
 });
 
+// ================================================================
+// PARTNERS & ASSOCIATES MANAGEMENT
+// ================================================================
+
+async function ensurePartnersTables() {
+    try {
+        await db.query(`
+            CREATE TABLE IF NOT EXISTS partners (
+                id INT PRIMARY KEY AUTO_INCREMENT,
+                partner_name VARCHAR(255) NOT NULL,
+                partner_type ENUM('awarding_body','associate','affiliate') NOT NULL DEFAULT 'associate',
+                contact_person VARCHAR(255),
+                job_title VARCHAR(255),
+                contact_email VARCHAR(255),
+                phone VARCHAR(50),
+                website VARCHAR(255),
+                address TEXT,
+                country VARCHAR(100) DEFAULT 'United Kingdom',
+                partnership_start_date DATE,
+                associate_type VARCHAR(100),
+                area_of_expertise TEXT,
+                notes TEXT,
+                status ENUM('active','inactive','suspended') DEFAULT 'active',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+        `);
+        await db.query(`
+            CREATE TABLE IF NOT EXISTS partner_visits (
+                id INT PRIMARY KEY AUTO_INCREMENT,
+                partner_id INT NOT NULL,
+                visit_type VARCHAR(100) NOT NULL,
+                visit_date DATE NOT NULL,
+                lead_contact VARCHAR(255),
+                coordinator VARCHAR(255),
+                purpose TEXT,
+                scope TEXT,
+                key_standards TEXT,
+                visit_agenda TEXT,
+                required_attendees TEXT,
+                outcomes TEXT,
+                status ENUM('planned','in_progress','completed','deferred') DEFAULT 'planned',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                FOREIGN KEY (partner_id) REFERENCES partners(id) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+        `);
+        await db.query(`
+            CREATE TABLE IF NOT EXISTS partner_subscriptions (
+                id INT PRIMARY KEY AUTO_INCREMENT,
+                partner_id INT NOT NULL,
+                subscription_type VARCHAR(100),
+                start_date DATE,
+                end_date DATE,
+                renewal_date DATE,
+                cost DECIMAL(10,2),
+                currency VARCHAR(10) DEFAULT 'GBP',
+                status ENUM('active','expired','suspended') DEFAULT 'active',
+                notes TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                FOREIGN KEY (partner_id) REFERENCES partners(id) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+        `);
+    } catch (err) {
+        console.error('[Partners] Failed to create tables:', err.message);
+    }
+}
+ensurePartnersTables();
+
+// GET /admin/partners — list all partners
+router.get('/admin/partners', async (req, res) => {
+    try {
+        const { type, status, search } = req.query;
+        let conditions = [];
+        let params = [];
+        if (type) { conditions.push('partner_type = ?'); params.push(type); }
+        if (status) { conditions.push('status = ?'); params.push(status); }
+        if (search) {
+            conditions.push('(partner_name LIKE ? OR contact_person LIKE ? OR contact_email LIKE ?)');
+            params.push(`%${search}%`, `%${search}%`, `%${search}%`);
+        }
+        const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+        const [rows] = await db.query(`SELECT * FROM partners ${where} ORDER BY partner_name ASC`, params);
+        res.json({ success: true, data: rows });
+    } catch (err) {
+        console.error('[Partners] GET list error:', err);
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+// GET /admin/partners/stats — summary counts
+router.get('/admin/partners/stats', async (req, res) => {
+    try {
+        const [[totals]] = await db.query(`
+            SELECT
+                COUNT(*) AS total,
+                SUM(partner_type = 'awarding_body') AS awarding_bodies,
+                SUM(partner_type = 'associate') AS associates,
+                SUM(partner_type = 'affiliate') AS affiliates,
+                SUM(status = 'active') AS active_count
+            FROM partners
+        `);
+        res.json({ success: true, data: totals });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+// GET /admin/partners/:id — single partner with visits + subscriptions
+router.get('/admin/partners/:id', async (req, res) => {
+    try {
+        const id = Number(req.params.id);
+        const [[partner]] = await db.query('SELECT * FROM partners WHERE id = ?', [id]);
+        if (!partner) return res.status(404).json({ success: false, message: 'Partner not found' });
+        const [visits] = await db.query('SELECT * FROM partner_visits WHERE partner_id = ? ORDER BY visit_date DESC', [id]);
+        const [subscriptions] = await db.query('SELECT * FROM partner_subscriptions WHERE partner_id = ? ORDER BY created_at DESC', [id]);
+        res.json({ success: true, data: { ...partner, visits, subscriptions } });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+// POST /admin/partners — create partner
+router.post('/admin/partners', async (req, res) => {
+    try {
+        const {
+            partner_name, partner_type, contact_person, job_title, contact_email,
+            phone, website, address, country, partnership_start_date,
+            associate_type, area_of_expertise, notes, status
+        } = req.body;
+        if (!partner_name || !partner_type) {
+            return res.status(400).json({ success: false, message: 'partner_name and partner_type are required' });
+        }
+        const [result] = await db.query(
+            `INSERT INTO partners (partner_name, partner_type, contact_person, job_title, contact_email,
+             phone, website, address, country, partnership_start_date, associate_type, area_of_expertise, notes, status)
+             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+            [partner_name, partner_type, contact_person||null, job_title||null, contact_email||null,
+             phone||null, website||null, address||null, country||'United Kingdom',
+             partnership_start_date||null, associate_type||null, area_of_expertise||null,
+             notes||null, status||'active']
+        );
+        const [[created]] = await db.query('SELECT * FROM partners WHERE id = ?', [result.insertId]);
+        res.status(201).json({ success: true, data: created });
+    } catch (err) {
+        console.error('[Partners] POST error:', err);
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+// PUT /admin/partners/:id — update partner
+router.put('/admin/partners/:id', async (req, res) => {
+    try {
+        const id = Number(req.params.id);
+        const {
+            partner_name, partner_type, contact_person, job_title, contact_email,
+            phone, website, address, country, partnership_start_date,
+            associate_type, area_of_expertise, notes, status
+        } = req.body;
+        await db.query(
+            `UPDATE partners SET partner_name=?, partner_type=?, contact_person=?, job_title=?,
+             contact_email=?, phone=?, website=?, address=?, country=?, partnership_start_date=?,
+             associate_type=?, area_of_expertise=?, notes=?, status=? WHERE id=?`,
+            [partner_name, partner_type, contact_person||null, job_title||null, contact_email||null,
+             phone||null, website||null, address||null, country||'United Kingdom',
+             partnership_start_date||null, associate_type||null, area_of_expertise||null,
+             notes||null, status||'active', id]
+        );
+        const [[updated]] = await db.query('SELECT * FROM partners WHERE id = ?', [id]);
+        res.json({ success: true, data: updated });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+// DELETE /admin/partners/:id
+router.delete('/admin/partners/:id', async (req, res) => {
+    try {
+        await db.query('DELETE FROM partners WHERE id = ?', [Number(req.params.id)]);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+// --- VISITS ---
+
+// GET /admin/partners/:id/visits
+router.get('/admin/partners/:id/visits', async (req, res) => {
+    try {
+        const [rows] = await db.query(
+            'SELECT pv.*, p.partner_name FROM partner_visits pv JOIN partners p ON p.id=pv.partner_id WHERE pv.partner_id=? ORDER BY pv.visit_date DESC',
+            [Number(req.params.id)]
+        );
+        res.json({ success: true, data: rows });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+// POST /admin/partners/:id/visits
+router.post('/admin/partners/:id/visits', async (req, res) => {
+    try {
+        const partner_id = Number(req.params.id);
+        const { visit_type, visit_date, lead_contact, coordinator, purpose, scope, key_standards, visit_agenda, required_attendees, outcomes, status } = req.body;
+        if (!visit_type || !visit_date) return res.status(400).json({ success: false, message: 'visit_type and visit_date are required' });
+        const [result] = await db.query(
+            `INSERT INTO partner_visits (partner_id, visit_type, visit_date, lead_contact, coordinator, purpose, scope, key_standards, visit_agenda, required_attendees, outcomes, status)
+             VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
+            [partner_id, visit_type, visit_date, lead_contact||null, coordinator||null, purpose||null, scope||null, key_standards||null, visit_agenda||null, required_attendees||null, outcomes||null, status||'planned']
+        );
+        const [[created]] = await db.query('SELECT * FROM partner_visits WHERE id = ?', [result.insertId]);
+        res.status(201).json({ success: true, data: created });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+// PUT /admin/partners/visits/:visitId
+router.put('/admin/partners/visits/:visitId', async (req, res) => {
+    try {
+        const { visit_type, visit_date, lead_contact, coordinator, purpose, scope, key_standards, visit_agenda, required_attendees, outcomes, status } = req.body;
+        await db.query(
+            `UPDATE partner_visits SET visit_type=?, visit_date=?, lead_contact=?, coordinator=?, purpose=?, scope=?, key_standards=?, visit_agenda=?, required_attendees=?, outcomes=?, status=? WHERE id=?`,
+            [visit_type, visit_date, lead_contact||null, coordinator||null, purpose||null, scope||null, key_standards||null, visit_agenda||null, required_attendees||null, outcomes||null, status||'planned', Number(req.params.visitId)]
+        );
+        const [[updated]] = await db.query('SELECT * FROM partner_visits WHERE id = ?', [Number(req.params.visitId)]);
+        res.json({ success: true, data: updated });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+// DELETE /admin/partners/visits/:visitId
+router.delete('/admin/partners/visits/:visitId', async (req, res) => {
+    try {
+        await db.query('DELETE FROM partner_visits WHERE id = ?', [Number(req.params.visitId)]);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+// --- SUBSCRIPTIONS ---
+
+// POST /admin/partners/:id/subscriptions
+router.post('/admin/partners/:id/subscriptions', async (req, res) => {
+    try {
+        const partner_id = Number(req.params.id);
+        const { subscription_type, start_date, end_date, renewal_date, cost, currency, status, notes } = req.body;
+        const [result] = await db.query(
+            `INSERT INTO partner_subscriptions (partner_id, subscription_type, start_date, end_date, renewal_date, cost, currency, status, notes)
+             VALUES (?,?,?,?,?,?,?,?,?)`,
+            [partner_id, subscription_type||null, start_date||null, end_date||null, renewal_date||null, cost||null, currency||'GBP', status||'active', notes||null]
+        );
+        const [[created]] = await db.query('SELECT * FROM partner_subscriptions WHERE id = ?', [result.insertId]);
+        res.status(201).json({ success: true, data: created });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+// PUT /admin/partners/subscriptions/:subId
+router.put('/admin/partners/subscriptions/:subId', async (req, res) => {
+    try {
+        const { subscription_type, start_date, end_date, renewal_date, cost, currency, status, notes } = req.body;
+        await db.query(
+            `UPDATE partner_subscriptions SET subscription_type=?, start_date=?, end_date=?, renewal_date=?, cost=?, currency=?, status=?, notes=? WHERE id=?`,
+            [subscription_type||null, start_date||null, end_date||null, renewal_date||null, cost||null, currency||'GBP', status||'active', notes||null, Number(req.params.subId)]
+        );
+        const [[updated]] = await db.query('SELECT * FROM partner_subscriptions WHERE id = ?', [Number(req.params.subId)]);
+        res.json({ success: true, data: updated });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+// DELETE /admin/partners/subscriptions/:subId
+router.delete('/admin/partners/subscriptions/:subId', async (req, res) => {
+    try {
+        await db.query('DELETE FROM partner_subscriptions WHERE id = ?', [Number(req.params.subId)]);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
 module.exports = router;
 

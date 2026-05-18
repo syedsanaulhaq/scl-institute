@@ -67,6 +67,7 @@ import TeacherRegistrationRequests from './components/TeacherRegistrationRequest
 import TeacherManagement from './pages/TeacherManagement';
 import FacultyOnboarding from './pages/FacultyOnboarding';
 import StudentOnboarding from './pages/StudentOnboarding';
+import PartnersManagement from './pages/PartnersManagement';
 import { getRoleContext } from './utils/roleAccess';
 import { logoutMoodleSession } from './utils/ssoService';
 
@@ -545,6 +546,15 @@ function App() {
                     user && canAccessManagementPortal ? (
                         <Layout user={user} onLogout={handleLogout}>
                             <StudentOnboarding user={user} />
+                        </Layout>
+                    ) : (
+                        <LoginPage onLoginSuccess={handleLoginSuccess} />
+                    )
+                } />
+                <Route path="/admin/partners" element={
+                    user && canAccessManagementPortal ? (
+                        <Layout user={user} onLogout={handleLogout}>
+                            <PartnersManagement user={user} />
                         </Layout>
                     ) : (
                         <LoginPage onLoginSuccess={handleLoginSuccess} />
