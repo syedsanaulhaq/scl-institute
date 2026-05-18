@@ -1661,11 +1661,12 @@ router.post('/admin/teacher-enroll', async (req, res) => {
             ).catch(() => null);
         }
 
-        // Insert user enrolment (ignore if already exists)
+        // Upsert user enrolment — activate if already exists (suspended), insert if new
         await safeMoodleSelectRows(
-            `INSERT IGNORE INTO mdl_user_enrolments
+            `INSERT INTO mdl_user_enrolments
              (enrolid, userid, status, timestart, timeend, modifierid, timecreated, timemodified)
-             VALUES (?, ?, 0, 0, 0, 2, ?, ?)`,
+             VALUES (?, ?, 0, 0, 0, 2, ?, ?)
+             ON DUPLICATE KEY UPDATE status=0, timemodified=VALUES(timemodified)`,
             [enrolId, moodleUserId, now, now]
         ).catch(() => null);
 
