@@ -97,7 +97,18 @@ function App() {
                     // and will return 401 — forcing the user to log in again.
                     const response = await axios.post(`${API_URL}/v1/auth/verify`, { token: accessToken });
                     if (response.data?.valid) {
-                        setUser(JSON.parse(storedUser));
+                        const parsedUser = JSON.parse(storedUser);
+                        // Fetch fresh privileges so direct-URL access respects current role settings
+                        try {
+                            const privRes = await axios.get(`${API_URL}/admin/role-privileges`, {
+                                headers: { Authorization: `Bearer ${accessToken}` }
+                            });
+                            if (privRes.data?.success && privRes.data?.data?.[parsedUser.role]) {
+                                parsedUser.privileges = privRes.data.data[parsedUser.role];
+                                sessionStorage.setItem('user', JSON.stringify(parsedUser));
+                            }
+                        } catch { /* keep session-stored privileges as fallback */ }
+                        setUser(parsedUser);
                     } else {
                         sessionStorage.removeItem('user');
                         sessionStorage.removeItem('accessToken');
@@ -554,10 +565,12 @@ function App() {
                     )
                 } />
                 <Route path="/admin/partners" element={
-                    user && canAccessManagementPortal ? (
+                    user && canAccessManagementPortal && user?.privileges?.can_manage_partners ? (
                         <Layout user={user} onLogout={handleLogout}>
                             <PartnersManagement user={user} />
                         </Layout>
+                    ) : user && canAccessManagementPortal ? (
+                        <Navigate to="/" replace />
                     ) : (
                         <LoginPage onLoginSuccess={handleLoginSuccess} />
                     )
@@ -774,19 +787,23 @@ function App() {
                 } />
                 <Route path="/admin/student-engagement" element={<Navigate to="/admin/support-requests" replace />} />
                 <Route path="/admin/vendors" element={
-                    user && canAccessManagementPortal ? (
+                    user && canAccessManagementPortal && user?.privileges?.can_manage_vendors ? (
                         <Layout user={user} onLogout={handleLogout}>
                             <VendorManagement user={user} />
                         </Layout>
+                    ) : user && canAccessManagementPortal ? (
+                        <Navigate to="/" replace />
                     ) : (
                         <LoginPage onLoginSuccess={handleLoginSuccess} />
                     )
                 } />
                 <Route path="/admin/facility-management" element={
-                    user && canAccessManagementPortal ? (
+                    user && canAccessManagementPortal && user?.privileges?.can_manage_facilities ? (
                         <Layout user={user} onLogout={handleLogout}>
                             <FacilityManagement user={user} />
                         </Layout>
+                    ) : user && canAccessManagementPortal ? (
+                        <Navigate to="/" replace />
                     ) : (
                         <LoginPage onLoginSuccess={handleLoginSuccess} />
                     )
