@@ -349,6 +349,40 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
         }
     }, [activeSectionTitle, menuSections]);
 
+    // Auto-expand section + parent group when URL changes (direct navigation, back/forward, etc.)
+    useEffect(() => {
+        const currentPath = location.pathname;
+        const currentSearch = location.search;
+
+        for (const section of menuSections) {
+            for (const item of section.items) {
+                // Top-level non-parent item
+                if (!item.isParent && item.path) {
+                    if (item.path.split('?')[0] === currentPath) {
+                        setActiveSectionTitle(section.title);
+                        return;
+                    }
+                }
+                // Parent item — check sub-items
+                if (item.isParent && item.subItems) {
+                    for (const subItem of item.subItems) {
+                        const subPathname = subItem.path?.split('?')[0];
+                        const subSearch = subItem.path?.includes('?') ? '?' + subItem.path.split('?')[1] : '';
+                        const pathMatches = subPathname === currentPath;
+                        const searchMatches = !subSearch || subSearch === currentSearch;
+                        if (pathMatches && searchMatches) {
+                            setActiveSectionTitle(section.title);
+                            setActiveSubMenuKey(item.key);
+                            setActiveSubItemKey(null); // let URL-based matching highlight the sub-item
+                            return;
+                        }
+                    }
+                }
+            }
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [location.pathname, location.search]);
+
     const toggleSection = (sectionTitle) => {
         setActiveSectionTitle((prev) => (prev === sectionTitle ? '' : sectionTitle));
         setActiveSubMenuKey(null);
