@@ -34,6 +34,8 @@ const scrollbarHideStyles = `
   }
 `;
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
+
 const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
     const navigate = useNavigate();
     const location = useLocation();
@@ -42,8 +44,28 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
     const { canAccessStudentPortal, canAccessManagementPortal, hasTeaching, hasManagement, hasStudent, isSystemAdmin, isCollegeAdmin, isManagerOnly } = roleContext;
     const isManagementUser = Boolean(canAccessManagementPortal || hasManagement);
 
-    // Privilege flags derived from the user's role privileges (set at login)
-    const privs = user?.privileges || {};
+    // Live privileges — fetched fresh from the API so role setting changes take effect
+    // without requiring users to log out and back in.
+    const [livePrivs, setLivePrivs] = useState(user?.privileges || {});
+
+    useEffect(() => {
+        const role = user?.role;
+        if (!role) return;
+        const token = sessionStorage.getItem('accessToken');
+        if (!token) return;
+        fetch(`${API_URL}/admin/role-privileges`, {
+            headers: { Authorization: `Bearer ${token}` }
+        })
+            .then(r => r.json())
+            .then(data => {
+                if (data?.success && data.data?.[role]) {
+                    setLivePrivs(data.data[role]);
+                }
+            })
+            .catch(() => { /* keep session-stored fallback */ });
+    }, [user?.role]);
+
+    const privs = livePrivs;
     const canSeePartners = Boolean(privs.can_manage_partners);
     const canSeeVendors = Boolean(privs.can_manage_vendors);
     const canSeeFacilities = Boolean(privs.can_manage_facilities);
