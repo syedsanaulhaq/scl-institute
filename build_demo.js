@@ -103,7 +103,7 @@ function managerFlow() {
     flowBox(20,90,130,44,'Applicants List','All Applicants',c),
     flowBox(170,90,130,44,'Users by Role','Role Groups',c),
     flowBox(320,90,130,44,'Programme Intakes','Cohort Mgmt',c),
-    flowBox(470,90,130,44,'Staff','Teacher Mgmt',c),
+    flowBox(470,90,130,44,'Staff','Faculty Mgmt',c),
     flowBox(620,90,130,44,'Settings','System Config',c),
   ];
   const arrs = [
@@ -176,7 +176,7 @@ function loginSection() {
               <div class="cred-pass">089f4607e213</div>
             </div>
             <div class="cred-row cred-teacher">
-              <div class="cred-role"><span class="role-dot" style="background:#059669"></span>Teacher</div>
+              <div class="cred-role"><span class="role-dot" style="background:#059669"></span>Faculty</div>
               <div class="cred-email">test@teacher.com</div>
               <div class="cred-pass">password123</div>
             </div>
@@ -384,7 +384,7 @@ footer a{color:#3b82f6;text-decoration:none}
     <a href="#login">🔐 Login</a>
     <a href="#student" class="student">👤 Student</a>
     <a href="#cadmin" class="cadmin">🏛️ College Admin</a>
-    <a href="#teacher" class="teacher">🎓 Teacher</a>
+    <a href="#teacher" class="teacher">🎓 Faculty</a>
     <a href="#manager" class="manager">⚙️ Manager</a>
     <a href="https://system.sclsandbox.xyz" target="_blank" class="nav-live">Open Live Site →</a>
   </div>
@@ -404,7 +404,7 @@ footer a{color:#3b82f6;text-decoration:none}
   </div>
   <div class="hero-roles">
     <a href="#student" class="role-chip chip-student">👤 Student Portal</a>
-    <a href="#teacher" class="role-chip chip-teacher">🎓 Teacher Portal</a>
+    <a href="#teacher" class="role-chip chip-teacher">🎓 Faculty Portal</a>
     <a href="#manager" class="role-chip chip-manager">⚙️ Manager Portal</a>
     <a href="#cadmin" class="role-chip chip-cadmin">🏛️ College Admin</a>
   </div>
@@ -459,17 +459,26 @@ ${roleSection(
 )}
 
 ${roleSection(
-  'teacher','#059669','rgba(5,150,105,0.1)','🎓','Teacher Portal',
-  'Teachers manage their courses, set assessments, track student progress, and view course reports via Moodle LMS integration.',
-  'TEACHER ROLE',
+  'teacher','#059669','rgba(5,150,105,0.1)','🎓','Faculty Portal',
+  'Faculty members manage their courses, set assessments, track student progress, and view course reports via Moodle LMS integration.',
+  'FACULTY ROLE',
   teacherFlow(),
   [
-    step(1,'Login','Teacher logs in with their credentials. The system detects the EDITINGTEACHER role and redirects to the Teacher Dashboard.','s00-login-screen.jpg','Login Screen','URL: /login','https://system.sclsandbox.xyz/login'),
-    step(2,'Teacher Dashboard','The teacher dashboard shows a summary of their assigned courses, recent student activity, assessment counts, and quick-access links.','s11-teacher-dashboard.jpg','Teacher Dashboard','URL: /teacher/dashboard','https://system.sclsandbox.xyz/teacher/dashboard'),
-    step(3,'My Teaching Programme','View all courses assigned to the teacher — course codes, programme details, intake dates, and student counts. Links directly to Moodle for course management.','s13-teacher-programme.png','Teacher Programme','URL: /teacher/programme','https://system.sclsandbox.xyz/teacher/programme'),
-    step(4,'Assessments','Full list of all assignments, quizzes, and forums across teaching courses. Filter by activity type or course. Each item links to Moodle for grading.','s14-teacher-assessments.jpg','Teacher Assessments','URL: /teacher/assessments','https://system.sclsandbox.xyz/teacher/assessments'),
-    step(5,'Reports','Course-level activity breakdown — total assignments (3), quizzes (2), forums (2), resources (1), links (1). Summary shows 10 total modules per course.','s15-teacher-reports.jpg','Teacher Reports','URL: /teacher/reports','https://system.sclsandbox.xyz/teacher/reports'),
-  ].join('')
+    step(1,'Login','Faculty member logs in with their credentials. The system detects the EDITINGTEACHER role and redirects to the Faculty Dashboard.','s00-login-screen.jpg','Login Screen','URL: /login','https://system.sclsandbox.xyz/login'),
+    step(2,'Faculty Dashboard','The faculty dashboard shows a summary of assigned courses, recent student activity, assessment counts, and quick-access links.','s11-teacher-dashboard.jpg','Faculty Dashboard','URL: /teacher/dashboard','https://system.sclsandbox.xyz/teacher/dashboard'),
+    step(3,'My Teaching Programme','View all courses assigned to the faculty — course codes, programme details, intake dates, and student counts. Links directly to Moodle for course management.','s13-teacher-programme.png','Faculty Programme','URL: /teacher/programme','https://system.sclsandbox.xyz/teacher/programme'),
+    step(4,'Assessments','Full list of all assignments, quizzes, and forums across faculty courses. Filter by activity type or course. Each item links to Moodle for grading.','s14-teacher-assessments.jpg','Faculty Assessments','URL: /teacher/assessments','https://system.sclsandbox.xyz/teacher/assessments'),
+    step(5,'Reports','Course-level activity breakdown — total assignments (3), quizzes (2), forums (2), resources (1), links (1). Summary shows 10 total modules per course.','s15-teacher-reports.jpg','Faculty Reports','URL: /teacher/reports','https://system.sclsandbox.xyz/teacher/reports'),
+  ].join(''),
+  `<div class="video-embed-block">
+    <h3>🎬 Faculty Management Overview</h3>
+    <div class="video-player-wrap">
+      <video controls preload="metadata" poster="">
+        <source src="/demo/videos/faculty-walkthrough.mp4" type="video/mp4">
+        Your browser does not support the video tag.
+      </video>
+    </div>
+  </div>`
 )}
 
 ${roleSection(
@@ -485,13 +494,13 @@ ${roleSection(
     step(5,'Programme Intakes','Create and manage programme intake cohorts — set start dates, capacity, and enrolment windows. View all active intakes across programmes.','s23-manager-intakes.jpg','Programme Intakes','URL: /programme-intakes','https://system.sclsandbox.xyz/programme-intakes'),
     step(6,'LMS Enrolments','Manage Moodle LMS enrolments — 93 students enrolled across courses. Sync enrolments, update roles, and monitor LMS access for all students.','s24-manager-lms.jpg','LMS Enrolments','URL: /admin/lms-enrolments','https://system.sclsandbox.xyz/admin/lms-enrolments'),
     step(7,'Course Lifecycle','Track all 55 courses through their lifecycle stages — from creation to archival. View status, enrolment counts, and manage course progression.','s25-manager-lifecycle.jpg','Course Lifecycle','URL: /admin/course-lifecycle','https://system.sclsandbox.xyz/admin/course-lifecycle'),
-    step(8,'Users by Role','View all system users grouped by role — Students, Teachers, Managers, College Admins. Assign and revoke roles, reset passwords, and manage access.','s26-manager-users.jpg','Users by Role','URL: /admin/users-by-role','https://system.sclsandbox.xyz/admin/users-by-role'),
+    step(8,'Users by Role','View all system users grouped by role — Students, Faculty, Managers, College Admins. Assign and revoke roles, reset passwords, and manage access.','s26-manager-users.jpg','Users by Role','URL: /admin/users-by-role','https://system.sclsandbox.xyz/admin/users-by-role'),
   ].join('')
 )}
 
 <footer>
   <p>SCL Institute Management Portal &nbsp;|&nbsp; <a href="https://system.sclsandbox.xyz" target="_blank">system.sclsandbox.xyz</a> &nbsp;|&nbsp; Demo generated May 2026</p>
-  <p style="margin-top:0.5rem">Screenshots captured live from production system &nbsp;•&nbsp; All 4 roles: Student · Teacher · Manager · College Admin</p>
+  <p style="margin-top:0.5rem">Screenshots captured live from production system &nbsp;•&nbsp; All 4 roles: Student · Faculty · Manager · College Admin</p>
 </footer>
 
 <script>
