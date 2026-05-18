@@ -13537,7 +13537,7 @@ router.post('/faculty-onboarding/:registrationId/activate', async (req, res) => 
 
         return res.json({
             success: true,
-            message: `${reg.first_name} ${reg.last_name} portal account is ready. Assign a course in Active Faculty to provision their Moodle account.`,
+            message: `${reg.first_name} ${reg.last_name} portal account is ready. Assign a subject in Active Faculty to provision their Moodle account.`,
             data: {
                 email: reg.email,
                 full_name: `${reg.first_name} ${reg.last_name}`,
