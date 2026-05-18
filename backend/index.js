@@ -1771,7 +1771,7 @@ app.post('/api/login', async (req, res) => {
 
             const effectiveRole = roleContext.primaryRole || user.role;
             const [privRows] = await pool.query('SELECT privileges FROM role_privileges WHERE role = ?', [effectiveRole]);
-            const privileges = privRows.length ? (JSON.parse(privRows[0].privileges) || {}) : {};
+            const privileges = privRows.length ? (typeof privRows[0].privileges === 'string' ? JSON.parse(privRows[0].privileges) : (privRows[0].privileges || {})) : {};
 
             res.json({ 
                 success: true,
@@ -1842,7 +1842,7 @@ app.post('/api/v1/auth/login', async (req, res) => {
 
             const effectiveRoleV1 = roleContext.primaryRole || user.role;
             const [privRowsV1] = await pool.query('SELECT privileges FROM role_privileges WHERE role = ?', [effectiveRoleV1]);
-            const privilegesV1 = privRowsV1.length ? (JSON.parse(privRowsV1[0].privileges) || {}) : {};
+            const privilegesV1 = privRowsV1.length ? (typeof privRowsV1[0].privileges === 'string' ? JSON.parse(privRowsV1[0].privileges) : (privRowsV1[0].privileges || {})) : {};
 
             res.json({ 
                 success: true,
