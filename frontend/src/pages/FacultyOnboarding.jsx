@@ -401,7 +401,7 @@ export default function FacultyOnboarding() {
                                     ? (
                                         <div className="w-full flex items-center justify-center gap-2 py-2.5 bg-green-50 border border-green-300 text-green-700 rounded-lg text-sm font-medium">
                                             <CheckCircle2 size={16} />
-                                            Active Faculty — Moodle Activated
+                                            Moodle Account Provisioned — Assign Course in Active Faculty
                                         </div>
                                     ) : (
                                         <button
