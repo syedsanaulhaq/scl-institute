@@ -3182,8 +3182,6 @@ router.post('/teacher-registrations/:id/decision', async (req, res) => {
     try {
         const { decision, reviewer_name, reviewer_notes } = req.body;
         const registrationId = req.params.id;
-        const portalLoginUrl = process.env.PORTAL_LOGIN_URL || process.env.FRONTEND_URL || 'http://localhost:3000/login';
-        const moodleUrl = process.env.MOODLE_URL || process.env.MOODLE_INTERNAL_URL || 'http://localhost:9090';
 
         if (!decision || !['accepted', 'rejected', 'under_review'].includes(String(decision))) {
             return res.status(400).json({ success: false, message: 'Valid decision is required' });
@@ -3195,77 +3193,16 @@ router.post('/teacher-registrations/:id/decision', async (req, res) => {
         }
 
         const registration = rows[0];
-        let createdUser = null;
-        let moodleAssignment = null;
-        let loginDetails = null;
-        let userId = registration.created_user_id ? Number(registration.created_user_id) : null;
 
-        if (decision === 'accepted') {
-            moodleAssignment = await assignTeacherToMoodleCourse(
-                registration.email,
-                registration.first_name,
-                registration.last_name,
-                registration.selected_course_code,
-                registration.teaching_role || 'editingteacher'
-            );
-
-            if (!moodleAssignment?.success) {
-                return res.status(502).json({
-                    success: false,
-                    message: moodleAssignment?.message || 'Failed to assign teacher to Moodle course',
-                    data: {
-                        registrationId: Number(registrationId),
-                        status: registration.application_status,
-                        moodle_assignment: moodleAssignment
-                    }
-                });
-            }
-
-            const [userRows] = await db.execute('SELECT id, role, password FROM users WHERE email = ? LIMIT 1', [registration.email]);
-            let tempPassword = null;
-
-            if (userRows.length === 0) {
-                tempPassword = generateTempPassword();
-                const passwordHash = crypto.createHash('sha256').update(tempPassword).digest('hex');
-                const mergedRole = mergeRoleValue('', registration.teaching_role || 'editingteacher');
-                const [insertResult] = await db.execute(
-                    'INSERT INTO users (email, password, password_hash, first_name, last_name, role, phone, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, 1)',
-                    [registration.email, tempPassword, passwordHash, registration.first_name, registration.last_name, mergedRole, registration.contact_number || null]
-                );
-                userId = Number(insertResult.insertId);
-                createdUser = { id: userId, email: registration.email, password: tempPassword, role: mergedRole, status: 'created' };
-            } else {
-                userId = Number(userRows[0].id);
-                const mergedRole = mergeRoleValue(userRows[0].role, registration.teaching_role || 'editingteacher');
-                await db.execute(
-                    'UPDATE users SET role = ?, first_name = ?, last_name = ?, phone = COALESCE(?, phone), is_active = 1 WHERE id = ?',
-                    [mergedRole, registration.first_name, registration.last_name, registration.contact_number || null, userId]
-                );
-                createdUser = { id: userId, email: registration.email, password: userRows[0].password || null, role: mergedRole, status: 'updated' };
-            }
-
-            loginDetails = {
-                email: registration.email,
-                password: createdUser?.password || null,
-                role: registration.teaching_role || 'editingteacher',
-                portal_login_url: portalLoginUrl,
-                moodle_url: moodleUrl,
-                moodle_course_code: registration.selected_course_code,
-                moodle_course_title: registration.selected_course_title,
-                note: createdUser?.password
-                    ? 'Use these credentials to login, then open Teacher Menu > Open Moodle Teaching.'
-                    : 'Existing user account reused. Use existing password or reset via Forgot Password.'
-            };
-        }
-
+        // Accept/reject is a status-only operation.
+        // User account + Moodle account creation happens at "Activate Faculty Account" (onboarding step).
         await db.execute(
             `UPDATE teacher_registrations
              SET application_status = ?, reviewer_name = ?, reviewer_notes = ?,
                  approved_at = CASE WHEN ? = 'accepted' THEN NOW() ELSE NULL END,
-                 rejected_at = CASE WHEN ? = 'rejected' THEN NOW() ELSE NULL END,
-                 created_user_id = CASE WHEN ? = 'accepted' THEN ? ELSE created_user_id END
+                 rejected_at = CASE WHEN ? = 'rejected' THEN NOW() ELSE NULL END
              WHERE id = ?`,
-            [decision, reviewer_name || null, reviewer_notes || null, decision, decision, decision, userId, registrationId]
+            [decision, reviewer_name || null, reviewer_notes || null, decision, decision, registrationId]
         );
 
         return res.json({
@@ -3273,10 +3210,7 @@ router.post('/teacher-registrations/:id/decision', async (req, res) => {
             message: `Teacher registration ${decision}`,
             data: {
                 registrationId: Number(registrationId),
-                status: decision,
-                created_user: createdUser,
-                moodle_assignment: moodleAssignment,
-                login_details: loginDetails
+                status: decision
             }
         });
     } catch (error) {
