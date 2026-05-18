@@ -1596,15 +1596,28 @@ router.post('/admin/teacher-enroll', async (req, res) => {
         return res.status(400).json({ success: false, message: 'teacherEmail and courseId are required' });
     }
     try {
-        // Get teacher's Moodle user id
+        // Resolve Moodle user — create the account now if it doesn't exist yet.
+        // This is intentional: Moodle provisioning is deferred until the first course assignment.
+        let moodleUserId;
         const userRows = await safeMoodleSelectRows(
             'SELECT id FROM mdl_user WHERE email = ? AND deleted = 0 LIMIT 1',
             [teacherEmail]
         );
         if (!userRows || userRows.length === 0) {
-            return res.status(404).json({ success: false, message: `No Moodle account found for ${teacherEmail}` });
+            const [portalRows] = await db.execute(
+                'SELECT first_name, last_name FROM users WHERE email = ? LIMIT 1',
+                [teacherEmail]
+            );
+            const firstName = portalRows[0]?.first_name || 'Teacher';
+            const lastName  = portalRows[0]?.last_name  || 'User';
+            const moodleCreate = await ensureMoodleUserAccount(teacherEmail, firstName, lastName);
+            if (!moodleCreate?.success) {
+                return res.status(502).json({ success: false, message: `Failed to provision Moodle account for ${teacherEmail}` });
+            }
+            moodleUserId = moodleCreate.moodleUserId;
+        } else {
+            moodleUserId = userRows[0].id;
         }
-        const moodleUserId = userRows[0].id;
         const now = Math.floor(Date.now() / 1000);
 
         // Get context id for this course
@@ -13488,11 +13501,9 @@ router.post('/faculty-onboarding/:registrationId/activate', async (req, res) => 
             return res.status(400).json({ success: false, message: 'Faculty application must be accepted before activation' });
         }
 
-        // Create Moodle user account (no course enrollment — that is done in Active Faculty)
-        const moodleResult = await ensureMoodleUserAccount(reg.email, reg.first_name, reg.last_name);
-        if (!moodleResult?.success) {
-            return res.status(502).json({ success: false, message: 'Failed to create Moodle account for faculty member' });
-        }
+        // NOTE: No Moodle operations here.
+        // Moodle account + course enrollment happen together when the first course
+        // is assigned via Active Faculty → Assign to Subject Unit.
 
         // Create or update SCL portal user account
         const [userRows] = await db.execute('SELECT id, password, role FROM users WHERE email = ? LIMIT 1', [reg.email]);
@@ -13526,15 +13537,13 @@ router.post('/faculty-onboarding/:registrationId/activate', async (req, res) => 
 
         return res.json({
             success: true,
-            message: `${reg.first_name} ${reg.last_name} is now active. Assign courses in the Active Faculty page.`,
+            message: `${reg.first_name} ${reg.last_name} portal account is ready. Assign a course in Active Faculty to provision their Moodle account.`,
             data: {
                 email: reg.email,
                 full_name: `${reg.first_name} ${reg.last_name}`,
                 password: tempPassword,
                 user_status: userStatus,
-                portal_role: reg.teaching_role || 'editingteacher',
-                moodle_user_created: moodleResult.created,
-                moodle_user_id: moodleResult.moodleUserId
+                portal_role: reg.teaching_role || 'editingteacher'
             }
         });
     } catch (error) {
