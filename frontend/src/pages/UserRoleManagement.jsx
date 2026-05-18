@@ -27,6 +27,9 @@ const PRIVILEGE_LABELS = {
     can_access_lms: { label: 'Access LMS', description: 'Single sign-on access to Moodle LMS' },
     can_manage_settings: { label: 'Manage Settings', description: 'Change system and account settings' },
     can_manage_roles: { label: 'Manage Roles & Users', description: 'Assign roles and edit privileges for users' },
+    can_manage_partners: { label: 'Manage Partners & Associates', description: 'Access and manage awarding bodies, associates and affiliates' },
+    can_manage_vendors: { label: 'Manage Vendors & Suppliers', description: 'Access and manage vendor/supplier contracts and records' },
+    can_manage_facilities: { label: 'Manage Buildings & Facilities', description: 'Access and manage buildings, rooms and compliance records' },
 };
 
 function RoleBadge({ role }) {

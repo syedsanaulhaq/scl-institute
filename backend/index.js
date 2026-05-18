@@ -196,15 +196,45 @@ async function initDB() {
         const [privRows] = await connection.query('SELECT COUNT(*) as cnt FROM role_privileges');
         if (privRows[0].cnt === 0) {
             const defaults = [
-                ['systemadmin', JSON.stringify({ can_approve_applications: true, can_manage_students: true, can_manage_teachers: true, can_view_reports: true, can_manage_courses: true, can_access_lms: true, can_manage_settings: true, can_manage_roles: true })],
-                ['collegeadmin', JSON.stringify({ can_approve_applications: true, can_manage_students: true, can_manage_teachers: false, can_view_reports: true, can_manage_courses: false, can_access_lms: true, can_manage_settings: false, can_manage_roles: false })],
-                ['manager', JSON.stringify({ can_approve_applications: false, can_manage_students: false, can_manage_teachers: false, can_view_reports: true, can_manage_courses: false, can_access_lms: true, can_manage_settings: false, can_manage_roles: false })],
-                ['teacher', JSON.stringify({ can_approve_applications: false, can_manage_students: false, can_manage_teachers: false, can_view_reports: false, can_manage_courses: false, can_access_lms: true, can_manage_settings: false, can_manage_roles: false })],
-                ['student', JSON.stringify({ can_approve_applications: false, can_manage_students: false, can_manage_teachers: false, can_view_reports: false, can_manage_courses: false, can_access_lms: true, can_manage_settings: false, can_manage_roles: false })]
+                ['systemadmin', JSON.stringify({ can_approve_applications: true, can_manage_students: true, can_manage_teachers: true, can_view_reports: true, can_manage_courses: true, can_access_lms: true, can_manage_settings: true, can_manage_roles: true, can_manage_partners: true, can_manage_vendors: true, can_manage_facilities: true })],
+                ['collegeadmin', JSON.stringify({ can_approve_applications: true, can_manage_students: true, can_manage_teachers: false, can_view_reports: true, can_manage_courses: false, can_access_lms: true, can_manage_settings: false, can_manage_roles: false, can_manage_partners: true, can_manage_vendors: true, can_manage_facilities: true })],
+                ['manager', JSON.stringify({ can_approve_applications: false, can_manage_students: false, can_manage_teachers: false, can_view_reports: true, can_manage_courses: false, can_access_lms: true, can_manage_settings: false, can_manage_roles: false, can_manage_partners: true, can_manage_vendors: true, can_manage_facilities: true })],
+                ['teacher', JSON.stringify({ can_approve_applications: false, can_manage_students: false, can_manage_teachers: false, can_view_reports: false, can_manage_courses: false, can_access_lms: true, can_manage_settings: false, can_manage_roles: false, can_manage_partners: false, can_manage_vendors: false, can_manage_facilities: false })],
+                ['student', JSON.stringify({ can_approve_applications: false, can_manage_students: false, can_manage_teachers: false, can_view_reports: false, can_manage_courses: false, can_access_lms: true, can_manage_settings: false, can_manage_roles: false, can_manage_partners: false, can_manage_vendors: false, can_manage_facilities: false })]
             ];
             for (const [role, privileges] of defaults) {
                 await connection.query('INSERT IGNORE INTO role_privileges (role, privileges) VALUES (?, ?)', [role, privileges]);
             }
+        }
+
+        // Migrate: add new module privilege keys to existing role rows
+        const modulePrivMigrations = [
+            ['systemadmin',   'can_manage_partners', true],
+            ['collegeadmin',  'can_manage_partners', true],
+            ['manager',       'can_manage_partners', true],
+            ['teacher',       'can_manage_partners', false],
+            ['student',       'can_manage_partners', false],
+            ['coursecreator', 'can_manage_partners', false],
+            ['systemadmin',   'can_manage_vendors', true],
+            ['collegeadmin',  'can_manage_vendors', true],
+            ['manager',       'can_manage_vendors', true],
+            ['teacher',       'can_manage_vendors', false],
+            ['student',       'can_manage_vendors', false],
+            ['coursecreator', 'can_manage_vendors', false],
+            ['systemadmin',   'can_manage_facilities', true],
+            ['collegeadmin',  'can_manage_facilities', true],
+            ['manager',       'can_manage_facilities', true],
+            ['teacher',       'can_manage_facilities', false],
+            ['student',       'can_manage_facilities', false],
+            ['coursecreator', 'can_manage_facilities', false],
+        ];
+        for (const [role, key, value] of modulePrivMigrations) {
+            try {
+                await connection.query(
+                    `UPDATE role_privileges SET privileges = JSON_SET(privileges, '$.${key}', ?) WHERE role = ? AND JSON_EXTRACT(privileges, '$.${key}') IS NULL`,
+                    [value, role]
+                );
+            } catch (_) { /* ignore if row doesn't exist */ }
         }
 
         console.log("[DB] Tables initialized");
