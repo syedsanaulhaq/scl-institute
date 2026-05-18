@@ -101,8 +101,7 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
                 key: 'academic-group',
                 subItems: [
                     { name: 'Course Lifecycle', icon: LayoutDashboard, path: '/course-lifecycle' },
-                    { name: 'Course Intakes', icon: Calendar, path: '/programme-intakes' },
-                    { name: 'Compliance Calendar', icon: Calendar, path: '/compliance-calendar' }
+                    { name: 'Course Intakes', icon: Calendar, path: '/programme-intakes' }
                 ]
             },
             {
@@ -135,6 +134,24 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
                 subItems: [
                     { name: 'LMS Enrolments', icon: GraduationCap, path: '/admin/lms-enrolments' },
                     { name: 'Access LMS', icon: GraduationCap, isSSO: true }
+                ]
+            },
+            {
+                name: 'Vendors & Suppliers',
+                icon: Building2,
+                isParent: true,
+                key: 'vendors-group',
+                subItems: [
+                    { name: 'Vendor Management', icon: Building2, path: '/admin/vendors' }
+                ]
+            },
+            {
+                name: 'Infrastructure',
+                icon: Building2,
+                isParent: true,
+                key: 'infrastructure-group',
+                subItems: [
+                    { name: 'Buildings & Facilities', icon: Building2, path: '/admin/facility-management' }
                 ]
             },
             {

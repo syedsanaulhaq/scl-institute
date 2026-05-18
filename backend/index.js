@@ -15,6 +15,8 @@ const inductionDrivenRouter = require('./routes/induction-driven');
 const accreditationsRouter = require('./routes/accreditations');
 const courseVisitsRouter = require('./routes/course-visits');
 const supportRouter = require('./routes/support');
+const vendorsRouter = require('./routes/vendors');
+const facilityManagementRouter = require('./routes/facility-management');
 
 process.on('unhandledRejection', (reason, p) => {
     console.error('Unhandled Rejection at:', p, 'reason:', reason);
@@ -326,6 +328,8 @@ app.use('/api/induction-driven', inductionDrivenRouter);
 app.use('/api/accreditations', accreditationsRouter);
 app.use('/api/course-visits', courseVisitsRouter);
 app.use('/api/support', supportRouter);
+app.use('/api/vendors', vendorsRouter);
+app.use('/api/facility-management', facilityManagementRouter);
 
 // ===============================
 // ROUTES

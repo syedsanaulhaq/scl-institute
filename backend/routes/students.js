@@ -13601,6 +13601,24 @@ const ensureStudentOnboardingTable = async () => {
             orientation_attended TINYINT(1) DEFAULT 0,
             it_setup_completed TINYINT(1) DEFAULT 0,
             student_id_issued TINYINT(1) DEFAULT 0,
+            course_handbook_acknowledged TINYINT(1) DEFAULT 0,
+            assessment_policy_acknowledged TINYINT(1) DEFAULT 0,
+            code_of_conduct_signed TINYINT(1) DEFAULT 0,
+            health_safety_acknowledged TINYINT(1) DEFAULT 0,
+            academic_integrity_acknowledged TINYINT(1) DEFAULT 0,
+            attendance_policy_acknowledged TINYINT(1) DEFAULT 0,
+            it_policy_acknowledged TINYINT(1) DEFAULT 0,
+            data_protection_acknowledged TINYINT(1) DEFAULT 0,
+            complaints_policy_acknowledged TINYINT(1) DEFAULT 0,
+            library_access_setup TINYINT(1) DEFAULT 0,
+            edi_policy_acknowledged TINYINT(1) DEFAULT 0,
+            safeguarding_acknowledged TINYINT(1) DEFAULT 0,
+            prevent_acknowledged TINYINT(1) DEFAULT 0,
+            consent_gdpr TINYINT(1) DEFAULT 0,
+            consent_awarding_bodies TINYINT(1) DEFAULT 0,
+            consent_marketing TINYINT(1) DEFAULT 0,
+            declaration_signed TINYINT(1) DEFAULT 0,
+            onboarding_digital_signature VARCHAR(255),
             onboarding_status ENUM('Pending','In Progress','Completed') DEFAULT 'Pending',
             remarks TEXT,
             started_at DATETIME,
@@ -13612,6 +13630,33 @@ const ensureStudentOnboardingTable = async () => {
             INDEX idx_status (onboarding_status)
         )
     `);
+
+    // Add missing columns for existing tables (safe migration)
+    const newCols = [
+        ['course_handbook_acknowledged', 'TINYINT(1) DEFAULT 0'],
+        ['assessment_policy_acknowledged', 'TINYINT(1) DEFAULT 0'],
+        ['code_of_conduct_signed', 'TINYINT(1) DEFAULT 0'],
+        ['health_safety_acknowledged', 'TINYINT(1) DEFAULT 0'],
+        ['academic_integrity_acknowledged', 'TINYINT(1) DEFAULT 0'],
+        ['attendance_policy_acknowledged', 'TINYINT(1) DEFAULT 0'],
+        ['it_policy_acknowledged', 'TINYINT(1) DEFAULT 0'],
+        ['data_protection_acknowledged', 'TINYINT(1) DEFAULT 0'],
+        ['complaints_policy_acknowledged', 'TINYINT(1) DEFAULT 0'],
+        ['library_access_setup', 'TINYINT(1) DEFAULT 0'],
+        ['edi_policy_acknowledged', 'TINYINT(1) DEFAULT 0'],
+        ['safeguarding_acknowledged', 'TINYINT(1) DEFAULT 0'],
+        ['prevent_acknowledged', 'TINYINT(1) DEFAULT 0'],
+        ['consent_gdpr', 'TINYINT(1) DEFAULT 0'],
+        ['consent_awarding_bodies', 'TINYINT(1) DEFAULT 0'],
+        ['consent_marketing', 'TINYINT(1) DEFAULT 0'],
+        ['declaration_signed', 'TINYINT(1) DEFAULT 0'],
+        ['onboarding_digital_signature', 'VARCHAR(255) NULL'],
+    ];
+    for (const [col, def] of newCols) {
+        try {
+            await db.execute(`ALTER TABLE student_onboarding_tracker ADD COLUMN ${col} ${def}`);
+        } catch (e) { /* column already exists */ }
+    }
 };
 
 // GET /api/students/student-onboarding
@@ -13646,6 +13691,24 @@ router.get('/student-onboarding', async (req, res) => {
                     COALESCE(sot.orientation_attended, 0) as orientation_attended,
                     COALESCE(sot.it_setup_completed, 0) as it_setup_completed,
                     COALESCE(sot.student_id_issued, 0) as student_id_issued,
+                    COALESCE(sot.course_handbook_acknowledged, 0) as course_handbook_acknowledged,
+                    COALESCE(sot.assessment_policy_acknowledged, 0) as assessment_policy_acknowledged,
+                    COALESCE(sot.code_of_conduct_signed, 0) as code_of_conduct_signed,
+                    COALESCE(sot.health_safety_acknowledged, 0) as health_safety_acknowledged,
+                    COALESCE(sot.academic_integrity_acknowledged, 0) as academic_integrity_acknowledged,
+                    COALESCE(sot.attendance_policy_acknowledged, 0) as attendance_policy_acknowledged,
+                    COALESCE(sot.it_policy_acknowledged, 0) as it_policy_acknowledged,
+                    COALESCE(sot.data_protection_acknowledged, 0) as data_protection_acknowledged,
+                    COALESCE(sot.complaints_policy_acknowledged, 0) as complaints_policy_acknowledged,
+                    COALESCE(sot.library_access_setup, 0) as library_access_setup,
+                    COALESCE(sot.edi_policy_acknowledged, 0) as edi_policy_acknowledged,
+                    COALESCE(sot.safeguarding_acknowledged, 0) as safeguarding_acknowledged,
+                    COALESCE(sot.prevent_acknowledged, 0) as prevent_acknowledged,
+                    COALESCE(sot.consent_gdpr, 0) as consent_gdpr,
+                    COALESCE(sot.consent_awarding_bodies, 0) as consent_awarding_bodies,
+                    COALESCE(sot.consent_marketing, 0) as consent_marketing,
+                    COALESCE(sot.declaration_signed, 0) as declaration_signed,
+                    sot.onboarding_digital_signature,
                     COALESCE(sot.onboarding_status, 'Pending') as onboarding_status,
                     sot.remarks, sot.started_at, sot.completed_at
              FROM student_applications sa
@@ -13668,14 +13731,38 @@ router.put('/student-onboarding/:applicationId', async (req, res) => {
         const { applicationId } = req.params;
         const {
             welcome_email_sent, portal_access_granted, moodle_enrolled,
-            handbook_signed, orientation_attended, it_setup_completed,
-            student_id_issued, remarks
+            handbook_signed, orientation_attended, it_setup_completed, student_id_issued,
+            course_handbook_acknowledged, assessment_policy_acknowledged, code_of_conduct_signed,
+            health_safety_acknowledged, academic_integrity_acknowledged, attendance_policy_acknowledged,
+            it_policy_acknowledged, data_protection_acknowledged, complaints_policy_acknowledged,
+            library_access_setup, edi_policy_acknowledged, safeguarding_acknowledged, prevent_acknowledged,
+            consent_gdpr, consent_awarding_bodies, consent_marketing,
+            declaration_signed, onboarding_digital_signature,
+            remarks
         } = req.body;
 
-        const fields = { welcome_email_sent, portal_access_granted, moodle_enrolled,
-            handbook_signed, orientation_attended, it_setup_completed, student_id_issued };
+        const CHECKLIST_KEYS = [
+            'welcome_email_sent', 'portal_access_granted', 'moodle_enrolled',
+            'handbook_signed', 'orientation_attended', 'it_setup_completed', 'student_id_issued',
+            'course_handbook_acknowledged', 'assessment_policy_acknowledged', 'code_of_conduct_signed',
+            'health_safety_acknowledged', 'academic_integrity_acknowledged', 'attendance_policy_acknowledged',
+            'it_policy_acknowledged', 'data_protection_acknowledged', 'complaints_policy_acknowledged',
+            'library_access_setup', 'edi_policy_acknowledged', 'safeguarding_acknowledged',
+            'prevent_acknowledged', 'consent_gdpr', 'consent_awarding_bodies', 'consent_marketing',
+            'declaration_signed'
+        ];
+        const fields = {
+            welcome_email_sent, portal_access_granted, moodle_enrolled,
+            handbook_signed, orientation_attended, it_setup_completed, student_id_issued,
+            course_handbook_acknowledged, assessment_policy_acknowledged, code_of_conduct_signed,
+            health_safety_acknowledged, academic_integrity_acknowledged, attendance_policy_acknowledged,
+            it_policy_acknowledged, data_protection_acknowledged, complaints_policy_acknowledged,
+            library_access_setup, edi_policy_acknowledged, safeguarding_acknowledged,
+            prevent_acknowledged, consent_gdpr, consent_awarding_bodies, consent_marketing,
+            declaration_signed
+        };
         const completedCount = Object.values(fields).filter(v => v == 1 || v === true).length;
-        const total = 7;
+        const total = CHECKLIST_KEYS.length;
         let onboarding_status = 'Pending';
         if (completedCount === total) onboarding_status = 'Completed';
         else if (completedCount > 0) onboarding_status = 'In Progress';
@@ -13684,8 +13771,15 @@ router.put('/student-onboarding/:applicationId', async (req, res) => {
             `INSERT INTO student_onboarding_tracker
                 (application_id, welcome_email_sent, portal_access_granted, moodle_enrolled,
                  handbook_signed, orientation_attended, it_setup_completed, student_id_issued,
+                 course_handbook_acknowledged, assessment_policy_acknowledged, code_of_conduct_signed,
+                 health_safety_acknowledged, academic_integrity_acknowledged, attendance_policy_acknowledged,
+                 it_policy_acknowledged, data_protection_acknowledged, complaints_policy_acknowledged,
+                 library_access_setup, edi_policy_acknowledged, safeguarding_acknowledged,
+                 prevent_acknowledged, consent_gdpr, consent_awarding_bodies, consent_marketing,
+                 declaration_signed, onboarding_digital_signature,
                  onboarding_status, remarks, started_at, completed_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, IF(? > 0, NOW(), NULL), IF(? = ?, NOW(), NULL))
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                     ?, ?, IF(? > 0, NOW(), NULL), IF(? = ?, NOW(), NULL))
              ON DUPLICATE KEY UPDATE
                 welcome_email_sent = VALUES(welcome_email_sent),
                 portal_access_granted = VALUES(portal_access_granted),
@@ -13694,15 +13788,42 @@ router.put('/student-onboarding/:applicationId', async (req, res) => {
                 orientation_attended = VALUES(orientation_attended),
                 it_setup_completed = VALUES(it_setup_completed),
                 student_id_issued = VALUES(student_id_issued),
+                course_handbook_acknowledged = VALUES(course_handbook_acknowledged),
+                assessment_policy_acknowledged = VALUES(assessment_policy_acknowledged),
+                code_of_conduct_signed = VALUES(code_of_conduct_signed),
+                health_safety_acknowledged = VALUES(health_safety_acknowledged),
+                academic_integrity_acknowledged = VALUES(academic_integrity_acknowledged),
+                attendance_policy_acknowledged = VALUES(attendance_policy_acknowledged),
+                it_policy_acknowledged = VALUES(it_policy_acknowledged),
+                data_protection_acknowledged = VALUES(data_protection_acknowledged),
+                complaints_policy_acknowledged = VALUES(complaints_policy_acknowledged),
+                library_access_setup = VALUES(library_access_setup),
+                edi_policy_acknowledged = VALUES(edi_policy_acknowledged),
+                safeguarding_acknowledged = VALUES(safeguarding_acknowledged),
+                prevent_acknowledged = VALUES(prevent_acknowledged),
+                consent_gdpr = VALUES(consent_gdpr),
+                consent_awarding_bodies = VALUES(consent_awarding_bodies),
+                consent_marketing = VALUES(consent_marketing),
+                declaration_signed = VALUES(declaration_signed),
+                onboarding_digital_signature = VALUES(onboarding_digital_signature),
                 onboarding_status = VALUES(onboarding_status),
                 remarks = VALUES(remarks),
-                started_at = IF(VALUES(welcome_email_sent) OR VALUES(portal_access_granted) OR VALUES(moodle_enrolled) OR VALUES(handbook_signed) OR VALUES(orientation_attended) OR VALUES(it_setup_completed) OR VALUES(student_id_issued), COALESCE(started_at, NOW()), started_at),
+                started_at = IF(VALUES(onboarding_status) != 'Pending', COALESCE(started_at, NOW()), started_at),
                 completed_at = IF(VALUES(onboarding_status) = 'Completed', COALESCE(completed_at, NOW()), NULL)`,
             [
                 applicationId,
                 welcome_email_sent ? 1 : 0, portal_access_granted ? 1 : 0, moodle_enrolled ? 1 : 0,
                 handbook_signed ? 1 : 0, orientation_attended ? 1 : 0, it_setup_completed ? 1 : 0,
                 student_id_issued ? 1 : 0,
+                course_handbook_acknowledged ? 1 : 0, assessment_policy_acknowledged ? 1 : 0,
+                code_of_conduct_signed ? 1 : 0, health_safety_acknowledged ? 1 : 0,
+                academic_integrity_acknowledged ? 1 : 0, attendance_policy_acknowledged ? 1 : 0,
+                it_policy_acknowledged ? 1 : 0, data_protection_acknowledged ? 1 : 0,
+                complaints_policy_acknowledged ? 1 : 0, library_access_setup ? 1 : 0,
+                edi_policy_acknowledged ? 1 : 0, safeguarding_acknowledged ? 1 : 0,
+                prevent_acknowledged ? 1 : 0, consent_gdpr ? 1 : 0,
+                consent_awarding_bodies ? 1 : 0, consent_marketing ? 1 : 0,
+                declaration_signed ? 1 : 0, onboarding_digital_signature || null,
                 onboarding_status, remarks || null,
                 completedCount,
                 completedCount, total

@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import {
     Building2, Users, Globe, Mail, Phone, Plus, Edit2, Trash2, Eye,
@@ -706,12 +707,18 @@ function PartnerDetailPanel({ partnerId, onClose, onEdit }) {
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
 export default function PartnersManagement() {
+    const [searchParams] = useSearchParams();
     const [partners, setPartners] = useState([]);
     const [stats, setStats] = useState(null);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
-    const [typeFilter, setTypeFilter] = useState('all');
+    const [typeFilter, setTypeFilter] = useState(searchParams.get('type') || 'all');
     const [statusFilter, setStatusFilter] = useState('all');
+
+    // Sync typeFilter when URL ?type= param changes (sidebar nav)
+    useEffect(() => {
+        setTypeFilter(searchParams.get('type') || 'all');
+    }, [searchParams]);
     const [partnerModal, setPartnerModal] = useState(null);
     const [detailId, setDetailId] = useState(null);
 
