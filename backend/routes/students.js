@@ -13737,7 +13737,19 @@ async function ensurePartnersTables() {
                 associate_type VARCHAR(100),
                 area_of_expertise TEXT,
                 notes TEXT,
-                status ENUM('active','inactive','suspended') DEFAULT 'active',
+                status ENUM('active','inactive','suspended','pending_renewal','expired') DEFAULT 'active',
+                accreditation_number VARCHAR(100),
+                accreditation_type VARCHAR(100),
+                expiry_date DATE,
+                responsible_person VARCHAR(255),
+                programme_titles TEXT,
+                programme_codes TEXT,
+                internal_review_date DATE,
+                internal_reviewer VARCHAR(255),
+                next_review_date DATE,
+                renewal_submission_date DATE,
+                renewal_status VARCHAR(50) DEFAULT 'not_started',
+                follow_up_actions TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
@@ -13779,6 +13791,25 @@ async function ensurePartnersTables() {
                 FOREIGN KEY (partner_id) REFERENCES partners(id) ON DELETE CASCADE
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
         `);
+        // Migration: add new accreditation columns to existing installs
+        const migrations = [
+            "ALTER TABLE partners ADD COLUMN IF NOT EXISTS accreditation_number VARCHAR(100) NULL",
+            "ALTER TABLE partners ADD COLUMN IF NOT EXISTS accreditation_type VARCHAR(100) NULL",
+            "ALTER TABLE partners ADD COLUMN IF NOT EXISTS expiry_date DATE NULL",
+            "ALTER TABLE partners ADD COLUMN IF NOT EXISTS responsible_person VARCHAR(255) NULL",
+            "ALTER TABLE partners ADD COLUMN IF NOT EXISTS programme_titles TEXT NULL",
+            "ALTER TABLE partners ADD COLUMN IF NOT EXISTS programme_codes TEXT NULL",
+            "ALTER TABLE partners ADD COLUMN IF NOT EXISTS internal_review_date DATE NULL",
+            "ALTER TABLE partners ADD COLUMN IF NOT EXISTS internal_reviewer VARCHAR(255) NULL",
+            "ALTER TABLE partners ADD COLUMN IF NOT EXISTS next_review_date DATE NULL",
+            "ALTER TABLE partners ADD COLUMN IF NOT EXISTS renewal_submission_date DATE NULL",
+            "ALTER TABLE partners ADD COLUMN IF NOT EXISTS renewal_status VARCHAR(50) NULL DEFAULT 'not_started'",
+            "ALTER TABLE partners ADD COLUMN IF NOT EXISTS follow_up_actions TEXT NULL",
+            "ALTER TABLE partners MODIFY COLUMN status ENUM('active','inactive','suspended','pending_renewal','expired') DEFAULT 'active'",
+        ];
+        for (const sql of migrations) {
+            try { await db.query(sql); } catch (_) { /* column may already exist */ }
+        }
     } catch (err) {
         console.error('[Partners] Failed to create tables:', err.message);
     }
@@ -13844,19 +13875,28 @@ router.post('/admin/partners', async (req, res) => {
         const {
             partner_name, partner_type, contact_person, job_title, contact_email,
             phone, website, address, country, partnership_start_date,
-            associate_type, area_of_expertise, notes, status
+            associate_type, area_of_expertise, notes, status,
+            accreditation_number, accreditation_type, expiry_date, responsible_person,
+            programme_titles, programme_codes, internal_review_date, internal_reviewer,
+            next_review_date, renewal_submission_date, renewal_status, follow_up_actions
         } = req.body;
         if (!partner_name || !partner_type) {
             return res.status(400).json({ success: false, message: 'partner_name and partner_type are required' });
         }
         const [result] = await db.query(
             `INSERT INTO partners (partner_name, partner_type, contact_person, job_title, contact_email,
-             phone, website, address, country, partnership_start_date, associate_type, area_of_expertise, notes, status)
-             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+             phone, website, address, country, partnership_start_date, associate_type, area_of_expertise, notes, status,
+             accreditation_number, accreditation_type, expiry_date, responsible_person,
+             programme_titles, programme_codes, internal_review_date, internal_reviewer,
+             next_review_date, renewal_submission_date, renewal_status, follow_up_actions)
+             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
             [partner_name, partner_type, contact_person||null, job_title||null, contact_email||null,
              phone||null, website||null, address||null, country||'United Kingdom',
              partnership_start_date||null, associate_type||null, area_of_expertise||null,
-             notes||null, status||'active']
+             notes||null, status||'active',
+             accreditation_number||null, accreditation_type||null, expiry_date||null, responsible_person||null,
+             programme_titles||null, programme_codes||null, internal_review_date||null, internal_reviewer||null,
+             next_review_date||null, renewal_submission_date||null, renewal_status||'not_started', follow_up_actions||null]
         );
         const [[created]] = await db.query('SELECT * FROM partners WHERE id = ?', [result.insertId]);
         res.status(201).json({ success: true, data: created });
@@ -13873,16 +13913,25 @@ router.put('/admin/partners/:id', async (req, res) => {
         const {
             partner_name, partner_type, contact_person, job_title, contact_email,
             phone, website, address, country, partnership_start_date,
-            associate_type, area_of_expertise, notes, status
+            associate_type, area_of_expertise, notes, status,
+            accreditation_number, accreditation_type, expiry_date, responsible_person,
+            programme_titles, programme_codes, internal_review_date, internal_reviewer,
+            next_review_date, renewal_submission_date, renewal_status, follow_up_actions
         } = req.body;
         await db.query(
             `UPDATE partners SET partner_name=?, partner_type=?, contact_person=?, job_title=?,
              contact_email=?, phone=?, website=?, address=?, country=?, partnership_start_date=?,
-             associate_type=?, area_of_expertise=?, notes=?, status=? WHERE id=?`,
+             associate_type=?, area_of_expertise=?, notes=?, status=?,
+             accreditation_number=?, accreditation_type=?, expiry_date=?, responsible_person=?,
+             programme_titles=?, programme_codes=?, internal_review_date=?, internal_reviewer=?,
+             next_review_date=?, renewal_submission_date=?, renewal_status=?, follow_up_actions=? WHERE id=?`,
             [partner_name, partner_type, contact_person||null, job_title||null, contact_email||null,
              phone||null, website||null, address||null, country||'United Kingdom',
              partnership_start_date||null, associate_type||null, area_of_expertise||null,
-             notes||null, status||'active', id]
+             notes||null, status||'active',
+             accreditation_number||null, accreditation_type||null, expiry_date||null, responsible_person||null,
+             programme_titles||null, programme_codes||null, internal_review_date||null, internal_reviewer||null,
+             next_review_date||null, renewal_submission_date||null, renewal_status||'not_started', follow_up_actions||null, id]
         );
         const [[updated]] = await db.query('SELECT * FROM partners WHERE id = ?', [id]);
         res.json({ success: true, data: updated });

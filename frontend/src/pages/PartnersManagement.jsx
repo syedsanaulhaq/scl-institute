@@ -22,6 +22,8 @@ const STATUS_COLORS = {
     active: 'bg-green-100 text-green-700',
     inactive: 'bg-gray-100 text-gray-500',
     suspended: 'bg-red-100 text-red-700',
+    pending_renewal: 'bg-amber-100 text-amber-700',
+    expired: 'bg-red-200 text-red-800',
 };
 const VISIT_STATUS_COLORS = {
     planned: 'bg-blue-100 text-blue-700',
@@ -39,6 +41,13 @@ const ASSOCIATE_TYPES = [
     'External Examiner', 'Industry Mentor', 'Guest Lecturer',
     'Placement Provider', 'Partner University', 'External Assessor', 'Other'
 ];
+const ACCREDITATION_TYPES = ['Programme-specific', 'Institutional', 'Professional Body', 'Other'];
+const RENEWAL_STATUSES = [
+    { value: 'not_started', label: 'Not Started' },
+    { value: 'in_progress', label: 'In Progress' },
+    { value: 'submitted', label: 'Submitted' },
+    { value: 'approved', label: 'Approved' },
+];
 const VISIT_TYPES = ['Annual Monitoring', 'Initial Approval', 'Audit', 'Thematic Review', 'Spot Check', 'Progress Review'];
 const SUB_TYPES = ['Annual Membership Fee', 'Registration Fee', 'Quality Assurance Fee', 'Awarding Fee', 'Other'];
 
@@ -46,7 +55,11 @@ const SUB_TYPES = ['Annual Membership Fee', 'Registration Fee', 'Quality Assuran
 const emptyPartner = {
     partner_name: '', partner_type: 'awarding_body', contact_person: '', job_title: '',
     contact_email: '', phone: '', website: '', address: '', country: 'United Kingdom',
-    partnership_start_date: '', associate_type: '', area_of_expertise: '', notes: '', status: 'active'
+    partnership_start_date: '', associate_type: '', area_of_expertise: '', notes: '', status: 'active',
+    accreditation_number: '', accreditation_type: '', expiry_date: '', responsible_person: '',
+    programme_titles: '', programme_codes: '',
+    internal_review_date: '', internal_reviewer: '', next_review_date: '',
+    renewal_submission_date: '', renewal_status: 'not_started', follow_up_actions: ''
 };
 const emptyVisit = {
     visit_type: '', visit_date: '', lead_contact: '', coordinator: '',
@@ -143,6 +156,8 @@ function PartnerFormModal({ initial, onClose, onSaved }) {
                             <Field label="Status">
                                 <select className={selCls} value={form.status} onChange={e => set('status', e.target.value)}>
                                     <option value="active">Active</option>
+                                    <option value="pending_renewal">Pending Renewal</option>
+                                    <option value="expired">Expired</option>
                                     <option value="inactive">Inactive</option>
                                     <option value="suspended">Suspended</option>
                                 </select>
@@ -169,6 +184,64 @@ function PartnerFormModal({ initial, onClose, onSaved }) {
                         </div>
                     </div>
 
+                    {/* ── Accreditation Details (Awarding Body only) ── */}
+                    {!isAssociate && (
+                        <div>
+                            <p className="text-xs font-bold text-purple-600 uppercase tracking-wide mb-3">Accreditation Details</p>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <Field label="Accreditation Number / Reference">
+                                    <input className={inputCls} value={form.accreditation_number} onChange={e => set('accreditation_number', e.target.value)} placeholder="e.g. BTEC/AB/2024/001" />
+                                </Field>
+                                <Field label="Type of Accreditation">
+                                    <select className={selCls} value={form.accreditation_type} onChange={e => set('accreditation_type', e.target.value)}>
+                                        <option value="">Select type...</option>
+                                        {ACCREDITATION_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                                    </select>
+                                </Field>
+                                <Field label="Expiry / Renewal Date">
+                                    <input type="date" className={inputCls} value={form.expiry_date} onChange={e => set('expiry_date', e.target.value)} />
+                                </Field>
+                                <Field label="Responsible Person (SCL)">
+                                    <input className={inputCls} value={form.responsible_person} onChange={e => set('responsible_person', e.target.value)} placeholder="Internal staff member" />
+                                </Field>
+                                <Field label="Related Programme Title(s)">
+                                    <input className={inputCls} value={form.programme_titles} onChange={e => set('programme_titles', e.target.value)} placeholder="e.g. HND in Business Management" />
+                                </Field>
+                                <Field label="Programme Code(s)">
+                                    <input className={inputCls} value={form.programme_codes} onChange={e => set('programme_codes', e.target.value)} placeholder="e.g. HND-BUS" />
+                                </Field>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* ── Review & Renewal (Awarding Body only) ── */}
+                    {!isAssociate && (
+                        <div>
+                            <p className="text-xs font-bold text-purple-600 uppercase tracking-wide mb-3">Review & Renewal</p>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <Field label="Last Internal Review Date">
+                                    <input type="date" className={inputCls} value={form.internal_review_date} onChange={e => set('internal_review_date', e.target.value)} />
+                                </Field>
+                                <Field label="Internal Reviewer">
+                                    <input className={inputCls} value={form.internal_reviewer} onChange={e => set('internal_reviewer', e.target.value)} placeholder="Staff name" />
+                                </Field>
+                                <Field label="Next Review Due">
+                                    <input type="date" className={inputCls} value={form.next_review_date} onChange={e => set('next_review_date', e.target.value)} />
+                                </Field>
+                                <Field label="Renewal Submission Date">
+                                    <input type="date" className={inputCls} value={form.renewal_submission_date} onChange={e => set('renewal_submission_date', e.target.value)} />
+                                </Field>
+                                <div className="sm:col-span-2">
+                                    <Field label="Renewal Status">
+                                        <select className={selCls} value={form.renewal_status} onChange={e => set('renewal_status', e.target.value)}>
+                                            {RENEWAL_STATUSES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+                                        </select>
+                                    </Field>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     {/* ── Associate-specific ── */}
                     {isAssociate && (
                         <div>
@@ -194,6 +267,11 @@ function PartnerFormModal({ initial, onClose, onSaved }) {
                     <Field label="Internal Notes">
                         <textarea className={textareaCls} rows={2} value={form.notes} onChange={e => set('notes', e.target.value)} placeholder="Any additional notes..." />
                     </Field>
+                    {!isAssociate && (
+                        <Field label="Follow-up Actions">
+                            <textarea className={textareaCls} rows={2} value={form.follow_up_actions} onChange={e => set('follow_up_actions', e.target.value)} placeholder="Outstanding compliance tasks or follow-up actions..." />
+                        </Field>
+                    )}
                 </form>
 
                 <div className="px-6 py-4 border-t flex justify-end gap-3">
@@ -492,10 +570,46 @@ function PartnerDetailPanel({ partnerId, onClose, onEdit }) {
                                     )}
                                 </div>
                             )}
+
+                            {/* Accreditation Details — Awarding Bodies */}
+                            {data.partner_type === 'awarding_body' && (data.accreditation_number || data.accreditation_type || data.expiry_date || data.responsible_person) && (
+                                <div>
+                                    <p className="text-xs font-bold text-purple-600 uppercase tracking-wide mb-2">Accreditation Details</p>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        {data.accreditation_number && <div><p className="text-xs text-gray-500">Reference No.</p><p className="text-sm font-medium">{data.accreditation_number}</p></div>}
+                                        {data.accreditation_type && <div><p className="text-xs text-gray-500">Type</p><p className="text-sm font-medium">{data.accreditation_type}</p></div>}
+                                        {data.expiry_date && <div><p className="text-xs text-gray-500">Expiry Date</p><p className="text-sm font-semibold text-amber-600">{fmt(data.expiry_date)}</p></div>}
+                                        {data.responsible_person && <div><p className="text-xs text-gray-500">Responsible (SCL)</p><p className="text-sm font-medium">{data.responsible_person}</p></div>}
+                                        {data.programme_titles && <div className="col-span-2"><p className="text-xs text-gray-500">Programmes</p><p className="text-sm">{data.programme_titles}</p></div>}
+                                        {data.programme_codes && <div><p className="text-xs text-gray-500">Programme Codes</p><p className="text-sm">{data.programme_codes}</p></div>}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Review & Renewal — Awarding Bodies */}
+                            {data.partner_type === 'awarding_body' && (data.internal_review_date || data.renewal_status) && (
+                                <div>
+                                    <p className="text-xs font-bold text-purple-600 uppercase tracking-wide mb-2">Review & Renewal</p>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        {data.internal_review_date && <div><p className="text-xs text-gray-500">Last Internal Review</p><p className="text-sm font-medium">{fmt(data.internal_review_date)}</p></div>}
+                                        {data.internal_reviewer && <div><p className="text-xs text-gray-500">Internal Reviewer</p><p className="text-sm font-medium">{data.internal_reviewer}</p></div>}
+                                        {data.next_review_date && <div><p className="text-xs text-gray-500">Next Review Due</p><p className="text-sm font-semibold text-amber-600">{fmt(data.next_review_date)}</p></div>}
+                                        {data.renewal_submission_date && <div><p className="text-xs text-gray-500">Renewal Submitted</p><p className="text-sm font-medium">{fmt(data.renewal_submission_date)}</p></div>}
+                                        {data.renewal_status && data.renewal_status !== 'not_started' && <div><p className="text-xs text-gray-500">Renewal Status</p><p className="text-sm font-semibold capitalize">{data.renewal_status.replace('_', ' ')}</p></div>}
+                                    </div>
+                                </div>
+                            )}
+
                             {data.notes && (
                                 <div>
                                     <p className="text-xs text-gray-500 mb-1">Notes</p>
                                     <p className="text-sm text-gray-700 bg-gray-50 rounded-lg p-3">{data.notes}</p>
+                                </div>
+                            )}
+                            {data.follow_up_actions && (
+                                <div>
+                                    <p className="text-xs text-gray-500 mb-1">Follow-up Actions</p>
+                                    <p className="text-sm text-gray-700 bg-amber-50 rounded-lg p-3">{data.follow_up_actions}</p>
                                 </div>
                             )}
                         </div>
