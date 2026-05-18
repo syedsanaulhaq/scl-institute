@@ -41,6 +41,44 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
     const roleContext = getRoleContext(user);
     const { canAccessStudentPortal, canAccessManagementPortal, hasTeaching, hasManagement, hasStudent, isSystemAdmin, isCollegeAdmin, isManagerOnly } = roleContext;
     const isManagementUser = Boolean(canAccessManagementPortal || hasManagement);
+
+    // Privilege flags derived from the user's role privileges (set at login)
+    const privs = user?.privileges || {};
+    const canSeePartners = Boolean(privs.can_manage_partners);
+    const canSeeVendors = Boolean(privs.can_manage_vendors);
+    const canSeeFacilities = Boolean(privs.can_manage_facilities);
+
+    // Shared menu groups that appear across multiple roles based on privileges
+    const partnersGroup = canSeePartners ? [{
+        name: 'Partners & Associates',
+        icon: Building2,
+        isParent: true,
+        key: 'partners-group',
+        subItems: [
+            { name: 'All Partners', icon: Building2, path: '/admin/partners' },
+            { name: 'Awarding Bodies', icon: ClipboardList, path: '/admin/partners?type=awarding_body' },
+            { name: 'Associates', icon: Users, path: '/admin/partners?type=associate' }
+        ]
+    }] : [];
+    const vendorsGroup = canSeeVendors ? [{
+        name: 'Vendors & Suppliers',
+        icon: Building2,
+        isParent: true,
+        key: 'vendors-group',
+        subItems: [
+            { name: 'Vendor Management', icon: Building2, path: '/admin/vendors' }
+        ]
+    }] : [];
+    const infrastructureGroup = canSeeFacilities ? [{
+        name: 'Infrastructure',
+        icon: Building2,
+        isParent: true,
+        key: 'infrastructure-group',
+        subItems: [
+            { name: 'Buildings & Facilities', icon: Building2, path: '/admin/facility-management' }
+        ]
+    }] : [];
+
     const [activeSectionTitle, setActiveSectionTitle] = useState(() => {
         if (isSystemAdmin) return 'System Admin Menu';
         if (isCollegeAdmin) return 'College Admin Menu';
@@ -104,17 +142,7 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
                     { name: 'Course Intakes', icon: Calendar, path: '/programme-intakes' }
                 ]
             },
-            {
-                name: 'Partners & Associates',
-                icon: Building2,
-                isParent: true,
-                key: 'partners-group',
-                subItems: [
-                    { name: 'All Partners', icon: Building2, path: '/admin/partners' },
-                    { name: 'Awarding Bodies', icon: ClipboardList, path: '/admin/partners?type=awarding_body' },
-                    { name: 'Associates', icon: Users, path: '/admin/partners?type=associate' }
-                ]
-            },
+            ...partnersGroup,
             {
                 name: 'Students',
                 icon: GraduationCap,
@@ -136,24 +164,8 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
                     { name: 'Access LMS', icon: GraduationCap, isSSO: true }
                 ]
             },
-            {
-                name: 'Vendors & Suppliers',
-                icon: Building2,
-                isParent: true,
-                key: 'vendors-group',
-                subItems: [
-                    { name: 'Vendor Management', icon: Building2, path: '/admin/vendors' }
-                ]
-            },
-            {
-                name: 'Infrastructure',
-                icon: Building2,
-                isParent: true,
-                key: 'infrastructure-group',
-                subItems: [
-                    { name: 'Buildings & Facilities', icon: Building2, path: '/admin/facility-management' }
-                ]
-            },
+            ...vendorsGroup,
+            ...infrastructureGroup,
             {
                 name: 'Users & Access',
                 icon: ShieldCheck,
@@ -212,6 +224,9 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
                 ]
             },
             { name: 'Support Inbox', icon: HelpCircle, path: '/admin/support-requests' },
+            ...partnersGroup,
+            ...vendorsGroup,
+            ...infrastructureGroup,
             { name: 'Settings', icon: Settings, path: '/settings' }
         ]
         : [];
@@ -224,6 +239,9 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
             { name: 'LMS Enrolments', icon: GraduationCap, path: '/admin/lms-enrolments' },
             { name: 'Student Programmes', icon: BookOpen, path: '/admin/student-programmes' },
             { name: 'Users by Role', icon: Users, path: '/admin/users-by-role' },
+            ...partnersGroup,
+            ...vendorsGroup,
+            ...infrastructureGroup,
             { name: 'Settings', icon: Settings, path: '/settings' }
         ]
         : [];

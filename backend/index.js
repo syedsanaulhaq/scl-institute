@@ -1768,6 +1768,11 @@ app.post('/api/login', async (req, res) => {
 
             const token = 'Bearer ' + Buffer.from(`${user.id}:${user.email}`).toString('base64');
             activeSessions.set(token, user.id);
+
+            const effectiveRole = roleContext.primaryRole || user.role;
+            const [privRows] = await pool.query('SELECT privileges FROM role_privileges WHERE role = ?', [effectiveRole]);
+            const privileges = privRows.length ? (JSON.parse(privRows[0].privileges) || {}) : {};
+
             res.json({ 
                 success: true,
                 token: token,
@@ -1775,8 +1780,9 @@ app.post('/api/login', async (req, res) => {
                     id: user.id, 
                     email: user.email, 
                     name: fullName,
-                    role: roleContext.primaryRole || user.role,
+                    role: effectiveRole,
                     roles: roleContext.roles,
+                    privileges,
                     roleContext: {
                         ...roleContext,
                         source: moodleRoleData?.source || 'local'
@@ -1833,6 +1839,11 @@ app.post('/api/v1/auth/login', async (req, res) => {
             
             const accessToken = `token_${user.id}_${Date.now()}`;
             activeSessions.set(accessToken, user.id);
+
+            const effectiveRoleV1 = roleContext.primaryRole || user.role;
+            const [privRowsV1] = await pool.query('SELECT privileges FROM role_privileges WHERE role = ?', [effectiveRoleV1]);
+            const privilegesV1 = privRowsV1.length ? (JSON.parse(privRowsV1[0].privileges) || {}) : {};
+
             res.json({ 
                 success: true,
                 tokens: {
@@ -1842,8 +1853,9 @@ app.post('/api/v1/auth/login', async (req, res) => {
                     id: user.id, 
                     email: user.email, 
                     name: `${user.first_name} ${user.last_name}`.trim(),
-                    role: roleContext.primaryRole || user.role,
+                    role: effectiveRoleV1,
                     roles: roleContext.roles,
+                    privileges: privilegesV1,
                     roleContext: {
                         ...roleContext,
                         source: moodleRoleData?.source || 'local'
