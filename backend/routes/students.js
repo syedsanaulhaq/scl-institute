@@ -87,6 +87,25 @@ const upload = multer({
     }
 });
 
+// CV-specific multer config — allows Word docs and has a higher size limit
+const cvUpload = multer({
+    storage,
+    limits: { fileSize: 25 * 1024 * 1024 }, // 25MB for CVs
+    fileFilter: (req, file, cb) => {
+        const allowedTypes = [
+            'application/pdf',
+            'image/jpeg', 'image/png', 'image/jpg',
+            'application/msword',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        ];
+        if (allowedTypes.includes(file.mimetype)) {
+            cb(null, true);
+        } else {
+            cb(new Error('Invalid file type. Only PDF, Word (.doc/.docx), JPG, and PNG files are allowed.'));
+        }
+    }
+});
+
 // Multer config for mixed files and fields
 const uploadFields = upload.fields([
     { name: 'documents', maxCount: 10 },
@@ -3087,7 +3106,19 @@ router.get('/applications/:id/offer-letter', async (req, res) => {
     }
 });
 
-router.post('/teacher-registrations', upload.single('cv_resume'), async (req, res) => {
+router.post('/teacher-registrations', (req, res, next) => {
+    cvUpload.single('cv_resume')(req, res, (err) => {
+        if (err instanceof multer.MulterError) {
+            const msg = err.code === 'LIMIT_FILE_SIZE'
+                ? 'CV file is too large. Maximum allowed size is 25MB.'
+                : `Upload error: ${err.message}`;
+            return res.status(400).json({ success: false, message: msg });
+        } else if (err) {
+            return res.status(400).json({ success: false, message: err.message });
+        }
+        next();
+    });
+}, async (req, res) => {
     try {
         const {
             first_name,
