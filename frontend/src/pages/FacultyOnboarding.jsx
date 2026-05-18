@@ -78,8 +78,13 @@ export default function FacultyOnboarding() {
             await axios.put(`${API_URL}/students/faculty-onboarding/${selected.id}`, form);
             showToast('Onboarding record saved.', 'success');
             fetchFaculty();
-            // Update local selected state
-            setSelected(prev => ({ ...prev, ...form }));
+            // Update local selected state including computed onboarding_status
+            setSelected(prev => {
+                const allDone = CHECKLIST.every(c => form[c.key]);
+                const anyDone = CHECKLIST.some(c => form[c.key]);
+                const newStatus = allDone ? 'Completed' : anyDone ? 'In Progress' : 'Pending';
+                return { ...prev, ...form, onboarding_status: newStatus };
+            });
         } catch {
             showToast('Failed to save. Please try again.', 'error');
         } finally {
