@@ -62,9 +62,7 @@ services:
         condition: service_healthy
     networks:
       - scl-network-test
-    volumes:
-      - ./backend:/app
-      - /app/node_modules
+    # No volume mount — uses built image so local .env is not overlaid
     command: npm start
 
   scli-frontend-test:
@@ -73,7 +71,7 @@ services:
       dockerfile: Dockerfile
     container_name: scli-frontend-test
     ports:
-      - "3001:3000"
+      - "3001:3001"
     environment:
       - VITE_API_URL=${VITE_API_URL}
       - VITE_ENV=${VITE_ENV}
@@ -84,7 +82,8 @@ services:
     volumes:
       - ./frontend:/app
       - /app/node_modules
-    command: npm run dev
+    # Run Vite on 3001 inside container so Host header matches (avoids DNS-rebinding 404)
+    command: npm run dev -- --port 3001
 
   scli-public-portal-test:
     build: ./public-portal
