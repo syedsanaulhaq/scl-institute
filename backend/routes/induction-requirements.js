@@ -12,7 +12,7 @@ router.get('/requirements/:inductionId', async (req, res) => {
         
         const [requirements] = await pool.query(
             `SELECT * FROM induction_requirements 
-             WHERE course_id = ?
+             WHERE induction_id = ?
              ORDER BY section_number ASC, id ASC`,
             [inductionId]
         );

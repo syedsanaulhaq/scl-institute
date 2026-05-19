@@ -17,6 +17,13 @@ const courseVisitsRouter = require('./routes/course-visits');
 const supportRouter = require('./routes/support');
 const vendorsRouter = require('./routes/vendors');
 const facilityManagementRouter = require('./routes/facility-management');
+const deferralRequestsRouter = require('./routes/deferral-requests');
+const complaintsAppealsRouter = require('./routes/complaints-appeals');
+const academicMisconductRouter = require('./routes/academic-misconduct');
+const studentEngagementRouter = require('./routes/student-engagement');
+const inductionsRouter = require('./routes/inductions');
+const inductionRequirementsRouter = require('./routes/induction-requirements');
+const moodleRouter = require('./routes/moodle');
 
 process.on('unhandledRejection', (reason, p) => {
     console.error('Unhandled Rejection at:', p, 'reason:', reason);
@@ -360,6 +367,13 @@ app.use('/api/course-visits', courseVisitsRouter);
 app.use('/api/support', supportRouter);
 app.use('/api/vendors', vendorsRouter);
 app.use('/api/facility-management', facilityManagementRouter);
+app.use('/api/deferral-requests', deferralRequestsRouter);
+app.use('/api/complaints-appeals', complaintsAppealsRouter);
+app.use('/api/academic-misconduct', academicMisconductRouter);
+app.use('/api/student-engagement', studentEngagementRouter);
+app.use('/api/inductions', inductionsRouter);
+app.use('/api/induction-requirements', inductionRequirementsRouter);
+app.use('/api/moodle', moodleRouter);
 
 // ===============================
 // ROUTES
@@ -389,11 +403,12 @@ app.get('/api/health/db', async (req, res) => {
 app.get('/api/public/programs', async (req, res) => {
     try {
         const query = `
-            SELECT id, name, code, description, duration, qualification, 
-                   fee_amount, fee_currency, status, created_at
-            FROM programs 
-            WHERE status = 'active'
-            ORDER BY name
+            SELECT id, course_code as code, course_title as name, description,
+                   duration_months as duration, course_type as qualification,
+                   awarding_body, course_status as status, created_at
+            FROM courses 
+            WHERE course_status = 'active'
+            ORDER BY course_title
         `;
         
         const [results] = await db.execute(query);
@@ -663,12 +678,12 @@ app.put('/api/admin/enquiries/:id', requireAuth, async (req, res) => {
 app.get('/api/admin/dashboard-stats', requireAuth, async (req, res) => {
     try {
         const queries = {
-            applications: 'SELECT COUNT(*) as count FROM applications',
-            pending_applications: 'SELECT COUNT(*) as count FROM applications WHERE status = "pending"',
-            approved_applications: 'SELECT COUNT(*) as count FROM applications WHERE status = "approved"',
+            applications: 'SELECT COUNT(*) as count FROM student_applications WHERE is_deleted = FALSE',
+            pending_applications: 'SELECT COUNT(*) as count FROM student_applications WHERE application_status = "pending" AND is_deleted = FALSE',
+            approved_applications: 'SELECT COUNT(*) as count FROM student_applications WHERE application_status = "accepted" AND is_deleted = FALSE',
             enquiries: 'SELECT COUNT(*) as count FROM enquiries',
-            pending_enquiries: 'SELECT COUNT(*) as count FROM enquiries WHERE status = "pending"',
-            programs: 'SELECT COUNT(*) as count FROM programs WHERE status = "active"'
+            pending_enquiries: 'SELECT COUNT(*) as count FROM enquiries WHERE status = "new"',
+            programs: 'SELECT COUNT(*) as count FROM courses WHERE course_status = "active"'
         };
         
         const stats = {};
