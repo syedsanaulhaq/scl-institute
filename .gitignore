@@ -63,6 +63,27 @@ dbname
 dbuser
 scripts/promote-develop-to-production.ps1
 
+# Demo / media outputs
+demo-output/
+demo-video.js
+demo-video-audio.js
+
+# Progress report documents
+*.docx
+generate_progress_report.py
+
+# One-off ops & data scripts (not part of the application)
+checkpw.js
+insert_teacher_notifs.js
+patch_nginx.py
+fix_nginx.py
+fix_sso.py
+teacher_notifs_insert.py
+notifs_hex.sql
+teacher_notifs.sql
+dedup-partners.sql
+test-insert.sql
+
 # Local docker overrides (dev-only nginx etc.)
 docker-compose.override.yml
 

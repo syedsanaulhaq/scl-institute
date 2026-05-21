@@ -5640,6 +5640,55 @@ router.post('/applications/:id/review', async (req, res) => {
 });
 
 // ===============================================
+// SYSTEM OVERVIEW: GET /api/students/system-overview
+// Aggregated counts for the main institutional dashboard
+// ===============================================
+router.get('/system-overview', async (req, res) => {
+    try {
+        const [[{ total_users }]] = await db.execute(
+            `SELECT COUNT(*) AS total_users FROM users WHERE is_active = 1 OR is_active IS NULL`
+        );
+        const [[{ total_students }]] = await db.execute(
+            `SELECT COUNT(*) AS total_students FROM users WHERE LOWER(role) = 'student' AND (is_active = 1 OR is_active IS NULL)`
+        );
+        const [[{ total_courses }]] = await db.execute(
+            `SELECT COUNT(*) AS total_courses FROM courses WHERE course_status = 'active'`
+        );
+        const [[{ total_applications }]] = await db.execute(
+            `SELECT COUNT(*) AS total_applications FROM student_applications WHERE is_deleted = FALSE`
+        );
+        const [[{ pending_applications }]] = await db.execute(
+            `SELECT COUNT(*) AS pending_applications FROM student_applications WHERE application_status = 'pending' AND is_deleted = FALSE`
+        );
+        const [[{ total_staff }]] = await db.execute(
+            `SELECT COUNT(*) AS total_staff FROM users WHERE LOWER(role) NOT IN ('student') AND (is_active = 1 OR is_active IS NULL)`
+        );
+        // Applications in last 30 days
+        const [[{ apps_last_30d }]] = await db.execute(
+            `SELECT COUNT(*) AS apps_last_30d FROM student_applications WHERE submitted_at >= DATE_SUB(NOW(), INTERVAL 30 DAY) AND is_deleted = FALSE`
+        );
+        res.json({
+            success: true,
+            data: {
+                total_users: Number(total_users),
+                total_students: Number(total_students),
+                total_staff: Number(total_staff),
+                total_courses: Number(total_courses),
+                total_applications: Number(total_applications),
+                pending_applications: Number(pending_applications),
+                apps_last_30d: Number(apps_last_30d),
+                server_uptime_seconds: Math.floor(process.uptime()),
+                node_version: process.version,
+                timestamp: new Date().toISOString()
+            }
+        });
+    } catch (error) {
+        console.error('Error fetching system overview:', error);
+        res.status(500).json({ success: false, message: 'Failed to fetch system overview', error: error.message });
+    }
+});
+
+// ===============================================
 // ROUTE 6: GET /api/students/dashboard-stats
 // Get dashboard statistics for admissions team
 // ===============================================

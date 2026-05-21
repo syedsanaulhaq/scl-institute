@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import {
     LayoutDashboard,
     GraduationCap,
@@ -17,16 +18,131 @@ import {
     UserSquare2,
     Settings2,
     Lock,
-    ClipboardList
+    ClipboardList,
+    Server,
+    Database,
+    Wifi,
+    TrendingUp,
+    BookOpen,
+    UserCheck,
+    Clock
 } from 'lucide-react';
 import { openMoodleSSO } from '../utils/ssoService';
 import { getRoleContext } from '../utils/roleAccess';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
+
+// ─── Inline SVG helpers ─────────────────────────────────────────────────────
+
+// Donut chart (applications by status)
+function DonutChart({ segments, size = 120, strokeWidth = 18 }) {
+    const r = (size - strokeWidth) / 2;
+    const circ = 2 * Math.PI * r;
+    const cx = size / 2, cy = size / 2;
+    let offset = 0;
+    const total = segments.reduce((s, seg) => s + seg.value, 0) || 1;
+    return (
+        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="rotate-[-90deg]">
+            {segments.map((seg, i) => {
+                const dash = (seg.value / total) * circ;
+                const gap = circ - dash;
+                const el = (
+                    <circle key={i} cx={cx} cy={cy} r={r}
+                        fill="none" stroke={seg.color} strokeWidth={strokeWidth}
+                        strokeDasharray={`${dash} ${gap}`}
+                        strokeDashoffset={-offset}
+                        strokeLinecap="butt"
+                    />
+                );
+                offset += dash;
+                return el;
+            })}
+        </svg>
+    );
+}
+
+// Minimal horizontal bar chart
+function HBarChart({ bars, maxVal }) {
+    const max = maxVal || Math.max(...bars.map(b => b.value), 1);
+    return (
+        <div className="space-y-2">
+            {bars.map((b, i) => (
+                <div key={i} className="flex items-center gap-2 text-xs">
+                    <span className="w-24 truncate text-gray-500 text-right shrink-0">{b.label}</span>
+                    <div className="flex-1 bg-gray-100 rounded-full h-3 overflow-hidden">
+                        <div
+                            className="h-3 rounded-full transition-all duration-700"
+                            style={{ width: `${(b.value / max) * 100}%`, background: b.color || '#6366f1' }}
+                        />
+                    </div>
+                    <span className="w-6 text-gray-700 font-semibold">{b.value}</span>
+                </div>
+            ))}
+        </div>
+    );
+}
+
+// Mini sparkline bar chart (monthly trend)
+function SparkBar({ data, color = '#6366f1' }) {
+    const max = Math.max(...data.map(d => d.value), 1);
+    return (
+        <div className="flex items-end gap-0.5 h-14">
+            {data.map((d, i) => (
+                <div key={i} className="flex-1 flex flex-col items-center gap-0.5 group relative">
+                    <div
+                        className="w-full rounded-sm transition-all duration-500"
+                        style={{ height: `${Math.max((d.value / max) * 52, 2)}px`, background: color, opacity: 0.8 }}
+                    />
+                    <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-[9px] px-1 py-0.5 rounded opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-10">
+                        {d.label}: {d.value}
+                    </div>
+                </div>
+            ))}
+        </div>
+    );
+}
+
+function formatUptime(secs) {
+    const d = Math.floor(secs / 86400);
+    const h = Math.floor((secs % 86400) / 3600);
+    const m = Math.floor((secs % 3600) / 60);
+    if (d > 0) return `${d}d ${h}h`;
+    if (h > 0) return `${h}h ${m}m`;
+    return `${m}m`;
+}
 
 const Dashboard = ({ user, viewMode = 'auto' }) => {
     const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const roleContext = getRoleContext(user);
+
+    // ─── Stats & health state ────────────────────────────────────────────────
+    const [sysOverview, setSysOverview] = useState(null);
+    const [dashStats, setDashStats] = useState(null);
+    const [infraHealth, setInfraHealth] = useState({ api: null, db: null });
+
+    useEffect(() => {
+        // Fetch system overview counts
+        axios.get(`${API_URL}/students/system-overview`)
+            .then(r => r.data?.success && setSysOverview(r.data.data))
+            .catch(() => {});
+
+        // Fetch dashboard stats (applications trend etc.)
+        axios.get(`${API_URL}/students/dashboard-stats`)
+            .then(r => r.data?.success && setDashStats(r.data.data))
+            .catch(() => {});
+
+        // Fetch infrastructure health
+        const t0 = Date.now();
+        axios.get(`${API_URL}/health`)
+            .then(() => setInfraHealth(prev => ({ ...prev, api: { ok: true, ms: Date.now() - t0 } })))
+            .catch(() => setInfraHealth(prev => ({ ...prev, api: { ok: false, ms: null } })));
+        axios.get(`${API_URL}/health/db`)
+            .then(r => setInfraHealth(prev => ({ ...prev, db: { ok: r.data?.status === 'OK', ms: null } })))
+            .catch(() => setInfraHealth(prev => ({ ...prev, db: { ok: false, ms: null } })));
+    }, []);
+
 
     // Resolve current dashboard audience mode.
     const activeView = viewMode !== 'auto'
@@ -187,12 +303,6 @@ const Dashboard = ({ user, viewMode = 'auto' }) => {
 
     const accessLabel = roleContext?.primaryRole || user?.role || 'user';
 
-    const stats = [
-        { label: 'Active Sessions', value: '12', icon: Activity, color: 'blue' },
-        { label: 'Total Users', value: '1,284', icon: Users, color: 'purple' },
-        { label: 'System Health', value: '99.9%', icon: CheckCircle2, color: 'green' },
-    ];
-
     return (
         <div className="space-y-10 animate-in fade-in duration-500">
             <div className="flex justify-between items-end">
@@ -294,6 +404,228 @@ const Dashboard = ({ user, viewMode = 'auto' }) => {
                     </div>
                 </div>
             )}
+
+            {/* ── KPI Cards ─────────────────────────────────────────────── */}
+            <div className="space-y-4">
+                <div className="flex items-center space-x-3 border-b border-gray-100 pb-4">
+                    <h2 className="text-xl font-bold text-gray-800">Institution Overview</h2>
+                    <span className="bg-green-100 text-green-700 px-2 py-0.5 rounded-lg text-xs font-bold">Live</span>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                    {[
+                        { label: 'Total Users', value: sysOverview?.total_users, icon: Users, color: 'bg-blue-500', text: 'text-blue-600' },
+                        { label: 'Students', value: sysOverview?.total_students, icon: GraduationCap, color: 'bg-indigo-500', text: 'text-indigo-600' },
+                        { label: 'Staff', value: sysOverview?.total_staff, icon: UserCheck, color: 'bg-purple-500', text: 'text-purple-600' },
+                        { label: 'Active Courses', value: sysOverview?.total_courses, icon: BookOpen, color: 'bg-emerald-500', text: 'text-emerald-600' },
+                        { label: 'Applications', value: sysOverview?.total_applications, icon: ClipboardList, color: 'bg-orange-500', text: 'text-orange-600' },
+                        { label: 'Pending Review', value: sysOverview?.pending_applications, icon: Clock, color: 'bg-amber-500', text: 'text-amber-600' },
+                    ].map((kpi, i) => (
+                        <div key={i} className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex flex-col gap-2">
+                            <div className={`w-8 h-8 ${kpi.color} rounded-lg flex items-center justify-center`}>
+                                <kpi.icon className="w-4 h-4 text-white" />
+                            </div>
+                            <p className={`text-2xl font-extrabold ${kpi.text}`}>
+                                {sysOverview ? (kpi.value ?? 0).toLocaleString() : '—'}
+                            </p>
+                            <p className="text-[11px] text-gray-500 font-medium leading-tight">{kpi.label}</p>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            {/* ── Charts Row ─────────────────────────────────────────────── */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+
+                {/* Application Status Donut */}
+                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+                    <h3 className="text-sm font-bold text-gray-700 mb-4">Applications by Status</h3>
+                    {dashStats ? (() => {
+                        const palette = {
+                            'accepted': '#22c55e',
+                            'approved': '#16a34a',
+                            'pending': '#f59e0b',
+                            'rejected': '#ef4444',
+                            'under_review': '#6366f1',
+                            'conditional_accept': '#3b82f6',
+                            'conditional': '#3b82f6',
+                            'submitted': '#94a3b8',
+                        };
+                        const segs = (dashStats.status_summary || []).map(s => ({
+                            label: s.application_status,
+                            value: Number(s.count),
+                            color: palette[s.application_status?.toLowerCase()] || '#cbd5e1'
+                        }));
+                        const total = segs.reduce((s, x) => s + x.value, 0);
+                        return (
+                            <div className="flex items-center gap-4">
+                                <div className="relative shrink-0">
+                                    <DonutChart segments={segs} size={110} strokeWidth={16} />
+                                    <div className="absolute inset-0 flex flex-col items-center justify-center">
+                                        <span className="text-xl font-extrabold text-gray-800">{total}</span>
+                                        <span className="text-[9px] text-gray-400 font-medium">Total</span>
+                                    </div>
+                                </div>
+                                <div className="space-y-1.5 min-w-0 flex-1">
+                                    {segs.map((s, i) => (
+                                        <div key={i} className="flex items-center gap-2 text-xs">
+                                            <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: s.color }} />
+                                            <span className="capitalize text-gray-600 truncate flex-1">{s.label.replace(/_/g, ' ')}</span>
+                                            <span className="font-bold text-gray-800">{s.value}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        );
+                    })() : (
+                        <div className="flex items-center justify-center h-28 text-gray-300 text-xs">Loading…</div>
+                    )}
+                </div>
+
+                {/* Monthly Applications Trend */}
+                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+                    <h3 className="text-sm font-bold text-gray-700 mb-4">Monthly Applications (12 months)</h3>
+                    {dashStats?.monthly_trend?.length > 0 ? (() => {
+                        const bars = dashStats.monthly_trend.map(m => ({
+                            label: m.month?.slice(5) || m.month,
+                            value: Number(m.total)
+                        }));
+                        return (
+                            <>
+                                <SparkBar data={bars} color="#6366f1" />
+                                <div className="flex justify-between mt-1">
+                                    <span className="text-[9px] text-gray-400">{bars[0]?.label}</span>
+                                    <span className="text-[9px] text-gray-400">{bars[bars.length - 1]?.label}</span>
+                                </div>
+                                <div className="mt-3 flex items-center gap-2 text-xs text-gray-500">
+                                    <TrendingUp className="w-3.5 h-3.5 text-indigo-400" />
+                                    <span>Last 30 days: <strong className="text-gray-800">{sysOverview?.apps_last_30d ?? '…'}</strong> applications</span>
+                                </div>
+                            </>
+                        );
+                    })() : (
+                        <div className="flex items-center justify-center h-28 text-gray-300 text-xs">
+                            {dashStats ? 'No trend data yet' : 'Loading…'}
+                        </div>
+                    )}
+                </div>
+
+                {/* Top Courses by Applications */}
+                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+                    <h3 className="text-sm font-bold text-gray-700 mb-4">Top Courses by Applications</h3>
+                    {dashStats?.course_summary?.length > 0 ? (() => {
+                        const bars = dashStats.course_summary.slice(0, 6).map((c, i) => ({
+                            label: c.course_code || c.course_title?.slice(0, 12) || `Course ${i + 1}`,
+                            value: Number(c.applications),
+                            color: ['#6366f1','#22c55e','#f59e0b','#3b82f6','#ef4444','#8b5cf6'][i % 6]
+                        }));
+                        return <HBarChart bars={bars} />;
+                    })() : (
+                        <div className="flex items-center justify-center h-28 text-gray-300 text-xs">
+                            {dashStats ? 'No course data yet' : 'Loading…'}
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {/* ── Access Level & Infrastructure ──────────────────────────── */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+
+                {/* Active Privileges */}
+                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+                    <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-sm font-bold text-gray-700">Your Active Privileges</h3>
+                        <span className="text-xs bg-scl-purple/10 text-scl-purple px-2 py-0.5 rounded-full font-bold">
+                            {visibleModules.length} / {modules.length} modules
+                        </span>
+                    </div>
+                    {/* Progress bar */}
+                    <div className="w-full bg-gray-100 rounded-full h-2 mb-4">
+                        <div
+                            className="h-2 rounded-full bg-gradient-to-r from-scl-purple to-indigo-400 transition-all duration-700"
+                            style={{ width: `${(visibleModules.length / Math.max(modules.length, 1)) * 100}%` }}
+                        />
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                        {modules.map(mod => {
+                            const active = visibleModules.some(v => v.id === mod.id);
+                            return (
+                                <div
+                                    key={mod.id}
+                                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border transition-all ${
+                                        active
+                                            ? 'bg-scl-purple/10 text-scl-purple border-scl-purple/20'
+                                            : 'bg-gray-50 text-gray-300 border-gray-100'
+                                    }`}
+                                >
+                                    <mod.icon className="w-3 h-3" />
+                                    {mod.title.split('&')[0].trim().split(' ').slice(0, 2).join(' ')}
+                                </div>
+                            );
+                        })}
+                    </div>
+                    <p className="text-[10px] text-gray-400 mt-3">
+                        Role: <strong className="text-gray-600 capitalize">{accessLabel}</strong> · Access level: <strong className="text-gray-600">{roleContext?.hasSystemManagement ? 'Full System' : 'Standard'}</strong>
+                    </p>
+                </div>
+
+                {/* Infrastructure Status */}
+                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+                    <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-sm font-bold text-gray-700">Infrastructure Status</h3>
+                        <span className="text-[10px] text-gray-400">system.sclsandbox.xyz</span>
+                    </div>
+                    <div className="space-y-3">
+                        {[
+                            {
+                                label: 'API Server',
+                                icon: Server,
+                                status: infraHealth.api == null ? 'checking' : infraHealth.api.ok ? 'ok' : 'down',
+                                detail: infraHealth.api?.ok ? `${infraHealth.api.ms}ms` : infraHealth.api?.ok === false ? 'Unreachable' : '…'
+                            },
+                            {
+                                label: 'Database (MySQL)',
+                                icon: Database,
+                                status: infraHealth.db == null ? 'checking' : infraHealth.db.ok ? 'ok' : 'down',
+                                detail: infraHealth.db?.ok ? 'Connected' : infraHealth.db?.ok === false ? 'Error' : '…'
+                            },
+                            {
+                                label: 'Backend Process',
+                                icon: Activity,
+                                status: sysOverview ? 'ok' : 'checking',
+                                detail: sysOverview ? `Uptime: ${formatUptime(sysOverview.server_uptime_seconds)}` : '…'
+                            },
+                            {
+                                label: 'Node.js Runtime',
+                                icon: Settings2,
+                                status: sysOverview ? 'ok' : 'checking',
+                                detail: sysOverview?.node_version || '…'
+                            },
+                        ].map((item, i) => (
+                            <div key={i} className="flex items-center gap-3">
+                                <div className="p-1.5 rounded-lg bg-gray-50">
+                                    <item.icon className="w-4 h-4 text-gray-500" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-xs font-semibold text-gray-700">{item.label}</p>
+                                    <p className="text-[10px] text-gray-400">{item.detail}</p>
+                                </div>
+                                <div className={`flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                                    item.status === 'ok' ? 'bg-green-50 text-green-600' :
+                                    item.status === 'down' ? 'bg-red-50 text-red-600' :
+                                    'bg-gray-50 text-gray-400'
+                                }`}>
+                                    <span className={`w-1.5 h-1.5 rounded-full ${
+                                        item.status === 'ok' ? 'bg-green-500' :
+                                        item.status === 'down' ? 'bg-red-500' :
+                                        'bg-gray-300 animate-pulse'
+                                    }`} />
+                                    {item.status === 'ok' ? 'Online' : item.status === 'down' ? 'Down' : 'Checking'}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </div>
         </div>
     );
 };

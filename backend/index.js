@@ -736,6 +736,14 @@ app.get('/api/admin/overview-stats', requireAuth, async (req, res) => {
             db.execute(`SELECT COUNT(*) as count FROM course_visits`),
             // Recent applications (7 days)
             db.execute(`SELECT COUNT(*) as count FROM student_applications WHERE is_deleted = FALSE AND submitted_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)`),
+            // Vendors by type
+            db.execute(`SELECT vendor_type, status, COUNT(*) as count FROM vendors GROUP BY vendor_type, status`),
+            // Partners by type
+            db.execute(`SELECT partner_type, status, COUNT(*) as count FROM partners GROUP BY partner_type, status`),
+            // Infrastructure: buildings, rooms, facility compliance
+            db.execute(`SELECT COUNT(*) as count FROM buildings`),
+            db.execute(`SELECT COUNT(*) as count FROM building_rooms`),
+            db.execute(`SELECT status, COUNT(*) as count FROM facility_compliance GROUP BY status`),
         ]);
 
         // --- Moodle DB queries (run in parallel) ---
@@ -765,6 +773,7 @@ app.get('/api/admin/overview-stats', requireAuth, async (req, res) => {
             [appsByCourse], [totalRegs], [regsByStatus], [intakes],
             lifecycleDashboard, [changeReqs], [teacherRegs], [progRegs],
             [accred], [inductions], [visits], [recentApps],
+            [vendorsByType], [partnersByType], [buildingCount], [roomCount], [facilityCompliance],
         ] = results;
 
         const lifecycleTotal = Number(lifecycleDashboard?.data?.data?.summary?.total_courses || 0);
@@ -797,6 +806,19 @@ app.get('/api/admin/overview-stats', requireAuth, async (req, res) => {
                 teacherRegistrations: teacherRegs[0]?.count || 0,
                 studentProgrammes: progRegs,
                 moodle: moodleData,
+                vendors: {
+                    byType: vendorsByType,
+                    total: vendorsByType.reduce((s, r) => s + Number(r.count), 0),
+                },
+                partners: {
+                    byType: partnersByType,
+                    total: partnersByType.reduce((s, r) => s + Number(r.count), 0),
+                },
+                infrastructure: {
+                    buildings: buildingCount[0]?.count || 0,
+                    rooms: roomCount[0]?.count || 0,
+                    facilityCompliance,
+                },
                 lastUpdated: new Date().toISOString(),
             },
         });

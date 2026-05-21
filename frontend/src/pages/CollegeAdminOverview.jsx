@@ -56,6 +56,7 @@ const SectionLink = ({ to, children, navigate }) => (
 const CollegeAdminOverview = ({ user }) => {
     const navigate = useNavigate();
     const [stats, setStats]   = useState(null);
+    const [extraData, setExtraData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError]   = useState('');
 
@@ -63,9 +64,15 @@ const CollegeAdminOverview = ({ user }) => {
         setLoading(true);
         setError('');
         try {
-            const res = await axios.get(`${API_URL}/students/dashboard-stats`);
-            if (res.data?.success) setStats(res.data.data);
+            const token = localStorage.getItem('token');
+            const authHeaders = { headers: { Authorization: `Bearer ${token}` } };
+            const [res, extraRes] = await Promise.allSettled([
+                axios.get(`${API_URL}/students/dashboard-stats`, authHeaders),
+                axios.get(`${API_URL}/admin/overview-stats`, authHeaders),
+            ]);
+            if (res.status === 'fulfilled' && res.value.data?.success) setStats(res.value.data.data);
             else setError('Failed to load dashboard data');
+            if (extraRes.status === 'fulfilled' && extraRes.value.data?.data) setExtraData(extraRes.value.data.data);
         } catch {
             setError('Unable to load dashboard data. Please try again.');
         } finally {
@@ -295,32 +302,122 @@ const CollegeAdminOverview = ({ user }) => {
                 )}
             </div>
 
-            {/* ── Quick Actions ── */}
-            <div className="bg-white rounded-xl shadow border border-gray-100 p-6">
-                <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                    <ClipboardList className="w-5 h-5 text-indigo-600" /> Quick Actions
-                </h3>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    {[
-                        { label: 'New Admission',       path: '/student-application', icon: UserCheck,     color: 'text-emerald-600 bg-emerald-50 hover:bg-emerald-100' },
-                        { label: 'All Applications',    path: '/applications',         icon: FileText,      color: 'text-indigo-600  bg-indigo-50  hover:bg-indigo-100'  },
-                        { label: 'Student List',        path: '/student-list',         icon: Users,         color: 'text-blue-600    bg-blue-50    hover:bg-blue-100'    },
-                        { label: 'Course Intakes',   path: '/programme-intakes',    icon: Calendar,      color: 'text-amber-600   bg-amber-50   hover:bg-amber-100'   },
-                        { label: 'LMS Enrolments',      path: '/admin/lms-enrolments', icon: GraduationCap, color: 'text-cyan-600    bg-cyan-50    hover:bg-cyan-100'    },
-                        { label: 'Application Reports', path: '/applications-report',  icon: BarChart3,     color: 'text-rose-600    bg-rose-50    hover:bg-rose-100'    },
-                        { label: 'Admissions Hub',      path: '/college-admin/dashboard', icon: TrendingUp, color: 'text-gray-600    bg-gray-50    hover:bg-gray-100'   },
-                    ].map((a, i) => (
-                        <button
-                            key={i}
-                            onClick={() => navigate(a.path)}
-                            className={`flex flex-col items-center gap-2 rounded-xl p-4 transition border border-transparent ${a.color}`}
-                        >
-                            <a.icon className="w-6 h-6" />
-                            <span className="text-xs font-semibold text-center leading-tight">{a.label}</span>
-                        </button>
-                    ))}
+            {/* ── Vendors, Partners & Infrastructure ── */}
+            {extraData && (
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+                    {/* Vendors by Type */}
+                    <div className="bg-white rounded-xl shadow border border-gray-100 p-6">
+                        <div className="flex items-center mb-4">
+                            <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                                <TrendingUp className="w-5 h-5 text-cyan-600" /> Vendors &amp; Suppliers
+                            </h3>
+                            <SectionLink to="/admin/vendors" navigate={navigate}>View All</SectionLink>
+                        </div>
+                        {(() => {
+                            const vendorTypeData = (extraData.vendors?.byType || []).reduce((acc, row) => {
+                                const t = row.vendor_type || 'Unknown';
+                                const existing = acc.find(a => a.name === t);
+                                if (existing) existing.value += Number(row.count);
+                                else acc.push({ name: t, value: Number(row.count) });
+                                return acc;
+                            }, []);
+                            const vColors = ['#0891b2', '#06b6d4', '#67e8f9', '#a5f3fc'];
+                            return vendorTypeData.length > 0 ? (
+                                <>
+                                    <ResponsiveContainer width="100%" height={200}>
+                                        <PieChart>
+                                            <Pie data={vendorTypeData} cx="50%" cy="50%" innerRadius={45} outerRadius={80} paddingAngle={3} dataKey="value" label={({ name, value }) => `${name} (${value})`}>
+                                                {vendorTypeData.map((_, i) => <Cell key={i} fill={vColors[i % vColors.length]} />)}
+                                            </Pie>
+                                            <Tooltip />
+                                            <Legend wrapperStyle={{ fontSize: 11 }} />
+                                        </PieChart>
+                                    </ResponsiveContainer>
+                                    <p className="text-center text-sm font-bold text-gray-700 mt-1">{extraData.vendors?.total || 0} Total Vendors</p>
+                                </>
+                            ) : <p className="text-gray-400 text-sm text-center py-12">No vendor data</p>;
+                        })()}
+                    </div>
+
+                    {/* Partners & Associates by Type */}
+                    <div className="bg-white rounded-xl shadow border border-gray-100 p-6">
+                        <div className="flex items-center mb-4">
+                            <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                                <Users className="w-5 h-5 text-indigo-600" /> Partners &amp; Associates
+                            </h3>
+                            <SectionLink to="/admin/partners" navigate={navigate}>View All</SectionLink>
+                        </div>
+                        {(() => {
+                            const partnerTypeData = (extraData.partners?.byType || []).reduce((acc, row) => {
+                                const t = (row.partner_type || 'Unknown').replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                                const existing = acc.find(a => a.name === t);
+                                if (existing) existing.value += Number(row.count);
+                                else acc.push({ name: t, value: Number(row.count) });
+                                return acc;
+                            }, []);
+                            const pColors = ['#6366f1', '#818cf8', '#a5b4fc', '#c7d2fe'];
+                            return partnerTypeData.length > 0 ? (
+                                <>
+                                    <ResponsiveContainer width="100%" height={200}>
+                                        <PieChart>
+                                            <Pie data={partnerTypeData} cx="50%" cy="50%" innerRadius={45} outerRadius={80} paddingAngle={3} dataKey="value" label={({ name, value }) => `${name} (${value})`}>
+                                                {partnerTypeData.map((_, i) => <Cell key={i} fill={pColors[i % pColors.length]} />)}
+                                            </Pie>
+                                            <Tooltip />
+                                            <Legend wrapperStyle={{ fontSize: 11 }} />
+                                        </PieChart>
+                                    </ResponsiveContainer>
+                                    <p className="text-center text-sm font-bold text-gray-700 mt-1">{extraData.partners?.total || 0} Total Partners</p>
+                                </>
+                            ) : <p className="text-gray-400 text-sm text-center py-12">No partner data</p>;
+                        })()}
+                    </div>
+
+                    {/* Infrastructure */}
+                    <div className="bg-white rounded-xl shadow border border-gray-100 p-6">
+                        <div className="flex items-center mb-4">
+                            <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                                <BarChart3 className="w-5 h-5 text-rose-600" /> Infrastructure
+                            </h3>
+                            <SectionLink to="/admin/facility-management" navigate={navigate}>View All</SectionLink>
+                        </div>
+                        {(() => {
+                            const infra = extraData.infrastructure || {};
+                            const infraBars = [
+                                { name: 'Buildings', value: Number(infra.buildings || 0), fill: '#f43f5e' },
+                                { name: 'Rooms', value: Number(infra.rooms || 0), fill: '#fb7185' },
+                                { name: 'Facility Checks', value: (infra.facilityCompliance || []).reduce((s, r) => s + Number(r.count), 0), fill: '#fda4af' },
+                            ];
+                            return (
+                                <>
+                                    <ResponsiveContainer width="100%" height={160}>
+                                        <BarChart data={infraBars} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
+                                            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                                            <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                                            <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
+                                            <Tooltip />
+                                            <Bar dataKey="value" radius={[4, 4, 0, 0]} name="Count">
+                                                {infraBars.map((b, i) => <Cell key={i} fill={b.fill} />)}
+                                            </Bar>
+                                        </BarChart>
+                                    </ResponsiveContainer>
+                                    {(infra.facilityCompliance || []).length > 0 && (
+                                        <div className="mt-3 space-y-1">
+                                            {infra.facilityCompliance.map((fc, i) => (
+                                                <div key={i} className="flex justify-between text-xs px-1">
+                                                    <span className="capitalize text-gray-600">{fc.status || 'unknown'}</span>
+                                                    <span className="font-bold text-gray-800">{fc.count}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </>
+                            );
+                        })()}
+                    </div>
                 </div>
-            </div>
+            )}
 
             {/* ── Recent Applications ── */}
             <div className="bg-white rounded-xl shadow border border-gray-100 overflow-hidden">
@@ -367,6 +464,33 @@ const CollegeAdminOverview = ({ user }) => {
                         </table>
                     </div>
                 )}
+            </div>
+
+            {/* ── Quick Actions ── */}
+            <div className="bg-white rounded-xl shadow border border-gray-100 p-6">
+                <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                    <ClipboardList className="w-5 h-5 text-indigo-600" /> Quick Actions
+                </h3>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    {[
+                        { label: 'New Admission',       path: '/student-application', icon: UserCheck,     color: 'text-emerald-600 bg-emerald-50 hover:bg-emerald-100' },
+                        { label: 'All Applications',    path: '/applications',         icon: FileText,      color: 'text-indigo-600  bg-indigo-50  hover:bg-indigo-100'  },
+                        { label: 'Student List',        path: '/student-list',         icon: Users,         color: 'text-blue-600    bg-blue-50    hover:bg-blue-100'    },
+                        { label: 'Course Intakes',      path: '/programme-intakes',    icon: Calendar,      color: 'text-amber-600   bg-amber-50   hover:bg-amber-100'   },
+                        { label: 'LMS Enrolments',      path: '/admin/lms-enrolments', icon: GraduationCap, color: 'text-cyan-600    bg-cyan-50    hover:bg-cyan-100'    },
+                        { label: 'Application Reports', path: '/applications-report',  icon: BarChart3,     color: 'text-rose-600    bg-rose-50    hover:bg-rose-100'    },
+                        { label: 'Admissions Hub',      path: '/college-admin/dashboard', icon: TrendingUp, color: 'text-gray-600    bg-gray-50    hover:bg-gray-100'   },
+                    ].map((a, i) => (
+                        <button
+                            key={i}
+                            onClick={() => navigate(a.path)}
+                            className={`flex flex-col items-center gap-2 rounded-xl p-4 transition border border-transparent ${a.color}`}
+                        >
+                            <a.icon className="w-6 h-6" />
+                            <span className="text-xs font-semibold text-center leading-tight">{a.label}</span>
+                        </button>
+                    ))}
+                </div>
             </div>
 
         </div>

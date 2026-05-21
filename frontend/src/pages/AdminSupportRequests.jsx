@@ -3,18 +3,224 @@ import axios from 'axios';
 import {
     HelpCircle, MessageSquare, FileText, Scale, Accessibility,
     Shield, RefreshCw, ChevronDown, ChevronUp, CheckCircle,
-    Clock, AlertCircle, XCircle, User, Mail, Calendar, Send
+    Clock, AlertCircle, XCircle, User, Mail, Calendar, Send,
+    GraduationCap, Briefcase, Heart, BookOpen, Plus, Loader2, X, Save, Search
 } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
 
 const TABS = [
-    { id: 'requests',     label: 'Support Requests',    icon: HelpCircle },
-    { id: 'feedback',     label: 'Feedback',             icon: MessageSquare },
-    { id: 'complaints',   label: 'Complaints & Appeals', icon: Scale },
-    { id: 'disability',   label: 'Disability',           icon: Accessibility },
-    { id: 'safeguarding', label: 'Safeguarding',         icon: Shield },
+    { id: 'requests',         label: 'Support Requests',    icon: HelpCircle },
+    { id: 'feedback',         label: 'Feedback',             icon: MessageSquare },
+    { id: 'complaints',       label: 'Complaints & Appeals', icon: Scale },
+    { id: 'disability',       label: 'Disability',           icon: Accessibility },
+    { id: 'safeguarding',     label: 'Safeguarding',         icon: Shield },
+    { id: 'graduate_outcome', label: 'Graduate Outcomes',    icon: GraduationCap },
+    { id: 'employability',    label: 'Employability',        icon: Briefcase },
+    { id: 'advising',         label: 'Academic Advising',    icon: BookOpen },
+    { id: 'wellbeing',        label: 'Wellbeing',            icon: Heart },
 ];
+
+// ── Config for the 4 admin-managed engagement tabs ───────────────────────────
+const ENGAGEMENT_CONFIGS = {
+    graduate_outcome: {
+        color: 'text-green-500',
+        columns: [['Employment Status', 'employment_status'], ['Employer', 'employer'], ['Graduation Date', 'graduation_date']],
+        emptyMsg: 'No graduate outcomes recorded yet.',
+        rowTitle: (r) => `${r.employment_status || 'Outcome'} — ${r.student_name || '—'}`,
+        formFields: [
+            { label: 'Student Name', name: 'student_name', type: 'text' },
+            { label: 'Student Email', name: 'student_email', type: 'email' },
+            { label: 'Graduation Date', name: 'graduation_date', type: 'date' },
+            { label: 'Employment Status', name: 'employment_status', type: 'select', options: ['Employed','Self-Employed','Further Study','Unemployed','Unknown'] },
+            { label: 'Employer', name: 'employer', type: 'text' },
+            { label: 'Job Title', name: 'job_title', type: 'text' },
+            { label: 'Evidence (file or URL)', name: 'evidence', type: 'text' },
+            { label: 'Notes', name: 'notes', type: 'textarea' },
+        ],
+    },
+    employability: {
+        color: 'text-amber-500',
+        columns: [['Support Type', 'support_type'], ['Date', 'event_date'], ['Notes', 'notes']],
+        emptyMsg: 'No employability support records yet.',
+        rowTitle: (r) => `${r.support_type || 'Session'} — ${r.student_name || '—'}`,
+        formFields: [
+            { label: 'Student Name', name: 'student_name', type: 'text' },
+            { label: 'Student Email', name: 'student_email', type: 'email' },
+            { label: 'Support Type', name: 'support_type', type: 'select', options: ['CV Workshop','Mock Interview','Internship','Career Fair','Mentorship','Other'] },
+            { label: 'Date', name: 'event_date', type: 'date' },
+            { label: 'Notes', name: 'notes', type: 'textarea' },
+        ],
+    },
+    advising: {
+        color: 'text-teal-500',
+        columns: [['Advisor', 'advisor_name'], ['Meeting Date', 'meeting_date']],
+        emptyMsg: 'No advising sessions recorded yet.',
+        rowTitle: (r) => `Session with ${r.advisor_name || '—'} — ${r.student_name || '—'}`,
+        formFields: [
+            { label: 'Student Name', name: 'student_name', type: 'text' },
+            { label: 'Student Email', name: 'student_email', type: 'email' },
+            { label: 'Advisor Name', name: 'advisor_name', type: 'text' },
+            { label: 'Meeting Date', name: 'meeting_date', type: 'date' },
+            { label: 'Discussion Notes', name: 'discussion_notes', type: 'textarea' },
+            { label: 'Follow-up Actions', name: 'follow_up_actions', type: 'textarea' },
+        ],
+    },
+    wellbeing: {
+        color: 'text-rose-500',
+        columns: [['Type', 'category_type'], ['Date', 'event_date'], ['Outcome', 'outcome']],
+        emptyMsg: 'No wellbeing records yet.',
+        rowTitle: (r) => `${r.category_type || 'Wellbeing'} — ${r.student_name || '—'}`,
+        formFields: [
+            { label: 'Student Name', name: 'student_name', type: 'text' },
+            { label: 'Student Email', name: 'student_email', type: 'email' },
+            { label: 'Wellbeing Type', name: 'category_type', type: 'select', options: ['Mental Health','Physical','Stress Management','Mindfulness','Other'] },
+            { label: 'Date', name: 'event_date', type: 'date' },
+            { label: 'Outcome', name: 'outcome', type: 'textarea' },
+            { label: 'Notes', name: 'notes', type: 'textarea' },
+        ],
+    },
+};
+
+// ── Shared CRUD tab for the 4 admin-managed engagement types ─────────────────
+function EngagementTab({ recordType }) {
+    const cfg = ENGAGEMENT_CONFIGS[recordType];
+    const [items, setItems] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [expanded, setExpanded] = useState(null);
+    const [modal, setModal] = useState(null); // null | { mode:'add'|'edit', data:{} }
+    const [form, setForm] = useState({});
+    const [saving, setSaving] = useState(false);
+
+    const emptyForm = () => cfg.formFields.reduce((a, f) => ({ ...a, [f.name]: '' }), { record_type: recordType });
+
+    const load = () => {
+        setLoading(true);
+        axios.get(`${API_URL}/student-engagement`, { params: { record_type: recordType } })
+            .then(r => setItems(r.data?.data || []))
+            .catch(console.error)
+            .finally(() => setLoading(false));
+    };
+    useEffect(load, [recordType]);
+
+    const openAdd = () => { setForm(emptyForm()); setModal({ mode: 'add' }); };
+    const openEdit = (item) => { setForm({ ...item, record_type: recordType }); setModal({ mode: 'edit', id: item.id }); };
+    const closeModal = () => setModal(null);
+
+    const save = async () => {
+        setSaving(true);
+        try {
+            if (modal.mode === 'edit') await axios.put(`${API_URL}/student-engagement/${modal.id}`, form);
+            else await axios.post(`${API_URL}/student-engagement`, form);
+            load(); closeModal();
+        } catch (e) { console.error(e); }
+        setSaving(false);
+    };
+
+    const del = async (id) => {
+        if (!window.confirm('Delete this record?')) return;
+        await axios.delete(`${API_URL}/student-engagement/${id}`).catch(console.error);
+        load();
+    };
+
+    return (
+        <div>
+            <div className="flex justify-end mb-4">
+                <button onClick={openAdd}
+                    className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700">
+                    <Plus className="w-4 h-4" /> Add Record
+                </button>
+            </div>
+
+            {loading ? <p className="text-center py-10 text-slate-400">Loading…</p> :
+             items.length === 0 ? <p className="text-center py-10 text-slate-400">{cfg.emptyMsg}</p> : (
+                <div className="space-y-2">
+                    {items.map(item => (
+                        <div key={item.id} className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
+                            <div className="flex items-center gap-4 px-5 py-3">
+                                <div className="flex-1 min-w-0">
+                                    <p className="font-medium text-sm text-slate-800">{cfg.rowTitle(item)}</p>
+                                    <p className="text-xs text-slate-500">{item.student_email || ''} · Added {fmt(item.created_at)}</p>
+                                </div>
+                                {cfg.columns.slice(0, 2).map(([label, key]) => (
+                                    <div key={key} className="hidden md:block text-right">
+                                        <p className="text-xs text-slate-400">{label}</p>
+                                        <p className="text-sm text-slate-700">{key.includes('date') ? fmt(item[key]) : (item[key] || '—')}</p>
+                                    </div>
+                                ))}
+                                <button onClick={() => openEdit(item)}
+                                    className="text-xs px-3 py-1 border border-slate-200 rounded-lg hover:bg-slate-50">Edit</button>
+                                <button onClick={() => del(item.id)}
+                                    className="text-xs px-3 py-1 border border-red-200 text-red-600 rounded-lg hover:bg-red-50">Delete</button>
+                                <button onClick={() => setExpanded(expanded === item.id ? null : item.id)}
+                                    className="p-1 rounded hover:bg-slate-100">
+                                    {expanded === item.id ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+                                </button>
+                            </div>
+                            {expanded === item.id && (
+                                <div className="border-t border-slate-100 px-5 py-4 bg-slate-50 grid grid-cols-2 md:grid-cols-3 gap-4">
+                                    {cfg.formFields.map(f => (
+                                        <div key={f.name}>
+                                            <p className="text-xs text-slate-400 uppercase tracking-wide mb-0.5">{f.label}</p>
+                                            <p className="text-sm text-slate-800 whitespace-pre-wrap">
+                                                {f.name.includes('date') ? fmt(item[f.name]) : (item[f.name] || '—')}
+                                            </p>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            {/* Modal */}
+            {modal && (
+                <div className="fixed inset-0 z-50 bg-black/40 flex items-start justify-center pt-12 px-4 overflow-y-auto">
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg mb-8">
+                        <div className="flex items-center justify-between p-5 border-b border-slate-200">
+                            <h2 className="text-base font-bold text-slate-800">
+                                {modal.mode === 'add' ? 'Add Record' : 'Edit Record'}
+                            </h2>
+                            <button onClick={closeModal} className="p-1.5 rounded-lg hover:bg-slate-100"><X className="w-4 h-4" /></button>
+                        </div>
+                        <div className="p-5 space-y-4 max-h-[70vh] overflow-y-auto">
+                            {cfg.formFields.map(f => (
+                                <div key={f.name}>
+                                    <label className="block text-xs font-medium text-slate-600 mb-1">{f.label}</label>
+                                    {f.type === 'textarea' ? (
+                                        <textarea rows={3} value={form[f.name] || ''}
+                                            onChange={e => setForm(p => ({ ...p, [f.name]: e.target.value }))}
+                                            className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-300 outline-none resize-none" />
+                                    ) : f.type === 'select' ? (
+                                        <select value={form[f.name] || ''}
+                                            onChange={e => setForm(p => ({ ...p, [f.name]: e.target.value }))}
+                                            className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-indigo-300 outline-none">
+                                            <option value="">Select…</option>
+                                            {f.options.map(o => <option key={o} value={o}>{o}</option>)}
+                                        </select>
+                                    ) : (
+                                        <input type={f.type} value={form[f.name] || ''}
+                                            onChange={e => setForm(p => ({ ...p, [f.name]: e.target.value }))}
+                                            className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-300 outline-none" />
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                        <div className="p-5 border-t border-slate-200 flex justify-end gap-3">
+                            <button onClick={closeModal} className="px-4 py-2 text-sm border border-slate-200 rounded-lg hover:bg-slate-50">Cancel</button>
+                            <button onClick={save} disabled={saving}
+                                className="flex items-center gap-2 px-5 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 disabled:opacity-50">
+                                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                                {saving ? 'Saving…' : 'Save'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
 
 const STATUS_COLORS = {
     open:        'bg-yellow-100 text-yellow-800',
@@ -560,11 +766,15 @@ const AdminSupportRequests = () => {
 
             {/* Tab Content */}
             <div>
-                {activeTab === 'requests'     && <SupportRequestsTab />}
-                {activeTab === 'feedback'     && <FeedbackTab />}
-                {activeTab === 'complaints'   && <ComplaintsTab />}
-                {activeTab === 'disability'   && <DisabilityTab />}
-                {activeTab === 'safeguarding' && <SafeguardingTab />}
+                {activeTab === 'requests'         && <SupportRequestsTab />}
+                {activeTab === 'feedback'         && <FeedbackTab />}
+                {activeTab === 'complaints'       && <ComplaintsTab />}
+                {activeTab === 'disability'       && <DisabilityTab />}
+                {activeTab === 'safeguarding'     && <SafeguardingTab />}
+                {activeTab === 'graduate_outcome' && <EngagementTab recordType="graduate_outcome" />}
+                {activeTab === 'employability'    && <EngagementTab recordType="employability" />}
+                {activeTab === 'advising'         && <EngagementTab recordType="advising" />}
+                {activeTab === 'wellbeing'        && <EngagementTab recordType="wellbeing" />}
             </div>
         </div>
     );

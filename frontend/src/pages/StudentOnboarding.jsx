@@ -7,15 +7,52 @@ import {
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
 
-const CHECKLIST = [
-    { key: 'welcome_email_sent',      label: 'Welcome Email Sent',     desc: 'Welcome email with login credentials sent to student' },
-    { key: 'portal_access_granted',   label: 'Portal Access Granted',  desc: 'Student portal login verified and working' },
-    { key: 'moodle_enrolled',         label: 'Moodle Enrolled',        desc: 'Student enrolled in all relevant Moodle courses' },
-    { key: 'handbook_signed',         label: 'Handbook Acknowledged',  desc: 'Student handbook and code of conduct signed' },
-    { key: 'orientation_attended',    label: 'Orientation Attended',   desc: 'Student attended induction / orientation session' },
-    { key: 'it_setup_completed',      label: 'IT Setup Completed',     desc: 'Student email, library and IT access all working' },
-    { key: 'student_id_issued',       label: 'Student ID Issued',      desc: 'Physical or virtual student ID card issued' },
+const CHECKLIST_SECTIONS = [
+    {
+        title: 'Admin Setup',
+        color: 'blue',
+        items: [
+            { key: 'welcome_email_sent',      label: 'Welcome Email Sent',     desc: 'Welcome email with login credentials sent to student' },
+            { key: 'portal_access_granted',   label: 'Portal Access Granted',  desc: 'Student portal login verified and working' },
+            { key: 'moodle_enrolled',         label: 'Moodle Enrolled',        desc: 'Student enrolled in all relevant Moodle courses' },
+            { key: 'orientation_attended',    label: 'Orientation Attended',   desc: 'Student attended induction / orientation session' },
+            { key: 'it_setup_completed',      label: 'IT Setup Completed',     desc: 'Student email, library and IT access all working' },
+            { key: 'student_id_issued',       label: 'Student ID Issued',      desc: 'Physical or virtual student ID card issued' },
+            { key: 'library_access_setup',    label: 'Library Access Setup',   desc: 'Student library card and online access configured' },
+        ]
+    },
+    {
+        title: 'Policy Acknowledgements',
+        color: 'purple',
+        items: [
+            { key: 'handbook_signed',                   label: 'Student Handbook',          desc: 'Student handbook read and acknowledged' },
+            { key: 'course_handbook_acknowledged',      label: 'Course Handbook',           desc: 'Course-specific handbook acknowledged' },
+            { key: 'assessment_policy_acknowledged',    label: 'Assessment Policy',         desc: 'Assessment and feedback policy acknowledged' },
+            { key: 'code_of_conduct_signed',            label: 'Code of Conduct',           desc: 'Student code of conduct signed' },
+            { key: 'health_safety_acknowledged',        label: 'Health & Safety',           desc: 'Health and safety policy acknowledged' },
+            { key: 'academic_integrity_acknowledged',   label: 'Academic Integrity',        desc: 'Academic integrity and plagiarism policy acknowledged' },
+            { key: 'attendance_policy_acknowledged',    label: 'Attendance Policy',         desc: 'Attendance requirements and policy acknowledged' },
+            { key: 'it_policy_acknowledged',            label: 'IT Policy',                 desc: 'IT acceptable use policy acknowledged' },
+            { key: 'data_protection_acknowledged',      label: 'Data Protection',           desc: 'Data protection and privacy notice acknowledged' },
+            { key: 'complaints_policy_acknowledged',    label: 'Complaints Policy',         desc: 'Complaints and appeals procedure acknowledged' },
+            { key: 'edi_policy_acknowledged',           label: 'EDI Policy',                desc: 'Equality, Diversity & Inclusion policy acknowledged' },
+            { key: 'safeguarding_acknowledged',         label: 'Safeguarding',              desc: 'Safeguarding policy and reporting obligations acknowledged' },
+            { key: 'prevent_acknowledged',              label: 'Prevent Duty',              desc: 'Prevent duty and radicalisation awareness acknowledged' },
+        ]
+    },
+    {
+        title: 'Consents & Declaration',
+        color: 'green',
+        items: [
+            { key: 'consent_gdpr',             label: 'GDPR Consent',                desc: 'Consent to process personal data under GDPR' },
+            { key: 'consent_awarding_bodies',  label: 'Share with Awarding Bodies',  desc: 'Consent to share data with awarding bodies' },
+            { key: 'consent_marketing',        label: 'Marketing Communications',    desc: 'Consent to receive marketing and news communications' },
+            { key: 'declaration_signed',       label: 'Declaration Signed',          desc: 'Student declaration of accuracy and agreement signed' },
+        ]
+    },
 ];
+
+const CHECKLIST = CHECKLIST_SECTIONS.flatMap(s => s.items);
 
 const STATUS_CONFIG = {
     Pending:       { color: 'bg-gray-100 text-gray-700',   bar: 'bg-gray-400'  },
@@ -61,6 +98,7 @@ export default function StudentOnboarding() {
         const init = {};
         CHECKLIST.forEach(c => { init[c.key] = s[c.key] === 1 || s[c.key] === true; });
         init.remarks = s.remarks || '';
+        init.onboarding_digital_signature = s.onboarding_digital_signature || '';
         setForm(init);
     };
 
@@ -273,26 +311,46 @@ export default function StudentOnboarding() {
                         </div>
 
                         {/* Checklist */}
-                        <div className="flex-1 overflow-y-auto p-4 space-y-2">
-                            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Onboarding Checklist</p>
-                            {CHECKLIST.map(({ key, label, desc }) => (
-                                <label key={key} className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-all hover:shadow-sm ${form[key] ? 'border-green-300 bg-green-50' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
-                                    <input
-                                        type="checkbox"
-                                        checked={!!form[key]}
-                                        onChange={() => toggle(key)}
-                                        className="mt-0.5 w-4 h-4 accent-green-600 cursor-pointer"
-                                    />
-                                    <div className="flex-1 min-w-0">
-                                        <p className={`text-sm font-medium ${form[key] ? 'text-green-800 line-through' : 'text-gray-800'}`}>{label}</p>
-                                        <p className="text-xs text-gray-500 mt-0.5">{desc}</p>
+                        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                            {CHECKLIST_SECTIONS.map(({ title, color, items }) => (
+                                <div key={title}>
+                                    <p className={`text-xs font-semibold uppercase tracking-wider mb-2 ${
+                                        color === 'blue' ? 'text-blue-600' : color === 'purple' ? 'text-purple-600' : 'text-green-600'
+                                    }`}>{title}</p>
+                                    <div className="space-y-1.5">
+                                        {items.map(({ key, label, desc }) => (
+                                            <label key={key} className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-all hover:shadow-sm ${form[key] ? 'border-green-300 bg-green-50' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={!!form[key]}
+                                                    onChange={() => toggle(key)}
+                                                    className="mt-0.5 w-4 h-4 accent-green-600 cursor-pointer"
+                                                />
+                                                <div className="flex-1 min-w-0">
+                                                    <p className={`text-sm font-medium ${form[key] ? 'text-green-800 line-through' : 'text-gray-800'}`}>{label}</p>
+                                                    <p className="text-xs text-gray-500 mt-0.5">{desc}</p>
+                                                </div>
+                                                {form[key] && <CheckCircle2 size={16} className="text-green-500 shrink-0 mt-0.5" />}
+                                            </label>
+                                        ))}
                                     </div>
-                                    {form[key] && <CheckCircle2 size={16} className="text-green-500 shrink-0 mt-0.5" />}
-                                </label>
+                                </div>
                             ))}
 
+                            {/* Digital Signature */}
+                            <div>
+                                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Digital Signature</label>
+                                <input
+                                    type="text"
+                                    value={form.onboarding_digital_signature || ''}
+                                    onChange={e => setForm(prev => ({ ...prev, onboarding_digital_signature: e.target.value }))}
+                                    placeholder="Student full name as digital signature…"
+                                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                />
+                            </div>
+
                             {/* Remarks */}
-                            <div className="mt-3">
+                            <div>
                                 <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Remarks / Notes</label>
                                 <textarea
                                     rows={3}

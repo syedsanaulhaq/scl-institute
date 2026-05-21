@@ -27,6 +27,15 @@ const STATUS_COLORS = {
     completed: '#3b82f6',
 };
 
+function formatUptime(secs) {
+    const d = Math.floor(secs / 86400);
+    const h = Math.floor((secs % 86400) / 3600);
+    const m = Math.floor((secs % 3600) / 60);
+    if (d > 0) return `${d}d ${h}h`;
+    if (h > 0) return `${h}h ${m}m`;
+    return `${m}m`;
+}
+
 const AdminOverview = ({ user }) => {
     const navigate = useNavigate();
     const [data, setData] = useState(null);
@@ -469,54 +478,115 @@ const AdminOverview = ({ user }) => {
 
             {/* Row 5: Change Requests + Teacher Registrations + Quick Links */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Change Requests */}
+                {/* Vendors by Type */}
                 <div className="bg-white rounded-xl shadow border border-gray-100 p-6">
                     <div className="flex items-center mb-4">
                         <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-                            <ClipboardList className="w-5 h-5 text-orange-600" /> Course Change Requests
+                            <TrendingUp className="w-5 h-5 text-cyan-600" /> Vendors &amp; Suppliers
                         </h3>
-                        <SectionLink to="/course-change-requests" />
+                        <SectionLink to="/admin/vendors">View All</SectionLink>
                     </div>
-                    {(changeRequests || []).length > 0 ? (
-                        <div className="space-y-2">
-                            {changeRequests.map((cr, i) => (
-                                <div key={i} className="flex items-center justify-between p-2 rounded-lg bg-gray-50 text-sm">
-                                    <div>
-                                        <span className="font-medium text-gray-700 capitalize">{cr.request_type?.replace(/_/g, ' ')}</span>
-                                        <span className="mx-2 text-gray-300">·</span>
-                                        <span className="text-xs capitalize" style={{ color: STATUS_COLORS[cr.status] || '#6b7280' }}>{cr.status}</span>
-                                    </div>
-                                    <span className="font-bold text-gray-900">{cr.count}</span>
-                                </div>
-                            ))}
-                        </div>
-                    ) : (
-                        <p className="text-gray-400 text-sm text-center py-8">No change requests</p>
-                    )}
+                    {(() => {
+                        const vendorTypeData = (data.vendors?.byType || []).reduce((acc, row) => {
+                            const t = row.vendor_type || 'Unknown';
+                            const existing = acc.find(a => a.name === t);
+                            if (existing) existing.value += Number(row.count);
+                            else acc.push({ name: t, value: Number(row.count) });
+                            return acc;
+                        }, []);
+                        const vColors = ['#0891b2', '#06b6d4', '#67e8f9', '#a5f3fc'];
+                        return vendorTypeData.length > 0 ? (
+                            <>
+                                <ResponsiveContainer width="100%" height={200}>
+                                    <PieChart>
+                                        <Pie data={vendorTypeData} cx="50%" cy="50%" innerRadius={45} outerRadius={80} paddingAngle={3} dataKey="value" label={({ name, value }) => `${name} (${value})`}>
+                                            {vendorTypeData.map((_, i) => <Cell key={i} fill={vColors[i % vColors.length]} />)}
+                                        </Pie>
+                                        <Tooltip />
+                                        <Legend wrapperStyle={{ fontSize: 11 }} />
+                                    </PieChart>
+                                </ResponsiveContainer>
+                                <p className="text-center text-sm font-bold text-gray-700 mt-1">{data.vendors?.total || 0} Total Vendors</p>
+                            </>
+                        ) : <p className="text-gray-400 text-sm text-center py-12">No vendor data</p>;
+                    })()}
                 </div>
 
-                {/* Teacher Registrations + Moodle Users */}
+                {/* Partners & Associates by Type */}
                 <div className="bg-white rounded-xl shadow border border-gray-100 p-6">
                     <div className="flex items-center mb-4">
                         <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-                            <Activity className="w-5 h-5 text-blue-600" /> System Snapshot
+                            <Users className="w-5 h-5 text-indigo-600" /> Partners &amp; Associates
                         </h3>
-                        <SectionLink to="/admin/lms-enrolments">LMS Details</SectionLink>
+                        <SectionLink to="/admin/partners">View All</SectionLink>
                     </div>
-                    <div className="space-y-3">
-                        {[
-                            { label: 'Teacher Registrations', value: teacherRegistrations || 0 },
-                            { label: 'LMS Users (Moodle)', value: moodle?.moodleUsers || 0 },
-                            { label: 'LMS Courses', value: moodle?.courses || 0 },
-                            { label: 'LMS Enrolments', value: moodle?.enrollments || 0 },
-                            { label: 'Course Registrations', value: courseRegistrations?.total || 0 },
-                        ].map((item, i) => (
-                            <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-gray-50">
-                                <span className="text-sm text-gray-600">{item.label}</span>
-                                <span className="text-sm font-bold text-gray-900">{item.value.toLocaleString()}</span>
-                            </div>
-                        ))}
+                    {(() => {
+                        const partnerTypeData = (data.partners?.byType || []).reduce((acc, row) => {
+                            const t = (row.partner_type || 'Unknown').replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                            const existing = acc.find(a => a.name === t);
+                            if (existing) existing.value += Number(row.count);
+                            else acc.push({ name: t, value: Number(row.count) });
+                            return acc;
+                        }, []);
+                        const pColors = ['#6366f1', '#818cf8', '#a5b4fc', '#c7d2fe'];
+                        return partnerTypeData.length > 0 ? (
+                            <>
+                                <ResponsiveContainer width="100%" height={200}>
+                                    <PieChart>
+                                        <Pie data={partnerTypeData} cx="50%" cy="50%" innerRadius={45} outerRadius={80} paddingAngle={3} dataKey="value" label={({ name, value }) => `${name} (${value})`}>
+                                            {partnerTypeData.map((_, i) => <Cell key={i} fill={pColors[i % pColors.length]} />)}
+                                        </Pie>
+                                        <Tooltip />
+                                        <Legend wrapperStyle={{ fontSize: 11 }} />
+                                    </PieChart>
+                                </ResponsiveContainer>
+                                <p className="text-center text-sm font-bold text-gray-700 mt-1">{data.partners?.total || 0} Total Partners</p>
+                            </>
+                        ) : <p className="text-gray-400 text-sm text-center py-12">No partner data</p>;
+                    })()}
+                </div>
+
+                {/* Infrastructure */}
+                <div className="bg-white rounded-xl shadow border border-gray-100 p-6">
+                    <div className="flex items-center mb-4">
+                        <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                            <Activity className="w-5 h-5 text-rose-600" /> Infrastructure
+                        </h3>
+                        <SectionLink to="/admin/facility-management">View All</SectionLink>
                     </div>
+                    {(() => {
+                        const infra = data.infrastructure || {};
+                        const infraBars = [
+                            { name: 'Buildings', value: Number(infra.buildings || 0), fill: '#f43f5e' },
+                            { name: 'Rooms', value: Number(infra.rooms || 0), fill: '#fb7185' },
+                            { name: 'Facility Checks', value: (infra.facilityCompliance || []).reduce((s, r) => s + Number(r.count), 0), fill: '#fda4af' },
+                        ];
+                        return (
+                            <>
+                                <ResponsiveContainer width="100%" height={160}>
+                                    <BarChart data={infraBars} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                                        <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                                        <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
+                                        <Tooltip />
+                                        <Bar dataKey="value" radius={[4, 4, 0, 0]} name="Count">
+                                            {infraBars.map((b, i) => <Cell key={i} fill={b.fill} />)}
+                                        </Bar>
+                                    </BarChart>
+                                </ResponsiveContainer>
+                                {(infra.facilityCompliance || []).length > 0 && (
+                                    <div className="mt-3 space-y-1">
+                                        {infra.facilityCompliance.map((fc, i) => (
+                                            <div key={i} className="flex justify-between text-xs px-1">
+                                                <span className="capitalize text-gray-600">{fc.status || 'unknown'}</span>
+                                                <span className="font-bold text-gray-800">{fc.count}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </>
+                        );
+                    })()}
                 </div>
 
                 {/* Active Courses */}
