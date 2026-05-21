@@ -1429,7 +1429,7 @@ router.get('/admin/teachers', async (req, res) => {
                         ue.id as enrolmentId
                  FROM mdl_user u
                  JOIN mdl_role_assignments ra ON ra.userid = u.id
-                 JOIN mdl_role r ON r.id = ra.roleid AND r.roleid IN (3,4)
+                 JOIN mdl_role r ON r.id = ra.roleid AND r.id IN (3,4)
                  JOIN mdl_context ctx ON ctx.id = ra.contextid AND ctx.contextlevel = 50
                  JOIN mdl_course c ON c.id = ctx.instanceid
                  LEFT JOIN mdl_enrol e ON e.courseid = c.id AND e.enrol = 'manual'
@@ -10985,7 +10985,7 @@ router.get('/programme/:id', async (req, res) => {
                 }
             );
 
-            const allCourses = coursesResponse.data || [];
+            const allCourses = Array.isArray(coursesResponse.data) ? coursesResponse.data : (coursesResponse.data?.courses || []);
             const studentCourse = allCourses.find(c => 
                 c.idnumber === courseCode || 
                 c.shortname === courseCode ||
