@@ -72,6 +72,7 @@ import VendorManagement from './pages/VendorManagement';
 import FacilityManagement from './pages/FacilityManagement';
 import { getRoleContext } from './utils/roleAccess';
 import { logoutMoodleSession } from './utils/ssoService';
+import { ThemeProvider } from './utils/ThemeContext';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
 
@@ -148,6 +149,7 @@ function App() {
     const canAccessManagementPortal = roleContext.canAccessManagementPortal;
     
     return (
+        <ThemeProvider>
         <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
             <Routes>
                 {/* Protected Routes */}
@@ -810,6 +812,7 @@ function App() {
                 } />
             </Routes>
         </Router>
+        </ThemeProvider>
     );
 }
 

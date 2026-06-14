@@ -1,11 +1,13 @@
 import { useState } from 'react';
-import { Search, Bell, User as UserIcon, LogOut } from 'lucide-react';
+import { Search, Bell, User as UserIcon, LogOut, Sun, Moon } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import Notifications from './Notifications';
 import { getRoleContext } from '../utils/roleAccess';
+import { useTheme } from '../utils/ThemeContext';
 
 const Navbar = ({ user, onLogout }) => {
     const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+    const { theme, toggleTheme } = useTheme();
     const roleContext = getRoleContext(user);
     const profilePath = roleContext.canAccessManagementPortal || roleContext.hasTeaching
         ? '/settings'
@@ -18,7 +20,7 @@ const Navbar = ({ user, onLogout }) => {
     };
 
     return (
-        <header className="h-20 bg-white border-b sticky top-0 z-40 px-8 flex items-center justify-between" style={{ borderColor: '#E5E7EB' }}>
+        <header className="h-20 bg-white dark:bg-gray-900 border-b dark:border-gray-700 sticky top-0 z-40 px-8 flex items-center justify-between" style={{ borderColor: '#E5E7EB' }}>
             <div className="flex-1 max-w-xl flex items-center gap-4">
                 <div className="hidden sm:flex items-center gap-3">
                     <span className="uppercase text-lg font-bold tracking-widest" style={{ color: '#1F2937' }}>Stratford College London</span>
@@ -37,10 +39,23 @@ const Navbar = ({ user, onLogout }) => {
             <div className="flex items-center space-x-6">
                 <Link
                     to="/student/notifications"
-                    className="relative p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                    className="relative p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-all"
                 >
                     <Notifications />
                 </Link>
+
+                {/* Dark / Light toggle */}
+                <button
+                    onClick={toggleTheme}
+                    aria-label="Toggle dark mode"
+                    className="p-2 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-all"
+                    title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+                >
+                    {theme === 'dark'
+                        ? <Sun className="w-5 h-5 text-yellow-400" />
+                        : <Moon className="w-5 h-5" />
+                    }
+                </button>
 
                 <div className="h-8 w-px bg-gray-100mx-2"></div>
 

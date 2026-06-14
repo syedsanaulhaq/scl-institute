@@ -461,7 +461,7 @@ const Sidebar = ({ isOpen, toggle, onLogout, user }) => {
                 }`}
             style={{ backgroundColor: '#f3f4f6', borderRight: '1px solid #e5e7eb' }}
         >
-            <div className="flex flex-col h-full relative">
+            <div className="flex flex-col h-full relative dark:bg-gray-900 dark:border-gray-700">
                 {/* Logo Area */}
                 <div className={`h-20 flex items-center px-3 border-b ${isOpen ? 'justify-between' : 'justify-center'}`} style={{ backgroundColor: '#DBEAFE', borderColor: '#E5E7EB' }}>
                     <div className="flex items-center space-x-2 rounded-lg px-2 py-1" style={{ backgroundColor: '#DBEAFE' }}>

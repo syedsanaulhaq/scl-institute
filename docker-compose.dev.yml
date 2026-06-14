@@ -1,24 +1,25 @@
-version: '3.8'
-
 services:
   scli-mysql:
     image: mysql:8.0
     container_name: scli-mysql-dev
+    env_file: .env
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-      MYSQL_DATABASE: ${MYSQL_DATABASE}
-      MYSQL_USER: ${MYSQL_USER}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpassword}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-scl_institute}
+      MYSQL_USER: ${MYSQL_USER:-scl_user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-scl_password}
     ports:
-      - "33061:3306"
+      - "33062:3306"
     volumes:
       - mysql_data_dev:/var/lib/mysql
     networks:
       - scl-network-dev
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
-      timeout: 10s
-      retries: 5
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
 
   # Moodle runs on Ubuntu LAMP stack, not Docker
   # scli-moodle-db and scli-moodle disabled
@@ -35,27 +36,28 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: scli-backend-dev
+    env_file: .env
     ports:
       - "4000:4000"
     environment:
-      - NODE_ENV=${NODE_ENV}
-      - PORT=${PORT}
+      - NODE_ENV=development
+      - PORT=4000
       - DB_HOST=scli-mysql-dev
-      - DB_PORT=${DB_PORT}
-      - DB_USER=${DB_USER}
-      - DB_PASS=${DB_PASS}
-      - DB_NAME=${DB_NAME}
+      - DB_PORT=3306
+      - DB_USER=${DB_USER:-scl_user}
+      - DB_PASS=${DB_PASS:-scl_password}
+      - DB_NAME=${DB_NAME:-scl_institute}
       - MOODLE_URL=http://localhost:9090
       - MOODLE_INTERNAL_URL=http://host.docker.internal:9090
-      - MOODLE_TOKEN=e86dd021aaa42f78114e6c67cc9d8ff1
-      # Moodle DB — points to the WSL LAMP Moodle database (accessible via host bridge)
+      - MOODLE_TOKEN=${MOODLE_TOKEN}
       - MOODLE_DATABASE_HOST=host.docker.internal
       - MOODLE_DATABASE_PORT=3306
-      - MOODLE_DATABASE_USER=moodleuser
-      - MOODLE_DATABASE_PASSWORD=moodlepass
-      - MOODLE_DATABASE_NAME=moodle
+      - MOODLE_DATABASE_USER=${MOODLE_DATABASE_USER:-moodleuser}
+      - MOODLE_DATABASE_PASSWORD=${MOODLE_DATABASE_PASSWORD:-moodlepass}
+      - MOODLE_DATABASE_NAME=${MOODLE_DATABASE_NAME:-moodle}
       - SSO_SECRET=${SSO_SECRET}
-      - VITE_API_URL=${VITE_API_URL}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       scli-mysql:
         condition: service_healthy
@@ -63,7 +65,7 @@ services:
       - scl-network-dev
     volumes:
       - ./backend:/app
-      - /app/node_modules
+      - backend_nm:/app/node_modules
     command: npm start
 
   scli-frontend:
@@ -71,18 +73,21 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     container_name: scli-frontend-dev
+    env_file: .env
     ports:
       - "3000:3000"
     environment:
-      - VITE_API_URL=${VITE_API_URL}
-      - VITE_ENV=${VITE_ENV}
+      - VITE_API_URL=http://localhost:4000/api
+      - VITE_ENV=development
     depends_on:
       - scli-backend
     networks:
       - scl-network-dev
     volumes:
-      - ./frontend:/app
-      - /app/node_modules
+      - ./frontend/src:/app/src
+      - ./frontend/public:/app/public
+      - ./frontend/index.html:/app/index.html
+      - ./frontend/vite.config.js:/app/vite.config.js
     command: npm run dev
 
   scli-public-portal:
@@ -94,7 +99,7 @@ services:
       - scl-network-dev
     volumes:
       - ./public-portal:/app
-      - /app/node_modules
+      - portal_nm:/app/node_modules
     command: sh -c "npm install --no-audit --no-fund && npm run dev"
 
 networks:
@@ -103,6 +108,5 @@ networks:
 
 volumes:
   mysql_data_dev:
-  moodle_db_data_dev:
-  moodle_data_dev:
-  moodledata_dev:
+  backend_nm:
+  portal_nm:

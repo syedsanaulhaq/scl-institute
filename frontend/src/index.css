@@ -28,3 +28,95 @@ details[open] > summary .details-plus::before { content: '−'; }
 details:not([open]) > summary .details-plus::before { content: '+'; }
 .details-plus { font-size: 0; }
 .details-plus::before { font-size: 0.75rem; }
+
+/* ─────────────────────────────────────────────────────────────
+   DARK MODE — global overrides so all existing pages adapt
+   without needing per-component dark: classes.
+   ──────────────────────────────────────────────────────────── */
+
+/* Base */
+.dark body {
+    background-color: #0a0f1e;
+    color: #e2e8f0;
+}
+
+/* Backgrounds */
+.dark .bg-white       { background-color: #1e2a3b !important; }
+.dark .bg-gray-50     { background-color: #111827 !important; }
+.dark .bg-gray-100    { background-color: #1e2a3b !important; }
+.dark .bg-gray-200    { background-color: #2d3748 !important; }
+
+/* Coloured pill / badge backgrounds that use opacity */
+.dark .bg-blue-50     { background-color: #1e3a5f !important; }
+.dark .bg-green-50    { background-color: #14532d !important; }
+.dark .bg-yellow-50   { background-color: #451a03 !important; }
+.dark .bg-red-50      { background-color: #4c0519 !important; }
+.dark .bg-purple-50   { background-color: #3b0764 !important; }
+.dark .bg-indigo-50   { background-color: #1e1b4b !important; }
+.dark .bg-cyan-50     { background-color: #083344 !important; }
+.dark .bg-amber-50    { background-color: #451a03 !important; }
+.dark .bg-emerald-50  { background-color: #022c22 !important; }
+.dark .bg-rose-50     { background-color: #4c0519 !important; }
+.dark .bg-orange-50   { background-color: #431407 !important; }
+
+/* Text */
+.dark .text-gray-900  { color: #f1f5f9 !important; }
+.dark .text-gray-800  { color: #e2e8f0 !important; }
+.dark .text-gray-700  { color: #cbd5e1 !important; }
+.dark .text-gray-600  { color: #94a3b8 !important; }
+.dark .text-gray-500  { color: #64748b !important; }
+.dark .text-gray-400  { color: #475569 !important; }
+.dark .text-gray-300  { color: #334155 !important; }
+
+/* Borders */
+.dark .border-gray-100 { border-color: #2d3748 !important; }
+.dark .border-gray-200 { border-color: #374151 !important; }
+.dark .border-gray-300 { border-color: #4b5563 !important; }
+.dark .divide-gray-100 > * + * { border-color: #2d3748 !important; }
+.dark .divide-gray-200 > * + * { border-color: #374151 !important; }
+
+/* Form inputs */
+.dark input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+.dark textarea,
+.dark select {
+    background-color: #1e2a3b !important;
+    color: #f1f5f9 !important;
+    border-color: #374151 !important;
+}
+.dark input::placeholder,
+.dark textarea::placeholder { color: #475569 !important; }
+
+/* Tables */
+.dark table    { border-color: #2d3748; }
+.dark thead tr { background-color: #111827 !important; border-color: #2d3748; }
+.dark tbody tr { border-color: #2d3748; }
+.dark tbody tr:hover { background-color: #1e2a3b !important; }
+.dark th       { color: #94a3b8 !important; }
+.dark td       { color: #cbd5e1 !important; border-color: #2d3748; }
+
+/* Hover states */
+.dark .hover\:bg-gray-50:hover  { background-color: #1e2a3b !important; }
+.dark .hover\:bg-gray-100:hover { background-color: #2d3748 !important; }
+
+/* Shadows */
+.dark .shadow,
+.dark .shadow-sm,
+.dark .shadow-md,
+.dark .shadow-lg,
+.dark .shadow-xl {
+    --tw-shadow-color: rgba(0,0,0,0.6);
+    --tw-shadow: var(--tw-shadow-colored);
+}
+
+/* Modals / overlays */
+.dark .bg-white\/80,
+.dark .bg-white\/90 { background-color: rgba(30,42,59,0.9) !important; }
+
+/* Scrollbar in dark mode */
+.dark ::-webkit-scrollbar-track { background: #111827; }
+.dark ::-webkit-scrollbar-thumb { background: #374151; border-radius: 4px; }
+.dark ::-webkit-scrollbar-thumb:hover { background: #4b5563; }
+
+/* Sidebar inline-style bg override */
+.dark aside[style] { background-color: #111827 !important; border-color: #374151 !important; }
+.dark aside[style] > div { background-color: #111827 !important; }
