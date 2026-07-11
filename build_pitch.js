@@ -28,7 +28,7 @@ const html = `<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SCL Institute — Enterprise Education Management System</title>
+<title>Institute Management Platform — Enterprise Education System</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
@@ -423,14 +423,14 @@ footer a{color:var(--blue);text-decoration:none}
 
 <!-- ══ NAVIGATION ══════════════════════════════════════════════════════════ -->
 <nav id="nav">
-  <div class="nav-brand">SCL <span>Institute</span></div>
+  <div class="nav-brand">Institute <span>Management Platform</span></div>
   <div class="nav-links-bar">
     <a href="#overview">Overview</a>
     <a href="#portals">Portals</a>
     <a href="#features">Features</a>
     <a href="#tech">Technology</a>
   </div>
-  <a href="https://system.sclsandbox.xyz" target="_blank" class="nav-pill">🔗 View Live System →</a>
+  <a href="https://system.sclsandbox.xyz" target="_blank" class="nav-pill">🔗 View Live Demo →</a>
 </nav>
 <div id="progress"></div>
 
@@ -444,7 +444,7 @@ footer a{color:var(--blue);text-decoration:none}
       <div class="eyebrow">🎓 Enterprise Education Technology</div>
       <h1 class="mega">The <span class="grad">Complete Platform</span><br>for Modern Colleges</h1>
       <p class="lead" style="font-size:1.25rem;margin-bottom:2rem">
-        SCL Institute Management System — a fully cloud-hosted, role-based portal that
+        Institute Management Platform — a fully cloud-hosted, role-based portal that
         manages every aspect of college operations from admissions to graduation,
         fully integrated with Moodle LMS.
       </p>
@@ -514,7 +514,7 @@ footer a{color:var(--blue);text-decoration:none}
   <div class="slide-inner">
     <div class="eyebrow eyebrow-green">✅ Our Solution</div>
     <h2 class="section-title">One Unified Platform.<br><span class="accent">Every Role. Every Process.</span></h2>
-    <p class="lead">SCL Institute Management System replaces every disconnected tool with a single, beautifully designed cloud platform — built specifically for further and higher education institutions.</p>
+    <p class="lead">The Institute Management Platform replaces every disconnected tool with a single, beautifully designed cloud platform — built specifically for further and higher education institutions.</p>
     <div class="solution-cards">
       <div class="solution-card">
         <div class="s-icon">🏗️</div>
@@ -560,14 +560,14 @@ footer a{color:var(--blue);text-decoration:none}
     <h2 class="section-title">Built for Scale.<br><span class="accent">Ready from Day One.</span></h2>
     <div class="big-numbers">
       <div class="big-num-card"><div class="bnn">4</div><div class="bnl">User Roles</div><div class="bns">Student · Faculty · College Admin · Manager</div></div>
-      <div class="big-num-card"><div class="bnn">55+</div><div class="bnl">Courses</div><div class="bns">Imported from SCLondon course catalog</div></div>
+      <div class="big-num-card"><div class="bnn">55+</div><div class="bnl">Courses</div><div class="bns">Imported from a structured course catalog</div></div>
       <div class="big-num-card"><div class="bnn">114</div><div class="bnl">Modules</div><div class="bns">Features tracked &amp; live in production</div></div>
       <div class="big-num-card"><div class="bnn">96%</div><div class="bnl">Completed</div><div class="bns">96 of 114 features fully live</div></div>
       <div class="big-num-card"><div class="bnn">100%</div><div class="bnl">Cloud Hosted</div><div class="bns">HTTPS, Docker, auto-restart, backups</div></div>
       <div class="big-num-card"><div class="bnn">1</div><div class="bnl">Login</div><div class="bns">SSO — one login accesses portal + Moodle LMS</div></div>
     </div>
     <div class="callout" style="margin-top:2.5rem;max-width:700px">
-      <p>"The entire system is live in production at <strong>system.sclsandbox.xyz</strong> — not a demo or prototype. Every screenshot in this presentation is captured from the live running system."</p>
+      <p>"The entire system is live in production — not a demo or prototype. Every screenshot in this presentation is captured from the live running system."</p>
     </div>
   </div>
 </section>
@@ -753,7 +753,7 @@ footer a{color:var(--blue);text-decoration:none}
           <li>Auto-enrolment on application approval</li>
           <li>Student attendance via Moodle Attendance plugin</li>
           <li>Grade sync — live in the student portal</li>
-          <li>Custom SCL-branded Moodle theme</li>
+          <li>Custom branded Moodle theme</li>
           <li>Cohort-based enrolment groups per intake</li>
         </ul>
       </div>
@@ -944,7 +944,7 @@ footer a{color:var(--blue);text-decoration:none}
         <span class="tech-pill">Custom SSO Plugin</span>
         <span class="tech-pill">Moodle REST API</span>
         <span class="tech-pill">Attendance Plugin</span>
-        <span class="tech-pill">Custom SCL Theme</span>
+        <span class="tech-pill">Custom Branded Theme</span>
         <span class="tech-pill">Cohort Enrolments</span>
       </div>
     </div>
@@ -971,12 +971,12 @@ footer a{color:var(--blue);text-decoration:none}
   <div class="slide-inner">
     <div class="eyebrow eyebrow-blue">🏆 Why Choose Us</div>
     <h2 class="section-title">How We Compare</h2>
-    <p class="lead">Unlike generic off-the-shelf systems, SCL Institute Management was built specifically for UK further &amp; higher education — and is already live.</p>
+    <p class="lead">Unlike generic off-the-shelf systems, the Institute Management Platform was built specifically for UK further &amp; higher education — and is already live.</p>
     <table class="compare-table">
       <thead>
         <tr>
           <th>Feature</th>
-          <th>SCL Institute System</th>
+          <th>Institute Management Platform</th>
           <th>Generic SIMS</th>
           <th>Spreadsheets / Email</th>
         </tr>
@@ -1010,8 +1010,7 @@ footer a{color:var(--blue);text-decoration:none}
       See It Live.<br><span class="accent">Right Now.</span>
     </h2>
     <p class="lead" style="margin:0 auto 0.5rem;text-align:center;font-size:1.15rem">
-      The system is live and running at <strong style="color:#fff">system.sclsandbox.xyz</strong><br>
-      — not a mockup, not a prototype. Log in and explore every feature today.
+      The system is live and running now — not a mockup, not a prototype. Log in and explore every feature today.
     </p>
     <div style="margin:2rem auto 0;max-width:600px">
       <div class="cta-box">
@@ -1032,16 +1031,16 @@ footer a{color:var(--blue);text-decoration:none}
         </div>
         <div style="margin-top:1.5rem;display:flex;gap:1.5rem;justify-content:center;flex-wrap:wrap;position:relative;z-index:1">
           <div style="text-align:left">
-            <p style="font-size:.75rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.25rem">Student Login</p>
-            <p style="font-size:.82rem;color:#94a3b8;font-family:monospace">sarah.johnson.lm@example.com<br>Password: 089f4607e213</p>
+            <p style="font-size:.75rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.25rem">Student Demo Access</p>
+              <p style="font-size:.82rem;color:#94a3b8;font-family:monospace">Provided during live walkthrough</p>
           </div>
           <div style="text-align:left">
-            <p style="font-size:.75rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.25rem">Manager Login</p>
-            <p style="font-size:.82rem;color:#94a3b8;font-family:monospace">admin@sclsandbox.xyz<br>Password: password123</p>
+            <p style="font-size:.75rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.25rem">Manager Demo Access</p>
+            <p style="font-size:.82rem;color:#94a3b8;font-family:monospace">Provided during live walkthrough</p>
           </div>
           <div style="text-align:left">
-            <p style="font-size:.75rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.25rem">College Admin Login</p>
-            <p style="font-size:.82rem;color:#94a3b8;font-family:monospace">collegeadmin@scl.com<br>Password: password</p>
+            <p style="font-size:.75rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.25rem">College Admin Demo Access</p>
+            <p style="font-size:.82rem;color:#94a3b8;font-family:monospace">Provided during live walkthrough</p>
           </div>
         </div>
       </div>
@@ -1052,11 +1051,11 @@ footer a{color:var(--blue);text-decoration:none}
 <!-- ══ FOOTER ═══════════════════════════════════════════════════════════════ -->
 <footer>
   <div>
-    <p style="color:#fff;font-weight:700;font-size:.9rem;margin-bottom:.3rem">SCL Institute Management System</p>
+    <p style="color:#fff;font-weight:700;font-size:.9rem;margin-bottom:.3rem">Institute Management Platform</p>
     <p>Built with React 18 · Node.js · MySQL · Moodle 4.3 · Docker · Nginx</p>
   </div>
   <div style="text-align:right">
-    <p><a href="https://system.sclsandbox.xyz">system.sclsandbox.xyz</a></p>
+    <p>Live demo hosted on the production environment</p>
     <p>Presentation generated July 2026</p>
   </div>
 </footer>
