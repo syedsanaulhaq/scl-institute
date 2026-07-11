@@ -442,10 +442,10 @@ footer a{color:var(--blue);text-decoration:none}
   <div class="slide-inner">
     <div style="max-width:780px">
       <div class="eyebrow">🎓 Enterprise Education Technology</div>
-      <h1 class="mega">The <span class="grad">Complete Platform</span><br>for Modern Colleges</h1>
+      <h1 class="mega">The <span class="grad">Complete Platform</span><br>for Modern Institutes</h1>
       <p class="lead" style="font-size:1.25rem;margin-bottom:2rem">
         Institute Management Platform — a fully cloud-hosted, role-based portal that
-        manages every aspect of college operations from admissions to graduation,
+        manages every aspect of institute operations from admissions to graduation,
         fully integrated with Moodle LMS.
       </p>
       <div class="stats-row">
@@ -469,8 +469,8 @@ footer a{color:var(--blue);text-decoration:none}
 <section class="slide bg-dark fade-up" id="problem" style="padding:100px 40px">
   <div class="slide-inner">
     <div class="eyebrow">⚠️ The Challenge</div>
-    <h2 class="section-title">What Colleges Struggle With<br>Every Single Day</h2>
-    <p class="lead">Traditional college management is fragmented, manual, and error-prone. Critical data sits in spreadsheets, emails, and disconnected tools.</p>
+    <h2 class="section-title">What Institutes Struggle With<br>Every Single Day</h2>
+    <p class="lead">Traditional institute management is fragmented, manual, and error-prone. Critical data sits in spreadsheets, emails, and disconnected tools.</p>
     <div class="problems-grid">
       <div class="problem-card">
         <div class="p-icon">📋</div>
@@ -524,7 +524,7 @@ footer a{color:var(--blue);text-decoration:none}
       <div class="solution-card">
         <div class="s-icon">🎯</div>
         <h4>Role-Based Portals</h4>
-        <p>Dedicated dashboards for Students, Faculty, College Admins, and Managers — each seeing exactly what they need.</p>
+        <p>Dedicated dashboards for Students, Faculty, Admissions Admins, and Managers — each seeing exactly what they need.</p>
       </div>
       <div class="solution-card">
         <div class="s-icon">🔗</div>
@@ -559,7 +559,7 @@ footer a{color:var(--blue);text-decoration:none}
     <div class="eyebrow eyebrow-blue">📊 At a Glance</div>
     <h2 class="section-title">Built for Scale.<br><span class="accent">Ready from Day One.</span></h2>
     <div class="big-numbers">
-      <div class="big-num-card"><div class="bnn">4</div><div class="bnl">User Roles</div><div class="bns">Student · Faculty · College Admin · Manager</div></div>
+      <div class="big-num-card"><div class="bnn">4</div><div class="bnl">User Roles</div><div class="bns">Student · Faculty · Admissions Admin · Manager</div></div>
       <div class="big-num-card"><div class="bnn">55+</div><div class="bnl">Courses</div><div class="bns">Imported from a structured course catalog</div></div>
       <div class="big-num-card"><div class="bnn">114</div><div class="bnl">Modules</div><div class="bns">Features tracked &amp; live in production</div></div>
       <div class="big-num-card"><div class="bnn">96%</div><div class="bnl">Completed</div><div class="bns">96 of 114 features fully live</div></div>
@@ -614,9 +614,9 @@ footer a{color:var(--blue);text-decoration:none}
       </div>
       <div class="portal-card pc-amber fli-amber">
         <div class="portal-icon">🏛️</div>
-        <div class="portal-badge pb-amber">College Admin Role</div>
-        <h3>College Admin Portal</h3>
-        <p>Day-to-day admissions and student management for College Admin staff — without needing full system access.</p>
+        <div class="portal-badge pb-amber">Admissions Admin Role</div>
+        <h3>Admissions Admin Portal</h3>
+        <p>Day-to-day admissions and student management for admissions admin staff — without needing full system access.</p>
         <ul class="feature-list">
           <li>Admissions hub — new applications pipeline</li>
           <li>Application review, approve, reject, defer</li>
@@ -708,15 +708,15 @@ footer a{color:var(--blue);text-decoration:none}
 
 <div class="section-divider"></div>
 
-<!-- ══ SLIDE 8 — COLLEGE ADMIN SCREENSHOTS ═════════════════════════════════ -->
+<!-- ══ SLIDE 8 — ADMISSIONS ADMIN SCREENSHOTS ═════════════════════════════ -->
 <section class="slide bg-amber fade-up" style="padding:80px 40px">
   <div class="blob blob-1" style="background:rgba(217,119,6,.2);opacity:.4"></div>
   <div class="slide-inner">
-    <div class="eyebrow eyebrow-amber">🏛️ College Admin View</div>
+    <div class="eyebrow eyebrow-amber">🏛️ Admissions Admin View</div>
     <div class="showcase">
       <div class="showcase-text">
         <h2 class="section-title" style="font-size:2.2rem">Admissions<br><span style="color:#fbbf24">Made Simple</span></h2>
-        <p class="body" style="margin-bottom:1.5rem">College Admin staff handle the day-to-day admission flow without needing full system access. A focused, purpose-built interface for what they actually do.</p>
+        <p class="body" style="margin-bottom:1.5rem">Admissions admin staff handle the day-to-day admission flow without needing full system access. A focused, purpose-built interface for what they actually do.</p>
         <ul class="feature-list fli-amber" style="gap:.6rem">
           <li>View and process student applications end-to-end</li>
           <li>Review uploaded documents and applicant details</li>
@@ -727,7 +727,7 @@ footer a{color:var(--blue);text-decoration:none}
         </ul>
       </div>
       <div class="showcase-screens two">
-        ${screen('s31-cadmin-dashboard.jpg','College Admin Dashboard','Admin Overview')}
+        ${screen('s31-cadmin-dashboard.jpg','Admissions Admin Dashboard','Admin Overview')}
         ${screen('s32-cadmin-applications.jpg','Applications List','Applications')}
         ${screen('s33-cadmin-students.jpg','Student Management','Student Management')}
         ${screen('s34-cadmin-intakes.jpg','Course Intakes','Course Intakes')}
@@ -866,7 +866,7 @@ footer a{color:var(--blue);text-decoration:none}
       <div class="module-badge"><span>📋</span> Teaching Programme</div>
       <div class="module-badge"><span>🧪</span> Assessment Manager</div>
       <div class="module-badge"><span>📉</span> Course Reports</div>
-      <div class="module-badge"><span>🏛️</span> College Admin Portal</div>
+      <div class="module-badge"><span>🏛️</span> Admissions Admin Portal</div>
       <div class="module-badge"><span>📥</span> Admissions Hub</div>
       <div class="module-badge"><span>🔍</span> Application Review</div>
       <div class="module-badge"><span>👥</span> Student Management</div>
@@ -1005,7 +1005,7 @@ footer a{color:var(--blue);text-decoration:none}
   <div class="blob blob-2"></div>
   <div class="grid-bg"></div>
   <div class="slide-inner" style="text-align:center">
-    <div class="eyebrow" style="margin:0 auto 1.5rem">🚀 Ready to Transform Your College</div>
+    <div class="eyebrow" style="margin:0 auto 1.5rem">🚀 Ready to Transform Your Institute</div>
     <h2 class="section-title" style="font-size:clamp(2rem,5vw,4rem);text-align:center">
       See It Live.<br><span class="accent">Right Now.</span>
     </h2>
@@ -1039,7 +1039,7 @@ footer a{color:var(--blue);text-decoration:none}
             <p style="font-size:.82rem;color:#94a3b8;font-family:monospace">Provided during live walkthrough</p>
           </div>
           <div style="text-align:left">
-            <p style="font-size:.75rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.25rem">College Admin Demo Access</p>
+            <p style="font-size:.75rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.25rem">Admissions Admin Demo Access</p>
             <p style="font-size:.82rem;color:#94a3b8;font-family:monospace">Provided during live walkthrough</p>
           </div>
         </div>
