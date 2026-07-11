@@ -514,7 +514,7 @@ footer a{color:var(--blue);text-decoration:none}
   <div class="slide-inner">
     <div class="eyebrow eyebrow-green">✅ Our Solution</div>
     <h2 class="section-title">One Unified Platform.<br><span class="accent">Every Role. Every Process.</span></h2>
-    <p class="lead">The Institute Management Platform replaces every disconnected tool with a single, beautifully designed cloud platform — built specifically for further and higher education institutions.</p>
+    <p class="lead">The Institute Management Platform replaces every disconnected tool with a single, beautifully designed cloud platform — built for schools, colleges, universities, and institutes.</p>
     <div class="solution-cards">
       <div class="solution-card">
         <div class="s-icon">🏗️</div>
@@ -773,7 +773,7 @@ footer a{color:var(--blue);text-decoration:none}
   <div class="slide-inner">
     <div class="eyebrow">🧩 Complete Feature Set</div>
     <h2 class="section-title">Everything You Need.<br><span class="accent">Nothing You Don't.</span></h2>
-    <p class="lead">Every module purpose-built for UK further and higher education institutions. 96 features live in production.</p>
+    <p class="lead">Every module purpose-built for schools, colleges, universities, and institutes. 96 features live in production.</p>
     <div class="features-grid">
       <div class="feat-card">
         <div class="feat-icon fi-blue">🔐</div>
@@ -971,7 +971,7 @@ footer a{color:var(--blue);text-decoration:none}
   <div class="slide-inner">
     <div class="eyebrow eyebrow-blue">🏆 Why Choose Us</div>
     <h2 class="section-title">How We Compare</h2>
-    <p class="lead">Unlike generic off-the-shelf systems, the Institute Management Platform was built specifically for UK further &amp; higher education — and is already live.</p>
+    <p class="lead">Unlike generic off-the-shelf systems, the Institute Management Platform was built specifically for schools, colleges, universities, and institutes — and is already live.</p>
     <table class="compare-table">
       <thead>
         <tr>
