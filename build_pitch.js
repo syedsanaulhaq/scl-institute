@@ -16,11 +16,11 @@ function screen(file, alt, label='') {
   const src = img64(file);
   if (!src) return `<div class="screen-missing">${alt}</div>`;
   return `
-    <div class="screen-frame">
+    <button type="button" class="screen-frame" onclick="openLightbox('${src}','${alt}')" aria-label="Open screenshot ${alt}">
       <div class="screen-bar"><span></span><span></span><span></span></div>
       <img src="${src}" alt="${alt}" class="screen-img">
       ${label ? `<div class="screen-label">${label}</div>` : ''}
-    </div>`;
+    </button>`;
 }
 
 const html = `<!DOCTYPE html>
@@ -201,10 +201,16 @@ p.body{font-size:.95rem;color:var(--text-sub);line-height:1.6}
 
 /* ── SCREENSHOTS ─────────────────────────────────────────────────────────── */
 .screen-frame{
-  border-radius:12px;overflow:hidden;
+  width:100%;
+  padding:0;
+  appearance:none;
   border:1px solid rgba(255,255,255,.12);
+  border-radius:12px;overflow:hidden;
   box-shadow:0 20px 60px rgba(0,0,0,.6);background:#1e293b;
+  cursor:zoom-in;text-align:left;
 }
+.screen-frame:hover{transform:translateY(-2px)}
+.screen-frame:focus-visible{outline:3px solid rgba(59,130,246,.65);outline-offset:3px}
 .screen-bar{
   height:28px;background:#1e293b;display:flex;align-items:center;gap:5px;padding:0 12px;
   border-bottom:1px solid rgba(255,255,255,.08);
@@ -222,6 +228,31 @@ p.body{font-size:.95rem;color:var(--text-sub);line-height:1.6}
   height:200px;display:flex;align-items:center;justify-content:center;
   color:var(--text-muted);font-size:.85rem;background:var(--surface);
 }
+
+/* ── LIGHTBOX ───────────────────────────────────────────────────────────── */
+.lightbox{
+  position:fixed;inset:0;z-index:5000;display:none;align-items:center;justify-content:center;
+  background:rgba(2,6,23,.92);backdrop-filter:blur(10px);padding:24px;
+}
+.lightbox.open{display:flex}
+.lightbox-panel{
+  width:min(96vw,1400px);max-height:92vh;display:flex;flex-direction:column;gap:12px;
+}
+.lightbox-top{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;color:#e2e8f0;
+}
+.lightbox-title{font-size:.95rem;font-weight:700}
+.lightbox-close{
+  appearance:none;border:none;background:rgba(255,255,255,.08);color:#fff;width:42px;height:42px;
+  border-radius:999px;font-size:1.2rem;font-weight:700;cursor:pointer;
+}
+.lightbox-close:hover{background:rgba(255,255,255,.14)}
+.lightbox-img-wrap{
+  overflow:auto;border-radius:16px;border:1px solid rgba(255,255,255,.12);background:#020617;
+  box-shadow:0 30px 90px rgba(0,0,0,.65);
+}
+.lightbox-img-wrap img{display:block;max-width:100%;height:auto}
+.lightbox-hint{font-size:.8rem;color:var(--text-muted)}
 
 /* ── SCREENSHOT SHOWCASE LAYOUT ──────────────────────────────────────────── */
 .showcase{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;align-items:center}
@@ -374,6 +405,21 @@ footer a{color:var(--blue);text-decoration:none}
 </style>
 </head>
 <body>
+
+<div class="lightbox" id="lightbox" aria-hidden="true">
+  <div class="lightbox-panel" role="dialog" aria-modal="true" aria-labelledby="lightbox-title">
+    <div class="lightbox-top">
+      <div>
+        <div class="lightbox-title" id="lightbox-title">Screenshot Preview</div>
+        <div class="lightbox-hint">Click outside or press Esc to close</div>
+      </div>
+      <button type="button" class="lightbox-close" aria-label="Close preview" onclick="closeLightbox()">✕</button>
+    </div>
+    <div class="lightbox-img-wrap">
+      <img id="lightbox-img" src="" alt="">
+    </div>
+  </div>
+</div>
 
 <!-- ══ NAVIGATION ══════════════════════════════════════════════════════════ -->
 <nav id="nav">
@@ -1031,12 +1077,36 @@ document.querySelectorAll('.fade-up').forEach(el => observer.observe(el));
 
 // ── Keyboard navigation
 document.addEventListener('keydown', e => {
+  if(e.key === 'Escape') closeLightbox();
   if(e.key === 'ArrowDown' || e.key === 'PageDown') {
     window.scrollBy({ top: window.innerHeight * 0.85, behavior: 'smooth' });
   }
   if(e.key === 'ArrowUp' || e.key === 'PageUp') {
     window.scrollBy({ top: -window.innerHeight * 0.85, behavior: 'smooth' });
   }
+});
+
+const lightbox = document.getElementById('lightbox');
+const lightboxImg = document.getElementById('lightbox-img');
+const lightboxTitle = document.getElementById('lightbox-title');
+
+function openLightbox(src, title) {
+  lightboxImg.src = src;
+  lightboxImg.alt = title;
+  lightboxTitle.textContent = title;
+  lightbox.classList.add('open');
+  lightbox.setAttribute('aria-hidden', 'false');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeLightbox() {
+  lightbox.classList.remove('open');
+  lightbox.setAttribute('aria-hidden', 'true');
+  document.body.style.overflow = '';
+}
+
+lightbox.addEventListener('click', (event) => {
+  if (event.target === lightbox) closeLightbox();
 });
 </script>
 </body>
