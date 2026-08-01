@@ -16,7 +16,7 @@ function screen(file, alt, label='') {
   const src = img64(file);
   if (!src) return `<div class="screen-missing">${alt}</div>`;
   return `
-    <button type="button" class="screen-frame" onclick="openLightbox('${src}','${alt}')" aria-label="Open screenshot ${alt}">
+    <button type="button" class="screen-frame" onclick="openLightbox(this.querySelector('img'))" aria-label="Open screenshot ${alt}">
       <div class="screen-bar"><span></span><span></span><span></span></div>
       <img src="${src}" alt="${alt}" class="screen-img">
       ${label ? `<div class="screen-label">${label}</div>` : ''}
@@ -1092,10 +1092,10 @@ const lightbox = document.getElementById('lightbox');
 const lightboxImg = document.getElementById('lightbox-img');
 const lightboxTitle = document.getElementById('lightbox-title');
 
-function openLightbox(src, title) {
-  lightboxImg.src = src;
-  lightboxImg.alt = title;
-  lightboxTitle.textContent = title;
+function openLightbox(sourceImage) {
+  lightboxImg.src = sourceImage.src;
+  lightboxImg.alt = sourceImage.alt;
+  lightboxTitle.textContent = sourceImage.alt;
   lightbox.classList.add('open');
   lightbox.setAttribute('aria-hidden', 'false');
   document.body.style.overflow = 'hidden';
